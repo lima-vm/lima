@@ -20,7 +20,7 @@ import (
 func runAnsibleProvision(ctx context.Context, inst *limatype.Instance) error {
 	for _, f := range inst.Config.Provision {
 		if f.Mode == limatype.ProvisionModeAnsible {
-			logrus.Infof("Waiting for ansible playbook %q", f.Playbook)
+			logrus.Infof("Waiting for ansible playbook %#q", f.Playbook)
 			if err := runAnsiblePlaybook(ctx, inst, f.Playbook); err != nil {
 				return err
 			}
@@ -34,7 +34,7 @@ func runAnsiblePlaybook(ctx context.Context, inst *limatype.Instance, playbook s
 	if err != nil {
 		return err
 	}
-	logrus.Debugf("ansible-playbook -i %q %q", inventory, playbook)
+	logrus.Debugf("ansible-playbook -i %#q %#q", inventory, playbook)
 	args := []string{"-i", inventory, playbook}
 	cmd := exec.CommandContext(ctx, "ansible-playbook", args...)
 	cmd.Env = getAnsibleEnvironment(inst)

@@ -21,13 +21,13 @@ import (
 func NewASIF(path string, size int64) error {
 	createArgs := []string{"image", "create", "blank", "--fs", "none", "--format", "ASIF", "--size", strconv.FormatInt(size, 10), path}
 	if err := exec.CommandContext(context.Background(), "diskutil", createArgs...).Run(); err != nil {
-		return fmt.Errorf("failed to create ASIF image %q: %w", path, err)
+		return fmt.Errorf("failed to create ASIF image %#q: %w", path, err)
 	}
 	if _, err := os.Stat(path); errors.Is(err, os.ErrNotExist) {
 		if _, err2 := os.Stat(path + ".asif"); !errors.Is(err2, os.ErrNotExist) {
 			// diskutil may create the file with .asif suffix
 			if err3 := os.Rename(path+".asif", path); err3 != nil {
-				return fmt.Errorf("failed to rename ASIF image from %q to %q: %w", path+".asif", path, err3)
+				return fmt.Errorf("failed to rename ASIF image from %#q to %#q: %w", path+".asif", path, err3)
 			}
 		}
 	}
@@ -44,13 +44,13 @@ func NewAttachedASIF(path string, size int64) (string, *os.File, error) {
 	attachArgs := []string{"image", "attach", "--noMount", path}
 	out, err := exec.CommandContext(context.Background(), "diskutil", attachArgs...).Output()
 	if err != nil {
-		return "", nil, fmt.Errorf("failed to attach ASIF image %q: %w", path, err)
+		return "", nil, fmt.Errorf("failed to attach ASIF image %#q: %w", path, err)
 	}
 	devicePath := strings.TrimSpace(string(out))
 	f, err := os.OpenFile(devicePath, os.O_RDWR, 0o644)
 	if err != nil {
 		_ = DetachASIF(devicePath)
-		return "", nil, fmt.Errorf("failed to open ASIF device %q: %w", devicePath, err)
+		return "", nil, fmt.Errorf("failed to open ASIF device %#q: %w", devicePath, err)
 	}
 	return devicePath, f, err
 }
@@ -58,7 +58,7 @@ func NewAttachedASIF(path string, size int64) (string, *os.File, error) {
 // DetachASIF detaches the ASIF image device at the specified path.
 func DetachASIF(devicePath string) error {
 	if output, err := exec.CommandContext(context.Background(), "hdiutil", "detach", devicePath).CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to detach ASIF image %q: %w: %s", devicePath, err, output)
+		return fmt.Errorf("failed to detach ASIF image %#q: %w: %s", devicePath, err, output)
 	}
 	return nil
 }
@@ -67,7 +67,7 @@ func DetachASIF(devicePath string) error {
 func ResizeASIF(path string, size int64) error {
 	resizeArgs := []string{"image", "resize", "--size", fmt.Sprintf("%d", size), path}
 	if output, err := exec.CommandContext(context.Background(), "diskutil", resizeArgs...).CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to resize ASIF image %q: %w: %s", path, err, output)
+		return fmt.Errorf("failed to resize ASIF image %#q: %w: %s", path, err, output)
 	}
 	return nil
 }
@@ -139,7 +139,7 @@ func DiskutilImageAttachNoMount(ctx context.Context, disk string) (*AttachedDisk
 		if strings.Contains(stderr.String(), "Resource temporarily unavailable") {
 			errToWrap = ErrResourceTemporarilyUnavailable
 		}
-		return nil, fmt.Errorf("failed to execute %v: %w (stderr: %q)", cmd.Args, errToWrap, stderr.String())
+		return nil, fmt.Errorf("failed to execute %v: %w (stderr: %#q)", cmd.Args, errToWrap, stderr.String())
 	}
 	return parseDiskutilImageAttachOutput(stdout.String())
 }

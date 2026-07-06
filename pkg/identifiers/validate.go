@@ -60,11 +60,11 @@ func Validate(s string) error {
 	}
 
 	if len(s) > maxLength {
-		return fmt.Errorf("identifier %q greater than maximum length (%d characters)", s, maxLength)
+		return fmt.Errorf("identifier %#q greater than maximum length (%d characters)", s, maxLength)
 	}
 
 	if !identifierRe.MatchString(s) {
-		return fmt.Errorf("identifier %q must match %v", s, identifierRe)
+		return fmt.Errorf("identifier %#q must match %v", s, identifierRe)
 	}
 	return nil
 }

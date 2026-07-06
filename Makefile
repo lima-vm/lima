@@ -4,6 +4,8 @@
 PREFIX ?= /usr/local
 DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 
+GITHUB_ACTIONS ?= false
+
 GO ?= go
 TAR ?= tar
 ZIP ?= zip
@@ -329,9 +331,9 @@ additional-drivers:
 	@for drv in $(ADDITIONAL_DRIVERS); do \
 		echo "Building $$drv as external"; \
 		if [ "$(GOOS)" = "windows" ]; then \
-			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv; \
+			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv.exe ./cmd/lima-driver-$$drv || exit 1; \
 		else \
-			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv ./cmd/lima-driver-$$drv; \
+			$(GO_BUILD) -o $(LIBEXEC_LIMA)/lima-driver-$$drv ./cmd/lima-driver-$$drv || exit 1; \
 			fi; \
 		if [ "$$drv" = "vz" ] && [ "$(GOOS)" = "darwin" ]; then \
 			codesign -f -v --entitlements vz.entitlements -s - $(LIBEXEC_LIMA)/lima-driver-vz; \
@@ -643,6 +645,11 @@ go-licenses:
 	# see also https://github.com/cncf/foundation/issues/1242
 	go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 
+.PHONY: gosocialcheck
+gosocialcheck:
+	$(GO) run -modfile=./hack/tools/go.mod github.com/AkihiroSuda/gosocialcheck/cmd/gosocialcheck run --gha=$(GITHUB_ACTIONS) ./...
+	# TODO: run gosocialcheck for ./hack/tools/... too (not supported yet by gosocialcheck)
+
 .PHONY: ltag
 ltag:
 	$(GO) run -modfile=./hack/tools/go.mod github.com/containerd/ltag -t ./hack/ltag --check -v
@@ -653,7 +660,7 @@ protolint:
 
 # Main lint target - runs all linting stages
 .PHONY: lint
-lint: check-generated nobin editorconfig-checker golangci-lint yamllint ls-lint shellcheck shfmt go-licenses ltag protolint
+lint: check-generated nobin editorconfig-checker golangci-lint yamllint ls-lint shellcheck shfmt go-licenses gosocialcheck ltag protolint
 
 .PHONY: clean
 clean:

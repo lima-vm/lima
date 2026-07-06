@@ -44,9 +44,9 @@ func defaultConfigBytes() ([]byte, error) {
 			args.SocketVMNet = realP
 			break
 		} else if errors.Is(err, exec.ErrNotFound) || errors.Is(err, os.ErrNotExist) {
-			logrus.WithError(err).Debugf("Failed to look up socket_vmnet path %q", candidate)
+			logrus.WithError(err).Debugf("Failed to look up socket_vmnet path %#q", candidate)
 		} else {
-			logrus.WithError(err).Warnf("Failed to look up socket_vmnet path %q", candidate)
+			logrus.WithError(err).Warnf("Failed to look up socket_vmnet path %#q", candidate)
 		}
 	}
 	if args.SocketVMNet == "" {
@@ -118,7 +118,7 @@ func loadCache() {
 			cfgDir := filepath.Dir(cfgFile)
 			cache.err = os.MkdirAll(cfgDir, 0o755)
 			if cache.err != nil {
-				cache.err = fmt.Errorf("could not create %q directory: %w", cfgDir, cache.err)
+				cache.err = fmt.Errorf("could not create %#q directory: %w", cfgDir, cache.err)
 				return
 			}
 			var b []byte
@@ -138,7 +138,7 @@ func loadCache() {
 		}
 		cache.err = yaml.Unmarshal(b, &cache.cfg)
 		if cache.err != nil {
-			cache.err = fmt.Errorf("cannot parse %q: %w", cfgFile, cache.err)
+			cache.err = fmt.Errorf("cannot parse %#q: %w", cfgFile, cache.err)
 			return
 		}
 		var strictCfg Config
@@ -149,7 +149,7 @@ func loadCache() {
 		}
 		cache.cfg, cache.err = fillDefaults(cache.cfg)
 		if cache.err != nil {
-			cache.err = fmt.Errorf("cannot fill default %q: %w", cfgFile, cache.err)
+			cache.err = fmt.Errorf("cannot fill default %#q: %w", cfgFile, cache.err)
 		}
 	})
 }

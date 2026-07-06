@@ -100,12 +100,12 @@ done
 
 @test 'non-existing .lima.yaml returns an error' {
 	url -1 'github:jandubois//missing/'
-	assert_fatal 'file "https://raw.githubusercontent.com/jandubois/jandubois/main/missing/.lima.yaml" not found or inaccessible: status 404'
+	assert_fatal 'file `https://raw.githubusercontent.com/jandubois/jandubois/main/missing/.lima.yaml` not found or inaccessible: status 404'
 }
 
 @test 'hidden files without an extension get a .yaml extension' {
 	url -1 'github:jandubois//test/.hidden'
-	assert_fatal 'file "https://raw.githubusercontent.com/jandubois/jandubois/main/test/.hidden.yaml" not found or inaccessible: status 404'
+	assert_fatal 'file `https://raw.githubusercontent.com/jandubois/jandubois/main/test/.hidden.yaml` not found or inaccessible: status 404'
 }
 
 @test 'files that have an extension do not get a .yaml extension' {
@@ -122,56 +122,56 @@ done
 # Invalid URLs
 @test 'empty github: url returns an error' {
 	url -1 'github:'
-	assert_fatal 'github: URL must contain at least an ORG, got ""'
+	assert_fatal 'github: URL must contain at least an ORG, got ``'
 }
 
 @test 'missing org returns an error' {
 	url -1 'github:/jandubois'
-	assert_fatal 'github: URL must contain at least an ORG, got ""'
+	assert_fatal 'github: URL must contain at least an ORG, got ``'
 }
 
 # github: redirects in github:ORG// repos
 @test 'org redirects can point to different repo and may switch the branch name' {
 	url -0 'github:jandubois//redirect/'
 	# Note that the default branch in jandubois/jandubois is main, but in jandubois/lima it is master
-	assert_debug 'Locator "github:jandubois//redirect/" replaced with "github:jandubois/lima/templates/default"'
-	assert_debug 'Locator "github:jandubois/lima/templates/default" replaced with "https://raw.githubusercontent.com/jandubois/lima/master/templates/default.yaml"'
+	assert_debug 'Locator `github:jandubois//redirect/` replaced with `github:jandubois/lima/templates/default`'
+	assert_debug 'Locator `github:jandubois/lima/templates/default` replaced with `https://raw.githubusercontent.com/jandubois/lima/master/templates/default.yaml`'
 	assert_output 'https://raw.githubusercontent.com/jandubois/lima/master/templates/default.yaml'
 }
 
 @test 'org redirects propagate an explicit branch/tag to the other repo' {
 	url -0 'github:jandubois//redirect/@v1.2.1'
-	assert_debug 'Locator "github:jandubois//redirect/@v1.2.1" replaced with "github:jandubois/lima/templates/default@v1.2.1"'
-	assert_debug 'Locator "github:jandubois/lima/templates/default@v1.2.1" replaced with "https://raw.githubusercontent.com/jandubois/lima/v1.2.1/templates/default.yaml"'
+	assert_debug 'Locator `github:jandubois//redirect/@v1.2.1` replaced with `github:jandubois/lima/templates/default@v1.2.1`'
+	assert_debug 'Locator `github:jandubois/lima/templates/default@v1.2.1` replaced with `https://raw.githubusercontent.com/jandubois/lima/v1.2.1/templates/default.yaml`'
 	assert_output 'https://raw.githubusercontent.com/jandubois/lima/v1.2.1/templates/default.yaml'
 }
 
 @test 'org redirects cannot point to another org' {
 	url -1 'github:jandubois//invalid/org/'
-	assert_fatal 'redirect "github:lima-vm" is not a "github:jandubois" URL…'
+	assert_fatal 'redirect `github:lima-vm` is not a `github:jandubois` URL…'
 }
 
 @test 'org redirects with branch cannot point to another org' {
 	url -1 'github:jandubois//invalid/org/@main'
-	assert_fatal 'redirect "github:lima-vm" is not a "github:jandubois" URL…'
+	assert_fatal 'redirect `github:lima-vm` is not a `github:jandubois` URL…'
 }
 
 @test 'org redirects cannot include a branch or tag' {
 	url -1 'github:jandubois//invalid/tag/'
-	assert_fatal 'redirect "github:jandubois//@v0.0.0" must not include a branch/tag/sha…'
+	assert_fatal 'redirect `github:jandubois//@v0.0.0` must not include a branch/tag/sha…'
 }
 
 @test 'org redirects with tag cannot include a branch or tag' {
 	url -1 'github:jandubois//invalid/tag/@v0.0.0'
-	assert_fatal 'redirect "github:jandubois//@v0.0.0" must not include a branch/tag/sha…'
+	assert_fatal 'redirect `github:jandubois//@v0.0.0` must not include a branch/tag/sha…'
 }
 
 @test 'org redirects must not create circular redirects' {
 	url -1 'github:jandubois//loop/'
-	assert_fatal 'custom locator "github:jandubois//loop/" has a redirect loop'
+	assert_fatal 'custom locator `github:jandubois//loop/` has a redirect loop'
 }
 
 @test 'org redirects with branch must not create circular redirects' {
 	url -1 'github:jandubois//back/@main'
-	assert_fatal 'custom locator "github:jandubois//back/@main" has a redirect loop'
+	assert_fatal 'custom locator `github:jandubois//back/@main` has a redirect loop'
 }

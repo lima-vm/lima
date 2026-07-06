@@ -59,6 +59,7 @@ func Sudoers() (string, error) {
 func (c *Config) passwordLessSudo(ctx context.Context) error {
 	// Flush cached sudo password
 	cmd := exec.CommandContext(ctx, "sudo", "-k")
+	logrus.Infof("Running: %v", cmd.Args)
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 	}
@@ -75,6 +76,7 @@ func (c *Config) passwordLessSudo(ctx context.Context) error {
 			return err
 		}
 		cmd = exec.CommandContext(ctx, "sudo", "--user", user.User, "--group", user.Group, "--non-interactive", "true")
+		logrus.Infof("Running: %v", cmd.Args)
 		if err := cmd.Run(); err != nil {
 			return fmt.Errorf("failed to run %v: %w", cmd.Args, err)
 		}
@@ -100,12 +102,12 @@ func (c *Config) VerifySudoAccess(ctx context.Context, sudoersFile string) error
 		if errors.Is(err, os.ErrNotExist) {
 			err = c.passwordLessSudo(ctx)
 			if err == nil {
-				logrus.Debugf("%q does not exist, but sudo doesn't seem to require a password", sudoersFile)
+				logrus.Debugf("%#q does not exist, but sudo doesn't seem to require a password", sudoersFile)
 				return nil
 			}
-			logrus.Debugf("%q does not exist; passwordLessSudo error: %s", sudoersFile, err)
+			logrus.Debugf("%#q does not exist; passwordLessSudo error: %s", sudoersFile, err)
 		}
-		return fmt.Errorf("can't read %q: %w: (Hint: %s)", sudoersFile, err, hint)
+		return fmt.Errorf("can't read %#q: %w: (Hint: %s)", sudoersFile, err, hint)
 	}
 	sudoers, err := Sudoers()
 	if err != nil {
@@ -113,7 +115,7 @@ func (c *Config) VerifySudoAccess(ctx context.Context, sudoersFile string) error
 	}
 	if string(b) != sudoers {
 		// Happens on upgrading socket_vmnet with Homebrew
-		return fmt.Errorf("sudoers file %q is out of sync and must be regenerated (Hint: %s)", sudoersFile, hint)
+		return fmt.Errorf("sudoers file %#q is out of sync and must be regenerated (Hint: %s)", sudoersFile, hint)
 	}
 	return nil
 }

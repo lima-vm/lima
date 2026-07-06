@@ -107,7 +107,7 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool, guestOS *limat
 	once.Do(func() {
 		limaUser = currentUser
 		if !regexUsername.MatchString(limaUser.Username) {
-			warning := fmt.Sprintf("local username %q is not a valid Linux username (must match %q); using %q instead",
+			warning := fmt.Sprintf("local username %#q is not a valid Linux username (must match %#q); using %#q instead",
 				limaUser.Username, regexUsername.String(), fallbackUser)
 			warnings = append(warnings, warning)
 			limaUser.Username = fallbackUser
@@ -122,7 +122,7 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool, guestOS *limat
 				uid = fallbackUid
 			}
 			if _, err := parseUidGid(limaUser.Uid); err != nil {
-				warning := fmt.Sprintf("local uid %q is not a valid Linux uid (must be integer); using %d uid instead",
+				warning := fmt.Sprintf("local uid %#q is not a valid Linux uid (must be integer); using %d uid instead",
 					limaUser.Uid, uid)
 				warnings = append(warnings, warning)
 				limaUser.Uid = formatUidGid(uid)
@@ -136,7 +136,7 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool, guestOS *limat
 				gid = fallbackGid
 			}
 			if _, err := parseUidGid(limaUser.Gid); err != nil {
-				warning := fmt.Sprintf("local gid %q is not a valid Linux gid (must be integer); using %d gid instead",
+				warning := fmt.Sprintf("local gid %#q is not a valid Linux gid (must be integer); using %d gid instead",
 					limaUser.Gid, gid)
 				warnings = append(warnings, warning)
 				limaUser.Gid = formatUidGid(gid)
@@ -163,7 +163,7 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool, guestOS *limat
 	if versionutil.GreaterEqual(limaVersion, "1.0.0") {
 		if u.Username == "admin" {
 			if warn {
-				logrus.Warnf("local username %q is reserved; using %q instead", u.Username, fallbackUser)
+				logrus.Warnf("local username %#q is reserved; using %#q instead", u.Username, fallbackUser)
 			}
 			u.Username = fallbackUser
 		}

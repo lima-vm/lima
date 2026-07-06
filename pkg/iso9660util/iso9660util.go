@@ -109,3 +109,24 @@ func IsISO9660(imagePath string) (bool, error) {
 	_, err = iso9660.Read(backendFile, fileInfo.Size(), 0, 0)
 	return err == nil, nil
 }
+
+func Label(imagePath string) (string, error) {
+	imageFile, err := os.Open(imagePath)
+	if err != nil {
+		return "", err
+	}
+	defer imageFile.Close()
+	backendFile := file.New(imageFile, true)
+
+	fileInfo, err := imageFile.Stat()
+	if err != nil {
+		return "", err
+	}
+
+	f, err := iso9660.Read(backendFile, fileInfo.Size(), 0, 0)
+	if err != nil {
+		return "", err
+	}
+
+	return f.Label(), nil
+}

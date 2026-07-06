@@ -51,7 +51,7 @@ if [ -f /sbin/openrc-run ]; then
 			description="Forward ports to the lima-hostagent"
 
 			command=${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/bin/lima-guestagent
-			command_args="daemon --debug=${LIMA_CIDATA_DEBUG} --vsock-port \"${LIMA_CIDATA_VSOCK_PORT}\" --virtio-port \"${LIMA_CIDATA_VIRTIO_PORT}\""
+			command_args="daemon --debug=${LIMA_CIDATA_DEBUG} --vsock-port \"${LIMA_CIDATA_VSOCK_PORT}\" --virtio-port \"${LIMA_CIDATA_VIRTIO_PORT}\" --socket-owner \"${LIMA_CIDATA_UID}\""
 			command_background=true
 			pidfile="/run/lima-guestagent.pid"
 		EOF
@@ -79,6 +79,6 @@ else
 	elif [ "${LIMA_CIDATA_VIRTIO_PORT}" != "" ]; then
 		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --guestagent-updated="${guestagent_updated}" --virtio-port "${LIMA_CIDATA_VIRTIO_PORT}"
 	else
-		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --guestagent-updated="${guestagent_updated}"
+		sudo "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/lima-guestagent install-systemd --debug="${LIMA_CIDATA_DEBUG}" --guestagent-updated="${guestagent_updated}" --socket-owner "${LIMA_CIDATA_UID}"
 	fi
 fi

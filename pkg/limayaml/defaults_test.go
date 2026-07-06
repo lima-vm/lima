@@ -99,7 +99,8 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS: ptr.Of(false),
 		},
 		Audio: limatype.Audio{
-			Device: ptr.Of(""),
+			Device:    ptr.Of(""),
+			Interface: ptr.Of(""),
 		},
 		Video: limatype.Video{
 			Display: ptr.Of("none"),
@@ -121,6 +122,7 @@ func TestFillDefault(t *testing.T) {
 			Shell:   ptr.Of("/bin/bash"),
 			UID:     ptr.Of(uint32(uid)),
 		},
+		TPM: ptr.Of(false),
 	}
 
 	defaultPortForward := limatype.PortForward{
@@ -297,6 +299,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.NestedVirtualization = ptr.Of(false)
+	expect.TPM = ptr.Of(false)
 
 	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -342,7 +345,8 @@ func TestFillDefault(t *testing.T) {
 			// Remove driver-specific firmware images from defaults
 		},
 		Audio: limatype.Audio{
-			Device: ptr.Of("coreaudio"),
+			Device:    ptr.Of("coreaudio"),
+			Interface: ptr.Of("virtio"),
 		},
 		Video: limatype.Video{
 			Display: ptr.Of("cocoa"),
@@ -424,6 +428,7 @@ func TestFillDefault(t *testing.T) {
 				"minimumVersion": "9.1.0",
 			},
 		},
+		TPM: ptr.Of(true),
 	}
 
 	expect = d
@@ -460,6 +465,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Plain = ptr.Of(false)
+	expect.TPM = ptr.Of(true)
 
 	y = limatype.LimaYAML{}
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
@@ -552,7 +558,8 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS: ptr.Of(true),
 		},
 		Audio: limatype.Audio{
-			Device: ptr.Of("coreaudio"),
+			Device:    ptr.Of("coreaudio"),
+			Interface: ptr.Of("hda"),
 		},
 		Video: limatype.Video{
 			Display: ptr.Of("cocoa"),
@@ -716,6 +723,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 	}
+	expect.TPM = ptr.Of(false)
 
 	FillDefault(t.Context(), &y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -886,4 +894,55 @@ func TestMountTagDuplicateLocation(t *testing.T) {
 	tag1 := MountTag(location, "/home/user")
 	tag2 := MountTag(location, "/mnt/home-writable")
 	assert.Assert(t, tag1 != tag2)
+}
+
+// TestContainerdUserDefaultPerOS verifies that FillDefault only enables
+// containerd.user=true on Linux guests for x86_64 and aarch64. nerdctl is a Linux-only runtime,
+// so non-Linux guests (Darwin, FreeBSD) must default to false regardless
+// of the host architecture. Regression test for issue #5037.
+func TestContainerdUserDefaultPerOS(t *testing.T) {
+	cases := []struct {
+		os   limatype.OS
+		arch limatype.Arch
+		want bool
+	}{
+		{limatype.LINUX, limatype.X8664, true},
+		{limatype.LINUX, limatype.AARCH64, true},
+		{limatype.LINUX, limatype.RISCV64, false},
+		{limatype.LINUX, limatype.ARMV7L, false},
+		{limatype.DARWIN, limatype.AARCH64, false},
+		{limatype.DARWIN, limatype.X8664, false},
+		{limatype.FREEBSD, limatype.X8664, false},
+		{limatype.FREEBSD, limatype.AARCH64, false},
+	}
+	for _, tc := range cases {
+		t.Run(fmt.Sprintf("%s/%s", tc.os, tc.arch), func(t *testing.T) {
+			y := limatype.LimaYAML{
+				OS:   ptr.Of(tc.os),
+				Arch: ptr.Of(tc.arch),
+			}
+			var d, o limatype.LimaYAML
+			FillDefault(t.Context(), &y, &d, &o, "", false)
+			assert.Assert(t, y.Containerd.User != nil, "Containerd.User must be set after FillDefault")
+			assert.Equal(t, *y.Containerd.User, tc.want,
+				"Containerd.User default for OS=%s Arch=%s", tc.os, tc.arch)
+		})
+	}
+}
+
+// TestContainerdUserExplicitOverride verifies FillDefault respects an
+// explicit containerd.user=true value even on non-Linux guests.
+func TestContainerdUserExplicitOverride(t *testing.T) {
+	y := limatype.LimaYAML{
+		OS:   ptr.Of(limatype.DARWIN),
+		Arch: ptr.Of(limatype.AARCH64),
+		Containerd: limatype.Containerd{
+			User: ptr.Of(true),
+		},
+	}
+	var d, o limatype.LimaYAML
+	FillDefault(t.Context(), &y, &d, &o, "", false)
+	assert.Assert(t, y.Containerd.User != nil)
+	assert.Equal(t, *y.Containerd.User, true,
+		"explicit Containerd.User=true must be preserved on non-Linux guests")
 }

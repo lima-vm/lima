@@ -44,7 +44,7 @@ func EvaluateExpressionWithEncoder(expression, content string, encoder yqlib.Enc
 	if expression == "" {
 		return content, nil
 	}
-	logrus.Debugf("Evaluating yq expression: %q", expression)
+	logrus.Debugf("Evaluating yq expression: %#q", expression)
 	memory := logging.NewMemoryBackend(0)
 	backend := logging.AddModuleLevel(memory)
 	logging.SetBackend(backend)

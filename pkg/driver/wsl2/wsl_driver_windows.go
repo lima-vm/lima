@@ -43,6 +43,7 @@ var knownYamlProperties = []string{
 	"PropagateProxyEnv",
 	"Provision",
 	"SSH",
+	"TPM",
 	"VMType",
 }
 
@@ -107,21 +108,39 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		}
 	}
 
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
+
 	if !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
+	}
+
+	if cfg.TPM != nil && *cfg.TPM {
+		return errors.New("field `tpm` is not supported on WSL2 driver")
 	}
 
 	if cfg.VMType != nil {
 		if cfg.Images != nil && cfg.Arch != nil {
 			// TODO: real filetype checks
-			tarFileRegex := regexp.MustCompile(`.*tar\.*`)
+			tarFileRegex := regexp.MustCompile(`\.(tar|tgz|txz|tbz2|tzst|tar\.(gz|xz|bz2|zstd|zst))$`)
+			unsupportedVMImgRegex := regexp.MustCompile(`\.(qcow2|raw|img|iso|ipsw)(\.(gz|xz|bz2|zstd|zst))?$`)
+			squashfsRegex := regexp.MustCompile(`\.squashfs(\.(gz|xz|bz2|zstd|zst))?$`)
 			for i, image := range cfg.Images {
 				if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
 					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *cfg.VMType, i, unknown)
 				}
-				match := tarFileRegex.MatchString(image.Location)
-				if image.Arch == *cfg.Arch && !match {
-					return fmt.Errorf("unsupported image type for vmType: %s, tarball root file system required: %#q", *cfg.VMType, image.Location)
+				if image.Arch == *cfg.Arch {
+					location := image.Location
+					if !tarFileRegex.MatchString(location) {
+						if unsupportedVMImgRegex.MatchString(location) {
+							return fmt.Errorf("unsupported image type for %s: %q. %s only supports importing tar archive root filesystems, not standard VM disk images", *cfg.VMType, location, *cfg.VMType)
+						}
+						if squashfsRegex.MatchString(location) {
+							return fmt.Errorf("unsupported image type for %s: %q. %s does not natively support importing SquashFS images; please convert the image to a tar archive before importing", *cfg.VMType, location, *cfg.VMType)
+						}
+						return fmt.Errorf("unsupported image type for %s: %q. A tar archive root filesystem (.tar, .tar.gz, .tar.xz, etc.) is required", *cfg.VMType, location)
+					}
 				}
 			}
 		}
@@ -224,7 +243,9 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 		// Probably never supportable for WSL2
 		logrus.Warn(".ssh.overVsock is not supported for WSL2 driver")
 	}
-
+	if l.Instance.Config.Audio.Interface != nil {
+		logrus.Warn("`audio.interface` is ignored when using the WSL2 driver")
+	}
 	logrus.Infof("Starting WSL VM")
 	status, err := getWslStatus(ctx, l.Instance.Name)
 	if err != nil {

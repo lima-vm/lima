@@ -5,10 +5,12 @@ package hostagent
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"net"
+	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -28,22 +30,27 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	)
 	var errs []error
 
+	fn := a.waitForRequirement
+	if *a.instConfig.OS == limatype.WINDOWS {
+		fn = a.waitForWinRequirement
+	}
+
 	for i, req := range requirements {
-		logrus.Infof("Waiting for the %s requirement %d of %d: %q", label, i+1, len(requirements), req.description)
+		logrus.Infof("Waiting for the %s requirement %d of %d: %#q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
-			err := a.waitForRequirement(ctx, req)
+			err := fn(ctx, req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
 			}
 			if req.fatal {
 				logrus.Infof("No further %s requirements will be checked", label)
-				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %#q: %s; skipping further checks: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				return errors.Join(errs...)
 			}
 			if j == retries-1 {
-				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %#q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
 			select {
@@ -115,15 +122,15 @@ func prefixExportParam(script string, guestOS *limatype.OS) (string, error) {
 }
 
 func (a *HostAgent) bashAvailable() bool {
-	return *a.instConfig.OS != limatype.FREEBSD
+	return *a.instConfig.OS != limatype.FREEBSD && *a.instConfig.OS != limatype.WINDOWS
 }
 
 func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
 	if r.check != nil {
-		logrus.Debugf("checking requirement %q", r.description)
+		logrus.Debugf("checking requirement %#q", r.description)
 		return r.check(ctx)
 	}
-	logrus.Debugf("executing script %q", r.description)
+	logrus.Debugf("executing script %#q", r.description)
 	script := r.script
 	if a.bashAvailable() {
 		var err error
@@ -153,9 +160,55 @@ func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error
 		}
 	}
 	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
-	logrus.Debugf("stdout=%q, stderr=%q, err=%v", stdout, stderr, err)
+	logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 	if err != nil {
-		return fmt.Errorf("stdout=%q, stderr=%q: %w", stdout, stderr, err)
+		return fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err)
+	}
+	return nil
+}
+
+// This function is copied from sshocker's ExecuteScript, because
+// the function doesn't support Windows commands.
+// TODO: Support Windows on sshocker, and replace this function.
+func (a *HostAgent) waitForWinRequirement(ctx context.Context, r requirement) error {
+	logrus.Debugf("executing script for windows %q", r.description)
+	script := r.script
+	sshConfig := a.sshConfig
+	if r.noMaster || runtime.GOOS == "windows" {
+		// Remove ControlMaster, ControlPath, and ControlPersist options,
+		// because Cygwin-based SSH clients do not support multiplexing when executing commands.
+		// References:
+		//   https://inbox.sourceware.org/cygwin/c98988a5-7e65-4282-b2a1-bb8e350d5fab@acm.org/T/
+		//   https://stackoverflow.com/questions/20959792/is-ssh-controlmaster-with-cygwin-on-windows-actually-possible
+		// By removing these options:
+		//   - Avoids execution failures when the control master is not yet available.
+		//   - Prevents error messages such as:
+		//     > mux_client_request_session: read from master failed: Connection reset by peer
+		//     > ControlSocket ....sock already exists, disabling multiplexing
+		//     > mm_send_fd: sendmsg(2): Connection reset by peer\\r\\nmux_client_request_session: send fds failed\\r\\n
+		sshConfig = &ssh.SSHConfig{
+			ConfigFile:     sshConfig.ConfigFile,
+			Persist:        false,
+			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
+		}
+	}
+	if sshConfig == nil {
+		return errors.New("got nil SSHConfig")
+	}
+	sshBinary := sshConfig.Binary()
+	sshArgs := sshConfig.Args()
+	if a.sshLocalPort != 0 {
+		sshArgs = append(sshArgs, "-p", strconv.Itoa(a.sshLocalPort))
+	}
+	sshArgs = append(sshArgs, a.instSSHAddress, "--", script)
+	sshCmd := exec.CommandContext(ctx, sshBinary, sshArgs...)
+	sshCmd.Stdin = strings.NewReader(script)
+	var stderr bytes.Buffer
+	sshCmd.Stderr = &stderr
+	logrus.Debugf("executing ssh for script :%s %v", sshCmd.Path, sshCmd.Args)
+	out, err := sshCmd.Output()
+	if err != nil {
+		return fmt.Errorf("failed to execute script: stdout=%q, stderr=%q: %w", string(out), stderr.String(), err)
 	}
 	return nil
 }
@@ -241,16 +294,33 @@ A possible workaround is to run "apt-get install sshfs" in the guest.
 `,
 		})
 		req = append(req, requirement{
-			description: "fuse to \"allow_other\" as user",
-			script: `#!/bin/sh
+			description: "fuse to allow_other as user",
+			script: fmt.Sprintf(`#!/bin/sh
 set -eux
-sudo grep -q ^user_allow_other /etc/fuse*.conf
-`,
-			debugHint: `Append "user_allow_other" to /etc/fuse.conf (/etc/fuse3.conf) in the guest`,
+[ "$(cat /run/lima-fuse-ready 2>/dev/null)" = "%s" ]
+`, a.iid),
+			debugHint: `Waiting for /run/lima-fuse-ready to be created by the boot scripts.`,
 		})
 	} else {
 		req = append(req, startControlMasterReq)
 	}
+	return req
+}
+
+func (a *HostAgent) essentialWinRequirements() []requirement {
+	req := make([]requirement, 0)
+	req = append(req,
+		requirement{
+			description: "ssh",
+			script:      `PowerShell.exe -c "echo 'ssh login succeeds.'"`,
+			debugHint: `Failed to SSH into the guest.
+Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
+If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
+`,
+			noMaster: true,
+		},
+	)
+
 	return req
 }
 
@@ -299,6 +369,11 @@ Also see "/var/log/cloud-init-output.log" in the guest.
 	return req
 }
 
+func (a *HostAgent) optionalWinRequirements() []requirement {
+	req := make([]requirement, 0)
+	return req
+}
+
 func (a *HostAgent) finalRequirements() []requirement {
 	req := make([]requirement, 0)
 	logLocation := "/var/log/cloud-init-output.log in the guest"
@@ -322,6 +397,11 @@ finish before the instance is considered "ready".
 Check "` + logLocation + `" to see where the process is blocked!
 `,
 		})
+	return req
+}
+
+func (a *HostAgent) finalWinRequirements() []requirement {
+	req := make([]requirement, 0)
 	return req
 }
 

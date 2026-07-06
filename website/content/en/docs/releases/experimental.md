@@ -10,13 +10,15 @@ The following features are experimental and subject to change:
 - `vmType: wsl2` and relevant configurations (`mountType: wsl2`)
 - `arch`: `riscv64`, `armv7l`, `s390x`, and `ppc64le`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
-- `audio.device`
+- `audio.device` and `audio.interface`
 - `mountInotify: true`
+- `tpm: true`
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers](../dev/drivers))
 - [`vmType: krunkit`](../config/vmtype/krunkit.md)
 - [`github` URL scheme](../templates/github.md): referencing templates on GitHub with `github:` URLs
 - [macOS guests](../usage/guests/macos.md)
 - [FreeBSD guests](../usage/guests/freebsd.md)
+- [Windows guests](../usage/guests/windows.md)
 
 The following commands are experimental and subject to change:
 

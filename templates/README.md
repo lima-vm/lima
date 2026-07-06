@@ -37,7 +37,7 @@ lima
 - [`almalinux-8`](./almalinux-8.yaml): AlmaLinux 8
 - [`almalinux-9`](./almalinux-9.yaml): AlmaLinux 9
 - [`almalinux-10`](./almalinux-10.yaml), `almalinux`: AlmaLinux 10
-- [`almalinux-kitten-10`](./almalinux-kitten-10.yaml), `almalinux-kitten`: AlmaLinux Kitten 10
+- [`experimental/almalinux-kitten-10`](./experimental/almalinux-kitten-10.yaml), `experimental/almalinux-kitten`: AlmaLinux Kitten 10
 - [`alpine-3.21`](./alpine-3.21.yaml): Alpine Linux 3.21
 - [`alpine-3.22`](./alpine-3.22.yaml): Alpine Linux 3.22
 - [`alpine-3.23`](./alpine-3.23.yaml), `alpine`: ☆Alpine Linux 3.23
@@ -62,12 +62,12 @@ lima
 - [`rocky-10`](./rocky-10.yaml), `rocky`: Rocky Linux 10
 - [`ubuntu-20.04`](./ubuntu-20.04.yaml): Ubuntu 20.04 LTS (Focal Fossa)
 - [`ubuntu-22.04`](./ubuntu-22.04.yaml): Ubuntu 22.04 LTS (Jammy Jellyfish)
-- [`ubuntu-24.04`](./ubuntu-24.04.yaml), `ubuntu-lts`: Ubuntu 24.04 LTS (Noble Numbat)
+- [`ubuntu-24.04`](./ubuntu-24.04.yaml): Ubuntu 24.04 LTS (Noble Numbat)
 - [`ubuntu-24.10`](./ubuntu-24.10.yaml): Ubuntu 24.10 (Oracular Oriole)
 - [`ubuntu-25.04`](./ubuntu-25.04.yaml): Ubuntu 25.04 (Plucky Puffin)
-- [`ubuntu-25.10`](./ubuntu-25.10.yaml), `ubuntu`: Ubuntu 25.10 (Questing Quokka)
+- [`ubuntu-25.10`](./ubuntu-25.10.yaml): Ubuntu 25.10 (Questing Quokka)
+- [`ubuntu-26.04`](./ubuntu-26.04.yaml), `ubuntu`, `ubuntu-lts`: Ubuntu 26.04 (Resolute Raccoon)
   - Same as `default` but comment lines are omitted from the YAML
-- [`ubuntu-26.04`](./ubuntu-26.04.yaml): Ubuntu 26.04 (Resolute Raccoon)
 - [`experimental/ubuntu-next`](./experimental/ubuntu-next.yaml): Ubuntu vNext
 - [`experimental/gentoo`](./experimental/gentoo.yaml): Gentoo
 - [`experimental/opensuse-tumbleweed`](./experimental/opensuse-tumbleweed.yaml): openSUSE Tumbleweed
@@ -82,6 +82,7 @@ NOTE: support for non-Linux OSes is [experimental](https://lima-vm.io/docs/relea
 - [`macos-26`](./macos-26.yaml), `macos`: [macOS](https://lima-vm.io/docs/usage/guests/macos/) 26 (Tahoe)
 - [`freebsd-15`](./freebsd-15.yaml), `freebsd`: [FreeBSD](https://lima-vm.io/docs/usage/guests/freebsd/) 15
 - [`experimental/freebsd-current`](./experimental/freebsd-current.yaml): [FreeBSD](https://lima-vm.io/docs/usage/guests/freebsd/) CURRENT
+- [`windows-2025`](./windows-2025.yaml): [Windows](https://lima-vm.io/docs/usage/guests/windows/) server 2025
 
 ### Alternative package managers
 

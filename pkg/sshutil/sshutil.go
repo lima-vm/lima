@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -82,7 +83,7 @@ func readPublicKey(f string) (PubKey, error) {
 	if err == nil {
 		entry.Content = strings.TrimSpace(string(content))
 	} else {
-		err = fmt.Errorf("failed to read ssh public key %q: %w", f, err)
+		err = fmt.Errorf("failed to read ssh public key %#q: %w", f, err)
 	}
 	return entry, err
 }
@@ -104,7 +105,7 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 			return nil, err
 		}
 		if err := os.MkdirAll(configDir, 0o700); err != nil {
-			return nil, fmt.Errorf("could not create %q directory: %w", configDir, err)
+			return nil, fmt.Errorf("could not create %#q directory: %w", configDir, err)
 		}
 		if err := lockutil.WithDirLock(configDir, func() error {
 			// no passphrase, no user@host comment
@@ -119,7 +120,7 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 				"-C", "lima", "-f", privPath)
 			logrus.Debugf("executing %v", keygenCmd.Args)
 			if out, err := keygenCmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("failed to run %v: %q: %w", keygenCmd.Args, string(out), err)
+				return fmt.Errorf("failed to run %v: %#q: %w", keygenCmd.Args, string(out), err)
 			}
 			return nil
 		}); err != nil {
@@ -147,12 +148,12 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 	}
 	for _, f := range files {
 		if !strings.HasSuffix(f, ".pub") {
-			panic(fmt.Errorf("unexpected ssh public key filename %q", f))
+			panic(fmt.Errorf("unexpected ssh public key filename %#q", f))
 		}
 		entry, err := readPublicKey(f)
 		if err == nil {
 			if !detectValidPublicKey(entry.Content) {
-				logrus.Warnf("public key %q doesn't seem to be in ssh format", entry.Filename)
+				logrus.Warnf("public key %#q doesn't seem to be in ssh format", entry.Filename)
 			} else {
 				res = append(res, entry)
 			}
@@ -216,7 +217,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 		}
 		for _, f := range files {
 			if !strings.HasSuffix(f, ".pub") {
-				panic(fmt.Errorf("unexpected ssh public key filename %q", f))
+				panic(fmt.Errorf("unexpected ssh public key filename %#q", f))
 			}
 			privateKeyPath := strings.TrimSuffix(f, ".pub")
 			_, err = os.Stat(privateKeyPath)
@@ -332,11 +333,47 @@ func IsControlMasterExisting(instDir string) bool {
 	return err == nil
 }
 
+// IsControlMasterRunning reports whether an SSH ControlMaster process is
+// actively listening on the instance's control socket. Unlike
+// IsControlMasterExisting, which only checks that the socket file is present,
+// this dials the socket to verify that a master is alive. A stale socket left
+// behind by an unclean master exit (kill -9, OOM, host crash, or the Cygwin
+// emulation file outliving its process) has no listener and returns false.
+func IsControlMasterRunning(ctx context.Context, instDir string) bool {
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctx, "unix", controlSock)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+// RemoveStaleControlMaster removes the SSH control socket only when no master
+// process is listening on it. It returns true when a stale socket was removed.
+// A live master's socket is never touched (returns false), and a missing socket
+// is treated as a no-op (returns false). This lets callers recover from a wedged
+// session without clobbering a healthy ControlMaster.
+func RemoveStaleControlMaster(ctx context.Context, instDir string) (bool, error) {
+	if IsControlMasterRunning(ctx, instDir) {
+		return false, nil
+	}
+	existed := IsControlMasterExisting(instDir)
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	if err := os.RemoveAll(controlSock); err != nil {
+		return false, err
+	}
+	return existed, nil
+}
+
 // SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
 func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
-		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
+		return nil, fmt.Errorf("socket path %#q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
 	opts, err := CommonOpts(ctx, sshExe, useDotSSH)
 	if err != nil {
@@ -441,7 +478,7 @@ func detectOpenSSHInfo(ctx context.Context, sshExe SSHExe) openSSHInfo {
 	cmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
+		logrus.Warnf("failed to run %v: stderr=%#q", cmd.Args, stderr.String())
 	} else {
 		info = openSSHInfo{
 			Version:         *ParseOpenSSHVersion(stderr.Bytes()),

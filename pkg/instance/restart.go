@@ -26,7 +26,7 @@ func Restart(ctx context.Context, inst *limatype.Instance, showProgress bool) er
 
 	// Network reconciliation will be performed by the process launched by the autostart manager
 	if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
-		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
 	} else if !registered {
 		if err := reconcile.Reconcile(ctx, inst.Name); err != nil {
 			return err
@@ -45,7 +45,7 @@ func RestartForcibly(ctx context.Context, inst *limatype.Instance, showProgress 
 	StopForcibly(inst)
 
 	if registered, err := autostart.IsRegistered(ctx, inst); err != nil && !errors.Is(err, autostart.ErrNotSupported) {
-		return fmt.Errorf("failed to check if the autostart entry for instance %q is registered: %w", inst.Name, err)
+		return fmt.Errorf("failed to check if the autostart entry for instance %#q is registered: %w", inst.Name, err)
 	} else if !registered {
 		if err := reconcile.Reconcile(ctx, inst.Name); err != nil {
 			return err

@@ -8,6 +8,7 @@
 package tools
 
 import (
+	_ "github.com/AkihiroSuda/gosocialcheck/pkg/source/cncf"
 	_ "github.com/containerd/ltag"
 	_ "github.com/golangci/golangci-lint/v2/pkg/exitcodes"
 	_ "github.com/jandubois/nobin/version"

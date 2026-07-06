@@ -296,6 +296,16 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Audio.Device = ptr.Of("")
 	}
 
+	if y.Audio.Interface == nil {
+		y.Audio.Interface = d.Audio.Interface
+	}
+	if o.Audio.Interface != nil {
+		y.Audio.Interface = o.Audio.Interface
+	}
+	if y.Audio.Interface == nil {
+		y.Audio.Interface = ptr.Of("")
+	}
+
 	if y.Video.Display == nil {
 		y.Video.Display = d.Video.Display
 	}
@@ -528,10 +538,17 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Containerd.User = o.Containerd.User
 	}
 	if y.Containerd.User == nil {
-		switch *y.Arch {
-		case limatype.X8664, limatype.AARCH64:
-			y.Containerd.User = ptr.Of(true)
-		default:
+		// nerdctl is a Linux-only container runtime; only default
+		// containerd.user=true when the guest OS is Linux. Otherwise
+		// downloading the nerdctl archive (~250 MiB) is wasted I/O.
+		if *y.OS == limatype.LINUX {
+			switch *y.Arch {
+			case limatype.X8664, limatype.AARCH64:
+				y.Containerd.User = ptr.Of(true)
+			default:
+				y.Containerd.User = ptr.Of(false)
+			}
+		} else {
 			y.Containerd.User = ptr.Of(false)
 		}
 	}
@@ -836,6 +853,21 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if y.Plain == nil {
 		y.Plain = ptr.Of(false)
 	}
+
+	if y.TPM == nil {
+		y.TPM = d.TPM
+	}
+	if o.TPM != nil {
+		y.TPM = o.TPM
+	}
+	if y.TPM == nil {
+		y.TPM = ptr.Of(false)
+	}
+	osOpts := make(limatype.OsOpts)
+	maps.Copy(osOpts, d.OsOpts)
+	maps.Copy(osOpts, y.OsOpts)
+	maps.Copy(osOpts, o.OsOpts)
+	y.OsOpts = osOpts
 
 	fixUpForPlainMode(y)
 }

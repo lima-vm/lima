@@ -187,7 +187,7 @@ containerd:
   # 🟢 Builtin default: false
   system: null
   # Enable user-scoped (aka rootless) containerd and its dependencies
-  # 🟢 Builtin default: true (for x86_64 and aarch64)
+  # 🟢 Builtin default: true for Linux x86_64 and aarch64 guests, false otherwise
   user: null
 #  # Override containerd archive
 #  # 🟢 Builtin default: hard-coded URL with hard-coded digest (see the output of `limactl info | jq .defaultTemplate.containerd.archives`)
@@ -403,6 +403,15 @@ vmOpts:
 # 🟢 Builtin default: "Linux"
 os: null
 
+# EXPERIMENTAL
+# osOpts configures guest OS specific settings.
+# Currently Windows guest only uses this option.
+# osOpts:
+#   Windows:
+#     virtioWin:
+#     - location: /
+#       arch: "x86_64"
+
 # DEPRECATED: Use vmOpts.qemu.cpuType instead. See the vmOpts.qemu.cpuType section above for configuration.
 cpuType:
 
@@ -439,6 +448,10 @@ audio:
   # that is still visible in the guest but not connected to the host.
   # 🟢 Builtin default: ""
   device: null
+  # The virtual hardware presentation for QEMU driver. Options are "hda" (legacy) or "virtio" (paravirtualized, requires QEMU >= 8.2).
+  # VZ driver always uses virtio-sound regardless of this setting.
+  # 🟢 Builtin default: "" (resolves to "hda" when audio.device is set)
+  interface: null
 
 video:
   # QEMU display, e.g., "none", "cocoa", "sdl", "gtk", "vnc", "default".
@@ -630,6 +643,13 @@ plain: null
 # - Only supported on Apple M3 or later with `vmType: vz` or `vmType: krunkit`.
 # 🟢 Builtin default: false
 nestedVirtualization: null
+
+# EXPERIMENTAL
+# When enabled, an emulated TPM 2.0 device is provided to the guest via swtpm.
+# Requires swtpm to be installed on the host. Only supported with vmType: qemu.
+# Currently not supported on Windows hosts as swtpm doesn't support Windows.
+# 🟢 Builtin default: false
+tpm: null
 
 # ===================================================================== #
 # GLOBAL DEFAULTS AND OVERRIDES

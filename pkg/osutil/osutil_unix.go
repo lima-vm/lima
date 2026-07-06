@@ -32,7 +32,7 @@ func Sysctl(ctx context.Context, name string) (string, error) {
 	cmd.Stderr = &stderrBuf
 	stdout, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("failed to run %v: %w (stdout=%q, stderr=%q)", cmd.Args, err,
+		return "", fmt.Errorf("failed to run %v: %w (stdout=%#q, stderr=%#q)", cmd.Args, err,
 			string(stdout), stderrBuf.String())
 	}
 	return strings.TrimSuffix(string(stdout), "\n"), nil

@@ -36,7 +36,7 @@ func GetInstanceVMID(ctx context.Context, instanceName string) (string, error) {
 	}
 
 	if vmID == "" {
-		return "", fmt.Errorf("failed to find VM ID for instance %q", instanceName)
+		return "", fmt.Errorf("failed to find VM ID for instance %#q", instanceName)
 	}
 
 	return vmID, nil

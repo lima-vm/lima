@@ -51,6 +51,13 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 
 	switch *y.OS {
 	case limatype.LINUX, limatype.DARWIN, limatype.FREEBSD:
+	case limatype.WINDOWS:
+		if *y.VMType != limatype.QEMU {
+			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on %#q; got %#q", limatype.QEMU, *y.VMType))
+		}
+		if !slices.Contains([]limatype.Arch{limatype.X8664}, *y.Arch) {
+			errs = errors.Join(errs, fmt.Errorf("currently Windows guest is only supported on [%#q]; got %#q", limatype.X8664, *y.Arch))
+		}
 	default:
 		errs = errors.Join(errs, fmt.Errorf("field `os` must be one of %#q; got %#q", limatype.OSTypes, *y.OS))
 	}
@@ -135,7 +142,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 		// There is no tilde-expansion for guest filenames
 		if strings.HasPrefix(*f.MountPoint, "~") {
-			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must not start with \"~\"", i))
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must not start with `~`", i))
 		}
 
 		if _, err := units.RAMInBytes(*f.NineP.Msize); err != nil {
@@ -416,6 +423,20 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 		}
 	}
+	if y.TPM != nil && *y.TPM {
+		switch *y.Arch {
+		case limatype.X8664, limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
+			// supported
+		default:
+			errs = errors.Join(errs, fmt.Errorf("field `tpm` is not supported on architecture %#q", *y.Arch))
+		}
+	}
+
+	if y.Audio.Interface != nil {
+		if *y.Audio.Interface != "" && *y.Audio.Interface != "hda" && *y.Audio.Interface != "virtio" {
+			return fmt.Errorf("invalid audio.interface %q, must be \"hda\" or \"virtio\"", *y.Audio.Interface)
+		}
+	}
 
 	return errs
 }
@@ -568,6 +589,9 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 				break
 			}
 		}
+		if key == "internal_netplanOptional" { // consumed by the cidata network-config template
+			keyIsUsed = true
+		}
 		if !keyIsUsed {
 			return fmt.Errorf("field `param` key %#q is not used in any provision, probe, copyToHost, or portForward", key)
 		}
@@ -590,6 +614,9 @@ func validatePort(field string, port int) error {
 }
 
 func warnExperimental(y *limatype.LimaYAML) {
+	if *y.OS == limatype.WINDOWS {
+		logrus.Warnf("`os: %s` is experimental", limatype.WINDOWS)
+	}
 	if *y.MountType == limatype.VIRTIOFS && runtime.GOOS == "linux" {
 		logrus.Warn("`mountType: virtiofs` on Linux is experimental")
 	}
@@ -602,6 +629,9 @@ func warnExperimental(y *limatype.LimaYAML) {
 	}
 	if y.Audio.Device != nil && *y.Audio.Device != "" {
 		logrus.Warn("`audio.device` is experimental")
+		if y.Audio.Interface != nil && *y.Audio.Interface != "" {
+			logrus.Warn("`audio.interface` is experimental")
+		}
 	}
 	if y.MountInotify != nil && *y.MountInotify {
 		logrus.Warn("`mountInotify` is experimental")

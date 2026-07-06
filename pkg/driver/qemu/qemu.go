@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -73,6 +72,8 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 			// was removed in https://github.com/lima-vm/lima/pull/3491
 			h, s = "7.0.0", "8.2.1"
 		}
+	case "windows":
+		h, s = "11.0.0", "11.0.0"
 	default:
 		// hardMin: Untested and maybe does not even work.
 		// softMin: Ubuntu 22.04's QEMU. The oldest version that can be easily tested on GitHub Actions.
@@ -374,6 +375,7 @@ func adjustMemBytesDarwinARM64HVF(memBytes int64, accel string) int64 {
 		return memBytes
 	}
 	macOSProductVersion, err := osutil.ProductVersion()
+	//nolint:staticcheck,nolintlint // SA4023: always true on Linux, but valid on macOS
 	if err != nil {
 		logrus.Warn(err)
 		return memBytes
@@ -563,14 +565,6 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			// This will disable CPU S3/S4 state.
 			args = append(args, "-global", "ICH9-LPC.disable_s3=1")
 			args = append(args, "-global", "ICH9-LPC.disable_s4=1")
-		case "whpx":
-			if version.LessThan(*semver.New("11.0.0")) {
-				// Older versions of QEMU required disabling `kernel-irqchip` explicitly.
-				// It is not recommended to keep using this with QEMU 11.0.0 and newer.
-				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel+",kernel-irqchip=off")
-			} else {
-				args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
-			}
 		default:
 			args = appendArgsIfNoConflict(args, "-machine", "q35,accel="+accel)
 		}
@@ -609,45 +603,26 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	noFirmware := *y.Arch == limatype.PPC64LE || *y.Arch == limatype.S390X || legacyBIOS
 	if !noFirmware {
 		var firmware string
-		firmwareInBios := runtime.GOOS == "windows" && version.LessThan(*semver.New("11.0.0"))
-		if envVar := os.Getenv("_LIMA_QEMU_UEFI_IN_BIOS"); envVar != "" {
-			logrus.Warn("use of deprecated _LIMA_QEMU_UEFI_IN_BIOS")
-			b, err := strconv.ParseBool(envVar)
-			if err != nil {
-				logrus.WithError(err).Warnf("invalid _LIMA_QEMU_UEFI_IN_BIOS value %#q", envVar)
-			} else {
-				firmwareInBios = b
-			}
-		}
-		firmwareInBios = firmwareInBios && *y.Arch == limatype.X8664
 		downloadedFirmware := filepath.Join(cfg.InstanceDir, filenames.QemuEfiCodeFD)
-		firmwareWithVars := filepath.Join(cfg.InstanceDir, filenames.QemuEfiFullFD)
-		if firmwareInBios {
-			if _, stErr := os.Stat(firmwareWithVars); stErr == nil {
-				firmware = firmwareWithVars
-				logrus.Infof("Using existing firmware (%#q)", firmware)
-			}
-		} else {
-			if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
-			loop:
-				for _, f := range y.Firmware.Images {
-					switch f.VMType {
-					case "", limatype.QEMU:
-						if f.Arch == *y.Arch {
-							if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
-								logrus.WithError(err).Warnf("failed to download %#q", f.Location)
-								continue loop
-							}
-							firmware = downloadedFirmware
-							logrus.Infof("Using firmware %#q (downloaded from %#q)", firmware, f.Location)
-							break loop
+		if _, stErr := os.Stat(downloadedFirmware); errors.Is(stErr, os.ErrNotExist) {
+		loop:
+			for _, f := range y.Firmware.Images {
+				switch f.VMType {
+				case "", limatype.QEMU:
+					if f.Arch == *y.Arch {
+						if _, err = fileutils.DownloadFile(ctx, downloadedFirmware, f.File, true, "UEFI code "+f.Location, *y.Arch); err != nil {
+							logrus.WithError(err).Warnf("failed to download %#q", f.Location)
+							continue loop
 						}
+						firmware = downloadedFirmware
+						logrus.Infof("Using firmware %#q (downloaded from %#q)", firmware, f.Location)
+						break loop
 					}
 				}
-			} else {
-				firmware = downloadedFirmware
-				logrus.Infof("Using existing firmware (%#q)", firmware)
 			}
+		} else {
+			firmware = downloadedFirmware
+			logrus.Infof("Using existing firmware (%#q)", firmware)
 		}
 		if firmware == "" {
 			firmware, err = getFirmware(exe, *y.Arch)
@@ -655,45 +630,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				return "", nil, err
 			}
 			logrus.Infof("Using system firmware (%#q)", firmware)
-			if firmwareInBios {
-				firmwareVars, err := getFirmwareVars(exe, *y.Arch)
-				if err != nil {
-					return "", nil, err
-				}
-				logrus.Infof("Using system firmware vars (%#q)", firmwareVars)
-				varsFile, err := os.Open(firmwareVars)
-				if err != nil {
-					return "", nil, err
-				}
-				defer varsFile.Close()
-				codeFile, err := os.Open(firmware)
-				if err != nil {
-					return "", nil, err
-				}
-				defer codeFile.Close()
-				resultFile, err := os.OpenFile(firmwareWithVars, os.O_CREATE|os.O_WRONLY, 0o644)
-				if err != nil {
-					return "", nil, err
-				}
-				defer resultFile.Close()
-				_, err = io.Copy(resultFile, varsFile)
-				if err != nil {
-					return "", nil, err
-				}
-				_, err = io.Copy(resultFile, codeFile)
-				if err != nil {
-					return "", nil, err
-				}
-				firmware = firmwareWithVars
-			}
 		}
 		if firmware != "" {
-			if firmwareInBios {
-				logrus.Warn("firmware in `-bios` is deprecated, consider upgrading to QEMU supporting `-drive if=pflash`")
-				args = append(args, "-bios", firmware)
-			} else {
-				args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
-			}
+			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
 		}
 	}
 
@@ -740,15 +679,34 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	} else {
 		args = appendArgsIfNoConflict(args, "-boot", "order=c,splash-time=0,menu=on")
 	}
+
+	var winOpts limatype.WindowsOpts
+	if err := limayaml.Convert(y.OsOpts[limatype.WINDOWS], &winOpts, "osOpts.Windows"); err != nil {
+		return "", nil, err
+	}
+
+	// virtio-win must be mounted before cidata.iso otherwise
+	// autounattend.xml can't find virtio drivers.
+	if *y.OS == limatype.WINDOWS && len(winOpts.VirtioWin) > 0 {
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
+	}
+
 	for _, extraDisk := range extraDisks {
 		args = append(args, "-drive", fmt.Sprintf("file=%s,if=virtio,discard=on", extraDisk))
 	}
 
 	// cloud-init
-	args = append(args,
-		"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
-		"-device", "virtio-scsi,id=scsi0",
-		"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	switch *y.OS {
+	case limatype.WINDOWS:
+		// We can't use virtio-scsi for Windows's cidata, because autounattend in cidata installs virtio-win drivers.
+		// Until then, the VM can't detect virtio.
+		args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.CIDataISO)))
+	default:
+		args = append(args,
+			"-drive", "id=cdrom0,if=none,format=raw,readonly=on,file="+filepath.Join(cfg.InstanceDir, filenames.CIDataISO),
+			"-device", "virtio-scsi,id=scsi0",
+			"-device", "scsi-cd,bus=scsi0.0,drive=cdrom0")
+	}
 
 	// Kernel
 	kernel := filepath.Join(cfg.InstanceDir, filenames.Kernel)
@@ -762,6 +720,24 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	if _, err := os.Stat(initrd); err == nil {
 		args = appendArgsIfNoConflict(args, "-initrd", initrd)
+	}
+
+	// TPM emulation.
+	if *y.TPM {
+		swtpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=chrtpm,path=%s", swtpmSock))
+		args = append(args, "-tpmdev", "emulator,id=tpm0,chardev=chrtpm")
+
+		var tpmDevice string
+		switch *y.Arch {
+		case limatype.X8664:
+			tpmDevice = "tpm-crb"
+		case limatype.AARCH64, limatype.ARMV7L, limatype.RISCV64:
+			tpmDevice = "tpm-tis-device"
+		default:
+			return "", nil, fmt.Errorf("TPM is not supported for architecture %#q", *y.Arch)
+		}
+		args = append(args, "-device", tpmDevice+",tpmdev=tpm0")
 	}
 
 	// Network
@@ -816,9 +792,17 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				if err != nil {
 					return "", nil, err
 				}
-				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
-				// TODO: should we also validate that the socket exists, or do we rely on the
-				// networks reconciler to throw an error when the network cannot start?
+				if strings.Contains(string(features.NetdevHelp), "stream") {
+					netdev := fmt.Sprintf("stream,id=net%d,server=off,addr.type=unix,addr.path=%s", i+1, sock)
+					if !version.LessThan(*semver.New("9.2.0")) {
+						netdev += ",reconnect-ms=500"
+					} else if !version.LessThan(*semver.New("8.0.0")) {
+						netdev += ",reconnect=1"
+					}
+					args = append(args, "-netdev", netdev)
+				} else {
+					args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
+				}
 			}
 		} else if nw.Socket != "" {
 			args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, nw.Socket))
@@ -835,19 +819,39 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	input := "mouse"
 
 	// Sound
-	if *y.Audio.Device != "" {
-		id := "default"
-		// audio device
-		audiodev := *y.Audio.Device
-		if audiodev == "default" {
-			audiodev = audioDevice()
+	if y.Audio.Device != nil && y.Audio.Interface != nil {
+		audioDev := *y.Audio.Device
+		audioInterface := *y.Audio.Interface
+
+		if audioDev == "" || audioDev == "none" {
+			args = append(args, "-audiodev", "none,id=snd0")
+		} else {
+			if audioDev == "default" {
+				audioDev = audioDevice()
+			}
+			args = append(args, "-audiodev", fmt.Sprintf("%s,id=snd0", audioDev))
+			if audioInterface == "" {
+				audioInterface = "hda"
+			}
+			switch audioInterface {
+			case "virtio":
+				minVirtioVersion := semver.New("8.2.0")
+				if version.LessThan(*minVirtioVersion) {
+					logrus.Warnf("virtio-sound requires QEMU 8.2.0 or newer. Falling back to intel-hda.")
+					// We append the HDA hardware directly here instead of mutating the variable
+					args = append(args, "-device", "ich9-intel-hda", "-device", "hda-output,audiodev=snd0")
+				} else {
+					args = append(args, "-device", "virtio-sound-pci,audiodev=snd0")
+				}
+			case "hda":
+				args = append(args,
+					"-device", "ich9-intel-hda",
+					"-device", "hda-output,audiodev=snd0",
+				)
+			default:
+				return "", nil, fmt.Errorf("unknown audio.interface %q", audioInterface)
+			}
 		}
-		audiodev += fmt.Sprintf(",id=%s", id)
-		args = append(args, "-audiodev", audiodev)
-		// audio controller
-		args = append(args, "-device", "ich9-intel-hda")
-		// audio codec
-		args = append(args, "-device", fmt.Sprintf("hda-output,audiodev=%s", id))
 	}
 	// Graphics
 	if *y.Video.Display != "" {
@@ -915,23 +919,26 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// Serial (virtio)
-	serialvSock := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioSock)
-	if err := os.RemoveAll(serialvSock); err != nil {
-		return "", nil, err
+	// Skip it for Windows guest because we encountered a problem around vioser.sys.
+	if *y.OS != limatype.WINDOWS {
+		serialvSock := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioSock)
+		if err := os.RemoveAll(serialvSock); err != nil {
+			return "", nil, err
+		}
+		serialvLog := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioLog)
+		if err := os.RemoveAll(serialvLog); err != nil {
+			return "", nil, err
+		}
+		const serialvChardev = "char-serial-virtio"
+		args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
+		// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
+		serialvMaxPorts := 1
+		if *y.Arch == limatype.S390X {
+			serialvMaxPorts++ // needed to avoid `virtio-serial-bus: Out-of-range port id specified, max. allowed: 0`
+		}
+		args = append(args, "-device", fmt.Sprintf("virtio-serial-pci,id=virtio-serial0,max_ports=%d", serialvMaxPorts))
+		args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 	}
-	serialvLog := filepath.Join(cfg.InstanceDir, filenames.SerialVirtioLog)
-	if err := os.RemoveAll(serialvLog); err != nil {
-		return "", nil, err
-	}
-	const serialvChardev = "char-serial-virtio"
-	args = append(args, "-chardev", fmt.Sprintf("socket,id=%s,path=%s,server=on,wait=off,logfile=%s", serialvChardev, serialvSock, serialvLog))
-	// max_ports=1 is required for https://github.com/lima-vm/lima/issues/1689 https://github.com/lima-vm/lima/issues/1691
-	serialvMaxPorts := 1
-	if *y.Arch == limatype.S390X {
-		serialvMaxPorts++ // needed to avoid `virtio-serial-bus: Out-of-range port id specified, max. allowed: 0`
-	}
-	args = append(args, "-device", fmt.Sprintf("virtio-serial-pci,id=virtio-serial0,max_ports=%d", serialvMaxPorts))
-	args = append(args, "-device", fmt.Sprintf("virtconsole,chardev=%s,id=console0", serialvChardev))
 
 	// We also want to enable vsock here, but QEMU does not support vsock for macOS hosts
 
@@ -1121,11 +1128,19 @@ func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 	return exe, args, nil
 }
 
+var hvSupport = sync.OnceValues(func() (string, error) {
+	return osutil.Sysctl(context.TODO(), "kern.hv_support")
+})
+
 func Accel(arch limatype.Arch) string {
 	if limatype.IsNativeArch(arch) {
 		switch runtime.GOOS {
 		case "darwin":
-			// TODO: return "tcg" if HVF is not available
+			s, err := hvSupport()
+			if err != nil || s != "1" {
+				logrus.WithError(err).Warn("Hypervisor API (kern.hv_support) is not available. Disabling HVF. Expect very poor performance.")
+				return "tcg"
+			}
 			return "hvf"
 		case "linux":
 			if _, err := os.Stat("/dev/kvm"); err != nil {
@@ -1142,6 +1157,45 @@ func Accel(arch limatype.Arch) string {
 		}
 	}
 	return "tcg"
+}
+
+func findSwtpm() (string, error) {
+	exe, err := exec.LookPath("swtpm")
+	if err != nil {
+		return "", fmt.Errorf("swtpm not found in PATH: %w (hint: install swtpm)", err)
+	}
+	return exe, nil
+}
+
+func SwtpmCmdline(cfg Config) (exe string, args []string, err error) {
+	if runtime.GOOS == "windows" {
+		return "", nil, errors.New("swtpm is not supported on Windows host")
+	}
+
+	swtpmExe, err := findSwtpm()
+	if err != nil {
+		return "", nil, err
+	}
+
+	stateDir := filepath.Join(cfg.InstanceDir, filenames.SwtpmDir)
+	if err := os.MkdirAll(stateDir, 0o700); err != nil {
+		return "", nil, fmt.Errorf("failed to create swtpm state directory: %w", err)
+	}
+
+	swtpmSock := filepath.Join(cfg.InstanceDir, filenames.SwtpmSock)
+	_ = os.Remove(swtpmSock)
+	_ = os.Remove(filepath.Join(stateDir, ".lock"))
+
+	args = []string{
+		"socket",
+		"--tpmstate", "dir=" + stateDir,
+		"--ctrl", "type=unixio,path=" + swtpmSock,
+		"--tpm2",
+		"--terminate",
+		"--log", "level=1",
+	}
+
+	return swtpmExe, args, nil
 }
 
 func parseQemuVersion(output string) (*semver.Version, error) {
@@ -1242,43 +1296,6 @@ func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 	}
 	qemuArch := strings.TrimPrefix(filepath.Base(qemuExe), "qemu-system-")
 	return "", fmt.Errorf("could not find firmware for %#q (hint: try copying the `edk-%s-code.fd` firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
-}
-
-func getFirmwareVars(qemuExe string, arch limatype.Arch) (string, error) {
-	var targetArch string
-	switch arch {
-	case limatype.X8664:
-		targetArch = "i386" // vars are unified between i386 and x86_64 and normally only former is bundled
-	default:
-		return "", fmt.Errorf("unexpected architecture: %#q", arch)
-	}
-
-	homeDir, err := os.UserHomeDir()
-	if err != nil {
-		return "", err
-	}
-
-	binDir := filepath.Dir(qemuExe)                  // "/usr/local/bin"
-	localDir := filepath.Dir(binDir)                 // "/usr/local"
-	userLocalDir := filepath.Join(homeDir, ".local") // "$HOME/.local"
-
-	relativePath := fmt.Sprintf("share/qemu/edk2-%s-vars.fd", qemuEdk2Arch(targetArch))
-	relativePathWin := fmt.Sprintf("share/edk2-%s-vars.fd", qemuEdk2Arch(targetArch))
-	candidates := []string{
-		filepath.Join(userLocalDir, relativePath), // XDG-like
-		filepath.Join(localDir, relativePath),     // macOS (homebrew)
-		filepath.Join(binDir, relativePathWin),    // Windows installer
-	}
-
-	logrus.Debugf("firmware vars candidates = %v", candidates)
-
-	for _, f := range candidates {
-		if _, err := os.Stat(f); err == nil {
-			return f, nil
-		}
-	}
-
-	return "", fmt.Errorf("could not find firmware vars for %#q", arch)
 }
 
 var hasSMEDarwin = sync.OnceValue(func() bool {

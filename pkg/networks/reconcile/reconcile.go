@@ -48,7 +48,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 				continue
 			}
 			if _, ok := cfg.Networks[nw.Lima]; !ok {
-				logrus.Errorf("network %q (used by instance %q) is missing from networks.yaml", nw.Lima, instName)
+				logrus.Errorf("network %#q (used by instance %#q) is missing from networks.yaml", nw.Lima, instName)
 				continue
 			}
 			activeNetwork[nw.Lima] = true
@@ -75,9 +75,9 @@ func sudo(ctx context.Context, user, group, command string) error {
 	cmd := exec.CommandContext(ctx, "sudo", args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
-	logrus.Debugf("Running: %v", cmd.Args)
+	logrus.Infof("Running: %v", cmd.Args)
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
+		return fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w",
 			cmd.Args, stdout.String(), stderr.String(), err)
 	}
 	return nil
@@ -99,14 +99,14 @@ func makeVarRun(ctx context.Context, cfg *networks.Config) error {
 	stat, ok := osutil.SysStat(fi)
 	if !ok {
 		// should never happen
-		return fmt.Errorf("could not retrieve stat buffer for %q", cfg.Paths.VarRun)
+		return fmt.Errorf("could not retrieve stat buffer for %#q", cfg.Paths.VarRun)
 	}
 	daemon, err := osutil.LookupUser("daemon")
 	if err != nil {
 		return err
 	}
 	if fi.Mode()&0o20 == 0 || stat.Gid != daemon.Gid {
-		return fmt.Errorf("%q doesn't seem to be writable by the daemon (gid:%d) group",
+		return fmt.Errorf("%#q doesn't seem to be writable by the daemon (gid:%d) group",
 			cfg.Paths.VarRun, daemon.Gid)
 	}
 	return nil
@@ -153,9 +153,9 @@ func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string)
 		return err
 	}
 
-	logrus.Debugf("Starting %q daemon for %q network: %v", daemon, name, cmd.Args)
+	logrus.Infof("Starting %#q daemon for %#q network: %v", daemon, name, cmd.Args)
 	if err := cmd.Start(); err != nil {
-		return fmt.Errorf("failed to run %v: %w (Hint: check %q, %q)", cmd.Args, err, stdoutPath, stderrPath)
+		return fmt.Errorf("failed to run %v: %w (Hint: check %#q, %#q)", cmd.Args, err, stdoutPath, stderrPath)
 	}
 	return nil
 }
@@ -177,7 +177,7 @@ func validateConfig(ctx context.Context, cfg *networks.Config) error {
 }
 
 func startNetwork(ctx context.Context, cfg *networks.Config, name string) error {
-	logrus.Debugf("Make sure %q network is running", name)
+	logrus.Debugf("Make sure %#q network is running", name)
 
 	// Handle usernet first without sudo requirements
 	isUsernet, err := cfg.Usernet(name)
@@ -186,7 +186,7 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 	}
 	if isUsernet {
 		if err := usernet.Start(ctx, name); err != nil {
-			return fmt.Errorf("failed to start usernet %q: %w", name, err)
+			return fmt.Errorf("failed to start usernet %#q: %w", name, err)
 		}
 		return nil
 	}
@@ -206,12 +206,12 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 	if ok {
 		daemons = append(daemons, networks.SocketVMNet)
 	} else {
-		return fmt.Errorf("daemon %q needs to be installed", networks.SocketVMNet)
+		return fmt.Errorf("daemon %#q needs to be installed", networks.SocketVMNet)
 	}
 	for _, daemon := range daemons {
 		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid == 0 {
-			logrus.Infof("Starting %s daemon for %q network", daemon, name)
+			logrus.Infof("Starting %s daemon for %#q network", daemon, name)
 			if err := startDaemon(ctx, cfg, name, daemon); err != nil {
 				return err
 			}
@@ -221,7 +221,7 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 }
 
 func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
-	logrus.Debugf("Make sure %q network is stopped", name)
+	logrus.Debugf("Make sure %#q network is stopped", name)
 	// Handle usernet first without sudo requirements
 	isUsernet, err := cfg.Usernet(name)
 	if err != nil {
@@ -229,7 +229,7 @@ func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 	}
 	if isUsernet {
 		if err := usernet.Stop(ctx, name); err != nil {
-			return fmt.Errorf("failed to stop usernet %q: %w", name, err)
+			return fmt.Errorf("failed to stop usernet %#q: %w", name, err)
 		}
 		return nil
 	}
@@ -246,7 +246,7 @@ func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 		}
 		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid != 0 {
-			logrus.Infof("Stopping %s daemon for %q network", daemon, name)
+			logrus.Infof("Stopping %s daemon for %#q network", daemon, name)
 			if err := validateConfig(ctx, cfg); err != nil {
 				return err
 			}
@@ -267,7 +267,7 @@ func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 				break
 			}
 			if time.Since(startWaiting) > 5*time.Second {
-				logrus.Infof("%q daemon for %q network still running after 5 seconds", daemon, name)
+				logrus.Infof("%#q daemon for %#q network still running after 5 seconds", daemon, name)
 				break
 			}
 			time.Sleep(500 * time.Millisecond)

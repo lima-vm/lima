@@ -25,7 +25,7 @@ func (c *Config) Check(name string) error {
 	if _, ok := c.Networks[name]; ok {
 		return nil
 	}
-	return fmt.Errorf("network %q is not defined", name)
+	return fmt.Errorf("network %#q is not defined", name)
 }
 
 // Usernet returns true if the mode of given network is ModeUserV2.
@@ -33,7 +33,7 @@ func (c *Config) Usernet(name string) (bool, error) {
 	if nw, ok := c.Networks[name]; ok {
 		return nw.Mode == ModeUserV2, nil
 	}
-	return false, fmt.Errorf("network %q is not defined", name)
+	return false, fmt.Errorf("network %#q is not defined", name)
 }
 
 // DaemonPath returns the daemon path.
@@ -42,7 +42,7 @@ func (c *Config) DaemonPath(daemon string) (string, error) {
 	case SocketVMNet:
 		return c.Paths.SocketVMNet, nil
 	default:
-		return "", fmt.Errorf("unknown daemon type %q", daemon)
+		return "", fmt.Errorf("unknown daemon type %#q", daemon)
 	}
 }
 
@@ -81,14 +81,14 @@ func (c *Config) LogFile(name, daemon, stream string) string {
 func (c *Config) User(daemon string) (osutil.User, error) {
 	if ok, _ := c.IsDaemonInstalled(daemon); !ok {
 		daemonPath, _ := c.DaemonPath(daemon)
-		return osutil.User{}, fmt.Errorf("daemon %q (path=%q) is not available", daemon, daemonPath)
+		return osutil.User{}, fmt.Errorf("daemon %#q (path=%#q) is not available", daemon, daemonPath)
 	}
 	//nolint:gocritic // singleCaseSwitch: should rewrite switch statement to if statement
 	switch daemon {
 	case SocketVMNet:
 		return osutil.LookupUser("root")
 	}
-	return osutil.User{}, fmt.Errorf("daemon %q not defined", daemon)
+	return osutil.User{}, fmt.Errorf("daemon %#q not defined", daemon)
 }
 
 func (c *Config) MkdirCmd() string {
@@ -97,7 +97,7 @@ func (c *Config) MkdirCmd() string {
 
 func (c *Config) StartCmd(name, daemon string) string {
 	if ok, _ := c.IsDaemonInstalled(daemon); !ok {
-		panic(fmt.Errorf("daemon %q is not available", daemon))
+		panic(fmt.Errorf("daemon %#q is not available", daemon))
 	}
 	var cmd string
 	switch daemon {
@@ -117,7 +117,7 @@ func (c *Config) StartCmd(name, daemon string) string {
 		}
 		cmd += " " + c.Sock(name)
 	default:
-		panic(fmt.Errorf("unexpected daemon %q", daemon))
+		panic(fmt.Errorf("unexpected daemon %#q", daemon))
 	}
 	return cmd
 }

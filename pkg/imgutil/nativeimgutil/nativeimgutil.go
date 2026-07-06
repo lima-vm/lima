@@ -54,12 +54,12 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 	defer srcF.Close()
 	srcImg, err := qcow2reader.Open(srcF)
 	if err != nil {
-		return fmt.Errorf("failed to detect the format of %q: %w", source, err)
+		return fmt.Errorf("failed to detect the format of %#q: %w", source, err)
 	}
 	if size != nil && *size < srcImg.Size() {
-		return fmt.Errorf("specified size %d is smaller than the original image size (%d) of %q", *size, srcImg.Size(), source)
+		return fmt.Errorf("specified size %d is smaller than the original image size (%d) of %#q", *size, srcImg.Size(), source)
 	}
-	logrus.Infof("Converting %q (%s) to a %s disk %q", source, srcImg.Type(), destType, dest)
+	logrus.Infof("Converting %#q (%s) to a %s disk %#q", source, srcImg.Type(), destType, dest)
 	switch t := srcImg.Type(); t {
 	case raw.Type:
 		if destType == raw.Type {
@@ -75,19 +75,19 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 				return fmt.Errorf("unexpected qcow2 image %T", srcImg)
 			}
 			if q.BackingFile != "" {
-				return fmt.Errorf("qcow2 image %q has an unexpected backing file: %q", source, q.BackingFile)
+				return fmt.Errorf("qcow2 image %#q has an unexpected backing file: %#q", source, q.BackingFile)
 			}
 		}
 	case asif.Type:
 		if destType == asif.Type {
 			return convertASIFToASIF(source, dest, size)
 		}
-		return fmt.Errorf("conversion from ASIF to %q is not supported", destType)
+		return fmt.Errorf("conversion from ASIF to %#q is not supported", destType)
 	default:
-		logrus.Warnf("image %q has an unexpected format: %q", source, t)
+		logrus.Warnf("image %#q has an unexpected format: %#q", source, t)
 	}
 	if err = srcImg.Readable(); err != nil {
-		return fmt.Errorf("image %q is not readable: %w", source, err)
+		return fmt.Errorf("image %#q is not readable: %w", source, err)
 	}
 
 	// Create a tmp file because source and dest can be same.
@@ -114,7 +114,7 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 		}
 		attachedDevice, destTmpF, err = asifutil.NewAttachedASIF(destTmp, newSize)
 	default:
-		return fmt.Errorf("unsupported target image type: %q", destType)
+		return fmt.Errorf("unsupported target image type: %#q", destType)
 	}
 	if err != nil {
 		return err
@@ -155,7 +155,7 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 	if destType == asif.Type {
 		err := asifutil.DetachASIF(attachedDevice)
 		if err != nil {
-			return fmt.Errorf("failed to detach ASIF image %q: %w", attachedDevice, err)
+			return fmt.Errorf("failed to detach ASIF image %#q: %w", attachedDevice, err)
 		}
 	}
 
@@ -170,10 +170,10 @@ func convertRawToRaw(source, dest string, size *int64) error {
 	if source != dest {
 		// continuity attempts clonefile
 		if err := containerdfs.CopyFile(dest, source); err != nil {
-			return fmt.Errorf("failed to copy %q into %q: %w", source, dest, err)
+			return fmt.Errorf("failed to copy %#q into %#q: %w", source, dest, err)
 		}
 		if err := os.Chmod(dest, 0o644); err != nil {
-			return fmt.Errorf("failed to set permissions on %q: %w", dest, err)
+			return fmt.Errorf("failed to set permissions on %#q: %w", dest, err)
 		}
 	}
 	if size != nil {
@@ -194,16 +194,16 @@ func convertRawToRaw(source, dest string, size *int64) error {
 func convertASIFToASIF(source, dest string, size *int64) error {
 	if source != dest {
 		if err := containerdfs.CopyFile(dest, source); err != nil {
-			return fmt.Errorf("failed to copy %q into %q: %w", source, dest, err)
+			return fmt.Errorf("failed to copy %#q into %#q: %w", source, dest, err)
 		}
 		if err := os.Chmod(dest, 0o644); err != nil {
-			return fmt.Errorf("failed to set permissions on %q: %w", dest, err)
+			return fmt.Errorf("failed to set permissions on %#q: %w", dest, err)
 		}
 	}
 	if size != nil {
 		logrus.Infof("Resizing to %s", units.BytesSize(float64(*size)))
 		if err := asifutil.ResizeASIF(dest, *size); err != nil {
-			return fmt.Errorf("failed to resize ASIF image %q: %w", dest, err)
+			return fmt.Errorf("failed to resize ASIF image %#q: %w", dest, err)
 		}
 	}
 	return nil

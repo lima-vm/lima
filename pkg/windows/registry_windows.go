@@ -33,7 +33,7 @@ func AddVSockRegistryKey(port int) error {
 	}
 
 	if slices.Contains(used, port) {
-		return fmt.Errorf("port %q in use", port)
+		return fmt.Errorf("port %#q in use", port)
 	}
 
 	vsockKeyPath := fmt.Sprintf(`%x%s`, port, magicVSOCKSuffix)
@@ -125,11 +125,11 @@ func GetDistroID(name string) (string, error) {
 			registry.READ,
 		)
 		if err != nil {
-			return "", fmt.Errorf("failed to read subkey %q for key %q: %w", k, wslDistroInfoPrefix, err)
+			return "", fmt.Errorf("failed to read subkey %#q for key %#q: %w", k, wslDistroInfoPrefix, err)
 		}
 		dn, _, err := subKey.GetStringValue("DistributionName")
 		if err != nil {
-			return "", fmt.Errorf("failed to read 'DistributionName' value for subkey %q of %q: %w", k, wslDistroInfoPrefix, err)
+			return "", fmt.Errorf("failed to read 'DistributionName' value for subkey %#q of %#q: %w", k, wslDistroInfoPrefix, err)
 		}
 		if dn == name {
 			out = k
@@ -138,7 +138,7 @@ func GetDistroID(name string) (string, error) {
 	}
 
 	if out == "" {
-		return "", fmt.Errorf("failed to find matching DistroID for %q", name)
+		return "", fmt.Errorf("failed to find matching DistroID for %#q", name)
 	}
 
 	return out, nil
@@ -221,7 +221,7 @@ func getUsedPorts(key registry.Key) ([]int, error) {
 		if len(split) == 2 {
 			i, err := strconv.Atoi(split[0])
 			if err != nil {
-				return nil, fmt.Errorf("failed convert %q to int: %w", split[0], err)
+				return nil, fmt.Errorf("failed convert %#q to int: %w", split[0], err)
 			}
 			out = append(out, i)
 		}

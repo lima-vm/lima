@@ -103,7 +103,7 @@ func (e *HTTPStatusError) Error() string {
 			return ej.Message
 		}
 	}
-	return fmt.Sprintf("unexpected HTTP status %s, body=%q", http.StatusText(e.StatusCode), e.Body)
+	return fmt.Sprintf("unexpected HTTP status %s, body=%#q", http.StatusText(e.StatusCode), e.Body)
 }
 
 func Successful(resp *http.Response) error {

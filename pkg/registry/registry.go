@@ -90,7 +90,7 @@ func registerExternalDriver(name, path string) {
 	}
 
 	if _, exists := internalDrivers[name]; exists {
-		logrus.Debugf("Driver %q is already registered as an internal driver, skipping external registration", name)
+		logrus.Debugf("Driver %#q is already registered as an internal driver, skipping external registration", name)
 		return
 	}
 
@@ -111,13 +111,13 @@ func discoverDrivers() error {
 
 			info, err := os.Stat(path)
 			if err != nil {
-				logrus.Warnf("Error accessing external driver path %q: %v", path, err)
+				logrus.Warnf("Error accessing external driver path %#q: %v", path, err)
 				continue
 			}
 
 			if info.IsDir() {
 				if err := discoverDriversInDir(path); err != nil {
-					logrus.Warnf("Error discovering external drivers in %q: %v", path, err)
+					logrus.Warnf("Error discovering external drivers in %#q: %v", path, err)
 				}
 			} else if isExecutable(info.Mode()) {
 				registerDriverFile(path)
@@ -134,7 +134,7 @@ func discoverDrivers() error {
 	for _, dir := range stdDriverDirs {
 		if _, err := os.Stat(dir); err == nil {
 			if err := discoverDriversInDir(dir); err != nil {
-				logrus.Warnf("Error discovering external drivers in %q: %v", dir, err)
+				logrus.Warnf("Error discovering external drivers in %#q: %v", dir, err)
 			}
 		}
 	}
@@ -144,7 +144,7 @@ func discoverDrivers() error {
 func discoverDriversInDir(dir string) error {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
-		return fmt.Errorf("failed to read driver directory %q: %w", dir, err)
+		return fmt.Errorf("failed to read driver directory %#q: %w", dir, err)
 	}
 
 	for _, entry := range entries {
@@ -154,7 +154,7 @@ func discoverDriversInDir(dir string) error {
 
 		info, err := entry.Info()
 		if err != nil {
-			logrus.Warnf("Failed to get info for %q: %v", entry.Name(), err)
+			logrus.Warnf("Failed to get info for %#q: %v", entry.Name(), err)
 			continue
 		}
 

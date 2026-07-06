@@ -23,7 +23,7 @@ func Mount(ctx context.Context, fs, dev, mnt string, options []string) error {
 	cmd := exec.CommandContext(ctx, "mount", args...)
 	logrus.Debugf("Executing command: %v", cmd.Args)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to mount %q on %q: %w (output=%q)", dev, mnt, err, output)
+		return fmt.Errorf("failed to mount %#q on %#q: %w (output=%#q)", dev, mnt, err, output)
 	}
 	return nil
 }
@@ -32,7 +32,7 @@ func Umount(ctx context.Context, mnt string) error {
 	cmd := exec.CommandContext(ctx, "umount", mnt)
 	logrus.Debugf("Executing command: %v", cmd.Args)
 	if output, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("failed to unmount %q: %w (output=%q)", mnt, err, output)
+		return fmt.Errorf("failed to unmount %#q: %w (output=%#q)", mnt, err, output)
 	}
 	return nil
 }

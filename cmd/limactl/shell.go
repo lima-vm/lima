@@ -187,7 +187,20 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
-			return err
+			// `ssh -O exit` fails when the control socket file exists but the
+			// master process is already dead (unclean hostagent exit: kill -9,
+			// OOM, host crash). That stale state is exactly what --reconnect is
+			// meant to recover from, so only surface the error when a master is
+			// still alive; otherwise drop the stale socket and continue so a
+			// fresh master can be established.
+			removed, rmErr := sshutil.RemoveStaleControlMaster(ctx, inst.Dir)
+			if rmErr != nil {
+				return rmErr
+			}
+			if !removed {
+				return err
+			}
+			logrus.WithError(err).Warnf("Removed stale ssh control socket for the instance %#q after the master had already exited", instName)
 		}
 	}
 
@@ -300,6 +313,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	// -l is known to be available in bash, zsh, and FreeBSD sh.
 	// Note that --login is not available in FreeBSD sh.
 	script := fmt.Sprintf("%s ; exec %s%s -l", changeDirCmd, envPrefix, shell)
+	if *inst.Config.OS == limatype.WINDOWS {
+		// TODO: When we implement a file mount for Windows guest, we should change directory here.
+		script = "cmd.exe"
+	}
 	if len(args) > 1 {
 		quotedArgs := make([]string, len(args[1:]))
 		parsingEnv := true
@@ -311,10 +328,16 @@ func shellAction(cmd *cobra.Command, args []string) error {
 				quotedArgs[i] = shellescape.Quote(arg)
 			}
 		}
-		script += fmt.Sprintf(
-			" -c %s",
-			shellescape.Quote(strings.Join(quotedArgs, " ")),
-		)
+		switch *inst.Config.OS {
+		case limatype.WINDOWS:
+			// On Windows, commands should be double-quoted.
+			script += fmt.Sprintf(` /c "%s"`, strings.Join(quotedArgs, " "))
+		default:
+			script += fmt.Sprintf(
+				" -c %s",
+				shellescape.Quote(strings.Join(quotedArgs, " ")),
+			)
+		}
 	}
 
 	sshExe, err := sshutil.NewSSHExe()

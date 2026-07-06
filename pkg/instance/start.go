@@ -53,8 +53,8 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 	case limatype.DARWIN:
 		// macOS guests always need the guest agent for running fake-cloud-init
 		needsGuestAgent = true
-	case limatype.FREEBSD:
-		// guest agent is not implemented for FreeBSD yet
+	case limatype.FREEBSD, limatype.WINDOWS:
+		// guest agent is not implemented for FreeBSD and Windows yet
 		needsGuestAgent = false
 	default:
 		needsGuestAgent = !*inst.Config.Plain
@@ -127,6 +127,30 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 		}
 	}
 
+	if *inst.Config.OS == limatype.WINDOWS {
+		var winOpts limatype.WindowsOpts
+		if err := limayaml.Convert(inst.Config.OsOpts[limatype.WINDOWS], &winOpts, "osOpts.Windows"); err != nil {
+			return nil, err
+		}
+
+		if len(winOpts.VirtioWin) > 0 {
+			ensuredImage := false
+			errs := make([]error, len(winOpts.VirtioWin))
+			virtioWin := filepath.Join(inst.Dir, filenames.VirtioWin)
+			for i, f := range winOpts.VirtioWin {
+				if _, err := fileutils.DownloadFile(ctx, virtioWin, f, true, "virtio-win", *inst.Config.Arch); err != nil {
+					errs[i] = err
+					continue
+				}
+				ensuredImage = true
+				break
+			}
+			if !ensuredImage {
+				return nil, fileutils.Errors(errs)
+			}
+		}
+	}
+
 	if err := limaDriver.CreateDisk(ctx); err != nil {
 		return nil, err
 	}
@@ -168,9 +192,9 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgentForeground, showProgress bool, limactl, guestAgent string) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
 	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
-		return fmt.Errorf("instance %q seems running (hint: remove %q if the instance is not actually running)", inst.Name, haPIDPath)
+		return fmt.Errorf("instance %#q seems running (hint: remove %#q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
-	logrus.Infof("Starting the instance %q with %s VM driver %q", inst.Name, registry.CheckInternalOrExternal(inst.VMType), inst.VMType)
+	logrus.Infof("Starting the instance %#q with %s VM driver %#q", inst.Name, registry.CheckInternalOrExternal(inst.VMType), inst.VMType)
 
 	haSockPath := filepath.Join(inst.Dir, filenames.HostAgentSock)
 
@@ -296,7 +320,7 @@ func waitHostAgentStart(_ context.Context, haPIDPath, haStderrPath string) error
 			return nil
 		}
 		if time.Now().After(deadline) {
-			return fmt.Errorf("hostagent (%q) did not start up in %v (hint: see %q)", haPIDPath, deadlineDuration, haStderrPath)
+			return fmt.Errorf("hostagent (%#q) did not start up in %v (hint: see %#q)", haPIDPath, deadlineDuration, haStderrPath)
 		}
 	}
 }
@@ -340,12 +364,12 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 			logrus.Errorf("%+v", ev.Status.Errors)
 		}
 		if ev.Status.Exiting {
-			err = fmt.Errorf("exiting, status=%+v (hint: see %q)", ev.Status, haStderrPath)
+			err = fmt.Errorf("exiting, status=%+v (hint: see %#q)", ev.Status, haStderrPath)
 			return true
 		} else if ev.Status.Running {
 			receivedRunningEvent = true
 			if ev.Status.Degraded {
-				logrus.Warnf("DEGRADED. The VM seems running, but file sharing and port forwarding may not work. (hint: see %q)", haStderrPath)
+				logrus.Warnf("DEGRADED. The VM seems running, but file sharing and port forwarding may not work. (hint: see %#q)", haStderrPath)
 				err = fmt.Errorf("degraded, status=%+v", ev.Status)
 				return true
 			}
@@ -361,7 +385,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 
 			if !isLaunchingShell(ctx) {
 				if *inst.Config.Plain {
-					logrus.Infof("READY. Run `ssh -F %q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
+					logrus.Infof("READY. Run `ssh -F %#q %s` to open the shell.", inst.SSHConfigFile, inst.Hostname)
 				} else {
 					logrus.Infof("READY. Run `%s` to open the shell.", LimactlShellCmd(inst.Name))
 				}
@@ -382,7 +406,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 	}
 
 	if !receivedRunningEvent {
-		return errors.New("did not receive an event with the \"running\" status")
+		return errors.New("did not receive an event with the `running` status")
 	}
 
 	return nil
@@ -444,7 +468,7 @@ func ShowMessage(inst *limatype.Instance) error {
 		return err
 	}
 	scanner := bufio.NewScanner(&b)
-	logrus.Infof("Message from the instance %q:", inst.Name)
+	logrus.Infof("Message from the instance %#q:", inst.Name)
 	for scanner.Scan() {
 		// Avoid prepending logrus "INFO" header, for ease of copy pasting
 		fmt.Fprintln(logrus.StandardLogger().Out, scanner.Text())

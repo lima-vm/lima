@@ -31,7 +31,7 @@ func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName 
 		return nil, errors.New("got empty instName")
 	}
 	if oldInst.Name == newInstName {
-		return nil, fmt.Errorf("new instance name %q must be different from %q", newInstName, oldInst.Name)
+		return nil, fmt.Errorf("new instance name %#q must be different from %#q", newInstName, oldInst.Name)
 	}
 	if oldInst.Status == limatype.StatusRunning {
 		return nil, errors.New("cannot " + verb + " a running instance")
@@ -43,13 +43,13 @@ func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName 
 	}
 
 	if _, err = os.Stat(newInstDir); !errors.Is(err, fs.ErrNotExist) {
-		return nil, fmt.Errorf("instance %q already exists", newInstName)
+		return nil, fmt.Errorf("instance %#q already exists", newInstName)
 	}
 
 	// the full path of the socket name must be less than UNIX_PATH_MAX chars.
 	maxSockName := filepath.Join(newInstDir, filenames.LongestSock)
 	if len(maxSockName) >= osutil.UnixPathMax {
-		return nil, fmt.Errorf("instance name %q too long: %q must be less than UNIX_PATH_MAX=%d characters, but is %d",
+		return nil, fmt.Errorf("instance name %#q too long: %#q must be less than UNIX_PATH_MAX=%d characters, but is %d",
 			newInstName, maxSockName, osutil.UnixPathMax, len(maxSockName))
 	}
 

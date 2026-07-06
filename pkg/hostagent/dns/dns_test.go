@@ -177,7 +177,7 @@ func TestDNSRecords(t *testing.T) {
 				return cmp.ResultSuccess
 			}
 			return cmp.ResultFailure(
-				fmt.Sprintf("%q did not match pattern %q", value, pattern))
+				fmt.Sprintf("%#q did not match pattern %#q", value, pattern))
 		}
 	}
 	t.Run("test TXT records", func(t *testing.T) {

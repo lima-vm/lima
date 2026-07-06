@@ -42,7 +42,7 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	// https://twitter.com/_AkihiroSuda_/status/1403403845842075648
 	//
 	// We use "pseudoloopback" forwarder that listens on 0.0.0.0:80 but rejects connections from non-loopback src IP.
-	logrus.Debugf("using pseudoloopback port forwarder for %q", local)
+	logrus.Debugf("using pseudoloopback port forwarder for %#q", local)
 
 	if verb == verbCancel {
 		plf, ok := pseudoLoopbackForwarders[local]
@@ -54,7 +54,7 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 				return err
 			}
 		} else {
-			logrus.Warnf("forwarding for %q seems already cancelled?", local)
+			logrus.Warnf("forwarding for %#q seems already cancelled?", local)
 		}
 		return nil
 	}
@@ -64,14 +64,14 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 		return err
 	}
 	localUnix := filepath.Join(localUnixDir, "sock")
-	logrus.Debugf("forwarding %q to %q", localUnix, remote)
+	logrus.Debugf("forwarding %#q to %#q", localUnix, remote)
 	if err := forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verb, false); err != nil {
 		return err
 	}
 	plf, err := newPseudoLoopbackForwarder(localPort, localUnix)
 	if err != nil {
 		if cancelErr := forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verbCancel, false); cancelErr != nil {
-			logrus.WithError(cancelErr).Warnf("failed to cancel forwarding %q to %q", localUnix, remote)
+			logrus.WithError(cancelErr).Warnf("failed to cancel forwarding %#q to %#q", localUnix, remote)
 		}
 		return err
 	}
@@ -129,12 +129,12 @@ func (plf *pseudoLoopbackForwarder) Serve() error {
 		remoteAddr := ac.RemoteAddr().String() // ip:port
 		remoteAddrIP, _, err := net.SplitHostPort(remoteAddr)
 		if err != nil {
-			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q (unparsable)", remoteAddr)
+			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q (unparsable)", remoteAddr)
 			ac.Close()
 			continue
 		}
 		if !portfwd.IsLoopback(remoteAddrIP) {
-			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q", remoteAddr)
+			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q", remoteAddr)
 			ac.Close()
 			continue
 		}

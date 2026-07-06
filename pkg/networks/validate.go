@@ -49,7 +49,7 @@ func (c *Config) Validate() error {
 		}
 	}
 	if socketVMNetNotFound {
-		return fmt.Errorf("networks.yaml: %q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
+		return fmt.Errorf("networks.yaml: %#q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
 	}
 	// TODO(jandubois): validate network definitions
 	return nil
@@ -70,10 +70,10 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		return nil
 	}
 	if path[0] != '/' {
-		return fmt.Errorf("path %q is not an absolute path", path)
+		return fmt.Errorf("path %#q is not an absolute path", path)
 	}
 	if strings.ContainsRune(path, ' ') {
-		return fmt.Errorf("path %q contains whitespace", path)
+		return fmt.Errorf("path %#q contains whitespace", path)
 	}
 	fi, err := os.Lstat(path)
 	if err != nil {
@@ -86,12 +86,12 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 	// TODO: should we allow symlinks when both the link and the target are secure?
 	// E.g. on macOS /var is a symlink to /private/var, /etc to /private/etc
 	if (fi.Mode() & fs.ModeSymlink) != 0 {
-		return fmt.Errorf("%s %q is a symlink", file, path)
+		return fmt.Errorf("%s %#q is a symlink", file, path)
 	}
 	stat, ok := osutil.SysStat(fi)
 	if !ok {
 		// should never happen
-		return fmt.Errorf("could not retrieve stat buffer for %q", path)
+		return fmt.Errorf("could not retrieve stat buffer for %#q", path)
 	}
 	if runtime.GOOS != "darwin" {
 		return errors.New("vmnet code must not be called on non-Darwin") // TODO: move to *_darwin.go
@@ -102,7 +102,7 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		return err
 	}
 	if stat.Uid != root.Uid {
-		return fmt.Errorf(`%s %q is not owned by %q (uid: %d), but by uid %d`, file, path, root.User, root.Uid, stat.Uid)
+		return fmt.Errorf(`%s %#q is not owned by %#q (uid: %d), but by uid %d`, file, path, root.User, root.Uid, stat.Uid)
 	}
 	if allowDaemonGroupWritable {
 		daemon, err := osutil.LookupUser("daemon")
@@ -110,18 +110,18 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 			return err
 		}
 		if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid && stat.Gid != daemon.Gid {
-			return fmt.Errorf(`%s %q is group-writable and group is neither %q (gid: %d) nor %q (gid: %d), but is gid: %d`,
+			return fmt.Errorf(`%s %#q is group-writable and group is neither %#q (gid: %d) nor %#q (gid: %d), but is gid: %d`,
 				file, path, root.User, root.Gid, daemon.User, daemon.Gid, stat.Gid)
 		}
 		if fi.Mode().IsDir() && fi.Mode()&1 == 0 && (fi.Mode()&0o010 == 0 || stat.Gid != daemon.Gid) {
-			return fmt.Errorf(`%s %q is not executable by the %q (gid: %d)" group`, file, path, daemon.User, daemon.Gid)
+			return fmt.Errorf(`%s %#q is not executable by the %#q (gid: %d)" group`, file, path, daemon.User, daemon.Gid)
 		}
 	} else if fi.Mode()&0o20 != 0 && stat.Gid != root.Gid {
-		return fmt.Errorf(`%s %q is group-writable and group is not %q (gid: %d), but is gid: %d`,
+		return fmt.Errorf(`%s %#q is group-writable and group is not %#q (gid: %d), but is gid: %d`,
 			file, path, root.User, root.Gid, stat.Gid)
 	}
 	if fi.Mode()&0o02 != 0 {
-		return fmt.Errorf("%s %q is world-writable", file, path)
+		return fmt.Errorf("%s %#q is world-writable", file, path)
 	}
 	if path != "/" {
 		return validatePath(filepath.Dir(path), allowDaemonGroupWritable)

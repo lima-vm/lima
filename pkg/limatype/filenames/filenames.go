@@ -59,6 +59,7 @@ const (
 	VNCPasswordFile         = "vncpassword"
 	GuestAgentSock          = "ga.sock"
 	VirtioPort              = "io.lima-vm.guest_agent.0"
+	VirtioWin               = "virtio-win"
 	HostAgentPID            = "ha.pid"
 	HostAgentSock           = "ha.sock"
 	HostAgentStdoutLog      = "ha.stdout.log"
@@ -69,7 +70,6 @@ const (
 	VzAux                   = "vz-aux"           // macOS guests only
 	VzEfi                   = "vz-efi"           // efi variable store
 	QemuEfiCodeFD           = "qemu-efi-code.fd" // efi code; not always created
-	QemuEfiFullFD           = "qemu-efi-full.fd" // concatenated efi vars and code; not always created
 	AnsibleInventoryYAML    = "ansible-inventory.yaml"
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.
@@ -77,6 +77,10 @@ const (
 	MntDir    = "mnt" // mount point (macOS guests only)
 
 	Protected = "protected" // empty file; used by `limactl protect`
+
+	// Swtpm is used for TPM emulation.
+	SwtpmSock = "swtpm.sock"
+	SwtpmDir  = "swtpm"
 )
 
 // Filenames used under a disk directory
@@ -103,6 +107,7 @@ func PIDFile(name string) string {
 // SkipOnClone files should be skipped on cloning an instance.
 var SkipOnClone = []string{
 	Protected,
+	SwtpmDir, // TPM state must not be shared between instances.
 }
 
 // NullifyOnClone files should be nullified on cloning an instance.

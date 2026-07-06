@@ -11,7 +11,7 @@ Running FreeBSD guests is experimentally supported since Lima v2.1.
 {{< tabpane text=true >}}
 {{% tab header="FreeBSD 15" %}}
 ```
-limactl start --mount-none template:freebsd-15
+limactl start template:freebsd-15
 ```
 {{% /tab %}}
 {{% tab header="FreeBSD 16 (CURRENT)" %}}
@@ -33,6 +33,6 @@ Prerequisites:
 - No support for installing custom `caCerts`
 - And more
 
-### FreeBSD prior to 16
+### FreeBSD prior to 15.1
 - No support for mounting host directories.
   Use `limactl cp` or `limactl shell --sync` to share files with the host.

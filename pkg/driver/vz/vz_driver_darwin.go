@@ -75,6 +75,7 @@ var knownYamlProperties = []string{
 	"Rosetta",
 	"SSH",
 	"TimeZone",
+	"TPM",
 	"UpgradePackages",
 	"User",
 	"Video",
@@ -272,6 +273,12 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	if cfg.MountType != nil && *cfg.MountType == limatype.NINEP {
 		return fmt.Errorf("field `mountType` must be %#q or %#q for VZ driver , got %#q", limatype.REVSSHFS, limatype.VIRTIOFS, *cfg.MountType)
 	}
+	if cfg.TPM != nil && *cfg.TPM {
+		return errors.New("field `tpm` is not supported on VZ driver")
+	}
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
 	if *cfg.Firmware.LegacyBIOS {
 		logrus.Warnf("vmType %s: ignoring `firmware.legacyBIOS`", *cfg.VMType)
 	}
@@ -468,7 +475,8 @@ func (l *LimaVzDriver) canRunGUI() bool {
 
 func (l *LimaVzDriver) RunGUI(_ context.Context) error {
 	if l.canRunGUI() {
-		return l.machine.StartGraphicApplication(1920, 1200)
+		title := fmt.Sprintf("Lima: %s", l.Instance.Name)
+		return l.machine.StartGraphicApplication(1920, 1200, vz.WithWindowTitle(title))
 	}
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
 }

@@ -10,10 +10,15 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"path/filepath"
+	"strings"
+
+	"github.com/sethvargo/go-password/password"
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -21,6 +26,15 @@ import (
 var templateFS embed.FS
 
 const templateFSRoot = "cidata.TEMPLATE.d"
+
+//go:embed wincidata.TEMPLATE.d
+var windowsTemplateFS embed.FS
+
+const windowsTemplateFSRoot = "wincidata.TEMPLATE.d"
+
+// This is for checking whether Windows OS is 11 or server 2025.
+// For example, Windows 11 x86-64's label is CCCOMA_X64FRE_EN-US_DV9.
+const windowsClientISOLabelPrefix = "CCCOMA_"
 
 type CACerts struct {
 	RemoveDefaults *bool
@@ -117,6 +131,35 @@ type TemplateArgs struct {
 	Plain                           bool
 	TimeZone                        string
 	NoCloudInit                     bool
+	WindowsInitialPassword          string
+	LegacyBIOS                      bool
+	IsWindowsServer                 bool
+	TPM                             bool
+}
+
+func (t *TemplateArgs) generateWindowsInitialPassword() error {
+	const pwLen = 16
+	// Avoid special characters to minimize potential keyboard layout issue.
+	pw, err := password.Generate(pwLen, pwLen/4, 0, false, false)
+	if err != nil {
+		return fmt.Errorf("failed to generate password: %w", err)
+	}
+
+	t.WindowsInitialPassword = pw
+	return nil
+}
+
+// checkWindowsVersion checks if a guest VM is Windows 11 (true) or Windows server 2025 (false).
+func (t *TemplateArgs) checkWindowsVersion(instDir string) error {
+	imagePath := filepath.Join(instDir, filenames.ISO)
+	label, err := iso9660util.Label(imagePath)
+	if err != nil {
+		return fmt.Errorf("failed to get ISO label: %w", err)
+	}
+
+	t.IsWindowsServer = !strings.HasPrefix(label, windowsClientISOLabelPrefix)
+
+	return nil
 }
 
 func ValidateTemplateArgs(args *TemplateArgs) error {
@@ -201,6 +244,46 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 
 	if err := fs.WalkDir(fsys, ".", walkFn); err != nil {
 		return nil, err
+	}
+
+	return layout, nil
+}
+
+func ExecuteTemplateWindowsISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
+	fs := windowsTemplateFS
+	root := windowsTemplateFSRoot
+
+	// Execute template for autounattend.xml
+	xmlTemplate, err := fs.ReadFile(path.Join(root, "autounattend.xml"))
+	if err != nil {
+		return nil, err
+	}
+
+	xmlfile, err := textutil.ExecuteTemplate(string(xmlTemplate), args)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render autounattend.xml: %w", err)
+	}
+
+	// Execute template for powershell script file
+	ps1Template, err := fs.ReadFile(path.Join(root, "first_logon.ps1"))
+	if err != nil {
+		return nil, err
+	}
+
+	ps1file, err := textutil.ExecuteTemplate(string(ps1Template), args)
+	if err != nil {
+		return nil, fmt.Errorf("failed to render ps1 file: %w", err)
+	}
+
+	layout := []iso9660util.Entry{
+		{
+			Path:   "autounattend.xml",
+			Reader: bytes.NewReader(xmlfile),
+		},
+		{
+			Path:   "first_logon.ps1",
+			Reader: bytes.NewReader(ps1file),
+		},
 	}
 
 	return layout, nil

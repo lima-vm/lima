@@ -231,10 +231,18 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return fmt.Errorf("field `mountType` must be %#q or %#q for krunkit driver, got %#q", limatype.VIRTIOFS, limatype.REVSSHFS, *cfg.MountType)
 	}
 
+	if cfg.TPM != nil && *cfg.TPM {
+		return errors.New("field `tpm` is not supported in krunkit driver")
+	}
+
 	if cfg.NestedVirtualization != nil && *cfg.NestedVirtualization {
 		if macOSProductVersion.LessThan(*semver.New("15.0.0")) {
 			return errors.New("nested virtualization requires macOS 15 or newer")
 		}
+	}
+
+	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
+		return errors.New("currently Windows guest OS is only supported on QEMU")
 	}
 
 	return nil
@@ -270,7 +278,11 @@ func (l *LimaKrunkitDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML
 	cfg.VMType = ptr.Of(vmType)
 
 	if cfg.SSH.OverVsock == nil {
-		cfg.SSH.OverVsock = ptr.Of(cfg.OS != nil && *cfg.OS == limatype.LINUX)
+		// ssh.overVsock is known not to work since Fedora 44: https://github.com/lima-vm/lima/issues/5085
+		// cfg.SSH.OverVsock = ptr.Of(cfg.OS != nil && *cfg.OS == limatype.LINUX)
+		cfg.SSH.OverVsock = ptr.Of(false)
+	} else if *cfg.SSH.OverVsock {
+		logrus.Warn("ssh.overVsock is known not to work since Fedora 44: https://github.com/lima-vm/lima/issues/5085")
 	}
 
 	return validateConfig(cfg)
