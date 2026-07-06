@@ -4,6 +4,8 @@
 package downloader
 
 import (
+	"compress/gzip"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -320,31 +322,48 @@ func TestDownloadLocal(t *testing.T) {
 }
 
 func TestDownloadCompressed(t *testing.T) {
-	if runtime.GOOS == "windows" {
-		// FIXME: `assertion failed: error is not nil: exec: "gzip": executable file not found in %PATH%`
-		t.Skip("Skipping on windows")
-	}
+	testContents := []byte("TestDownloadCompressed")
 
-	t.Run("gzip", func(t *testing.T) {
-		ctx := t.Context()
+	// check builds a compressed fixture via write, downloads it with
+	// decompression, and asserts the result round-trips. With noExternal set,
+	// PATH is emptied so the built-in decoder runs instead of a host binary.
+	check := func(t *testing.T, ext string, write func(io.Writer) error, noExternal bool) {
+		t.Helper()
+		if noExternal {
+			t.Setenv("PATH", t.TempDir())
+		}
 		localPath := filepath.Join(t.TempDir(), t.Name())
-		localFile := filepath.Join(t.TempDir(), "test-file")
-		testDownloadCompressedContents := []byte("TestDownloadCompressed")
-		assert.NilError(t, os.WriteFile(localFile, testDownloadCompressedContents, 0o644))
-		assert.NilError(t, exec.CommandContext(ctx, "gzip", localFile).Run())
-		localFile += ".gz"
-		testLocalFileURL := "file://" + localFile
+		localFile := filepath.Join(t.TempDir(), "test-file"+ext)
+		f, err := os.Create(localFile)
+		assert.NilError(t, err)
+		assert.NilError(t, write(f))
+		assert.NilError(t, f.Close())
 
-		r, err := Download(ctx, localPath, testLocalFileURL, WithDecompress(true))
+		r, err := Download(t.Context(), localPath, "file://"+localFile, WithDecompress(true))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusDownloaded, r.Status)
-
 		got, err := os.ReadFile(localPath)
 		assert.NilError(t, err)
-		assert.Equal(t, string(got), string(testDownloadCompressedContents))
-	})
+		assert.Equal(t, string(got), string(testContents))
+	}
+	writeGz := func(w io.Writer) error {
+		gz := gzip.NewWriter(w)
+		if _, err := gz.Write(testContents); err != nil {
+			return err
+		}
+		return gz.Close()
+	}
+
+	t.Run("gzip", func(t *testing.T) { check(t, ".gz", writeGz, false) })
+	t.Run("gzip without external binary", func(t *testing.T) { check(t, ".gz", writeGz, true) })
 
 	t.Run("bzip2", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			// External bzip2 ships with MSYS2/Git for Windows but not
+			// vanilla Windows, and there is no in-process equivalent
+			// in the standard library.
+			t.Skip("bzip2 binary required to build the fixture")
+		}
 		ctx := t.Context()
 		localPath := filepath.Join(t.TempDir(), t.Name())
 		localFile := filepath.Join(t.TempDir(), "test-file")
