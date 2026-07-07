@@ -26,6 +26,9 @@ git submodule update --init --recursive
 make bats
 ```
 
+Some tests require additional tools on the host, e.g. `socat` and `jq` for the
+port-forwarding tests.
+
 The BATS tests are located under [`hack/bats/tests`](https://github.com/lima-vm/lima/tree/master/hack/bats/tests).
 
 ### Extra tests
@@ -40,7 +43,7 @@ Run the following command to run the extra BATS tests:
 
 ## Template-specific tests
 
-Tests that are specific to template files are written in bash and partially in Perl.
+Tests that are specific to template files are written in bash.
 
 Use [`hack/test-templates.sh`](https://github.com/lima-vm/lima/blob/master/hack/test-templates.sh)
 to execute tests, with a virtual machine template file, e.g.,:
