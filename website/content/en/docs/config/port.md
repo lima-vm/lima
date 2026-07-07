@@ -5,6 +5,8 @@ weight: 31
 
 Lima supports automatic port-forwarding of localhost ports from guest to host.
 
+> **See also:** In [plain mode](./plain.md), dynamic port forwarding is disabled and only rules with `static: true` are forwarded.
+
 ## Port forwarding types
 
 Lima supports two port forwarders: SSH and GRPC.

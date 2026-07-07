@@ -36,3 +36,8 @@ Prerequisites:
 ### FreeBSD prior to 15.1
 - No support for mounting host directories.
   Use `limactl cp` or `limactl shell --sync` to share files with the host.
+
+## Plain mode
+The guest agent, containerd, and automatic port forwarding are not available on
+FreeBSD guests regardless of the mode, so [plain mode](../../config/plain.md)
+additionally disables only the host directory mounts (on FreeBSD 15.1 and later).

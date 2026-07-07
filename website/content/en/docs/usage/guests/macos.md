@@ -39,3 +39,8 @@ limactl shell macos cat /Users/${USER}.guest/password
   Use `ssh -L` to manually set up port forwarding, or,
   use the [`vzNAT`](../../config/network/vmnet.md#vznat) network to access the guest by its IP.
 - No support for installing custom `caCerts`
+
+## Plain mode
+containerd and automatic port forwarding are not available on macOS guests regardless
+of the mode, so [plain mode](../../config/plain.md) additionally disables only the
+host directory mounts.

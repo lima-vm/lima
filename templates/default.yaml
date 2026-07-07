@@ -631,6 +631,7 @@ guestInstallPrefix: null
 # - guest agent will not be running
 # - dependency packages like sshfs will not be installed into the VM
 # User-specified provisioning scripts will be still executed.
+# See https://lima-vm.io/docs/config/plain/ for the full behavior.
 # 🟢 Builtin default: false
 plain: null
 
