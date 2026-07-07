@@ -514,7 +514,11 @@ func detectValidPublicKey(content string) bool {
 		return false
 	}
 	sigLength := binary.BigEndian.Uint32(decodedKey)
-	if uint32(len(decodedKey)) < sigLength {
+	// The format identifier occupies decodedKey[4 : 4+sigLength], so the buffer
+	// must hold sigLength bytes beyond the 4-byte length prefix, not just
+	// sigLength bytes in total. len(decodedKey) >= 4 is guaranteed above, so the
+	// subtraction cannot underflow.
+	if sigLength > uint32(len(decodedKey))-4 {
 		return false
 	}
 	sigFormat := string(decodedKey[4 : 4+sigLength])

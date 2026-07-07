@@ -56,6 +56,9 @@ func Test_detectValidPublicKey(t *testing.T) {
 
 	assert.Check(t, !detectValidPublicKey("wrong-algo AAAAB3NzaC1kc3MAAACBAP/yAytaYzqXq01uTd5+1RC="))
 	assert.Check(t, !detectValidPublicKey("huge-length AAAD6A=="))
+	// Length prefix equal to the decoded length: sigLength (8) is not larger than
+	// len(decodedKey) (8) but the format field runs to offset 4+8, past the buffer.
+	assert.Check(t, !detectValidPublicKey("trailing-length AAAACAAAAAA="))
 	assert.Check(t, !detectValidPublicKey("arbitrary content"))
 	assert.Check(t, !detectValidPublicKey(""))
 }
