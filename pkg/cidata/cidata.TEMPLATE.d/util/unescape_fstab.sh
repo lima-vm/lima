@@ -6,7 +6,12 @@
 # Read a string on stdin and write it to stdout with the octal escapes used in
 # /etc/fstab and /proc/mounts decoded to their literal characters:
 # "\040" -> space, "\011" -> tab, "\012" -> newline, "\134" -> backslash,
-# "\043" -> "#". The inverse of util/escape_fstab.sh.
+# "\043" -> "#".
+#
+# This decodes the full set of escapes the kernel emits in /proc/mounts and that
+# mount(8) reads from /etc/fstab -- a superset of what util/escape_fstab.sh
+# produces (only \040, \011 and \134). It round-trips that script's output
+# (unescape(escape(x)) == x) but is not its exact inverse.
 # https://github.com/torvalds/linux/blob/v6.6/fs/proc_namespace.c#L89
 
 set -eu

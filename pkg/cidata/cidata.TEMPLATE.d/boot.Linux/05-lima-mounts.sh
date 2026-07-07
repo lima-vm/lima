@@ -18,7 +18,7 @@ fi
 # https://github.com/abiosoft/colima/issues/1471
 if grep -q virtiofs /etc/fstab; then
 	escape_fstab.sh </etc/fstab >/etc/fstab.lima.tmp &&
-		cat /etc/fstab.lima.tmp >/etc/fstab && rm -f /etc/fstab.lima.tmp
+		cp /etc/fstab.lima.tmp /etc/fstab && rm -f /etc/fstab.lima.tmp
 	# Mount entries cc_mounts skipped due to the previously broken line (already-mounted ones
 	# are a no-op). On Oracle Linux the virtiofs module is installed later in
 	# 30-install-packages.sh (REMOUNT_VIRTIOFS=1 remounts then), so tolerate failure here.
