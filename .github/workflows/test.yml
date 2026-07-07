@@ -165,7 +165,7 @@ jobs:
   windows:
     name: "Windows tests (WSL2)"
     runs-on: windows-2025
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
     - name: Enable WSL2
       run: |
@@ -198,6 +198,8 @@ jobs:
         git config --global core.eol lf
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
+        # Submodules are required by the BATS port-forwarding test
+        submodules: true
         persist-credentials: false
     - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
       with:
@@ -210,18 +212,26 @@ jobs:
     - name: Integration tests (WSL2, Windows host)
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
-        pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
+        pacman -Sy --noconfirm diffutils jq socat w3m
         $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "/mnt$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
         $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/experimental/wsl2.yaml"
+    - name: Run BATS port-forwarding test (WSL2, Windows host)
+      run: |
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + $env:PATH
+        $env:MSYS2_ENV_CONV_EXCL = '_LIMA_WINDOWS_EXTRA_PATH;LIMA_BATS_PORT_FORWARDING_BASE_TEMPLATE'
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=wsl2 --mount-type=wsl2 --containerd=system'
+        $env:LIMA_BATS_PORT_FORWARDING_BASE_TEMPLATE = 'template:experimental/wsl2'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        bash.exe -c "./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats"
 
   windows-qemu:
     name: "Windows tests (QEMU)"
     runs-on: windows-2025
-    timeout-minutes: 30
+    timeout-minutes: 45
     steps:
     - name: Set gitconfig
       run: |
@@ -229,6 +239,8 @@ jobs:
         git config --global core.eol lf
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
+        # Submodules are required by the BATS port-forwarding test
+        submodules: true
         persist-credentials: false
     - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
       with:
@@ -242,13 +254,20 @@ jobs:
     - name: Integration tests (QEMU, Windows host)
       run: |
         $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
-        pacman -Sy --noconfirm openbsd-netcat diffutils socat w3m
+        pacman -Sy --noconfirm diffutils jq socat w3m
         $env:MSYS2_ENV_CONV_EXCL = 'HOME_HOST;HOME_GUEST;_LIMA_WINDOWS_EXTRA_PATH'
         $env:HOME_HOST = $(cygpath.exe "$env:USERPROFILE")
         $env:HOME_GUEST = "$env:HOME_HOST"
         $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
         $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
         bash.exe -c "./hack/test-templates.sh templates/default.yaml"
+    - name: Run BATS port-forwarding test (QEMU, Windows host)
+      run: |
+        $env:PATH = "$pwd\_output\bin;" + 'C:\msys64\usr\bin;' + 'C:\Program Files\QEMU;' + $env:PATH
+        $env:MSYS2_ENV_CONV_EXCL = '_LIMA_WINDOWS_EXTRA_PATH'
+        $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
+        $env:_LIMA_WINDOWS_EXTRA_PATH = 'C:\Program Files\Git\usr\bin'
+        bash.exe -c "./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats"
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
@@ -257,6 +276,8 @@ jobs:
     steps:
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
+        # Submodules are required by the BATS port-forwarding test
+        submodules: true
         persist-credentials: false
     - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
       with:
@@ -280,10 +301,10 @@ jobs:
       run: find -L templates -name '*.yaml' ! -path '*/_default/*' | xargs limactl validate
     - name: Install test dependencies
       # QEMU:      required by Lima itself
-      # bash:      required by test-templates.sh (OS version of bash is too old)
+      # bash:      required by test-templates.sh and BATS (OS version of bash is too old)
       # coreutils: required by test-templates.sh for the "timeout" command
       # w3m :      required by test-templates.sh for port forwarding tests
-      # socat:     required by test-templates.sh for port forwarding tests
+      # socat:     required by the BATS port-forwarding test
       run: brew install qemu bash coreutils w3m socat
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
@@ -303,6 +324,10 @@ jobs:
     # GHA macOS is slow and flaky, so we only test default.yaml here.
     # Other yamls are tested on Linux instances.
     #
+    - name: "Run BATS port-forwarding test (QEMU, macOS host)"
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats
+      env:
+        LIMA_BATS_ALL_TESTS_RETRIES: "2"
     - if: always()
       uses: ./.github/actions/upload_failure_logs_if_exists
     - name: "Show cache"
@@ -349,7 +374,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo ./hack/install-qemu.sh
-        sudo apt-get install -y --no-install-recommends socat w3m
+        sudo apt-get install -y --no-install-recommends w3m
     - name: Install ansible-playbook
       run: |
         sudo apt-get install -y --no-install-recommends ansible
@@ -393,6 +418,8 @@ jobs:
     - name: Install test dependencies
       run: |
         sudo apt-get update
+        # socat is used by the port-forwarding tests
+        sudo apt-get install -y socat
         sudo ./hack/install-qemu.sh
     - name: Cache image used by templates/default.yaml
       uses: ./.github/actions/setup_cache_for_template
@@ -495,7 +522,7 @@ jobs:
       with:
         template: templates/default.yaml
     - name: Install test dependencies
-      run: brew install qemu bash coreutils w3m socat
+      run: brew install qemu bash coreutils w3m
     - name: Install socket_vmnet
       env:
         SOCKET_VMNET_VERSION: v1.2.2
@@ -583,6 +610,8 @@ jobs:
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --cpus 1 --memory 1" >>$GITHUB_ENV
     - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
       with:
+        # Submodules are required by the BATS port-forwarding test
+        submodules: true
         persist-credentials: false
     - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
       with:
@@ -602,6 +631,11 @@ jobs:
       run: brew uninstall --ignore-dependencies --force qemu
     - name: Test
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
+    - name: "Run BATS port-forwarding test (vz, macOS host)"
+      if: matrix.template == 'default.yaml'
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats
+      env:
+        LIMA_BATS_ALL_TESTS_RETRIES: "2"
     - if: failure()
       uses: ./.github/actions/upload_failure_logs_if_exists
       with:
