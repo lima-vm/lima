@@ -85,9 +85,20 @@ provision:
               runtime_type = "io.containerd.runc.v2"
               [plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
                 SystemdCgroup = true
+    {{- if .Param.mirror }}
+        [plugins."io.containerd.grpc.v1.cri".registry]
+          config_path = "/etc/containerd/certs.d"
+    {{- end}}
       [plugins."io.containerd.cri.v1.runtime".cni]
         bin_dirs = ["/usr/local/libexec/cni","/opt/cni/bin"]
     EOF
+    {{if .Param.mirror }}
+    mkdir -p /etc/containerd/certs.d/_default
+    cat <<EOF >/etc/containerd/certs.d/_default/hosts.toml
+    [host."{{.Param.mirror}}"]
+      capabilities = ["pull", "resolve"]
+    EOF
+    {{end}}
     systemctl restart containerd
 # See <https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/create-cluster-kubeadm/>
 - mode: system
@@ -229,6 +240,9 @@ message: |
   ------
   {{end -}}
 param:
+  # The mirror to use when pulling images from registry
+  # For a local mirror use for instance "http://host.lima.internal:8080"
+  mirror: ""
   # The stability can be either "stable" or "prerelease"
   # <https://build.opensuse.org/project/subprojects/isv:kubernetes:core>
   stability: "stable"
