@@ -24,6 +24,15 @@ func TestDefaultPubKeys(t *testing.T) {
 	}
 }
 
+// TestDefaultPubKeys_WithoutExistingKey tests DefaultPubKeys without an existing public key.
+func TestDefaultPubKeys_WithoutExistingKey(t *testing.T) {
+	tmpDir := t.TempDir()
+	t.Setenv("LIMA_HOME", tmpDir)
+	keys, err := DefaultPubKeys(t.Context(), false)
+	assert.NilError(t, err)
+	assert.Equal(t, 1, len(keys))
+}
+
 func TestParseOpenSSHVersion(t *testing.T) {
 	assert.Check(t, ParseOpenSSHVersion([]byte("OpenSSH_8.4p1 Ubuntu")).Equal(
 		semver.Version{Major: 8, Minor: 4, Patch: 1, PreRelease: "", Metadata: ""}))
