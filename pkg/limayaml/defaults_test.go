@@ -943,3 +943,42 @@ func TestContainerdUserExplicitOverride(t *testing.T) {
 	assert.Equal(t, *y.Containerd.User, true,
 		"explicit Containerd.User=true must be preserved on non-Linux guests")
 }
+
+func TestUnmarshalImageVariant(t *testing.T) {
+	yamlBytes := []byte(`
+images:
+- location: "server-img.img"
+  variant: "server"
+- location: "minimal-img.img"
+  variant: "minimal"
+`)
+	var y limatype.LimaYAML
+	err := Unmarshal(yamlBytes, &y, "test")
+	assert.NilError(t, err)
+	assert.Equal(t, len(y.Images), 2)
+	assert.Equal(t, y.Images[0].Variant, "server")
+	assert.Equal(t, y.Images[1].Variant, "minimal")
+}
+
+func TestDefaultSelectedImageIsStandard(t *testing.T) {
+	// Verify that the default order of the images in the standard template
+	// places standard/server before minimal so standard users don't regress.
+	data, err := os.ReadFile("../../templates/_images/ubuntu-24.04.yaml")
+	assert.NilError(t, err)
+	var y limatype.LimaYAML
+	err = Unmarshal(data, &y, "ubuntu-24.04.yaml")
+	assert.NilError(t, err)
+
+	var foundServer, foundMinimal bool
+	for _, img := range y.Images {
+		switch img.Variant {
+		case "server":
+			foundServer = true
+			assert.Assert(t, !foundMinimal, "standard/server images must be listed before minimal images to prevent fallback regressions")
+		case "minimal":
+			foundMinimal = true
+		}
+	}
+	assert.Assert(t, foundServer, "should have found standard/server images")
+	assert.Assert(t, foundMinimal, "should have found minimal images")
+}

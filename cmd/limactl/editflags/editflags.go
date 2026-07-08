@@ -105,6 +105,8 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 		return []string{"x86_64", "aarch64", "riscv64", "armv7l", "s390x", "ppc64le"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
+	flags.String("image-variant", "", commentPrefix+"Image variant")
+
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
 	_ = cmd.RegisterFlagCompletionFunc("containerd", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
@@ -374,6 +376,22 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 			false,
 		},
 		{"ssh-port", d(".ssh.localPort = %s"), false, false},
+		{
+			"image-variant",
+			func(_ *flag.Flag) ([]string, error) {
+				variant, err := flags.GetString("image-variant")
+				if err != nil {
+					return nil, err
+				}
+				if variant == "" {
+					return nil, errors.New("`--image-variant` must not be empty")
+				}
+				expr := fmt.Sprintf(`.images = [.images[] | select(.variant == %q)]`, variant)
+				return []string{expr}, nil
+			},
+			true,
+			false,
+		},
 		{"arch", d(".arch = %q"), true, false},
 		{
 			"containerd",
