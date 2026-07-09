@@ -5,7 +5,10 @@
 
 set -eux
 
-# This script prepares Alpine for lima; there is nothing in here for other distros
+# This script prepares Alpine for lima; there is nothing in here for other distros.
+# The script is executed in plain mode too, as the host agent depends on bash, sudo,
+# and public key auth for checking the boot completion, and on sshd TCP forwarding
+# for forwarding static ports.
 test -f /etc/alpine-release || exit 0
 
 # Configure apk repos
@@ -36,9 +39,6 @@ sed -i 's/AllowTcpForwarding no/AllowTcpForwarding yes/g' /etc/ssh/sshd_config
 # Enable PAM so as to load /etc/environment via pam_env
 sed -i 's/#UsePAM no/UsePAM yes/g' /etc/ssh/sshd_config
 rc-service --ifstarted sshd reload
-
-# mount /sys/fs/cgroup
-rc-service cgroups start
 
 # `limactl stop` tells acpid to powerdown
 rc-update add acpid
