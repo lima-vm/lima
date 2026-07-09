@@ -1144,7 +1144,7 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 		sshAddress,
 		"sh", "-c",
 		`"if command -v systemctl >/dev/null 2>&1 && systemctl is-enabled -q cloud-init-main.service; then
-			sudo journalctl -u cloud-init-main.service -b -S @0 -o cat -f
+			journalctl -u cloud-init-main.service -b -S @0 -o cat -f
 		else
 			sudo tail -n +$(sudo awk '
 				BEGIN{b=1; e=1}
