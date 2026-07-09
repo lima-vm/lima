@@ -1,0 +1,35 @@
+minimumLimaVersion: 2.2.0
+
+base: template:_default/mounts
+
+images:
+- location: https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-amd64.img
+  arch: x86_64
+  variant: server
+- location: https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-arm64.img
+  arch: aarch64
+  variant: server
+- location: https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-armhf.img
+  arch: armv7l
+  variant: server
+- location: https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-riscv64.img
+  arch: riscv64
+  variant: server
+- location: https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-s390x.img
+  arch: s390x
+  variant: server
+- location: https://cloud-images.ubuntu.com/stonking/current/stonking-server-cloudimg-ppc64el.img
+  arch: ppc64le
+  variant: server
+- location: https://cloud-images.ubuntu.com/minimal/daily/stonking/current/stonking-minimal-cloudimg-amd64.img
+  arch: x86_64
+  variant: minimal
+- location: https://cloud-images.ubuntu.com/minimal/daily/stonking/current/stonking-minimal-cloudimg-arm64.img
+  arch: aarch64
+  variant: minimal
+
+# Do not require Lima NICs for systemd-networkd-wait-online: the first-boot
+# rename to eth0 fails on 26.04 (LP: #2136392) and would block boot for 120s.
+# Lima's cidata bootcmd renames the NIC and waits for it instead.
+param:
+  internal_netplanOptional: "true"
