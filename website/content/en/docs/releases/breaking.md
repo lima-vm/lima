@@ -3,6 +3,10 @@ title: Breaking changes
 weight: 20
 ---
 
+## v2.2.0
+- The default VM driver on Windows hosts was changed from `wsl2` to `qemu`,
+  as `wsl2` is not compatible with most templates.
+
 ## [v2.0.0](https://github.com/lima-vm/lima/releases/tag/v2.0.0)
 - `/tmp/lima` is no longer mounted by default.
 - SSH port is no longer hard-coded to 60022 for the "default" instance.
