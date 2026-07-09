@@ -17,7 +17,10 @@ arch: null
 
 
 # OpenStack-compatible disk image.
-# Each image has a `location` URL for the disk image, an `arch` setting, and an optional `digest`.
+# Each image has a `location` URL for the disk image, an `arch` setting, an optional `digest`,
+# and an optional `variant` (e.g. "server", "minimal", "genericcloud").
+# If multiple image variants are defined for the target architecture, the first one is used by default,
+# but they can be filtered using the `--image-variant` flag when running `limactl start` or `limactl create`.
 # To specify a custom kernel and initial RAM disk, nest `kernel` and `initrd` under an image entry:
 #   - location: "https://example.com/image.qcow2"
 #     # kernel specifies a custom kernel to boot.

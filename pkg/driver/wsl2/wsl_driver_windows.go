@@ -127,7 +127,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 			unsupportedVMImgRegex := regexp.MustCompile(`\.(qcow2|raw|img|iso|ipsw)(\.(gz|xz|bz2|zstd|zst))?$`)
 			squashfsRegex := regexp.MustCompile(`\.squashfs(\.(gz|xz|bz2|zstd|zst))?$`)
 			for i, image := range cfg.Images {
-				if unknown := reflectutil.UnknownNonEmptyFields(image, "File"); len(unknown) > 0 {
+				if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Variant"); len(unknown) > 0 {
 					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *cfg.VMType, i, unknown)
 				}
 				if image.Arch == *cfg.Arch {

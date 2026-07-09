@@ -93,8 +93,25 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)
 	if !osutil.FileExists(imagePath) && !osutil.FileExists(disk) {
 		var ensuredImage bool
+		var targetVariant string
+		var targetVariantSet bool
+		for _, img := range inst.Config.Images {
+			if img.Arch == *inst.Config.Arch {
+				targetVariant = img.Variant
+				targetVariantSet = true
+				break
+			}
+		}
+
+		if len(inst.Config.Images) == 0 {
+			return nil, errors.New("no images are configured (did you set --image-variant to a value not present in the template?)")
+		}
 		errs := make([]error, len(inst.Config.Images))
 		for i, f := range inst.Config.Images {
+			if targetVariantSet && f.Variant != targetVariant {
+				errs[i] = fmt.Errorf("%w: variant mismatch (expected %q, got %q)", fileutils.ErrSkipped, targetVariant, f.Variant)
+				continue
+			}
 			if _, err := fileutils.DownloadFile(ctx, imagePath, f.File, true, "the image", *inst.Config.Arch); err != nil {
 				errs[i] = err
 				continue
