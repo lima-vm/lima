@@ -49,7 +49,7 @@ validate_artifact() {
 		MYARCH="aarch64"
 		OTHERARCH="x86_64"
 	fi
-	if [[ $FILE == *"go-mod-vendor.tar.gz" ]]; then
+	if [[ $FILE == *"go-mod-vendor.tar.gz" || $FILE == *"sbom.tar.gz" ]]; then
 		: NOP
 	elif [[ $FILE == *"lima-additional-guestagents"*".tar.gz" || $FILE == *"lima-additional-guestagents"*".zip" ]]; then
 		must_not_contain "$FILE" "lima-guestagent.Linux-$MYARCH"

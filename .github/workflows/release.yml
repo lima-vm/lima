@@ -85,6 +85,9 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu
+    - name: Install cyclonedx-gomod
+      run: |
+        go install github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod@v1.10.0
     - name: "Compile binaries (Linux)"
       run: make artifacts-linux
     - name: "Compile binaries (Windows)"
