@@ -638,12 +638,14 @@ shellcheck:
 shfmt:
 	find . -name '*.sh' ! -path "./.git/*" | xargs $(GO) run -modfile=./hack/tools/go.mod mvdan.cc/sh/v3/cmd/shfmt -s -d
 
+CYCLONEDX_GOMOD = $(GO) run -modfile=./hack/tools/go.mod github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod
+
 .PHONY: sbom
 sbom:
-	cyclonedx-gomod mod -licenses -json -output bom.json -type library
-	cyclonedx-gomod app -licenses -json -output limactl.bom.json -main cmd/limactl
-	cyclonedx-gomod app -licenses -json -output limactl-mcp.bom.json -main cmd/limactl-mcp
-	cyclonedx-gomod app -licenses -json -output lima-guestagent.bom.json -main cmd/lima-guestagent
+	$(CYCLONEDX_GOMOD) mod -licenses -json -output bom.json -type library
+	$(CYCLONEDX_GOMOD) app -licenses -json -output limactl.bom.json -main cmd/limactl
+	$(CYCLONEDX_GOMOD) app -licenses -json -output limactl-mcp.bom.json -main cmd/limactl-mcp
+	$(CYCLONEDX_GOMOD) app -licenses -json -output lima-guestagent.bom.json -main cmd/lima-guestagent
 
 .PHONY: go-licenses
 go-licenses:
