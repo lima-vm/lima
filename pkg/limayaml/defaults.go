@@ -204,6 +204,8 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			y.User.Shell = ptr.Of("/bin/sh")
 		case limatype.DARWIN:
 			y.User.Shell = ptr.Of("/bin/zsh")
+		case limatype.WINDOWS:
+			y.User.Shell = ptr.Of("cmd.exe")
 		default:
 			y.User.Shell = ptr.Of("/bin/bash")
 		}

@@ -368,8 +368,11 @@ user:
   # It can use the following template variables: {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
   # 🟢 Builtin default: "/home/{{.User}}.guest" (Also accessible as "/home/{{.User}}.linux")
   home: null
-  # Shell. Needs to be an absolute path.
-  # 🟢 Builtin default: "/bin/bash"
+  # Shell. Needs to be an absolute path on POSIX guests.
+  # For Windows guests, this is the command-line interpreter used by `limactl shell`,
+  # and must be one of "cmd.exe", "powershell.exe", or "pwsh.exe".
+  # The shell must already exist in the guest image.
+  # 🟢 Builtin default: "/bin/bash" (Linux), "/bin/zsh" (macOS), "/bin/sh" (FreeBSD), "cmd.exe" (Windows)
   shell: null
 
 vmOpts:

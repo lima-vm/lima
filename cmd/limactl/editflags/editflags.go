@@ -93,6 +93,11 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 		}
 		return drivers, cobra.ShellCompDirectiveNoFileComp
 	})
+
+	flags.String("shell", "", commentPrefix+"User login shell in the guest (e.g. /bin/bash, /bin/zsh)")
+	_ = cmd.RegisterFlagCompletionFunc("shell", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"/bin/bash", "/bin/zsh", "cmd.exe", "powershell.exe", "pwsh.exe"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
@@ -439,6 +444,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 			false,
 			false,
 		},
+		{"shell", d(".user.shell = %q"), false, false},
 	}
 	var exprs []string
 	for _, def := range defs {

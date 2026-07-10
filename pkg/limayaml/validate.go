@@ -65,6 +65,17 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %#q", limatype.ArchTypes, *y.Arch))
 	}
 
+	if y.User.Shell != nil {
+		shell := *y.User.Shell
+		if *y.OS == limatype.WINDOWS {
+			if !IsSupportedWindowsShell(shell) {
+				errs = errors.Join(errs, fmt.Errorf("field `user.shell` must be one of %v for Windows guest, got %#q", SupportedWindowsShells, shell))
+			}
+		} else if !path.IsAbs(shell) {
+			errs = errors.Join(errs, fmt.Errorf("field `user.shell` must be an absolute path, got %#q", shell))
+		}
+	}
+
 	if len(y.Images) == 0 {
 		errs = errors.Join(errs, errors.New("field `images` must be set"))
 	}
@@ -439,6 +450,22 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	}
 
 	return errs
+}
+
+var SupportedWindowsShells = []string{"cmd.exe", "powershell.exe", "pwsh.exe"}
+
+func IsSupportedWindowsShell(shell string) bool {
+	// Normalize both forward and backward slashes since Windows-style paths may
+	// be validated on a non-Windows host.
+	if i := strings.LastIndexAny(shell, `/\`); i >= 0 {
+		shell = shell[i+1:]
+	}
+	for _, s := range SupportedWindowsShells {
+		if strings.EqualFold(shell, s) {
+			return true
+		}
+	}
+	return false
 }
 
 func validateFileObject(f limatype.File, fieldName string) error {

@@ -28,6 +28,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
@@ -289,8 +290,23 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	if shell == "" {
-		shell = `"$SHELL"`
+	if *inst.Config.OS == limatype.WINDOWS {
+		if shell == "" {
+			if inst.Config.User.Shell != nil {
+				shell = *inst.Config.User.Shell
+			} else {
+				shell = "cmd.exe"
+			}
+		}
+		if !limayaml.IsSupportedWindowsShell(shell) {
+			return fmt.Errorf("unsupported shell %#q for Windows guest, must be one of %v", shell, limayaml.SupportedWindowsShells)
+		}
+	} else if shell == "" {
+		if inst.Config.User.Shell != nil {
+			shell = shellescape.Quote(*inst.Config.User.Shell)
+		} else {
+			shell = `"$SHELL"`
+		}
 	} else {
 		shell = shellescape.Quote(shell)
 	}
@@ -315,7 +331,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	script := fmt.Sprintf("%s ; exec %s%s -l", changeDirCmd, envPrefix, shell)
 	if *inst.Config.OS == limatype.WINDOWS {
 		// TODO: When we implement a file mount for Windows guest, we should change directory here.
-		script = "cmd.exe"
+		script = windowsQuoteShell(shell)
 	}
 	if len(args) > 1 {
 		quotedArgs := make([]string, len(args[1:]))
@@ -330,8 +346,10 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		switch *inst.Config.OS {
 		case limatype.WINDOWS:
+			// cmd.exe uses "/c", while powershell.exe / pwsh.exe use "-Command".
+			flag := windowsShellCommandFlag(shell)
 			// On Windows, commands should be double-quoted.
-			script += fmt.Sprintf(` /c "%s"`, strings.Join(quotedArgs, " "))
+			script += fmt.Sprintf(` %s "%s"`, flag, strings.Join(quotedArgs, " "))
 		default:
 			script += fmt.Sprintf(
 				" -c %s",
@@ -465,6 +483,33 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty)
 	}
 	return nil
+}
+
+// windowsShellCommandFlag returns the flag used to pass a command string to the
+// given Windows shell. cmd.exe uses "/c", while powershell.exe and pwsh.exe use "-Command".
+// The shell may be an absolute path (e.g. `C:\Windows\System32\cmd.exe`);
+// only its basename is inspected.
+func windowsShellCommandFlag(shell string) string {
+	if i := strings.LastIndexAny(shell, `/\`); i >= 0 {
+		shell = shell[i+1:]
+	}
+	if strings.EqualFold(shell, "cmd.exe") {
+		return "/c"
+	}
+	return "-Command"
+}
+
+// windowsQuoteShell wraps an absolute Windows shell path in double quotes
+// when it contains whitespace, so the remote command line parses correctly.
+// Already-quoted values are returned unchanged.
+func windowsQuoteShell(shell string) string {
+	if strings.HasPrefix(shell, `"`) && strings.HasSuffix(shell, `"`) && len(shell) >= 2 {
+		return shell
+	}
+	if !strings.ContainsAny(shell, " \t") {
+		return shell
+	}
+	return `"` + shell + `"`
 }
 
 func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
