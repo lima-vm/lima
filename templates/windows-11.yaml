@@ -1,7 +1,6 @@
 # Windows guest is currently experimental. It only runs on QEMU, and it requires plain: true.
 os: "Windows"
 vmType: "qemu"
-arch: "x86_64"
 
 images:
 # Currently there is no way to download Windows 11 ISO automatically.
@@ -9,6 +8,8 @@ images:
 # Please download `English (United States)` version. Otherwise VM installation is stopped in the middle.
 - location: "~/Downloads/Win11_25H2_English_x64_v2.iso"
   arch: "x86_64"
+- location: "~/Downloads/Win11_25H2_English_Arm64_v2.iso"
+  arch: "aarch64"
 
 # Windows 11 guest uses TPM emulation by default.
 # You can turn off TPM (in that case, lima bypasses Windows 11's initial TPM check).
