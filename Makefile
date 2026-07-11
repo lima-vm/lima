@@ -646,6 +646,7 @@ SBOM_ARCH = $(call to_uname_m,$(GOARCH))
 
 .PHONY: sbom
 sbom:
+	rm -rf vendor
 	GOOS="$(GOHOSTOS)" GOARCH="$(GOHOSTARCH)" GOFLAGS="" \
 	$(CYCLONEDX_GOMOD) mod $(CYCLONEDX_GOMOD_FLAGS) -json -output bom.json -type library
 ifeq ($(native_compiling),true)
