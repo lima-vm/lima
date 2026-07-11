@@ -73,8 +73,8 @@ The following templates are designed to support multi-node mode:
 {{< tabpane text=true >}}
 {{% tab header="Lima v2.0" %}}
 ```bash
-limactl start --name k8s-0 --network lima:user-v2 template:k8s
-limactl shell k8s-0 sudo kubeadm token create --print-join-command
+limactl start --name k8s --network lima:user-v2 template:k8s
+limactl shell k8s sudo kubeadm token create --print-join-command
 # (The join command printed here)
 ```
 
@@ -86,8 +86,8 @@ limactl shell k8s-1 sudo <JOIN_COMMAND_FROM_ABOVE>
 {{% /tab %}}
 {{% tab header="Lima v2.1 (k8s)" %}}
 ```bash
-limactl start --name k8s-0 --network lima:user-v2 template:k8s
-limactl shell k8s-0 sudo kubeadm token create --print-join-command
+limactl start --name k8s --network lima:user-v2 template:k8s
+limactl shell k8s sudo kubeadm token create --print-join-command
 # (The parameters for the start command printed here)
 ```
 
@@ -99,10 +99,10 @@ limactl start --name k8s-1 --network lima:user-v2 template:k8s \
 {{% /tab %}}
 {{% tab header="Lima v2.1 (k3s)" %}}
 ```bash
-limactl start --name k3s-0 --network lima:user-v2 template:k3s
-printf "https://lima-%s.internal:6443\n" k3s-0
+limactl start --name k3s --network lima:user-v2 template:k3s
+printf "https://lima-%s.internal:6443\n" k3s
 # (The url for the start command printed here)
-limactl shell k3s-0 sudo cat /var/lib/rancher/k3s/server/node-token
+limactl shell k3s sudo cat /var/lib/rancher/k3s/server/node-token
 # (The token for the start command printed here)
 ```
 

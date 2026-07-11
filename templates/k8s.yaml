@@ -13,8 +13,8 @@
 # A multi-node cluster can be created by starting multiple instances of this template
 # connected via the `lima:user-v2` network.
 #
-# $ limactl start --name k8s-0 --network lima:user-v2 template:k8s
-# $ limactl shell k8s-0 sudo kubeadm token create --print-join-command
+# $ limactl start --name k8s --network lima:user-v2 template:k8s
+# $ limactl shell k8s sudo kubeadm token create --print-join-command
 # (The parameters for the start command printed here)
 #
 # $ limactl start --name k8s-1 --network lima:user-v2 template:k8s \
