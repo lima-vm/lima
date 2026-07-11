@@ -93,8 +93,8 @@ limactl shell k8s-0 sudo kubeadm token create --print-join-command
 
 ```bash
 limactl start --name k8s-1 --network lima:user-v2 template:k8s \
-              --set '.param.url="https://<ADDRESS_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>" | \
-                     .param.discoveryTokenCaCertHash="<DISCOVERY_TOKEN_CA_CERT_HASH_FROM_ABOVE>"'
+              --param url="https://<ADDRESS_FROM_ABOVE>" --param token="<TOKEN_FROM_ABOVE>" \
+              --param discoveryTokenCaCertHash="<DISCOVERY_TOKEN_CA_CERT_HASH_FROM_ABOVE>"
 ```
 {{% /tab %}}
 {{% tab header="Lima v2.1 (k3s)" %}}
@@ -108,7 +108,7 @@ limactl shell k3s-0 sudo cat /var/lib/rancher/k3s/server/node-token
 
 ```bash
 limactl start --name k3s-1 --network lima:user-v2 template:k3s \
-              --set '.param.url="<URL_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>"'
+              --param url="<URL_FROM_ABOVE>" --param token="<TOKEN_FROM_ABOVE>"
 ```
 {{% /tab %}}
 {{< /tabpane >}}

@@ -20,7 +20,7 @@
 # (The token for the start command printed here)
 #
 # $ limactl start --name k3s-1 --network lima:user-v2 template:k3s \
-#                 --set '.param.url="<URL_FROM_ABOVE>" | .param.token="<TOKEN_FROM_ABOVE>"'
+#                 --param url="<URL_FROM_ABOVE>" --param token="<TOKEN_FROM_ABOVE>"
 
 minimumLimaVersion: 2.0.0
 
