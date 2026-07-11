@@ -5,6 +5,8 @@ weight: 50
 
 Lima supports several methods for mounting the host filesystem into the guest.
 
+> **See also:** In [plain mode](./plain.md), all filesystem mounts are disabled.
+
 The default mount type is shown in the following table:
 
 | Lima Version | Default                                                       |
