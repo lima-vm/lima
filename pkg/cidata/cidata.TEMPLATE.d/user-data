@@ -38,9 +38,10 @@ timezone: {{.TimeZone}}
 
 users:
   - name: "{{.User}}"
-{{- if ne .OS "FreeBSD" }}
+{{- if eq .OS "FreeBSD" }}
     # nuageinit does not support specifying the UID.
     # The UID is fixed up in boot.essential.FreeBSD/00-freebsd-user-group.sh
+{{- else }}
     uid: "{{.UID}}"
 {{- end }}
 {{- if .Comment }}
