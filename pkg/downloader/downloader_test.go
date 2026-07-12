@@ -4,6 +4,7 @@
 package downloader
 
 import (
+	"bytes"
 	"compress/gzip"
 	"io"
 	"net/http"
@@ -13,6 +14,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -206,6 +208,204 @@ func countResults(t *testing.T, results chan downloadResult) (downloaded, cached
 		}
 	}
 	return downloaded, cached
+}
+
+// seedPartial writes a partial download (data.part) and its cached Last-Modified
+// into the cache entry for url, so a subsequent Download attempts to resume it.
+func seedPartial(t *testing.T, cacheDir, url string, partial []byte, lastModified string) {
+	t.Helper()
+	shad := cacheDirectoryPath(cacheDir, url)
+	assert.NilError(t, os.MkdirAll(shad, 0o700))
+	assert.NilError(t, os.WriteFile(filepath.Join(shad, "data.part"), partial, 0o644))
+	if lastModified != "" {
+		assert.NilError(t, os.WriteFile(filepath.Join(shad, "time"), []byte(lastModified), 0o644))
+	}
+}
+
+func TestResumeDownload(t *testing.T) {
+	content := bytes.Repeat([]byte("lima-resume-test\n"), 100) // 1700 bytes
+	dgst := digest.FromBytes(content)
+	modtime := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC)
+	lastModified := modtime.UTC().Format(http.TimeFormat)
+	const prefix = 400
+
+	t.Run("resumes from partial", func(t *testing.T) {
+		ctx := t.Context()
+		var gotRange atomic.Bool
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Range") != "" {
+				gotRange.Store(true)
+			}
+			// ServeContent handles Range/If-Range and replies 206 when the
+			// If-Range validator (Last-Modified) matches modtime.
+			http.ServeContent(w, r, "data", modtime, bytes.NewReader(content))
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		seedPartial(t, cacheDir, ts.URL, content[:prefix], lastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		r, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		assert.Assert(t, gotRange.Load(), "server should have received a Range request")
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "resumed file must match the full content")
+	})
+
+	t.Run("falls back to full download when Range is ignored", func(t *testing.T) {
+		ctx := t.Context()
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+			// Always reply 200 with the full body, ignoring the Range header.
+			w.Header().Set("Last-Modified", lastModified)
+			_, _ = w.Write(content)
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		// Garbage partial must be discarded (O_TRUNC) on a 200 response.
+		seedPartial(t, cacheDir, ts.URL, []byte("garbage-garbage-garbage"), lastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		r, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "file must be the full content, not the garbage partial")
+	})
+
+	t.Run("restarts when remote changed (If-Range mismatch)", func(t *testing.T) {
+		ctx := t.Context()
+		// The remote is newer than the cached partial, so If-Range mismatches
+		// and ServeContent replies 200 with the full (current) body.
+		newModtime := time.Date(2021, time.June, 1, 0, 0, 0, 0, time.UTC)
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeContent(w, r, "data", newModtime, bytes.NewReader(content))
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		oldLastModified := time.Date(2020, time.January, 1, 0, 0, 0, 0, time.UTC).Format(http.TimeFormat)
+		seedPartial(t, cacheDir, ts.URL, []byte("stale-stale-stale-stale"), oldLastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		r, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "file must be the fresh full content")
+	})
+
+	t.Run("restarts on 416 when partial exceeds remote size", func(t *testing.T) {
+		ctx := t.Context()
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeContent(w, r, "data", modtime, bytes.NewReader(content))
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		// Partial larger than the remote → Range unsatisfiable → 416 → restart.
+		seedPartial(t, cacheDir, ts.URL, bytes.Repeat([]byte("x"), len(content)+500), lastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		r, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "file must be the full content after 416 restart")
+	})
+
+	t.Run("finalizes a complete partial on 416 without re-downloading", func(t *testing.T) {
+		ctx := t.Context()
+		var requests atomic.Int32
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			requests.Add(1)
+			http.ServeContent(w, r, "data", modtime, bytes.NewReader(content))
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		// The partial is already the complete file, so the Range request is
+		// unsatisfiable (416) and it should be finalized in place.
+		seedPartial(t, cacheDir, ts.URL, content, lastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		r, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		assert.Equal(t, int32(1), requests.Load(), "a complete partial must be finalized without a second request")
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "finalized file must match the full content")
+	})
+
+	t.Run("restarts from scratch without a digest", func(t *testing.T) {
+		ctx := t.Context()
+		var gotRange atomic.Bool
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Header.Get("Range") != "" {
+				gotRange.Store(true)
+			}
+			http.ServeContent(w, r, "data", modtime, bytes.NewReader(content))
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		// A valid partial exists, but without a digest its integrity cannot be
+		// verified, so the download must restart (no Range request) rather than
+		// trusting the partial.
+		seedPartial(t, cacheDir, ts.URL, content[:prefix], lastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		r, err := Download(ctx, localPath, ts.URL, WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		assert.Assert(t, !gotRange.Load(), "server must not receive a Range request without a digest")
+
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "file must be the full content")
+	})
+
+	t.Run("discards corrupt partial on digest mismatch", func(t *testing.T) {
+		ctx := t.Context()
+		ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			http.ServeContent(w, r, "data", modtime, bytes.NewReader(content))
+		}))
+		t.Cleanup(ts.Close)
+
+		cacheDir := filepath.Join(t.TempDir(), "cache")
+		// A correctly-sized but corrupt prefix: the resumed digest cannot match.
+		corrupt := bytes.Repeat([]byte("?"), prefix)
+		seedPartial(t, cacheDir, ts.URL, corrupt, lastModified)
+
+		localPath := filepath.Join(t.TempDir(), "out")
+		_, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.ErrorContains(t, err, "expected digest")
+
+		// The corrupt partial must be removed so the next attempt can recover.
+		part := filepath.Join(cacheDirectoryPath(cacheDir, ts.URL), "data.part")
+		_, statErr := os.Stat(part)
+		assert.Assert(t, os.IsNotExist(statErr), "corrupt data.part should have been removed")
+
+		// The next attempt starts fresh and succeeds.
+		r, err := Download(ctx, localPath, ts.URL, WithExpectedDigest(dgst), WithCacheDir(cacheDir))
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+		got, err := os.ReadFile(localPath)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Equal(got, content), "recovered file must match the full content")
+	})
 }
 
 func TestRedownloadRemote(t *testing.T) {

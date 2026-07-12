@@ -143,6 +143,10 @@ The directory contains the following files:
 
 - `url`: raw url text, without "\n"
 - `data`: data
+- `data.part`: (Optional) a partial download that has not completed yet. It is renamed to `data` once the download finishes and its digest (if any) is verified. When a download is interrupted, this file is kept so the next attempt can resume it with an HTTP `Range` request (guarded by `If-Range`). At most one `data.part` exists per URL. A leftover partial is only removed together with its cache entry: `limactl prune` deletes the entire cache, and when `limactl prune --keep-referred` deletes an unused cache entry, any `data.part` in that entry is removed with it.
+- `time`: value of the `Last-Modified` response header, used to detect changes of digest-less images and as an `If-Range` validator when resuming.
+- `type`: value of the `Content-Type` response header.
+- `etag`: (Optional) value of the `ETag` response header, used as the preferred `If-Range` validator when resuming.
 - `<ALGO>.digest`: digest of the data, in OCI format.
    e.g., file name `sha256.digest`, with content `sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967`
 - `imgconv/`: (Optional) a converted copy of the image, in a format the current driver can use. The downloader creates this on demand when the driver reports its `SupportedImageFormats` and the cached `data` is not one of them (for example, a `qcow2` image requested by the `vz` driver, which only boots raw). The original `data` and its digest file are left as-is, so another driver can still use them.
