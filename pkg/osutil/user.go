@@ -150,7 +150,10 @@ func LimaUser(ctx context.Context, limaVersion string, warn bool, guestOS *limat
 	}
 	// Make sure we return a pointer to a COPY of limaUser
 	u := *limaUser
-	limaVersionUnknown := limaVersion == "" || limaVersion == "<unknown>"
+	// "" and "<unknown>" both mean the version is unknown, but "" marks an instance created
+	// before Lima v0.20 and counts as old, while "<unknown>" is a development build assumed
+	// current.
+	limaVersionUnknown := limaVersion == "<unknown>"
 	if guestOS != nil && *guestOS == limatype.DARWIN {
 		u.HomeDir = "/Users/{{.User}}.guest"
 	} else if limaVersionUnknown || versionutil.GreaterEqual(limaVersion, "2.1.0") {

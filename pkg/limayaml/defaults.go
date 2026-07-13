@@ -874,20 +874,27 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	fixUpForPlainMode(y)
 }
 
-// ExistingLimaVersion returns empty if the instance was created with Lima prior to v0.20.
+// ExistingLimaVersion returns the version that created the instance, the empty string
+// for instances created before Lima v0.20 (which have no recorded version), or the
+// current version when the instance doesn't exist yet.
 func ExistingLimaVersion(instDir string) string {
 	if !IsExistingInstanceDir(instDir) {
 		return version.Version
 	}
 
 	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
-	if b, err := os.ReadFile(limaVersionFile); err == nil {
+	b, err := os.ReadFile(limaVersionFile)
+	switch {
+	case err == nil:
 		return strings.TrimSpace(string(b))
-	} else if !errors.Is(err, os.ErrNotExist) {
+	case errors.Is(err, os.ErrNotExist):
+		// Instances created before Lima v0.20 have no version file. versionutil treats
+		// the empty string as older than any release.
+		return ""
+	default:
 		logrus.WithError(err).Warnf("Failed to read %#q", limaVersionFile)
+		return version.Version
 	}
-
-	return version.Version
 }
 
 func fixUpForPlainMode(y *limatype.LimaYAML) {
