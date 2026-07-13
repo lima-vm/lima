@@ -55,7 +55,7 @@ See <https://lima-vm.io/docs/> for the further information.
 
 ## Software Bill of Materials (SBOM)
 
-The "sbom" download contains SBOM in the CycloneDX format.
+The "sbom" download contains SBOM in the CycloneDX format since v2.3.
 
 There are both "app" \*.bom.json and "mod" bom.json files:
 
