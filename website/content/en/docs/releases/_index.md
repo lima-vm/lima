@@ -14,3 +14,5 @@ See <https://github.com/lima-vm/lima/releases> for the latest release.
 | v0.x    | 2021-05-14 | 2024-11-06 (v1 Begin + 0 days)   |
 
 Since Lima v1.x, each major release receives security updates and critical bug fixes until three months after the next major release.
+
+Since Lima v2.3, each major and minor release contains a Software Bill of Materials (SBOM) together with the other release artifacts.

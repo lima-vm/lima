@@ -803,9 +803,10 @@ artifacts-jsonschema: schema-limayaml.json | _artifacts
 	$(CP) $^ _artifacts/
 
 .PHONY: artifacts-misc
-artifacts-misc: | _artifacts
+artifacts-misc: sbom | _artifacts
 	go mod vendor
 	$(TAR) --no-xattrs -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
+	$(TAR) --no-xattrs -czf _artifacts/lima-$(VERSION_TRIMMED)-sbom.tar.gz *bom.json
 
 MKDIR_TARGETS += _artifacts
 
