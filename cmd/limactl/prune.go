@@ -64,7 +64,9 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 			}
 		}
 	}
-	return nil
+
+	// Sweep leftover partial downloads (data.part / data.tmp.*) from the kept entries.
+	return downloader.RemoveStaleTempFiles(opt)
 }
 
 func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
