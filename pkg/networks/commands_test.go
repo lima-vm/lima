@@ -38,10 +38,6 @@ func TestLogFile(t *testing.T) {
 func TestUser(t *testing.T) {
 	config, err := DefaultConfig()
 	assert.NilError(t, err)
-	if runtime.GOOS != "darwin" && config.Group == "everyone" {
-		// The "everyone" group is a specific macOS feature to include non-local accounts.
-		config.Group = "staff"
-	}
 	if runtime.GOOS == "windows" {
 		// unimplemented
 		t.Skip()
@@ -84,11 +80,11 @@ func TestStartCmd(t *testing.T) {
 		}
 
 		cmd := config.StartCmd("shared", SocketVMNet)
-		assert.Equal(t, cmd, "/opt/socket_vmnet/bin/socket_vmnet --pidfile="+filepath.Join(varRunDir, "shared_socket_vmnet.pid")+" --socket-group=everyone --vmnet-mode=shared "+
+		assert.Equal(t, cmd, "/opt/socket_vmnet/bin/socket_vmnet --pidfile="+filepath.Join(varRunDir, "shared_socket_vmnet.pid")+" --socket-group=admin --vmnet-mode=shared "+
 			"--vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 "+filepath.Join(varRunDir, "socket_vmnet.shared"))
 
 		cmd = config.StartCmd("bridged", SocketVMNet)
-		assert.Equal(t, cmd, "/opt/socket_vmnet/bin/socket_vmnet --pidfile="+filepath.Join(varRunDir, "bridged_socket_vmnet.pid")+" --socket-group=everyone --vmnet-mode=bridged "+
+		assert.Equal(t, cmd, "/opt/socket_vmnet/bin/socket_vmnet --pidfile="+filepath.Join(varRunDir, "bridged_socket_vmnet.pid")+" --socket-group=admin --vmnet-mode=bridged "+
 			"--vmnet-interface=en0 "+filepath.Join(varRunDir, "socket_vmnet.bridged"))
 	})
 }

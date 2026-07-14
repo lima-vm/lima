@@ -15,7 +15,10 @@ paths:
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
 
-group: everyone
+# The group that is allowed to run socket_vmnet via sudo and to access the
+# socket_vmnet socket (macOS only; ignored on other platforms). Non-admin users
+# must set this to a group they belong to (e.g. "staff").
+group: admin
 
 networks:
   user-v2:

@@ -4,6 +4,8 @@ weight: 20
 ---
 
 ## v2.2.0
+- The default [`socket_vmnet` group](../config/network/vmnet.md) in `networks.yaml` was changed from `everyone` to
+  `admin`. A non-admin user must set `group` to a group they belong to (e.g. `staff`).
 - The default VM driver on Windows hosts was changed from `wsl2` to `qemu`,
   as `wsl2` is not compatible with most templates.
 
