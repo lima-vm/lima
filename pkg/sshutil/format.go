@@ -63,6 +63,13 @@ func quoteOption(o string) string {
 // Format formats the ssh options.
 func Format(w io.Writer, sshPath, instName string, format FormatT, opts []string) error {
 	fakeHostname := hostname.FromInstName(instName) // TODO: support customization
+	for _, o := range opts {
+		// A line break in an option value (e.g. a crafted user.name) would inject
+		// extra ssh_config directives such as ProxyCommand into the generated config.
+		if strings.ContainsAny(o, "\r\n") {
+			return fmt.Errorf("ssh option %#q contains a line break", o)
+		}
+	}
 	switch format {
 	case FormatCmd:
 		args := []string{sshPath}
