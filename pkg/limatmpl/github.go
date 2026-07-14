@@ -41,6 +41,18 @@ func transformGitHubURL(ctx context.Context, input string) (string, error) {
 	repo := cmp.Or(parts[1], org)
 	filePath := strings.Join(parts[2:], "/")
 
+	// A `..` in REPO, PATH, or BRANCH collapses server-side and moves the fetch
+	// to an unrelated org. Redirect bodies re-enter here, so treat them as untrusted.
+	if repo == ".." {
+		return "", fmt.Errorf("repo %#q in github: URL %#q escapes the org", repo, input)
+	}
+	if escapesRepo(filePath) {
+		return "", fmt.Errorf("path %#q in github: URL %#q escapes the repository", filePath, input)
+	}
+	if escapesRepo(origBranch) {
+		return "", fmt.Errorf("branch %#q in github: URL %#q escapes the repository", origBranch, input)
+	}
+
 	if filePath == "" {
 		filePath = defaultFilename
 	} else {
@@ -75,7 +87,9 @@ func transformGitHubURL(ctx context.Context, input string) (string, error) {
 }
 
 func githubUserContentURL(org, repo, branch, filePath string) string {
-	return fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s", org, repo, branch, filePath)
+	// Emit a cleaned path so we never rely on the server to resolve `../`,
+	// even for in-repo segments that don't escape.
+	return fmt.Sprintf("https://raw.githubusercontent.com/%s/%s/%s/%s", org, repo, branch, path.Clean(filePath))
 }
 
 func getGitHubUserContent(ctx context.Context, org, repo, branch, filePath string) (*http.Response, error) {
@@ -168,10 +182,30 @@ func resolveGitHubSymlink(ctx context.Context, org, repo, branch, filePath, orig
 
 	// A symlink must be a single line (without trailing newline), no spaces, no colons
 	if !(content == "" || strings.ContainsAny(content, "\n :")) {
-		// symlink is relative to the directory of filePath
-		filePath = path.Join(path.Dir(filePath), content)
+		// symlink is relative to the directory of filePath, and must stay within the repo
+		filePath, err = symlinkTarget(filePath, content)
+		if err != nil {
+			return "", err
+		}
 	}
 	return githubUserContentURL(org, repo, branch, filePath), nil
+}
+
+// symlinkTarget resolves a symlink target relative to the directory of filePath.
+// It returns an error if the target escapes the repository root, so a symlink
+// cannot redirect the fetch to a different repository via `../` segments.
+func symlinkTarget(filePath, target string) (string, error) {
+	resolved := path.Join(path.Dir(filePath), target)
+	if escapesRepo(resolved) {
+		return "", fmt.Errorf("symlink target %#q in %#q escapes the repository", target, filePath)
+	}
+	return resolved, nil
+}
+
+// escapesRepo reports whether the cleaned path climbs above the repository root.
+func escapesRepo(p string) bool {
+	p = path.Clean(p)
+	return p == ".." || strings.HasPrefix(p, "../")
 }
 
 // resolveGitHubRedirect checks if a file at the given path is a github: URL to another file within the same repo.
