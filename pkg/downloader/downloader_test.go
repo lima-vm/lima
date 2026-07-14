@@ -246,6 +246,38 @@ func TestRedownloadRemote(t *testing.T) {
 		assert.Equal(t, StatusUsedCache, r.Status)
 	})
 
+	// Regression test for https://github.com/lima-vm/lima/issues/5188: when the
+	// freshness HEAD check for a digest-less cached image fails (e.g. network
+	// error), Download must still fall back to the cache and actually copy the
+	// cached data to the local path, not just report StatusUsedCache.
+	t.Run("digest-less, HEAD failure falls back to cache", func(t *testing.T) {
+		ctx := t.Context()
+		flakyRemoteDir := t.TempDir()
+		flakyTS := httptest.NewServer(http.FileServer(http.Dir(flakyRemoteDir)))
+		remoteFile := filepath.Join(flakyRemoteDir, "flaky.txt")
+		assert.NilError(t, os.WriteFile(remoteFile, []byte("flaky"), 0o644))
+		remoteURL := flakyTS.URL + "/flaky.txt"
+		flakyCacheOpt := WithCacheDir(t.TempDir())
+
+		// First download populates the cache together with its last-modified time.
+		r, err := Download(ctx, filepath.Join(downloadDir, "flaky-1"), remoteURL, flakyCacheOpt)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusDownloaded, r.Status)
+
+		// The server goes away, so the freshness HEAD check on the next
+		// download will fail.
+		flakyTS.Close()
+
+		localPath2 := filepath.Join(downloadDir, "flaky-2")
+		r, err = Download(ctx, localPath2, remoteURL, flakyCacheOpt)
+		assert.NilError(t, err)
+		assert.Equal(t, StatusUsedCache, r.Status)
+
+		got, err := os.ReadFile(localPath2)
+		assert.NilError(t, err)
+		assert.Equal(t, "flaky", string(got))
+	})
+
 	t.Run("has-digest", func(t *testing.T) {
 		ctx := t.Context()
 		remoteFile := filepath.Join(remoteDir, "has-digest.txt")
