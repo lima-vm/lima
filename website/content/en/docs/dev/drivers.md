@@ -58,9 +58,8 @@ type Driver interface {
 	SnapshotManager
 	GuestAgent
 
-	Info() Info
+	Info(ctx context.Context) Info
 	Configure(ctx context.Context, inst *limatype.Instance) (*ConfiguredDriver, error)
-	FillConfig(ctx context.Context, cfg *limatype.LimaYAML, filePath string) error
 	SSHAddress(ctx context.Context) (string, error)
 }
 ```
