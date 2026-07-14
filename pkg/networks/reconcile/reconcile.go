@@ -6,6 +6,7 @@ package reconcile
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -34,9 +35,15 @@ func Reconcile(ctx context.Context, newInst string) error {
 		return err
 	}
 	activeNetwork := make(map[string]bool, 3)
+	skippedInstance := false
 	for _, instName := range instances {
 		instance, err := store.Inspect(ctx, instName)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				logrus.Warnf("Skipping instance %#q during network reconcile: %v", instName, err)
+				skippedInstance = true
+				continue
+			}
 			return err
 		}
 		// newInst is about to be started, so its networks should be running
@@ -56,9 +63,12 @@ func Reconcile(ctx context.Context, newInst string) error {
 	}
 	for name := range cfg.Networks {
 		var err error
-		if activeNetwork[name] {
+		switch {
+		case activeNetwork[name]:
 			err = startNetwork(ctx, &cfg, name)
-		} else {
+		case skippedInstance:
+			logrus.Debugf("Not stopping network %#q: an instance could not be inspected", name)
+		default:
 			err = stopNetwork(ctx, &cfg, name)
 		}
 		if err != nil {

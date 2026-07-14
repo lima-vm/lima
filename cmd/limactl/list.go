@@ -10,6 +10,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"reflect"
 	"slices"
 	"strings"
@@ -20,6 +21,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/uiutil"
 	"github.com/lima-vm/lima/v2/pkg/yqutil"
@@ -107,6 +109,22 @@ func (unmatchedInstancesError) Error() string {
 // ExitCode implements ExitCoder.
 func (unmatchedInstancesError) ExitCode() int {
 	return 1
+}
+
+func brokenInstance(instanceName string, inspectErr error) *limatype.Instance {
+	instDir, err := dirnames.InstanceDir(instanceName)
+	if err != nil {
+		return nil
+	}
+	if _, err := os.Stat(instDir); err != nil {
+		return nil
+	}
+	return &limatype.Instance{
+		Name:   instanceName,
+		Dir:    instDir,
+		Status: limatype.StatusBroken,
+		Errors: []error{inspectErr},
+	}
 }
 
 func listAction(cmd *cobra.Command, args []string) error {
@@ -216,6 +234,17 @@ func listAction(cmd *cobra.Command, args []string) error {
 	for _, instanceName := range instanceNames {
 		instance, err := store.Inspect(ctx, instanceName)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				if broken := brokenInstance(instanceName, err); broken != nil {
+					instances = append(instances, broken)
+					continue
+				}
+				logrus.Warnf("Skipping instance %#q: %v (being cloned or deleted?)", instanceName, err)
+				if len(args) > 0 {
+					unmatchedInstances = true
+				}
+				continue
+			}
 			return fmt.Errorf("unable to load instance %s: %w", instanceName, err)
 		}
 		instances = append(instances, instance)

@@ -20,6 +20,12 @@ local_setup() {
     export LIMA_HOME="${LOCAL_LIMA_HOME:?}"
 }
 
+local_teardown() {
+    # Some tests create a racy "probe" instance directory without a lima.yaml;
+    # make sure it never leaks into subsequent tests, even on assertion failure.
+    rm -rf "${LOCAL_LIMA_HOME:?}/probe"
+}
+
 @test 'list with no running instances shows a warning and exits without error' {
     export LIMA_HOME="$BATS_TEST_TMPDIR"
     run_e -0 limactl list
@@ -60,6 +66,73 @@ local_setup() {
     assert_line --index 1 --regexp '^foo'
     assert_line --index 2 --regexp '^bar'
     assert_output_lines_count 3
+}
+
+@test 'instance directory without lima.yaml is reported as broken, not fatal' {
+    # Simulate the window during `limactl clone` (dir created before lima.yaml
+    # is written) or `limactl delete` (lima.yaml removed before the dir), or a
+    # genuinely orphaned/broken instance directory. Rather than hiding it,
+    # the instance should still show up so the user knows it exists.
+    mkdir -p "${LIMA_HOME}/probe"
+
+    # table format: exits 0, warns about the broken instance, and lists it
+    # alongside everyone else with a Broken status.
+    run_e -0 limactl ls
+    assert_warning 'instance `probe` has errors…'
+    assert_line --index 0 --regexp '^NAME'
+    assert_line --index 1 --regexp '^bar'
+    assert_line --index 2 --regexp '^baz'
+    assert_line --index 3 --regexp '^foo'
+    assert_line --index 4 --regexp '^probe +Broken'
+    assert_output_lines_count 5
+
+    # json format: same behavior, one object per instance, including probe
+    run_e -0 limactl ls --format json
+    assert_warning 'instance `probe` has errors…'
+    assert_line --index 0 --regexp '^\{"name":"bar",'
+    assert_line --index 1 --regexp '^\{"name":"baz",'
+    assert_line --index 2 --regexp '^\{"name":"foo",'
+    assert_line --index 3 --regexp '^\{"name":"probe","hostname":"[^"]*","status":"Broken"'
+    assert_output_lines_count 4
+
+    # --quiet bypasses Inspect entirely and just lists directory names, so the
+    # broken "probe" dir is included there without a warning; this is
+    # existing, unrelated behavior, verified here as a regression guard.
+    run_e -0 limactl ls --quiet
+    assert_line --index 3 probe
+    assert_output_lines_count 4
+
+    # When the user explicitly names the broken instance, it is still found
+    # (it does exist, it is just broken) and reported, not treated as an
+    # unmatched/typo'd name. Other named instances are still listed too.
+    run_e -0 limactl ls foo probe
+    assert_warning 'instance `probe` has errors…'
+    assert_line --index 0 --regexp '^NAME'
+    assert_line --index 1 --regexp '^foo'
+    assert_line --index 2 --regexp '^probe +Broken'
+    assert_output_lines_count 3
+
+    rm -rf "${LIMA_HOME}/probe"
+}
+
+@test 'delete on a directory without lima.yaml is not silently ignored' {
+    # Unlike list/prune/reconcile, `delete` must not treat this directory as
+    # just another "instance doesn't exist" case: the directory may contain a
+    # large disk that would otherwise never be reachable through the CLI
+    # again, since `limactl list` now hides it. It also must not delete the
+    # directory automatically, since it could still be mid-clone.
+    mkdir -p "${LIMA_HOME}/probe"
+
+    run_e -1 limactl delete --force probe
+    assert_fatal 'instance `probe` directory…'
+    assert_dir_exists "${LIMA_HOME}/probe"
+
+    # A genuinely non-existent instance (typo, no directory at all) keeps its
+    # original, non-fatal behavior.
+    run_e -0 limactl delete --force does-not-exist
+    assert_warning 'Ignoring non-existent instance `does-not-exist`'
+
+    rm -rf "${LIMA_HOME}/probe"
 }
 
 @test '--quiet option shows only names, no header' {
