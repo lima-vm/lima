@@ -37,18 +37,11 @@ icacls $pubkeyLocation /inheritance:r
 icacls $pubkeyLocation /grant "SYSTEM:F"
 icacls $pubkeyLocation /grant "Administrators:F"
 
-# Install chocolatey for installing WinFSP.
-# WinFSP can be installed through winget as well, but currently winget is unstable in Windows Server Core
-# See: https://github.com/microsoft/winget-cli/discussions/5230
-Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.ServicePointManager]::SecurityProtocol -bor 3072; iex ((New-Object System.Net.WebClient).DownloadString('https://community.chocolatey.org/install.ps1'))
-
-# Install WinFSP for VirtioFS
-C:\ProgramData\chocolatey\choco.exe install winfsp -y --pre
-
-# Create VirtioFs service from virtio-win, and enable it
-# By default, the host directory is mounted on Z:
-New-Service -Name VirtioFsSvc -BinaryPathName 'E:\viofs\2k25\amd64\virtiofs.exe' -DisplayName VirtioFsSvc -StartupType Automatic
-Start-Service -Name VirtioFsSvc
+# Finally, it creates a marker file. Host agent will check the file.
+$bootDoneDir = 'C:\ProgramData\Lima'
+New-Item -ItemType Directory -Path $bootDoneDir -Force | Out-Null
+$bootDoneFile = Join-Path $bootDoneDir 'lima-boot-done.txt'
+'done' | Out-File -FilePath $bootDoneFile -Encoding ascii -Force -NoNewline
 
 # Finish recording logs
 Stop-Transcript

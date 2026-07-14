@@ -81,6 +81,9 @@ const (
 	// Swtpm is used for TPM emulation.
 	SwtpmSock = "swtpm.sock"
 	SwtpmDir  = "swtpm"
+
+	// Marker which indicates Windows OS installation completed.
+	WinDoneInstallation = "win-done-installation"
 )
 
 // Filenames used under a disk directory

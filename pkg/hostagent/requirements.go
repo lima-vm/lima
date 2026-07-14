@@ -282,7 +282,7 @@ func (a *HostAgent) essentialWinRequirements() []requirement {
 	req = append(req,
 		requirement{
 			description: "ssh",
-			script:      `PowerShell.exe -c "echo 'ssh login succeeds.'"`,
+			script:      `PowerShell.exe -NoProfile -NonInteractive -Command "if (Test-Path -Path 'C:\ProgramData\Lima\lima-boot-done.txt' -PathType Leaf) { exit 0 } else { exit 1 }"`,
 			debugHint: `Failed to SSH into the guest.
 Make sure that the YAML field "ssh.localPort" is not used by other processes on the host.
 If any private key under ~/.ssh is protected with a passphrase, you need to have ssh-agent to be running.
