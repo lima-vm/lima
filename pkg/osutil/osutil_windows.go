@@ -30,6 +30,9 @@ func SysStat(_ fs.FileInfo) (Stat, bool) {
 // SigInt is the value of SIGINT.
 const SigInt = Signal(2)
 
+// SigTerm is the value of SIGTERM.
+const SigTerm = Signal(15)
+
 // SigKill is the value of SIGKILL.
 const SigKill = Signal(9)
 
@@ -37,6 +40,21 @@ type Signal int
 
 func SysKill(pid int, _ Signal) error {
 	return windows.GenerateConsoleCtrlEvent(syscall.CTRL_BREAK_EVENT, uint32(pid))
+}
+
+// ProcessAlive reports whether the process with the given PID is still running.
+func ProcessAlive(pid int) bool {
+	h, err := windows.OpenProcess(windows.PROCESS_QUERY_LIMITED_INFORMATION, false, uint32(pid))
+	if err != nil {
+		return false
+	}
+	var exitCode uint32
+	err = windows.GetExitCodeProcess(h, &exitCode)
+	_ = windows.CloseHandle(h)
+	if err != nil {
+		return false
+	}
+	return exitCode == 259 // STILL_ACTIVE
 }
 
 func Dup2(_ int, _ syscall.Handle) error {

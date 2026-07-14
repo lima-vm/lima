@@ -91,10 +91,18 @@ func restartAction(cmd *cobra.Command, args []string) error {
 			if err != nil {
 				return err
 			}
-			if err := driverutil.ResolveVMType(ctx, y, filePath); err != nil {
+			if err := driverutil.ResolveVMType(y); err != nil {
 				return fmt.Errorf("failed to resolve vm for %#q: %w", filePath, err)
 			}
-			if err := limayaml.Validate(y, true); err != nil {
+			inst.Config = y
+			limaDriver, err := driverutil.CreateConfiguredDriver(ctx, inst, 0)
+			if err != nil {
+				return err
+			}
+			if err := limaDriver.Validate(ctx); err != nil {
+				return saveRejectedYAML(yBytes, err)
+			}
+			if err := limayaml.Validate(inst.Config, true); err != nil {
 				return saveRejectedYAML(yBytes, err)
 			}
 			if err := limayaml.ValidateAgainstLatestConfig(ctx, yBytes, yContent); err != nil {

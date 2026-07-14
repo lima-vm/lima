@@ -76,13 +76,17 @@ func New() *LimaQemuDriver {
 	}
 }
 
-func (l *LimaQemuDriver) Configure(_ context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
+func (l *LimaQemuDriver) Configure(_ context.Context, inst *limatype.Instance) (*driver.ConfiguredDriver, error) {
+	if err := fillConfig(inst.Config, inst.Dir); err != nil {
+		return nil, err
+	}
+
 	l.Instance = inst
 	l.SSHLocalPort = inst.SSHLocalPort
 
 	return &driver.ConfiguredDriver{
 		Driver: l,
-	}
+	}, nil
 }
 
 func (l *LimaQemuDriver) Validate(ctx context.Context) error {
@@ -185,12 +189,10 @@ func validateMountType(cfg *limatype.LimaYAML) error {
 	return nil
 }
 
-func (l *LimaQemuDriver) FillConfig(_ context.Context, cfg *limatype.LimaYAML, filePath string) error {
+func fillConfig(cfg *limatype.LimaYAML, instDir string) error {
 	if cfg.VMType == nil {
 		cfg.VMType = ptr.Of(limatype.QEMU)
 	}
-
-	instDir := filepath.Dir(filePath)
 
 	if cfg.Video.VNC.Display == nil || *cfg.Video.VNC.Display == "" {
 		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")

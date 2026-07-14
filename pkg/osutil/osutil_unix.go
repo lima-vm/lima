@@ -41,3 +41,9 @@ func Sysctl(ctx context.Context, name string) (string, error) {
 func IsEACCES(err error) bool {
 	return errors.Is(err, unix.EACCES)
 }
+
+// ProcessAlive reports whether the process with the given PID is still running.
+func ProcessAlive(pid int) bool {
+	err := syscall.Kill(pid, 0)
+	return err == nil || errors.Is(err, syscall.EPERM)
+}

@@ -136,10 +136,6 @@ func (d *DriverClient) Delete(ctx context.Context) error {
 	return nil
 }
 
-func (d *DriverClient) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ string) error {
-	return errors.New("pre-configured driver action not implemented in client driver")
-}
-
 func (d *DriverClient) RunGUI(ctx context.Context) error {
 	d.logger.Debug("Running GUI for the driver instance")
 
@@ -290,30 +286,35 @@ func (d *DriverClient) Info(ctx context.Context) driver.Info {
 	return info
 }
 
-func (d *DriverClient) Configure(ctx context.Context, inst *limatype.Instance) *driver.ConfiguredDriver {
+func (d *DriverClient) Configure(ctx context.Context, inst *limatype.Instance) (*driver.ConfiguredDriver, error) {
 	d.logger.Debugf("Setting config for instance %s with SSH local port %d", inst.Name, inst.SSHLocalPort)
 
 	instJSON, err := inst.MarshalJSON()
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to marshal instance config")
-		return nil
+		return nil, err
 	}
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
 
-	_, err = d.DriverSvc.Configure(ctx, &pb.SetConfigRequest{
+	resp, err := d.DriverSvc.Configure(ctx, &pb.SetConfigRequest{
 		InstanceConfigJson: instJSON,
 	})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to set config")
-		return nil
+		return nil, err
+	}
+
+	if err := inst.UnmarshalJSON(resp.InstanceConfigJson); err != nil {
+		d.logger.WithError(err).Error("Failed to unmarshal updated instance config")
+		return nil, err
 	}
 
 	d.logger.Debugf("Config set successfully for instance %s", inst.Name)
 	return &driver.ConfiguredDriver{
 		Driver: d,
-	}
+	}, nil
 }
 
 func (d *DriverClient) InspectStatus(_ context.Context, _ *limatype.Instance) string {

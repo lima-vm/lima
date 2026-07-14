@@ -13,6 +13,8 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/cidata"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/store"
@@ -69,10 +71,16 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 			}
 		}
 	}
+	if _, err := driverutil.CreateConfiguredDriver(ctx, inst, 0); err != nil {
+		logrus.WithError(err).Error("failed to configure driver for regenerating cloud-config")
+	}
 	// Regenerate the cloud-config.yaml, to reflect any changes to the global _config
 	if err := cidata.GenerateCloudConfig(ctx, inst.Dir, instName, inst.Config); err != nil {
 		logrus.Error(err)
 	}
+	defer func() {
+		server.Stop(inst.Dir, true)
+	}()
 
 	logrus.Infof("Instance %#q has been factory reset", instName)
 	return nil

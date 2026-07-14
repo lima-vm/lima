@@ -21,7 +21,6 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
@@ -675,9 +674,6 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	l, err := LoadWithWarnings(ctx, yLatest, "")
 	if err != nil {
 		errs = errors.Join(errs, err)
-	}
-	if err := driverutil.ResolveVMType(ctx, l, ""); err != nil {
-		errs = errors.Join(errs, fmt.Errorf("failed to resolve vm for %#q: %w", "", err))
 	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
 		errs = errors.Join(errs, err)

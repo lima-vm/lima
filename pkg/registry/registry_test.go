@@ -48,14 +48,13 @@ func (m *mockDriver) Info(_ context.Context) driver.Info {
 	return driver.Info{Name: m.Name}
 }
 
-func (m *mockDriver) Configure(_ context.Context, _ *limatype.Instance) *driver.ConfiguredDriver {
-	return nil
+func (m *mockDriver) Configure(_ context.Context, _ *limatype.Instance) (*driver.ConfiguredDriver, error) {
+	return nil, nil
 }
-func (m *mockDriver) FillConfig(_ context.Context, _ *limatype.LimaYAML, _ string) error { return nil }
-func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string       { return "" }
-func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                       { return "", nil }
-func (m *mockDriver) BootScripts(_ context.Context) (map[string][]byte, error)           { return nil, nil }
-func (m *mockDriver) AdditionalSetupForSSH(_ context.Context) error                      { return nil }
+func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string { return "" }
+func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                 { return "", nil }
+func (m *mockDriver) BootScripts(_ context.Context) (map[string][]byte, error)     { return nil, nil }
+func (m *mockDriver) AdditionalSetupForSSH(_ context.Context) error                { return nil }
 
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)

@@ -7,7 +7,6 @@ import (
 	"context"
 	"fmt"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -27,14 +26,9 @@ const (
 type ExternalDriver struct {
 	Name         string
 	InstanceName string
-	Command      *exec.Cmd
-	SocketPath   string
 	Client       *client.DriverClient // Client is the gRPC client for the external driver
 	Path         string
-	Ctx          context.Context
 	Logger       *logrus.Logger
-	CancelFunc   context.CancelFunc
-	PIDFileOwner string
 }
 
 var (

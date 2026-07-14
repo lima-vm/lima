@@ -64,18 +64,29 @@ func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) err
 	}
 }
 
-func (s *DriverServer) Configure(ctx context.Context, req *pb.SetConfigRequest) (*emptypb.Empty, error) {
+func (s *DriverServer) Configure(ctx context.Context, req *pb.SetConfigRequest) (*pb.SetConfigResponse, error) {
 	s.logger.Debugf("Received SetConfig request")
 	var inst limatype.Instance
 
 	if err := inst.UnmarshalJSON(req.InstanceConfigJson); err != nil {
 		s.logger.WithError(err).Error("Failed to unmarshal InstanceConfigJson")
-		return &emptypb.Empty{}, err
+		return nil, err
 	}
 
-	_ = s.driver.Configure(ctx, &inst)
+	_, err := s.driver.Configure(ctx, &inst)
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to configure driver")
+		return nil, err
+	}
 
-	return &emptypb.Empty{}, nil
+	jsonConfig, err := inst.MarshalJSON()
+	if err != nil {
+		s.logger.WithError(err).Error("Failed to marshal instance config")
+		return nil, status.Errorf(codes.Internal, "failed to marshal instance config: %v", err)
+	}
+
+	s.logger.Debug("Configure succeeded")
+	return &pb.SetConfigResponse{InstanceConfigJson: jsonConfig}, nil
 }
 
 func (s *DriverServer) GuestAgentConn(ctx context.Context, _ *emptypb.Empty) (*emptypb.Empty, error) {
