@@ -30,7 +30,7 @@ limactl shell macos cat /Users/${USER}.guest/password
 
 ## Difference from Linux guests
 - Password login is enabled
-- Password-less sudo is disabled, except for `/sbin/shutdown -h now`
+- Password-less sudo is disabled, except for `/sbin/shutdown -h now` (see [Sudo](/docs/config/sudo/) — this is not currently configurable on macOS)
 - Several features are not implemented yet. See [Caveats](#caveats) below.
 
 ## Caveats

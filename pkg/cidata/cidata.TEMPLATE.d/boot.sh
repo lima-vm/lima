@@ -203,6 +203,41 @@ if [ -d "${LIMA_CIDATA_MNT}"/provision.user ]; then
 	done
 fi
 
+if [ "${UNAME}" != "Darwin" ] && [ "${LIMA_CIDATA_PASSWORDLESS_SUDO}" != "1" ]; then
+	if [ ! -f "${LIMA_CIDATA_HOME}/.lima-password-set" ]; then
+		PASSWORD=$(head -c 8 /dev/urandom | od -An -tx1 | tr -d ' \n')
+		if command -v chpasswd >/dev/null 2>&1; then
+			if ! echo "${LIMA_CIDATA_USER}:${PASSWORD}" | chpasswd; then
+				WARNING "failed to set password via chpasswd"
+				PASSWORD=""
+				CODE=1
+			fi
+		elif command -v pw >/dev/null 2>&1; then
+			if ! echo "${PASSWORD}" | pw usermod "${LIMA_CIDATA_USER}" -h 0; then
+				WARNING "failed to set password via pw"
+				PASSWORD=""
+				CODE=1
+			fi
+		else
+			WARNING "no supported tool to set password found"
+			PASSWORD=""
+			CODE=1
+		fi
+		if [ -n "${PASSWORD}" ]; then
+			(umask 077 && : >"${LIMA_CIDATA_HOME}/password")
+			chown "${LIMA_CIDATA_USER}:${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}/password" || {
+				WARNING "failed to chown ${LIMA_CIDATA_HOME}/password"
+				CODE=1
+			}
+			echo "${PASSWORD}" >"${LIMA_CIDATA_HOME}/password"
+			touch "${LIMA_CIDATA_HOME}/.lima-password-set"
+			chown "${LIMA_CIDATA_USER}:${LIMA_CIDATA_USER}" "${LIMA_CIDATA_HOME}/.lima-password-set" || {
+				WARNING "failed to chown ${LIMA_CIDATA_HOME}/.lima-password-set"
+				CODE=1
+			}
+		fi
+	fi
+fi
 # Signal that provisioning is done. The instance ID changes on every boot,
 # so any value from a previous boot cycle will be different.
 echo "${LIMA_CIDATA_IID}" >"${RUN}/lima-boot-done"

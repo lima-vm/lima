@@ -56,6 +56,7 @@ users:
     {{/* (Why doesn't macOS VM support graceful shutdown?) */}}
     sudo: ALL=(ALL) NOPASSWD:/sbin/shutdown -h now
 {{- else }}
+    {{- if .PasswordlessSudo }}
     sudo: ALL=(ALL) NOPASSWD:ALL
     {{- if eq .OS "FreeBSD" }}
     groups:
@@ -63,6 +64,15 @@ users:
     doas: permit nopass :wheel
     {{- end}}
     lock_passwd: true
+    {{- else }}
+    sudo: ALL=(ALL) ALL
+    {{- if eq .OS "FreeBSD" }}
+    groups:
+    - wheel
+    doas: permit :wheel
+    {{- end}}
+    lock_passwd: false
+    {{- end }}
 {{- end }}
 {{- if eq .OS "FreeBSD" }}
     ssh_authorized_keys:

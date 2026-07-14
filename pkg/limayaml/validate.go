@@ -423,6 +423,25 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			}
 		}
 	}
+
+	// passwordlessSudo: true is not supported on macOS guests yet (lock_passwd unimplemented,
+	// account creation requires a password, and the same account backs the GUI session)
+	if y.OS != nil && *y.OS == limatype.DARWIN &&
+		y.User.PasswordlessSudo != nil && *y.User.PasswordlessSudo {
+		errs = errors.Join(errs, errors.New("`user.passwordlessSudo: true` is not supported on macOS guests"))
+	}
+	if y.VMType != nil && *y.VMType == limatype.WSL2 &&
+		y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo {
+		errs = errors.Join(errs, errors.New("`user.passwordlessSudo: false` is not supported on WSL2 guest"))
+	}
+	// GHSA-2j9v-p4xj-cjw2 constraint: require plain mode when passwordless sudo is disabled
+	if y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo {
+		if y.OS == nil || *y.OS != limatype.DARWIN {
+			if y.Plain == nil || !*y.Plain {
+				errs = errors.Join(errs, errors.New("`user.passwordlessSudo: false` requires `plain: true`"))
+			}
+		}
+	}
 	if y.Plain != nil && *y.Plain {
 		const portRangeWarnThreshold = 10
 		for i, rule := range y.PortForwards {
@@ -661,6 +680,14 @@ func warnExperimental(y *limatype.LimaYAML) {
 	}
 	if y.MountInotify != nil && *y.MountInotify {
 		logrus.Warn("`mountInotify` is experimental")
+	}
+	if y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo {
+		if y.OS == nil || *y.OS != limatype.DARWIN {
+			logrus.Warn("`user.passwordlessSudo: false` is experimental")
+		}
+	}
+	if y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo && len(y.Param) > 0 {
+		logrus.Warn("`param` still relies on sudo internally, it may not work as expected when `user.passwordlessSudo: false` is set")
 	}
 }
 

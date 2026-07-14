@@ -374,6 +374,12 @@ user:
   # The shell must already exist in the guest image.
   # 🟢 Builtin default: "/bin/bash" (Linux), "/bin/zsh" (macOS), "/bin/sh" (FreeBSD), "cmd.exe" (Windows)
   shell: null
+  # EXPERIMENTAL
+  # If false, a secure 16-character random password will be generated inside
+  # the guest on first boot and saved to `~/password` (with 0600 permissions).
+  # The user should manually rotate this password after the initial login.
+  # 🟢 Builtin default: true (false for macOS)
+  passwordlessSudo: null
 
 vmOpts:
   qemu:

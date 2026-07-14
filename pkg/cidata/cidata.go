@@ -136,6 +136,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Home:               *instConfig.User.Home,
 		Shell:              *instConfig.User.Shell,
 		UID:                *instConfig.User.UID,
+		PasswordlessSudo:   *instConfig.User.PasswordlessSudo,
 		GuestInstallPrefix: *instConfig.GuestInstallPrefix,
 		UpgradePackages:    *instConfig.UpgradePackages,
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
