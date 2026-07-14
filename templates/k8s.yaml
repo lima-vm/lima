@@ -170,10 +170,13 @@ provision:
   script: |
     #!/bin/bash
     set -eux -o pipefail
+    # set up user config on control plane node
+    {{if not ( and .Param.url .Param.token )}}
     export KUBECONFIG=/etc/kubernetes/admin.conf
     mkdir -p {{.Home}}/.kube
     cp -f $KUBECONFIG {{.Home}}/.kube/config
     chown -R {{.User}} {{.Home}}/.kube
+    {{end}}
 probes:
 - description: "kubeadm to be installed"
   script: |
