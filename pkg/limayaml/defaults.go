@@ -991,13 +991,16 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 		} else {
 			rule.GuestIP = IPv4loopback1
 		}
+		rule.GuestIPWasUndefined = true
 	}
 	if rule.GuestIPMustBeZero == nil {
 		rule.GuestIPMustBeZero = ptr.Of(rule.GuestIP.Equal(net.IPv4zero))
 	}
 	if rule.HostIP == nil {
 		rule.HostIP = IPv4loopback1
+		rule.HostIPWasUndefined = true
 	}
+
 	if rule.GuestPortRange[0] == 0 && rule.GuestPortRange[1] == 0 {
 		if rule.GuestPort == 0 {
 			rule.GuestPortRange[0] = 1
