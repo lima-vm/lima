@@ -8,6 +8,12 @@ weight: 20
   `admin`. A non-admin user must set `group` to a group they belong to (e.g. `staff`).
 - The default VM driver on Windows hosts was changed from `wsl2` to `qemu`,
   as `wsl2` is not compatible with most templates.
+- External driver transport was reworked:
+  - The `Driver.FillConfig()` method was removed; its logic was merged into `Driver.Configure()`,
+    which now returns `(*ConfiguredDriver, error)`.
+  - The external driver gRPC server socket moved from the OS temp directory (`/tmp/lima-driver-<name>-<pid>.sock`)
+    to the instance directory (`~/.lima/<instance>/lima-driver-<name>.sock`).
+  - External driver authors must update their drivers to match the new `driver.Driver` interface.
 
 ## [v2.0.0](https://github.com/lima-vm/lima/releases/tag/v2.0.0)
 - `/tmp/lima` is no longer mounted by default.
