@@ -25,7 +25,42 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/version"
 )
+
+func TestExistingLimaVersion(t *testing.T) {
+	t.Run("instance does not exist yet", func(t *testing.T) {
+		assert.Equal(t, ExistingLimaVersion(t.TempDir()), version.Version)
+	})
+
+	t.Run("version has been recorded", func(t *testing.T) {
+		instDir := createInstanceDir(t, map[string]string{filenames.LimaVersion: "1.2.3\n"})
+		assert.Equal(t, ExistingLimaVersion(instDir), "1.2.3")
+	})
+
+	// Instances created before Lima v0.20 have no lima-version file. Reporting the current
+	// version for them would move the guest home directory to a path that doesn't exist.
+	t.Run("instance predates the version file", func(t *testing.T) {
+		instDir := createInstanceDir(t, nil)
+		assert.Equal(t, ExistingLimaVersion(instDir), "")
+
+		user := osutil.LimaUser(t.Context(), ExistingLimaVersion(instDir), false, nil)
+		assert.Equal(t, user.HomeDir, "/home/{{.User}}.linux")
+	})
+}
+
+// createInstanceDir returns a directory that IsExistingInstanceDir recognizes as an
+// existing instance, populated with files.
+func createInstanceDir(t *testing.T, files map[string]string) string {
+	t.Helper()
+	instDir := t.TempDir()
+	// The host agent log is one of the files that identify an existing instance.
+	assert.NilError(t, os.WriteFile(filepath.Join(instDir, filenames.HostAgentStdoutLog), nil, 0o644))
+	for name, content := range files {
+		assert.NilError(t, os.WriteFile(filepath.Join(instDir, name), []byte(content), 0o644))
+	}
+	return instDir
+}
 
 func TestFillDefault(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)

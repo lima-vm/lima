@@ -30,6 +30,14 @@ func TestLimaUserAdminOld(t *testing.T) {
 	assert.Equal(t, user.Username, "admin")
 }
 
+// An empty version marks an instance created before Lima v0.20, which keeps the old home
+func TestLimaUserEmptyVersionIsOld(t *testing.T) {
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), "", false, nil)
+	assert.Equal(t, user.HomeDir, "/home/{{.User}}.linux")
+}
+
 func TestLimaUserInvalid(t *testing.T) {
 	currentUser.Username = "use@example.com"
 	once = new(sync.Once)
