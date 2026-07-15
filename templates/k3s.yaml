@@ -37,6 +37,10 @@ provision:
   script: |
     #!/bin/sh
     if [ ! -d /var/lib/rancher/k3s ]; then
+    {{- if .Param.proxy }}
+            INSTALL_K3S_ARTIFACT_URL={{.Param.proxy}}/HTTPS///github.com/k3s-io/k3s/releases/download
+            export INSTALL_K3S_ARTIFACT_URL
+    {{- end}}
     {{if not ( and .Param.url .Param.token )}}
             curl -sfL https://get.k3s.io | INSTALL_K3S_EXEC="server --write-kubeconfig-mode 644" sh -
     {{else}}
@@ -73,5 +77,8 @@ message: |
   ------
   {{end}}
 param:
+  # The proxy to use when downloading artifacts from k3s.io
+  # For a local proxy use for instance "http://host.lima.internal:3142"
+  proxy: ""
   url: ""
   token: ""
