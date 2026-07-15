@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"io"
 	"net"
 	"os"
@@ -103,6 +104,9 @@ func (c *qemuPacketConn) Read(b []byte) (n int, err error) {
 	if err := binary.Read(c.Conn, binary.BigEndian, &size); err != nil {
 		// Likely connection closed by peer.
 		return 0, err
+	}
+	if uint64(size) > uint64(len(b)) {
+		return 0, fmt.Errorf("packet size %d exceeds read buffer size %d", size, len(b))
 	}
 	return io.ReadFull(c.Conn, b[:size])
 }

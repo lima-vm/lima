@@ -102,6 +102,28 @@ func TestDialQemu(t *testing.T) {
 	}
 }
 
+// TestQemuPacketConnReadOversize verifies that a packet whose size prefix
+// exceeds the caller's buffer returns an error instead of panicking on b[:size].
+func TestQemuPacketConnReadOversize(t *testing.T) {
+	server, client := net.Pipe()
+	defer server.Close()
+	defer client.Close()
+
+	const bufSize = 1500
+	go func() {
+		hdr := make([]byte, 4)
+		binary.BigEndian.PutUint32(hdr, bufSize+1)
+		_, _ = server.Write(hdr)
+		_, _ = server.Write(make([]byte, bufSize+1))
+	}()
+
+	qemuConn := qemuPacketConn{Conn: client}
+	buf := make([]byte, bufSize)
+	n, err := qemuConn.Read(buf)
+	assert.Assert(t, err != nil, "expected an error for an oversize packet")
+	assert.Equal(t, n, 0, "no bytes should be reported on error")
+}
+
 // serveOneClient accepts one client and echo back received packets until a
 // "quit" packet is sent.
 func serveOneClient(listener *net.UnixListener) error {
