@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"maps"
 	"os"
 
@@ -78,6 +80,9 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 	for _, instanceName := range instances {
 		instance, err := store.Inspect(ctx, instanceName)
 		if err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return nil, fmt.Errorf("cannot safely prune while instance %#q is being used: %w", instanceName, err)
+			}
 			return nil, err
 		}
 		if instance.Errors != nil {

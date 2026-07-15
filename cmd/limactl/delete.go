@@ -13,6 +13,8 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/instance"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/networks/reconcile"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -37,11 +39,14 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	var errs []error
 	for _, instName := range args {
 		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
 			if errors.Is(err, os.ErrNotExist) {
-				logrus.Warnf("Ignoring non-existent instance %#q", instName)
+				if err := warnAboutMissingInstance(instName); err != nil {
+					errs = append(errs, err)
+				}
 				continue
 			}
 			return err
@@ -60,7 +65,27 @@ func deleteAction(cmd *cobra.Command, args []string) error {
 		}
 		logrus.Infof("Deleted %#q (%#q)", instName, inst.Dir)
 	}
-	return reconcile.Reconcile(ctx, "")
+	if err := reconcile.Reconcile(ctx, ""); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+func warnAboutMissingInstance(instName string) error {
+	instDir, err := dirnames.InstanceDir(instName)
+	if err != nil {
+		return err
+	}
+	if _, statErr := os.Stat(instDir); errors.Is(statErr, os.ErrNotExist) {
+		logrus.Warnf("Ignoring non-existent instance %#q", instName)
+		return nil
+	} else if statErr != nil {
+		return statErr
+	}
+	return fmt.Errorf("instance %#q directory %#q exists but its %#q could not be read; "+
+		"it was NOT deleted, in case it is currently being cloned into. "+
+		"If no `limactl` operation is using it, remove it manually",
+		instName, instDir, filenames.LimaYAML)
 }
 
 func deleteBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
