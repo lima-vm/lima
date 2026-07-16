@@ -208,6 +208,33 @@ func countResults(t *testing.T, results chan downloadResult) (downloaded, cached
 	return downloaded, cached
 }
 
+func TestRemoveStaleTempFiles(t *testing.T) {
+	cacheDir := filepath.Join(t.TempDir(), "cache")
+	url := "https://example.com/image.img"
+	shad := cacheDirectoryPath(cacheDir, url)
+	assert.NilError(t, os.MkdirAll(shad, 0o700))
+
+	data := filepath.Join(shad, "data")
+	part := filepath.Join(shad, "data.part")
+	legacy := filepath.Join(shad, "data.tmp.123.1")
+	for _, f := range []string{data, part, legacy} {
+		assert.NilError(t, os.WriteFile(f, []byte("x"), 0o644))
+	}
+
+	// No cache dir configured is a no-op.
+	assert.NilError(t, RemoveStaleTempFiles())
+
+	assert.NilError(t, RemoveStaleTempFiles(WithCacheDir(cacheDir)))
+
+	// The completed "data" file is kept; partial/temp files are removed.
+	_, err := os.Stat(data)
+	assert.NilError(t, err)
+	_, err = os.Stat(part)
+	assert.Assert(t, os.IsNotExist(err), "data.part should have been removed")
+	_, err = os.Stat(legacy)
+	assert.Assert(t, os.IsNotExist(err), "data.tmp.* should have been removed")
+}
+
 func TestRedownloadRemote(t *testing.T) {
 	remoteDir := t.TempDir()
 	ts := httptest.NewServer(http.FileServer(http.Dir(remoteDir)))

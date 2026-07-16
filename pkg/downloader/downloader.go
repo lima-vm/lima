@@ -1015,3 +1015,49 @@ func RemoveAllCacheDir(opts ...Opt) error {
 	logrus.Infof("Pruning %#q", o.cacheDir)
 	return os.RemoveAll(o.cacheDir)
 }
+
+// RemoveStaleTempFiles removes leftover partial-download files ("data.part" and
+// legacy "data.tmp.*") from the cache, keeping the completed "data" files.
+// Each cache entry is locked before its partial files are removed, so a download
+// currently in progress is never disturbed.
+func RemoveStaleTempFiles(opts ...Opt) error {
+	var o options
+	if err := o.apply(opts); err != nil {
+		return err
+	}
+	if o.cacheDir == "" {
+		return nil
+	}
+	entries, err := CacheEntries(opts...)
+	if err != nil {
+		return err
+	}
+	for _, dir := range entries {
+		if err := removeStaleTempFilesInDir(dir); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func removeStaleTempFilesInDir(dir string) error {
+	return lockutil.WithDirLock(dir, func() error {
+		patterns := []string{
+			filepath.Join(dir, "data.part"),
+			filepath.Join(dir, "data.tmp.*"),
+		}
+		for _, pattern := range patterns {
+			matches, err := filepath.Glob(pattern)
+			if err != nil {
+				return err
+			}
+			for _, m := range matches {
+				logrus.Debugf("Removing stale partial download %#q", m)
+				if err := os.Remove(m); err != nil && !errors.Is(err, os.ErrNotExist) {
+					return err
+				}
+			}
+		}
+		return nil
+	})
+}
