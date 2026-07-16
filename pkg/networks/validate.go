@@ -13,10 +13,40 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 func (c *Config) Validate() error {
+	// The group name and the per-network name/mode/interface are interpolated
+	// verbatim into the sudoers file (sudoers.go) and into the socket_vmnet
+	// command that reconcile.go runs via sudo after splitting it on spaces
+	// (commands.go). A value with whitespace injects an extra argument, and a
+	// newline in a network name adds an arbitrary directive to the generated
+	// sudoers file, so require them to be valid identifiers. Interface is empty
+	// for non-bridged networks, and group defaults to "admin" when unset, so
+	// only validate those when a value is actually present.
+	if c.Group != "" {
+		if err := identifiers.Validate(c.Group); err != nil {
+			return fmt.Errorf("invalid group %#q: %w", c.Group, err)
+		}
+	}
+	for name, nw := range c.Networks {
+		if err := identifiers.Validate(name); err != nil {
+			return fmt.Errorf("invalid network name %#q: %w", name, err)
+		}
+		if nw.Mode != "" {
+			if err := identifiers.Validate(nw.Mode); err != nil {
+				return fmt.Errorf("invalid mode %#q for network %#q: %w", nw.Mode, name, err)
+			}
+		}
+		if nw.Interface != "" {
+			if err := identifiers.Validate(nw.Interface); err != nil {
+				return fmt.Errorf("invalid interface %#q for network %#q: %w", nw.Interface, name, err)
+			}
+		}
+	}
+
 	// validate all paths.* values
 	paths := reflect.ValueOf(&c.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
@@ -51,7 +81,6 @@ func (c *Config) Validate() error {
 	if socketVMNetNotFound {
 		return fmt.Errorf("networks.yaml: %#q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
 	}
-	// TODO(jandubois): validate network definitions
 	return nil
 }
 
