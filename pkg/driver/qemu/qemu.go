@@ -675,16 +675,24 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	if isoPresent {
 		args = appendArgsIfNoConflict(args, "-boot", "order=d,splash-time=0,menu=on")
-		// For aarch64, QEMU uses `virt` machine type but it doesn't recognize CDROM drive.
-		// In order to attach ISO files, we need to use USB devices instead.
-		if *y.OS == limatype.WINDOWS && *y.Arch == limatype.AARCH64 {
-			// Those two lines are necessary here, otherwise QEMU raises an error `No 'usb-bus' bus found for device 'usb-storage'`.
-			args = append(args, "-device", "qemu-xhci")
-			args = append(args, "-device", "usb-kbd")
-
-			args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd0,format=raw,media=cdrom,readonly=on", isoPath))
-			args = append(args, "-device", "usb-storage,drive=cd0")
-		} else {
+		switch *y.OS {
+		case limatype.WINDOWS:
+			// We don't mount the ISO file if the Windows VM was already created before.
+			if isWindowsBootDone(cfg) {
+				break
+			}
+			// For aarch64, QEMU uses `virt` machine type but it doesn't recognize CDROM drive.
+			// In order to attach ISO files, we need to use USB devices instead.
+			if *y.Arch == limatype.AARCH64 {
+				// Those two lines are necessary here, otherwise QEMU raises an error `No 'usb-bus' bus found for device 'usb-storage'`.
+				args = append(args, "-device", "qemu-xhci")
+				args = append(args, "-device", "usb-kbd")
+				args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd0,format=raw,media=cdrom,readonly=on", isoPath))
+				args = append(args, "-device", "usb-storage,drive=cd0")
+			} else {
+				args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
+			}
+		default:
 			args = append(args, "-drive", fmt.Sprintf("file=%s,format=raw,media=cdrom,readonly=on", isoPath))
 		}
 	} else {
@@ -698,7 +706,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 
 	// virtio-win must be mounted before cidata.iso otherwise
 	// autounattend.xml can't find virtio drivers.
-	if *y.OS == limatype.WINDOWS && len(winOpts.VirtioWin) > 0 {
+	// The ISO file is not mounted if the VM was already created.
+	if *y.OS == limatype.WINDOWS && len(winOpts.VirtioWin) > 0 && !isWindowsBootDone(cfg) {
 		if *y.Arch == limatype.AARCH64 {
 			args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd1,format=raw,media=cdrom,readonly=on", filepath.Join(cfg.InstanceDir, filenames.VirtioWin)))
 			args = append(args, "-device", "usb-storage,drive=cd1")
@@ -714,6 +723,10 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	// cloud-init
 	switch *y.OS {
 	case limatype.WINDOWS:
+		// cidata for Windows is not mounted if the VM was already created.
+		if isWindowsBootDone(cfg) {
+			break
+		}
 		// We can't use virtio-scsi for Windows's cidata, because autounattend in cidata installs virtio-win drivers.
 		// Until then, the VM can't detect virtio.
 		if *y.Arch == limatype.AARCH64 {
@@ -1361,4 +1374,16 @@ func hasHostCPU() bool {
 	}
 	// Not reached
 	return false
+}
+
+// isWindowsBootDone returns true if the Windows VM instance was already created and all installation was finished before.
+func isWindowsBootDone(cfg Config) bool {
+	if *cfg.LimaYAML.OS != limatype.WINDOWS {
+		return false
+	}
+
+	if _, err := os.Stat(filepath.Join(cfg.InstanceDir, filenames.WinDoneInstallation)); err != nil {
+		return false
+	}
+	return true
 }

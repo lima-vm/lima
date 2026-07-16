@@ -91,6 +91,9 @@ TPM:
 - `swtpm.sock`: SWTPM (Software TPM Emulator) socket.
 - `swtpm`: A directory where TPM's state will be written.
 
+Installation Marker for Windows:
+- `win-done-installation`: An indicator showing whether Windows OS installation has completed.
+
 Guest agent:
 
 Each drivers use their own mode of communication

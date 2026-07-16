@@ -602,6 +602,15 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	if err := a.waitForRequirements("essential", essentialRequirements); err != nil {
 		errs = append(errs, err)
 	}
+
+	// Windows guest needs a marker file which shows all installation is done.
+	// In the next boot, Lima will not mount OS installer ISO file to prevent unexpected re-installation.
+	if *a.instConfig.OS == limatype.WINDOWS {
+		if _, err := os.Create(filepath.Join(a.instDir, filenames.WinDoneInstallation)); err != nil {
+			errs = append(errs, errors.New("failed to create a windows installation marker"))
+		}
+	}
+
 	if *a.instConfig.SSH.ForwardAgent {
 		if *a.instConfig.Plain {
 			logrus.Warn("Running in plain mode. Ignoring ssh.forwardAgent")
