@@ -80,9 +80,13 @@ GUI:
 - `#lima` channel in the CNCF Slack
   - New account: <https://slack.cncf.io/>
   - Login: <https://cloud-native.slack.com/>
-- Zoom meetings (tentatively monthly)
-  - Meeting notes & agenda proposals: https://github.com/lima-vm/lima/discussions/categories/meetings
-  - Calendar: https://zoom-lfx.platform.linuxfoundation.org/meetings/lima
+
+### Community meetings
+
+We host a monthly community meeting on Zoom. Meeting notes and agenda proposals are tracked in GitHub Discussions.
+
+- Meeting notes & agenda proposals: https://github.com/lima-vm/lima/discussions/categories/meetings
+- Calendar: https://zoom-lfx.platform.linuxfoundation.org/meetings/lima
 
 ### Social media accounts
 
