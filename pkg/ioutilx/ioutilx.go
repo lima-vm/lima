@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -59,27 +60,33 @@ func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
 }
 
 // WindowsSubsystemPathWithCygpath converts a Windows path with the given
-// cygpathExe ("cygpath" for PATH, or an absolute path to bind the
-// conversion to one Cygwin install). When cygpath is unavailable it falls
-// back to a native conversion of the drive-letter case; Universal Naming Convention
-// (UNC) and other non-drive-letter inputs return an error.
+// cygpathExe ("cygpath" for PATH, or an absolute path to bind the conversion
+// to one Cygwin install). When the cygpath binary is not found it falls back
+// to a native conversion of the absolute drive-letter case; a cygpath that
+// runs and fails returns its error, and non-drive-letter inputs (UNC, device,
+// extended-length) return an error.
 func WindowsSubsystemPathWithCygpath(ctx context.Context, cygpathExe, orig string) (string, error) {
 	out, err := exec.CommandContext(ctx, cygpathExe, filepath.ToSlash(orig)).CombinedOutput()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
+	if !errors.Is(err, exec.ErrNotFound) && !errors.Is(err, fs.ErrNotExist) {
+		return "", fmt.Errorf("failed to run %#q on %#q: %#q: %w", cygpathExe, orig, strings.TrimSpace(string(out)), err)
+	}
 
-	logrus.WithError(err).Debugf("cygpath unavailable for %#q (output: %#q), attempting native conversion", orig, strings.TrimSpace(string(out)))
+	logrus.WithError(err).Debugf("%#q not found for %#q, attempting native conversion", cygpathExe, orig)
 
 	return windowsSubsystemPathWithoutCygpath(orig)
 }
 
 func windowsSubsystemPathWithoutCygpath(orig string) (string, error) {
-	// Only an absolute drive-letter path ("C:\foo") has a well-defined
-	// Cygwin form here. A drive-relative path ("C:foo") would become
-	// an unrelated absolute path, so reject it.
+	// The /c/... form this produces is the MSYS2 and Git-for-Windows
+	// convention; stock Cygwin defaults to /cygdrive/c/. Only an absolute
+	// drive-letter path ("C:\foo") has a well-defined form here. A
+	// drive-relative path ("C:foo") would become an unrelated absolute
+	// path, so reject it.
 	if !filepath.IsAbs(orig) {
-		return "", fmt.Errorf("cannot convert %#q to a Cygwin-style path: input is not an absolute drive-letter path", orig)
+		return "", fmt.Errorf("cannot convert %#q to an MSYS-style path: input is not an absolute drive-letter path", orig)
 	}
 
 	// UNC path ("\\server\share\foo") is rejected here.
@@ -92,7 +99,7 @@ func windowsSubsystemPathWithoutCygpath(orig string) (string, error) {
 		return converted, nil
 	}
 
-	return "", fmt.Errorf("cannot convert %#q to a Cygwin-style path: cygpath is unavailable and input is not an absolute drive-letter path", orig)
+	return "", fmt.Errorf("cannot convert %#q to an MSYS-style path: input is not an absolute drive-letter path", orig)
 }
 
 func WindowsSubsystemPathForLinux(ctx context.Context, orig, distro string) (string, error) {
