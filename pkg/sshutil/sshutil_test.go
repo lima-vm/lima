@@ -31,6 +31,12 @@ func TestDefaultPubKeys_WithoutExistingKey(t *testing.T) {
 	keys, err := DefaultPubKeys(t.Context(), false)
 	assert.NilError(t, err)
 	assert.Equal(t, 1, len(keys))
+	// LimaDir resolves symlinks (e.g. /var -> /private/var on macOS), so
+	// resolve tmpDir the same way before comparing the returned filename.
+	resolvedTmp, err := filepath.EvalSymlinks(tmpDir)
+	assert.NilError(t, err)
+	assert.Equal(t, keys[0].Filename, filepath.Join(resolvedTmp, filenames.ConfigDir, filenames.UserPublicKey))
+	assert.Assert(t, detectValidPublicKey(keys[0].Content), "generated key is not a valid public key: %#q", keys[0].Content)
 }
 
 func TestParseOpenSSHVersion(t *testing.T) {

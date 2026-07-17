@@ -98,8 +98,13 @@ func pickCompleteSSHOnWindows() string {
 		}
 		return sshPath
 	}
-	nativeSSH := filepath.Join(systemRoot(), "System32", "OpenSSH", "ssh.exe")
+	nativeDir := filepath.Join(systemRoot(), "System32", "OpenSSH")
+	nativeSSH := filepath.Join(nativeDir, "ssh.exe")
 	if _, err := os.Stat(nativeSSH); err == nil {
+		if missing := missingSiblings(nativeDir, "scp.exe", "ssh-keygen.exe"); len(missing) > 0 {
+			logrus.Debugf("skipping native ssh at %#q: missing %v in same directory", nativeSSH, missing)
+			return ""
+		}
 		return nativeSSH
 	}
 
@@ -142,26 +147,60 @@ func IsSSHCygwin(sshExe SSHExe) bool {
 	return ok
 }
 
-// cygpathForSSH returns the cygpath.exe besides sshExe (resolved through
-// symlinks) and whether sshExe is Cygwin-based. Callers pass the returned
-// path to exec.Command so conversions run through that toolchain's own
-// cygpath, even when $SSH points outside PATH. It returns
-// ("", false) on non-Windows or empty input; results are cached per resolved path.
-func cygpathForSSH(sshExe SSHExe) (string, bool) {
-	if runtime.GOOS != "windows" || sshExe.Exe == "" {
+// resolvedSSHPath returns the absolute, symlink-resolved path of sshExe's
+// binary — the directory Lima reads its companion tools from. It returns
+// ("", false) when a bare name does not resolve on PATH.
+func resolvedSSHPath(sshExe SSHExe) (string, bool) {
+	if sshExe.Exe == "" {
 		return "", false
 	}
 	path := sshExe.Exe
 	if !filepath.IsAbs(path) {
 		resolved, err := exec.LookPath(path)
 		if err != nil {
-			logrus.WithError(err).Debugf("cygpathForSSH: cannot resolve %#q via PATH; assuming native", path)
+			logrus.WithError(err).Debugf("cannot resolve ssh at %#q via PATH", path)
 			return "", false
 		}
 		path = resolved
 	}
 	if resolved, err := filepath.EvalSymlinks(path); err == nil {
 		path = resolved
+	}
+	return path, true
+}
+
+// companionForSSH returns tool from the same toolchain as sshExe. NewSSHExe can
+// select an ssh outside PATH, so resolving a companion by bare name can pick a
+// different toolchain than the one PathForSSH formats paths for. It returns tool
+// unchanged on non-Windows, or when no sibling exists, leaving it to PATH.
+func companionForSSH(sshExe SSHExe, tool string) string {
+	if runtime.GOOS != "windows" {
+		return tool
+	}
+	path, ok := resolvedSSHPath(sshExe)
+	if !ok {
+		return tool
+	}
+	companion := filepath.Join(filepath.Dir(path), tool+".exe")
+	if _, err := os.Stat(companion); err != nil {
+		logrus.Debugf("no %#q beside ssh at %#q; resolving %#q from PATH", companion, path, tool)
+		return tool
+	}
+	return companion
+}
+
+// cygpathForSSH returns the cygpath.exe beside sshExe (resolved through
+// symlinks) and whether sshExe is Cygwin-based. Callers pass the returned
+// path to exec.Command so conversions run through that toolchain's own
+// cygpath, even when $SSH points outside PATH. It returns
+// ("", false) on non-Windows or empty input; results are cached per resolved path.
+func cygpathForSSH(sshExe SSHExe) (string, bool) {
+	if runtime.GOOS != "windows" {
+		return "", false
+	}
+	path, ok := resolvedSSHPath(sshExe)
+	if !ok {
+		return "", false
 	}
 	cygwinDetectCacheRW.RLock()
 	cached, ok := cygwinDetectCache[path]
@@ -221,16 +260,9 @@ func SftpServerForSSH(ctx context.Context, sshExe SSHExe) string {
 		}
 		return ""
 	}
-	path := sshExe.Exe
-	if !filepath.IsAbs(path) {
-		resolved, err := exec.LookPath(path)
-		if err != nil {
-			return ""
-		}
-		path = resolved
-	}
-	if resolved, err := filepath.EvalSymlinks(path); err == nil {
-		path = resolved
+	path, ok := resolvedSSHPath(sshExe)
+	if !ok {
+		return ""
 	}
 	sftpServer := filepath.Join(filepath.Dir(path), "sftp-server.exe")
 	if _, err := os.Stat(sftpServer); err != nil {
@@ -279,17 +311,19 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 		if err := lockutil.WithDirLock(configDir, func() error {
 			// no passphrase, no user@host comment
 			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
+			keygenExe := "ssh-keygen"
 			if runtime.GOOS == "windows" {
 				sshExe, sshErr := NewSSHExe()
 				if sshErr != nil {
 					return sshErr
 				}
+				keygenExe = companionForSSH(sshExe, "ssh-keygen")
 				privPath, err = PathForSSH(ctx, sshExe, privPath)
 				if err != nil {
 					return err
 				}
 			}
-			keygenCmd := exec.CommandContext(ctx, "ssh-keygen", "-t", "ed25519", "-q", "-N", "",
+			keygenCmd := exec.CommandContext(ctx, keygenExe, "-t", "ed25519", "-q", "-N", "",
 				"-C", "lima", "-f", privPath)
 			logrus.Debugf("executing %v", keygenCmd.Args)
 			if out, err := keygenCmd.CombinedOutput(); err != nil {
