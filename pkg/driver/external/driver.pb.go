@@ -22,9 +22,13 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
+// BootScriptsResponse carries the boot scripts injected into the VM.
 type BootScriptsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Scripts       map[string][]byte      `protobuf:"bytes,1,rep,name=scripts,proto3" json:"scripts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Maps a script path to its content. Each key must be
+	// "boot.<OS>/<SCRIPT>", or "<SCRIPT>" as a deprecated alias for
+	// "boot.Linux/<SCRIPT>".
+	Scripts       map[string][]byte `protobuf:"bytes,1,rep,name=scripts,proto3" json:"scripts,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -66,9 +70,11 @@ func (x *BootScriptsResponse) GetScripts() map[string][]byte {
 	return nil
 }
 
+// SSHAddressResponse carries the guest SSH address.
 type SSHAddressResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Address       string                 `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Host/IP used to SSH into the guest.
+	Address       string `protobuf:"bytes,1,opt,name=address,proto3" json:"address,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -110,9 +116,13 @@ func (x *SSHAddressResponse) GetAddress() string {
 	return ""
 }
 
+// InfoResponse carries driver metadata and capability flags.
 type InfoResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	InfoJson      []byte                 `protobuf:"bytes,1,opt,name=info_json,json=infoJson,proto3" json:"info_json,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON-encoded driver.Info (name, ports, instance dir and feature flags).
+	// JSON keeps it in sync with the Go type. The full set of fields is defined at
+	// https://pkg.go.dev/github.com/lima-vm/lima/v2/pkg/driver#Info
+	InfoJson      []byte `protobuf:"bytes,1,opt,name=info_json,json=infoJson,proto3" json:"info_json,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -154,15 +164,18 @@ func (x *InfoResponse) GetInfoJson() []byte {
 	return nil
 }
 
-// StartResponse is a streamed response for Start() RPC. It tries to mimic
-// errChan from pkg/driver/driver.go. The server sends an initial response
-// with success=true when Start() is initiated. If errors occur, they are
-// sent as success=false with the error field populated. When the error channel
-// closes, a final success=true message is sent.
+// StartResponse is a streamed response for the Start RPC. It mimics the
+// errChan from pkg/driver/driver.go. The server sends an initial response with
+// success=true once Start is initiated (this unblocks the client). If errors
+// occur they are sent as success=false with the error field populated. When the
+// error channel closes, a final success=true message is sent and the stream ends.
 type StartResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Success       bool                   `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
-	Error         string                 `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True for the initial "started" message and the final "done" message, and
+	// false for each streamed error.
+	Success bool `protobuf:"varint,1,opt,name=success,proto3" json:"success,omitempty"`
+	// Error message when success is false; empty otherwise.
+	Error         string `protobuf:"bytes,2,opt,name=error,proto3" json:"error,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -211,9 +224,11 @@ func (x *StartResponse) GetError() string {
 	return ""
 }
 
+// SetConfigRequest carries the instance configuration for Configure.
 type SetConfigRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	InstanceConfigJson []byte                 `protobuf:"bytes,1,opt,name=instance_config_json,json=instanceConfigJson,proto3" json:"instance_config_json,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON-encoded limatype.Instance. JSON keeps it in sync with the Go type.
+	InstanceConfigJson []byte `protobuf:"bytes,1,opt,name=instance_config_json,json=instanceConfigJson,proto3" json:"instance_config_json,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -255,9 +270,14 @@ func (x *SetConfigRequest) GetInstanceConfigJson() []byte {
 	return nil
 }
 
+// SetConfigResponse carries the instance configuration after Configure applied
+// the driver's defaults and validation. It is returned so the caller picks up
+// those changes (the in-process interface mutates the instance in place).
 type SetConfigResponse struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	InstanceConfigJson []byte                 `protobuf:"bytes,1,opt,name=instance_config_json,json=instanceConfigJson,proto3" json:"instance_config_json,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// JSON-encoded limatype.Instance after Configure applied the driver's defaults
+	// and validation. JSON keeps it in sync with the Go type.
+	InstanceConfigJson []byte `protobuf:"bytes,1,opt,name=instance_config_json,json=instanceConfigJson,proto3" json:"instance_config_json,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -299,9 +319,11 @@ func (x *SetConfigResponse) GetInstanceConfigJson() []byte {
 	return nil
 }
 
+// ChangeDisplayPasswordRequest carries the new display password.
 type ChangeDisplayPasswordRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Password      string                 `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// New VM display (e.g. VNC) password.
+	Password      string `protobuf:"bytes,1,opt,name=password,proto3" json:"password,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -343,9 +365,11 @@ func (x *ChangeDisplayPasswordRequest) GetPassword() string {
 	return ""
 }
 
+// GetDisplayConnectionResponse carries the VM display connection string.
 type GetDisplayConnectionResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Connection    string                 `protobuf:"bytes,1,opt,name=connection,proto3" json:"connection,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Driver-specific display connection string.
+	Connection    string `protobuf:"bytes,1,opt,name=connection,proto3" json:"connection,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -387,9 +411,11 @@ func (x *GetDisplayConnectionResponse) GetConnection() string {
 	return ""
 }
 
+// CreateSnapshotRequest identifies the snapshot to create.
 type CreateSnapshotRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tag           string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Names the snapshot.
+	Tag           string `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -431,9 +457,11 @@ func (x *CreateSnapshotRequest) GetTag() string {
 	return ""
 }
 
+// ApplySnapshotRequest identifies the snapshot to restore.
 type ApplySnapshotRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tag           string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Names the snapshot to restore.
+	Tag           string `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -475,9 +503,11 @@ func (x *ApplySnapshotRequest) GetTag() string {
 	return ""
 }
 
+// DeleteSnapshotRequest identifies the snapshot to delete.
 type DeleteSnapshotRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Tag           string                 `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Names the snapshot to delete.
+	Tag           string `protobuf:"bytes,1,opt,name=tag,proto3" json:"tag,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -519,9 +549,11 @@ func (x *DeleteSnapshotRequest) GetTag() string {
 	return ""
 }
 
+// ListSnapshotsResponse carries the existing snapshots.
 type ListSnapshotsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Snapshots     string                 `protobuf:"bytes,1,opt,name=snapshots,proto3" json:"snapshots,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Driver-formatted list of existing snapshots.
+	Snapshots     string `protobuf:"bytes,1,opt,name=snapshots,proto3" json:"snapshots,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -563,9 +595,12 @@ func (x *ListSnapshotsResponse) GetSnapshots() string {
 	return ""
 }
 
+// ForwardGuestAgentResponse reports how the guest agent is reached.
 type ForwardGuestAgentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ShouldForward bool                   `protobuf:"varint,1,opt,name=should_forward,json=shouldForward,proto3" json:"should_forward,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// True when the host agent forwards the guest agent socket over SSH; false
+	// means the driver provides a direct connection via GuestAgentConn.
+	ShouldForward bool `protobuf:"varint,1,opt,name=should_forward,json=shouldForward,proto3" json:"should_forward,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

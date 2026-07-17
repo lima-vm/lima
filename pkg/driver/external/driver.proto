@@ -4,90 +4,215 @@ import "google/protobuf/empty.proto";
 
 option go_package = "github.com/lima-vm/lima/v2/pkg/driver/external";
 
+// Driver is the transport used by an external VM driver. It is the gRPC
+// projection of the Go `driver.Driver` interface (pkg/driver/driver.go): the
+// host agent runs a gRPC client and each external driver binary
+// (lima-driver-<name>) runs the server. The RPCs mirror the interface methods
+// one-to-one, so this file is the authoritative contract for driver authors.
+//
+// Call ordering on the instance start path: instance.Prepare (pkg/instance)
+// runs steps 1-4, then the host agent (pkg/hostagent) boots the VM and runs
+// steps 5-7. Creating an instance without starting it (limactl create) only
+// runs Configure and Create.
+//   1. Configure  - set the instance config; must run before any method that
+//      depends on it.
+//   2. Validate    - reject configs the driver cannot support.
+//   3. Create      - first-time provisioning; a no-op on existing instances.
+//   4. CreateDisk  - create the instance disk(s).
+//   5. Start       - begin booting the VM. It returns once boot has been
+//      initiated (the initial StartResponse), not once the guest has finished
+//      booting; later boot errors arrive on the stream. See StartResponse.
+//   6. AdditionalSetupForSSH - runs right after Start returns (boot initiated,
+//      the guest is not necessarily up yet), before the first SSH connection.
+//   7. SSHAddress  - re-queried after Start only when Info reports
+//      Features.dynamicSSHAddress.
+//
+// Unless stated otherwise, an RPC returning google.protobuf.Empty completes
+// synchronously and reports failures as a gRPC error status. Requests and
+// responses that carry structured data use JSON payloads (Info, Configure) to
+// stay in sync with the Go types without duplicating them here.
+//
+// Concurrency: the start-path RPCs above are invoked sequentially in the
+// order listed. Once the VM is running, the host agent polls read-only RPCs
+// (notably Info and ForwardGuestAgent) from background goroutines, so the
+// driver server must be safe to handle concurrent RPCs.
 service Driver {
+  // Validate reports whether the driver supports the currently configured
+  // instance. It is called early on the start path, before Create. Returning
+  // an error aborts the operation.
   rpc Validate(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // Create performs first-time provisioning of the instance (e.g. writing a
+  // "vz-identifier" file). It MUST return successfully (no-op) when called
+  // against an instance that already exists, and it MUST NOT create the disks
+  // (that is CreateDisk's job).
   rpc Create(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // CreateDisk creates the instance disk(s). It is called after Create.
   rpc CreateDisk(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // Start begins booting the VM. It is a server-streaming RPC that mirrors the
+  // `(chan error, error)` return of the in-process interface: the call returns
+  // once boot has been initiated (the initial StartResponse), not once the
+  // guest has finished booting, and later boot errors arrive on the stream. See
+  // StartResponse for the streaming protocol.
   rpc Start(google.protobuf.Empty) returns (stream StartResponse);
+
+  // Stop terminates the running VM. It blocks until the VM has fully exited
+  // (or the driver's internal shutdown deadline elapses) and returns a gRPC
+  // error status if the shutdown failed.
   rpc Stop(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // Delete removes the instance created by Create (and its driver-specific
+  // files). The generic instance directory is removed by the host agent.
   rpc Delete(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // BootScripts returns the boot scripts to inject into the VM via cloud-init.
+  // See BootScriptsResponse for the required key format.
   rpc BootScripts(google.protobuf.Empty) returns (BootScriptsResponse);
 
+  // RunGUI starts the GUI synchronously. It blocks and returns only after the
+  // VM terminates. It is only used by drivers that report Features.canRunGui.
   rpc RunGUI(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // ChangeDisplayPassword sets the password for the VM display (e.g. VNC).
   rpc ChangeDisplayPassword(ChangeDisplayPasswordRequest) returns (google.protobuf.Empty);
+
+  // GetDisplayConnection returns the connection string for the VM display.
   rpc GetDisplayConnection(google.protobuf.Empty) returns (GetDisplayConnectionResponse);
 
+  // CreateSnapshot creates a VM snapshot identified by the given tag.
   rpc CreateSnapshot(CreateSnapshotRequest) returns (google.protobuf.Empty);
+
+  // ApplySnapshot restores the VM to the snapshot identified by the given tag.
   rpc ApplySnapshot(ApplySnapshotRequest) returns (google.protobuf.Empty);
+
+  // DeleteSnapshot removes the snapshot identified by the given tag.
   rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
+
+  // ListSnapshots returns the driver-formatted list of existing snapshots.
   rpc ListSnapshots(google.protobuf.Empty) returns (ListSnapshotsResponse);
 
+  // ForwardGuestAgent reports whether the host agent must forward the guest
+  // agent socket over SSH. When false, the driver provides a direct guest agent
+  // connection via GuestAgentConn (e.g. vsock/virtio).
   rpc ForwardGuestAgent(google.protobuf.Empty) returns (ForwardGuestAgentResponse);
+
+  // GuestAgentConn returns a direct guest agent connection, used when
+  // ForwardGuestAgent is false; it returns nil when the socket is forwarded
+  // over SSH instead. Over this transport the server bridges the connection to
+  // a unix socket in the instance directory when it is not already one, so the
+  // client relies on that socket rather than on a returned connection.
   rpc GuestAgentConn(google.protobuf.Empty) returns (google.protobuf.Empty);
 
+  // Configure sets the instance configuration on the driver. It must be called
+  // before RPCs that depend on the config.
   rpc Configure(SetConfigRequest) returns (SetConfigResponse);
+
+  // Info returns driver metadata and capability flags (see InfoResponse). The
+  // host agent uses it to discover features such as dynamicSSHAddress.
   rpc Info(google.protobuf.Empty) returns (InfoResponse);
+
+  // SSHAddress returns the address used to SSH into the guest. For drivers that
+  // report Features.dynamicSSHAddress the address is not known until after
+  // Start, so the host agent re-queries it at that point.
   rpc SSHAddress(google.protobuf.Empty) returns (SSHAddressResponse);
 
   // AdditionalSetupForSSH provides additional setup required for SSH connection.
-  // It is called after VM is started, before first SSH connection.
+  // It is called right after Start returns (boot initiated, the guest is not
+  // necessarily up yet), before the first SSH connection.
   rpc AdditionalSetupForSSH(google.protobuf.Empty) returns (google.protobuf.Empty);
 }
 
+// BootScriptsResponse carries the boot scripts injected into the VM.
 message BootScriptsResponse {
+  // Maps a script path to its content. Each key must be
+  // "boot.<OS>/<SCRIPT>", or "<SCRIPT>" as a deprecated alias for
+  // "boot.Linux/<SCRIPT>".
   map<string, bytes> scripts = 1;
 }
 
+// SSHAddressResponse carries the guest SSH address.
 message SSHAddressResponse {
+  // Host/IP used to SSH into the guest.
   string address = 1;
 }
 
-message InfoResponse{
+// InfoResponse carries driver metadata and capability flags.
+message InfoResponse {
+  // JSON-encoded driver.Info (name, ports, instance dir and feature flags).
+  // JSON keeps it in sync with the Go type. The full set of fields is defined at
+  // https://pkg.go.dev/github.com/lima-vm/lima/v2/pkg/driver#Info
   bytes info_json = 1;
 }
 
-// StartResponse is a streamed response for Start() RPC. It tries to mimic
-// errChan from pkg/driver/driver.go. The server sends an initial response
-// with success=true when Start() is initiated. If errors occur, they are
-// sent as success=false with the error field populated. When the error channel
-// closes, a final success=true message is sent.
+// StartResponse is a streamed response for the Start RPC. It mimics the
+// errChan from pkg/driver/driver.go. The server sends an initial response with
+// success=true once Start is initiated (this unblocks the client). If errors
+// occur they are sent as success=false with the error field populated. When the
+// error channel closes, a final success=true message is sent and the stream ends.
 message StartResponse {
+  // True for the initial "started" message and the final "done" message, and
+  // false for each streamed error.
   bool success = 1;
+  // Error message when success is false; empty otherwise.
   string error = 2;
 }
 
+// SetConfigRequest carries the instance configuration for Configure.
 message SetConfigRequest {
+  // JSON-encoded limatype.Instance. JSON keeps it in sync with the Go type.
   bytes instance_config_json = 1;
 }
 
+// SetConfigResponse carries the instance configuration after Configure applied
+// the driver's defaults and validation. It is returned so the caller picks up
+// those changes (the in-process interface mutates the instance in place).
 message SetConfigResponse {
+  // JSON-encoded limatype.Instance after Configure applied the driver's defaults
+  // and validation. JSON keeps it in sync with the Go type.
   bytes instance_config_json = 1;
 }
 
+// ChangeDisplayPasswordRequest carries the new display password.
 message ChangeDisplayPasswordRequest {
+  // New VM display (e.g. VNC) password.
   string password = 1;
 }
 
+// GetDisplayConnectionResponse carries the VM display connection string.
 message GetDisplayConnectionResponse {
+  // Driver-specific display connection string.
   string connection = 1;
 }
 
+// CreateSnapshotRequest identifies the snapshot to create.
 message CreateSnapshotRequest {
+  // Names the snapshot.
   string tag = 1;
 }
 
+// ApplySnapshotRequest identifies the snapshot to restore.
 message ApplySnapshotRequest {
+  // Names the snapshot to restore.
   string tag = 1;
 }
 
+// DeleteSnapshotRequest identifies the snapshot to delete.
 message DeleteSnapshotRequest {
+  // Names the snapshot to delete.
   string tag = 1;
 }
 
+// ListSnapshotsResponse carries the existing snapshots.
 message ListSnapshotsResponse {
+  // Driver-formatted list of existing snapshots.
   string snapshots = 1;
 }
 
+// ForwardGuestAgentResponse reports how the guest agent is reached.
 message ForwardGuestAgentResponse {
+  // True when the host agent forwards the guest agent socket over SSH; false
+  // means the driver provides a direct connection via GuestAgentConn.
   bool should_forward = 1;
 }

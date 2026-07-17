@@ -115,21 +115,47 @@ type ConfiguredDriver struct {
 	Driver
 }
 
+// Info describes a driver instance: its identity, the guest-agent transport,
+// the instance directory and the driver's capability flags. It is returned by
+// Driver.Info and, for external drivers, carried as JSON in InfoResponse.
 type Info struct {
-	Name        string         `json:"name"`
-	VsockPort   int            `json:"vsockPort"`
-	VirtioPort  string         `json:"virtioPort"`
-	InstanceDir string         `json:"instanceDir,omitempty"`
-	Features    DriverFeatures `json:"features"`
+	// Name is the driver name, e.g. "qemu", "vz", "wsl2" or "krunkit".
+	Name string `json:"name"`
+	// VsockPort is the vsock port used by the guest agent, or 0 when vsock is
+	// not used.
+	VsockPort int `json:"vsockPort"`
+	// VirtioPort is the virtio-serial port name used by the guest agent, or
+	// empty when virtio-serial is not used.
+	VirtioPort string `json:"virtioPort"`
+	// InstanceDir is the absolute path of the instance directory.
+	InstanceDir string `json:"instanceDir,omitempty"`
+	// Features declares the driver's optional capabilities and behaviors.
+	Features DriverFeatures `json:"features"`
 }
 
+// DriverFeatures declares optional capabilities and behaviors of a driver. The
+// host agent reads them (via Info) to adapt provisioning, SSH and forwarding.
 type DriverFeatures struct {
-	CanRunGUI             bool     `json:"canRunGui,omitempty"`
-	DynamicSSHAddress     bool     `json:"dynamicSSHAddress"`
-	StaticSSHPort         bool     `json:"staticSSHPort"`
-	SkipSocketForwarding  bool     `json:"skipSocketForwarding"`
-	NoCloudInit           bool     `json:"noCloudInit"`
-	RosettaEnabled        bool     `json:"rosettaEnabled"`
-	RosettaBinFmt         bool     `json:"rosettaBinFmt"`
+	// CanRunGUI reports that the driver can display a GUI via RunGUI.
+	CanRunGUI bool `json:"canRunGui,omitempty"`
+	// DynamicSSHAddress reports that the SSH address is not known until after
+	// Start, so the host agent re-queries SSHAddress once the VM is running.
+	DynamicSSHAddress bool `json:"dynamicSSHAddress"`
+	// StaticSSHPort reports that the driver uses a fixed SSH port; when false the
+	// host agent allocates a free local port.
+	StaticSSHPort bool `json:"staticSSHPort"`
+	// SkipSocketForwarding reports that the host agent should skip unix-socket
+	// forwarding for this driver.
+	SkipSocketForwarding bool `json:"skipSocketForwarding"`
+	// NoCloudInit reports that the driver does not use cloud-init, so the host
+	// agent skips building the cloud-init seed.
+	NoCloudInit bool `json:"noCloudInit"`
+	// RosettaEnabled reports that Rosetta is enabled for the guest.
+	RosettaEnabled bool `json:"rosettaEnabled"`
+	// RosettaBinFmt reports that Rosetta is registered as a binfmt_misc handler
+	// in the guest.
+	RosettaBinFmt bool `json:"rosettaBinFmt"`
+	// SupportedImageFormats lists the disk image formats the driver can boot
+	// (e.g. "raw", "qcow2"), used to select or convert the instance image.
 	SupportedImageFormats []string `json:"supportedImageFormats,omitempty"`
 }
