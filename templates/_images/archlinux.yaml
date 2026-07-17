@@ -1,9 +1,9 @@
 images:
 # Try to use yyyyMMdd.REV image if available. Note that yyyyMMdd.REV will be removed after several months.
 
-- location: "https://geo.mirror.pkgbuild.com/images/v20260615.545059/Arch-Linux-x86_64-cloudimg-20260615.545059.qcow2"
+- location: "https://geo.mirror.pkgbuild.com/images/v20260715.556894/Arch-Linux-x86_64-cloudimg-20260715.556894.qcow2"
   arch: "x86_64"
-  digest: "sha256:43bb93d6e0a46aa2e9e4c7cc73d1b79c88e65cf71a8360b177a5c8e0e46888ef"
+  digest: "sha256:f419d4e29aebfc017ad4c9de330a3be0d7eefba710b269108b116aaca1122926"
 - location: https://github.com/mcginty/arch-boxes-arm/releases/download/v20220323/Arch-Linux-aarch64-cloudimg-20220323.0.qcow2
   arch: aarch64
   digest: sha512:27524910bf41cb9b3223c8749c6e67fd2f2fdb8b70d40648708e64d6b03c0b4a01b3c5e72d51fefd3e0c3f58487dbb400a79ca378cde2da341a3a19873612be8
