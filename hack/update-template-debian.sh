@@ -184,6 +184,17 @@ function debian_arch_from_location_basename() {
 	echo "${arch}"
 }
 
+# debian_target_vendor_from_location_basename returns the target vendor segment
+# (e.g. "genericcloud", "generic", "nocloud") from the given location.
+function debian_target_vendor_from_location_basename() {
+	local location=$1 location_basename target_vendor
+	location_basename=$(basename "${location}")
+	location_basename=${location_basename/-backports/}
+	target_vendor=$(echo "${location_basename}" | cut -d- -f3)
+	[[ -n ${target_vendor} ]] || error_exit "Failed to get target_vendor from ${location}"
+	echo "${target_vendor}"
+}
+
 function debian_file_extension_from_location_basename() {
 	local location=$1 location_basename file_extension
 	location_basename=$(basename "${location}")
@@ -226,7 +237,7 @@ function debian_image_format_from_file_extension() {
 # ```
 # shellcheck disable=SC2034
 function debian_url_spec_from_location() {
-	local location=$1 backports=false daily=false timestamp='' codename version='' arch file_extension image_format
+	local location=$1 backports=false daily=false timestamp='' codename version='' arch target_vendor file_extension image_format
 	local -r timestamp_pattern='[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]'
 	case "${location}" in
 	${debian_base_url}*-backports/*) backports=true ;;&
@@ -242,9 +253,10 @@ function debian_url_spec_from_location() {
 	[[ -v debian_codename_to_version[${codename}] ]] || error_exit "Unknown codename: ${codename}"
 	version=${debian_codename_to_version[${codename}]}
 	arch=$(debian_arch_from_location_basename "${location}")
+	target_vendor=$(debian_target_vendor_from_location_basename "${location}")
 	file_extension=$(debian_file_extension_from_location_basename "${location}")
 	image_format=$(debian_image_format_from_file_extension "${file_extension}")
-	json_vars backports daily timestamp version arch file_extension image_format
+	json_vars backports daily timestamp version arch target_vendor file_extension image_format
 }
 
 # debian_location_from_url_spec returns the location for the given URL spec.
@@ -268,7 +280,7 @@ function debian_url_spec_from_location() {
 # https://cloud.debian.org/images/cloud/bookworm-backports/daily/20241019-1905/debian-12-backports-genericcloud-amd64-daily-20241019-1905.qcow2
 # ```
 function debian_location_from_url_spec() {
-	local url_spec=$1 base_url version backports daily timestamp arch file_extension
+	local url_spec=$1 base_url version backports daily timestamp arch target_vendor file_extension
 	base_url=${debian_base_url}
 	version=$(jq -e -r '.version' <<<"${url_spec}")
 	[[ -v debian_version_to_codename[${version}] ]] || error_exit "Unsupported version: ${version}"
@@ -280,7 +292,8 @@ function debian_location_from_url_spec() {
 	timestamp=$(jq -r 'if .timestamp then .timestamp else empty end' <<<"${url_spec}")
 	base_url+=${timestamp:-latest}/
 	arch=$(jq -e -r '.arch' <<<"${url_spec}")
-	target_vendor=$(debian_target_vendor_from_arch "${arch}")
+	target_vendor=$(jq -r '.target_vendor // empty' <<<"${url_spec}")
+	[[ -z ${target_vendor} ]] && target_vendor=$(debian_target_vendor_from_arch "${arch}")
 	file_extension=$(jq -e -r '.file_extension' <<<"${url_spec}")
 	base_url+=debian-${version}${backports}-${target_vendor}-${arch}${daily:+-${daily}}${timestamp:+-${timestamp}}.${file_extension}
 	echo "${base_url}"
@@ -305,7 +318,8 @@ function debian_cache_key_for_image_kernel_overriding() {
 	version=$(jq -r '.version|if . then "-\(.)" else empty end' <<<"${url_spec}")
 	backports=$(jq -r 'if .backports then "-backports" else empty end' <<<"${url_spec}")
 	arch=$(jq -e -r '.arch' <<<"${url_spec}")
-	target_vendor=$(debian_target_vendor_from_arch "${arch}")
+	target_vendor=$(jq -r '.target_vendor // empty' <<<"${url_spec}")
+	[[ -z ${target_vendor} ]] && target_vendor=$(debian_target_vendor_from_arch "${arch}")
 	daily=$(jq -r 'if .daily then "-daily" else empty end' <<<"${url_spec}")
 	timestamped=$(jq -r 'if .timestamp then "-timestamped" else empty end' <<<"${url_spec}")
 	file_extension=$(jq -e -r '.file_extension' <<<"${url_spec}")
@@ -444,7 +458,7 @@ for template in "${templates[@]}"; do
 				image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
 			echo "${image_entry}" | jq
 			limactl edit --log-level error --set "
-				.images[${index}] = ${image_entry}|
+				.images[${index}] *= ${image_entry}|
 				(.images[${index}] | ..) style = \"double\"
 			" "${template}"
 		fi
