@@ -45,28 +45,105 @@ const (
 // DriverClient is the client API for Driver service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
+//
+// Driver is the transport used by an external VM driver. It is the gRPC
+// projection of the Go `driver.Driver` interface (pkg/driver/driver.go): the
+// host agent runs a gRPC client and each external driver binary
+// (lima-driver-<name>) runs the server. The RPCs mirror the interface methods
+// one-to-one, so this file is the authoritative contract for driver authors.
+//
+// Call ordering on the instance start path: instance.Prepare (pkg/instance)
+// runs steps 1-4, then the host agent (pkg/hostagent) boots the VM and runs
+// steps 5-7. Creating an instance without starting it (limactl create) only
+// runs Configure and Create.
+//  1. Configure  - set the instance config; must run before any method that
+//     depends on it.
+//  2. Validate    - reject configs the driver cannot support.
+//  3. Create      - first-time provisioning; a no-op on existing instances.
+//  4. CreateDisk  - create the instance disk(s).
+//  5. Start       - begin booting the VM. It returns once boot has been
+//     initiated (the initial StartResponse), not once the guest has finished
+//     booting; later boot errors arrive on the stream. See StartResponse.
+//  6. AdditionalSetupForSSH - runs right after Start returns (boot initiated,
+//     the guest is not necessarily up yet), before the first SSH connection.
+//  7. SSHAddress  - re-queried after Start only when Info reports
+//     Features.dynamicSSHAddress.
+//
+// Unless stated otherwise, an RPC returning google.protobuf.Empty completes
+// synchronously and reports failures as a gRPC error status. Requests and
+// responses that carry structured data use JSON payloads (Info, Configure) to
+// stay in sync with the Go types without duplicating them here.
+//
+// Concurrency: the start-path RPCs above are invoked sequentially in the
+// order listed. Once the VM is running, the host agent polls read-only RPCs
+// (notably Info and ForwardGuestAgent) from background goroutines, so the
+// driver server must be safe to handle concurrent RPCs.
 type DriverClient interface {
+	// Validate reports whether the driver supports the currently configured
+	// instance. It is called early on the start path, before Create. Returning
+	// an error aborts the operation.
 	Validate(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Create performs first-time provisioning of the instance (e.g. writing a
+	// "vz-identifier" file). It MUST return successfully (no-op) when called
+	// against an instance that already exists, and it MUST NOT create the disks
+	// (that is CreateDisk's job).
 	Create(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// CreateDisk creates the instance disk(s). It is called after Create.
 	CreateDisk(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Start begins booting the VM. It is a server-streaming RPC that mirrors the
+	// `(chan error, error)` return of the in-process interface: the call returns
+	// once boot has been initiated (the initial StartResponse), not once the
+	// guest has finished booting, and later boot errors arrive on the stream. See
+	// StartResponse for the streaming protocol.
 	Start(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (grpc.ServerStreamingClient[StartResponse], error)
+	// Stop terminates the running VM. It blocks until the VM has fully exited
+	// (or the driver's internal shutdown deadline elapses) and returns a gRPC
+	// error status if the shutdown failed.
 	Stop(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Delete removes the instance created by Create (and its driver-specific
+	// files). The generic instance directory is removed by the host agent.
 	Delete(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// BootScripts returns the boot scripts to inject into the VM via cloud-init.
+	// See BootScriptsResponse for the required key format.
 	BootScripts(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*BootScriptsResponse, error)
+	// RunGUI starts the GUI synchronously. It blocks and returns only after the
+	// VM terminates. It is only used by drivers that report Features.canRunGui.
 	RunGUI(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ChangeDisplayPassword sets the password for the VM display (e.g. VNC).
 	ChangeDisplayPassword(ctx context.Context, in *ChangeDisplayPasswordRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// GetDisplayConnection returns the connection string for the VM display.
 	GetDisplayConnection(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*GetDisplayConnectionResponse, error)
+	// CreateSnapshot creates a VM snapshot identified by the given tag.
 	CreateSnapshot(ctx context.Context, in *CreateSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ApplySnapshot restores the VM to the snapshot identified by the given tag.
 	ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// DeleteSnapshot removes the snapshot identified by the given tag.
 	DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ListSnapshots returns the driver-formatted list of existing snapshots.
 	ListSnapshots(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListSnapshotsResponse, error)
+	// ForwardGuestAgent reports whether the host agent must forward the guest
+	// agent socket over SSH. When false, the driver provides a direct guest agent
+	// connection via GuestAgentConn (e.g. vsock/virtio).
 	ForwardGuestAgent(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ForwardGuestAgentResponse, error)
+	// GuestAgentConn returns a direct guest agent connection, used when
+	// ForwardGuestAgent is false; it returns nil when the socket is forwarded
+	// over SSH instead. Over this transport the server bridges the connection to
+	// a unix socket in the instance directory when it is not already one, so the
+	// client relies on that socket rather than on a returned connection.
 	GuestAgentConn(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// Configure sets the instance configuration on the driver. It must be called
+	// before RPCs that depend on the config.
 	Configure(ctx context.Context, in *SetConfigRequest, opts ...grpc.CallOption) (*SetConfigResponse, error)
+	// Info returns driver metadata and capability flags (see InfoResponse). The
+	// host agent uses it to discover features such as dynamicSSHAddress.
 	Info(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*InfoResponse, error)
+	// SSHAddress returns the address used to SSH into the guest. For drivers that
+	// report Features.dynamicSSHAddress the address is not known until after
+	// Start, so the host agent re-queries it at that point.
 	SSHAddress(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*SSHAddressResponse, error)
 	// AdditionalSetupForSSH provides additional setup required for SSH connection.
-	// It is called after VM is started, before first SSH connection.
+	// It is called right after Start returns (boot initiated, the guest is not
+	// necessarily up yet), before the first SSH connection.
 	AdditionalSetupForSSH(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
@@ -290,28 +367,105 @@ func (c *driverClient) AdditionalSetupForSSH(ctx context.Context, in *emptypb.Em
 // DriverServer is the server API for Driver service.
 // All implementations must embed UnimplementedDriverServer
 // for forward compatibility.
+//
+// Driver is the transport used by an external VM driver. It is the gRPC
+// projection of the Go `driver.Driver` interface (pkg/driver/driver.go): the
+// host agent runs a gRPC client and each external driver binary
+// (lima-driver-<name>) runs the server. The RPCs mirror the interface methods
+// one-to-one, so this file is the authoritative contract for driver authors.
+//
+// Call ordering on the instance start path: instance.Prepare (pkg/instance)
+// runs steps 1-4, then the host agent (pkg/hostagent) boots the VM and runs
+// steps 5-7. Creating an instance without starting it (limactl create) only
+// runs Configure and Create.
+//  1. Configure  - set the instance config; must run before any method that
+//     depends on it.
+//  2. Validate    - reject configs the driver cannot support.
+//  3. Create      - first-time provisioning; a no-op on existing instances.
+//  4. CreateDisk  - create the instance disk(s).
+//  5. Start       - begin booting the VM. It returns once boot has been
+//     initiated (the initial StartResponse), not once the guest has finished
+//     booting; later boot errors arrive on the stream. See StartResponse.
+//  6. AdditionalSetupForSSH - runs right after Start returns (boot initiated,
+//     the guest is not necessarily up yet), before the first SSH connection.
+//  7. SSHAddress  - re-queried after Start only when Info reports
+//     Features.dynamicSSHAddress.
+//
+// Unless stated otherwise, an RPC returning google.protobuf.Empty completes
+// synchronously and reports failures as a gRPC error status. Requests and
+// responses that carry structured data use JSON payloads (Info, Configure) to
+// stay in sync with the Go types without duplicating them here.
+//
+// Concurrency: the start-path RPCs above are invoked sequentially in the
+// order listed. Once the VM is running, the host agent polls read-only RPCs
+// (notably Info and ForwardGuestAgent) from background goroutines, so the
+// driver server must be safe to handle concurrent RPCs.
 type DriverServer interface {
+	// Validate reports whether the driver supports the currently configured
+	// instance. It is called early on the start path, before Create. Returning
+	// an error aborts the operation.
 	Validate(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Create performs first-time provisioning of the instance (e.g. writing a
+	// "vz-identifier" file). It MUST return successfully (no-op) when called
+	// against an instance that already exists, and it MUST NOT create the disks
+	// (that is CreateDisk's job).
 	Create(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// CreateDisk creates the instance disk(s). It is called after Create.
 	CreateDisk(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Start begins booting the VM. It is a server-streaming RPC that mirrors the
+	// `(chan error, error)` return of the in-process interface: the call returns
+	// once boot has been initiated (the initial StartResponse), not once the
+	// guest has finished booting, and later boot errors arrive on the stream. See
+	// StartResponse for the streaming protocol.
 	Start(*emptypb.Empty, grpc.ServerStreamingServer[StartResponse]) error
+	// Stop terminates the running VM. It blocks until the VM has fully exited
+	// (or the driver's internal shutdown deadline elapses) and returns a gRPC
+	// error status if the shutdown failed.
 	Stop(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Delete removes the instance created by Create (and its driver-specific
+	// files). The generic instance directory is removed by the host agent.
 	Delete(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// BootScripts returns the boot scripts to inject into the VM via cloud-init.
+	// See BootScriptsResponse for the required key format.
 	BootScripts(context.Context, *emptypb.Empty) (*BootScriptsResponse, error)
+	// RunGUI starts the GUI synchronously. It blocks and returns only after the
+	// VM terminates. It is only used by drivers that report Features.canRunGui.
 	RunGUI(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// ChangeDisplayPassword sets the password for the VM display (e.g. VNC).
 	ChangeDisplayPassword(context.Context, *ChangeDisplayPasswordRequest) (*emptypb.Empty, error)
+	// GetDisplayConnection returns the connection string for the VM display.
 	GetDisplayConnection(context.Context, *emptypb.Empty) (*GetDisplayConnectionResponse, error)
+	// CreateSnapshot creates a VM snapshot identified by the given tag.
 	CreateSnapshot(context.Context, *CreateSnapshotRequest) (*emptypb.Empty, error)
+	// ApplySnapshot restores the VM to the snapshot identified by the given tag.
 	ApplySnapshot(context.Context, *ApplySnapshotRequest) (*emptypb.Empty, error)
+	// DeleteSnapshot removes the snapshot identified by the given tag.
 	DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*emptypb.Empty, error)
+	// ListSnapshots returns the driver-formatted list of existing snapshots.
 	ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error)
+	// ForwardGuestAgent reports whether the host agent must forward the guest
+	// agent socket over SSH. When false, the driver provides a direct guest agent
+	// connection via GuestAgentConn (e.g. vsock/virtio).
 	ForwardGuestAgent(context.Context, *emptypb.Empty) (*ForwardGuestAgentResponse, error)
+	// GuestAgentConn returns a direct guest agent connection, used when
+	// ForwardGuestAgent is false; it returns nil when the socket is forwarded
+	// over SSH instead. Over this transport the server bridges the connection to
+	// a unix socket in the instance directory when it is not already one, so the
+	// client relies on that socket rather than on a returned connection.
 	GuestAgentConn(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// Configure sets the instance configuration on the driver. It must be called
+	// before RPCs that depend on the config.
 	Configure(context.Context, *SetConfigRequest) (*SetConfigResponse, error)
+	// Info returns driver metadata and capability flags (see InfoResponse). The
+	// host agent uses it to discover features such as dynamicSSHAddress.
 	Info(context.Context, *emptypb.Empty) (*InfoResponse, error)
+	// SSHAddress returns the address used to SSH into the guest. For drivers that
+	// report Features.dynamicSSHAddress the address is not known until after
+	// Start, so the host agent re-queries it at that point.
 	SSHAddress(context.Context, *emptypb.Empty) (*SSHAddressResponse, error)
 	// AdditionalSetupForSSH provides additional setup required for SSH connection.
-	// It is called after VM is started, before first SSH connection.
+	// It is called right after Start returns (boot initiated, the guest is not
+	// necessarily up yet), before the first SSH connection.
 	AdditionalSetupForSSH(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
 	mustEmbedUnimplementedDriverServer()
 }
