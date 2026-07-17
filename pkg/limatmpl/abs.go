@@ -126,8 +126,10 @@ func absPath(locator, basePath string) (string, error) {
 			return "", errors.New("basePath is empty")
 		case basePath == "-":
 			return "", errors.New("can't use relative paths when reading template from STDIN")
-		case strings.Contains(locator, "../"):
-			return "", fmt.Errorf("relative locator path %#q must not contain '../' segments", locator)
+		case strings.Contains(locator, "../") || strings.Contains(locator, `..\`):
+			// filepath.Join treats a backslash as a separator on Windows, so `..\` escapes the
+			// base directory just like `../`; reject both so the guard holds on every platform.
+			return "", fmt.Errorf("relative locator path %#q must not contain '..' path segments", locator)
 		case volumeLen != 0:
 			return "", fmt.Errorf("relative locator path %#q must not include a volume name", locator)
 		}
