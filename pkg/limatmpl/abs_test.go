@@ -246,7 +246,12 @@ func TestAbsPath(t *testing.T) {
 
 	t.Run("Relative paths must be underneath the basePath", func(t *testing.T) {
 		_, err = absPath("../foo", volume+"/root")
-		assert.ErrorContains(t, err, "'../'")
+		assert.ErrorContains(t, err, "'..'")
+	})
+
+	t.Run("Relative paths must not use backslash traversal", func(t *testing.T) {
+		_, err = absPath(`..\foo`, volume+"/root")
+		assert.ErrorContains(t, err, "'..'")
 	})
 
 	t.Run("locator must not be empty", func(t *testing.T) {
