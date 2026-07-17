@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/inetaf/tcpproxy"
@@ -39,7 +40,12 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 	if err != nil {
 		return err
 	}
-	rw := &GRPCServerRW{stream: stream, id: in.Id, closeCh: make(chan any, 1)}
+	// The tunnel is unusable once this function returns, so close the dialed
+	// connection here as well. This both releases the FD even if the proxy
+	// goroutine is still blocked reading from the guest, and unblocks that
+	// read so the goroutine can finish.
+	defer conn.Close()
+	rw := &GRPCServerRW{stream: stream, id: in.Id, closeCh: make(chan any)}
 	go func() {
 		<-ctx.Done()
 		rw.Close()
@@ -52,7 +58,6 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 
 	// The stream will be closed when this function returns.
 	// Wait here until rw.Close(), rw.CloseRead(), or rw.CloseWrite() is called.
-	// We can't close rw.closeCh since the calling order of Close* methods is not guaranteed.
 	<-rw.closeCh
 	logrus.Debugf("closed GRPCServerRW for id: %s", in.Id)
 
@@ -63,6 +68,13 @@ type GRPCServerRW struct {
 	id      string
 	stream  api.GuestService_TunnelServer
 	closeCh chan any
+	// closeOnce guards closeCh. Close, CloseRead, and CloseWrite may be
+	// called in any order and multiple times (e.g., tcpproxy calls
+	// CloseRead/CloseWrite from each copy direction and then Close), so
+	// they must be idempotent and must never block; otherwise the proxy
+	// goroutine gets stuck and never closes the dialed guest connection,
+	// leaking one FD per forwarded connection.
+	closeOnce sync.Once
 
 	// rxBuf holds bytes received from the stream that did not fit in the
 	// buffer passed to the previous Read call.
@@ -91,7 +103,7 @@ func (g *GRPCServerRW) Read(p []byte) (n int, err error) {
 
 func (g *GRPCServerRW) Close() error {
 	logrus.Debugf("closing GRPCServerRW for id: %s", g.id)
-	g.closeCh <- struct{}{}
+	g.closeOnce.Do(func() { close(g.closeCh) })
 	return nil
 }
 
@@ -100,13 +112,13 @@ func (g *GRPCServerRW) Close() error {
 
 func (g *GRPCServerRW) CloseRead() error {
 	logrus.Debugf("closing read GRPCServerRW for id: %s", g.id)
-	g.closeCh <- struct{}{}
+	g.closeOnce.Do(func() { close(g.closeCh) })
 	return nil
 }
 
 func (g *GRPCServerRW) CloseWrite() error {
 	logrus.Debugf("closing write GRPCServerRW for id: %s", g.id)
-	g.closeCh <- struct{}{}
+	g.closeOnce.Do(func() { close(g.closeCh) })
 	return nil
 }
 
