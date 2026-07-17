@@ -1,0 +1,33 @@
+name: lint
+
+# These linters apply to the whole tree, docs included, so this workflow runs
+# without the paths-ignore filter that test.yml uses to skip docs-only changes.
+on:
+  push:
+    branches:
+    - master
+    - 'release/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  lint-docs:
+    name: "Lint docs"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
+      with:
+        go-version: stable
+        cache: false
+    - name: Run editorconfig-checker
+      run: make editorconfig-checker
+    - name: Run yamllint
+      run: make yamllint
+    - name: Run file and directory name linter
+      uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1

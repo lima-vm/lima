@@ -43,16 +43,10 @@ jobs:
       run: make generate check-generated
     - name: Run nobin
       run: make nobin
-    - name: Run editorconfig-checker
-      run: make editorconfig-checker
-    - name: Run yamllint
-      run: make yamllint
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
-    - name: Run file and directory name linter
-      uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1
     - name: Run shellcheck
       run: make shellcheck
     - name: Run shfmt
