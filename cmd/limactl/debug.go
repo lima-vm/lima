@@ -1,12 +1,16 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
 	"strconv"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/hostagent/dns"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/hostagent/dns"
 )
 
 func newDebugCommand() *cobra.Command {
@@ -28,7 +32,7 @@ func newDebugDNSCommand() *cobra.Command {
 		Args:  WrapArgsError(cobra.RangeArgs(1, 2)),
 		RunE:  debugDNSAction,
 	}
-	cmd.Flags().BoolP("ipv6", "6", false, "lookup IPv6 addresses too")
+	cmd.Flags().BoolP("ipv6", "6", false, "Lookup IPv6 addresses too")
 	return cmd
 }
 

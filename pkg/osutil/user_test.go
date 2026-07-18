@@ -1,46 +1,62 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package osutil
 
 import (
 	"path"
 	"strconv"
+	"sync"
 	"testing"
 
 	"gotest.tools/v3/assert"
 )
 
-func TestLimaUserWarn(t *testing.T) {
-	_, err := LimaUser(true)
-	assert.NilError(t, err)
+const limaVersion = "1.0.0"
+
+// "admin" is a reserved username in 1.0.0
+func TestLimaUserAdminNew(t *testing.T) {
+	currentUser.Username = "admin"
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
+	assert.Equal(t, user.Username, fallbackUser)
 }
 
-func validUsername(username string) bool {
-	return regexUsername.MatchString(username)
+// "admin" is allowed in older instances
+func TestLimaUserAdminOld(t *testing.T) {
+	currentUser.Username = "admin"
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), "0.23.0", false, nil)
+	assert.Equal(t, user.Username, "admin")
 }
 
-func TestLimaUsername(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
-	// check for reasonable unix user name
-	assert.Assert(t, validUsername(user.Username), user.Username)
+func TestLimaUserInvalid(t *testing.T) {
+	currentUser.Username = "use@example.com"
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
+	assert.Equal(t, user.Username, fallbackUser)
 }
 
 func TestLimaUserUid(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
-	_, err = strconv.Atoi(user.Uid)
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
+	_, err := strconv.Atoi(user.Uid)
 	assert.NilError(t, err)
 }
 
 func TestLimaUserGid(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
-	_, err = strconv.Atoi(user.Gid)
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
+	_, err := strconv.Atoi(user.Gid)
 	assert.NilError(t, err)
 }
 
 func TestLimaHomeDir(t *testing.T) {
-	user, err := LimaUser(false)
-	assert.NilError(t, err)
+	currentUser.Username = fallbackUser
+	once = new(sync.Once)
+	user := LimaUser(t.Context(), limaVersion, false, nil)
 	// check for absolute unix path (/home)
 	assert.Assert(t, path.IsAbs(user.HomeDir), user.HomeDir)
 }

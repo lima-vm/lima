@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -6,13 +9,19 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"text/tabwriter"
 
+	contfs "github.com/containerd/continuity/fs"
 	"github.com/docker/go-units"
-	"github.com/lima-vm/lima/pkg/qemu"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/go-qcow2reader"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func newDiskCommand() *cobra.Command {
@@ -27,7 +36,7 @@ func newDiskCommand() *cobra.Command {
 
   Delete a disk:
   $ limactl disk delete DISK
-  
+
   Resize a disk:
   $ limactl disk resize DISK --size SIZE`,
 		SilenceUsage:  true,
@@ -40,6 +49,7 @@ func newDiskCommand() *cobra.Command {
 		newDiskDeleteCommand(),
 		newDiskUnlockCommand(),
 		newDiskResizeCommand(),
+		newDiskImportCommand(),
 	)
 	return diskCommand
 }
@@ -55,13 +65,14 @@ $ limactl disk create DISK --size SIZE [--format qcow2]
 		Args:  WrapArgsError(cobra.ExactArgs(1)),
 		RunE:  diskCreateAction,
 	}
-	diskCreateCommand.Flags().String("size", "", "configure the disk size")
+	diskCreateCommand.Flags().String("size", "", "Configure the disk size")
 	_ = diskCreateCommand.MarkFlagRequired("size")
-	diskCreateCommand.Flags().String("format", "qcow2", "specify the disk format")
+	diskCreateCommand.Flags().String("format", "qcow2", "Specify the disk format")
 	return diskCreateCommand
 }
 
 func diskCreateAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	size, err := cmd.Flags().GetString("size")
 	if err != nil {
 		return err
@@ -101,12 +112,16 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := qemu.CreateDataDisk(diskDir, format, int(diskSize)); err != nil {
+	// qemu may not be available, use it only if needed.
+	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	err = diskUtil.CreateDisk(ctx, dataDisk, diskSize)
+	if err != nil {
 		rerr := os.RemoveAll(diskDir)
 		if rerr != nil {
 			err = errors.Join(err, fmt.Errorf("failed to remove a directory %q: %w", diskDir, rerr))
 		}
-		return fmt.Errorf("Failed to create %s disk in %q: %w", format, diskDir, err)
+		return fmt.Errorf("failed to create %s disk in %q: %w", format, diskDir, err)
 	}
 
 	return nil
@@ -128,11 +143,11 @@ $ limactl disk list
 	return diskListCommand
 }
 
-func diskMatches(diskName string, disks []string) []string {
+func nameMatches(nameName string, names []string) []string {
 	matches := []string{}
-	for _, disk := range disks {
-		if disk == diskName {
-			matches = append(matches, disk)
+	for _, name := range names {
+		if name == nameName {
+			matches = append(matches, name)
 		}
 	}
 	return matches
@@ -152,7 +167,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	disks := []string{}
 	if len(args) > 0 {
 		for _, arg := range args {
-			matches := diskMatches(arg, allDisks)
+			matches := nameMatches(arg, allDisks)
 			if len(matches) > 0 {
 				disks = append(disks, matches...)
 			} else {
@@ -165,7 +180,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 
 	if jsonFormat {
 		for _, diskName := range disks {
-			disk, err := store.InspectDisk(diskName)
+			disk, err := store.InspectDisk(diskName, nil)
 			if err != nil {
 				logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
 				continue
@@ -187,7 +202,7 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, diskName := range disks {
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			logrus.WithError(err).Errorf("disk %q does not exist?", diskName)
 			continue
@@ -214,11 +229,12 @@ $ limactl disk delete DISK1 DISK2 ...
 		RunE:              diskDeleteAction,
 		ValidArgsFunction: diskBashComplete,
 	}
-	diskDeleteCommand.Flags().BoolP("force", "f", false, "force delete")
+	diskDeleteCommand.Flags().BoolP("force", "f", false, "Force delete")
 	return diskDeleteCommand
 }
 
 func diskDeleteAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	force, err := cmd.Flags().GetBool("force")
 	if err != nil {
 		return err
@@ -228,9 +244,9 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	var instances []*store.Instance
+	var instances []*limatype.Instance
 	for _, instName := range instNames {
-		inst, err := store.Inspect(instName)
+		inst, err := store.Inspect(ctx, instName)
 		if err != nil {
 			continue
 		}
@@ -238,7 +254,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 	}
 
 	for _, diskName := range args {
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				logrus.Warnf("Ignoring non-existent disk %q", diskName)
@@ -253,11 +269,9 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 			}
 			var refInstances []string
 			for _, inst := range instances {
-				if len(inst.AdditionalDisks) > 0 {
-					for _, d := range inst.AdditionalDisks {
-						if d.Name == diskName {
-							refInstances = append(refInstances, inst.Name)
-						}
+				for _, d := range inst.AdditionalDisks {
+					if d.Name == diskName {
+						refInstances = append(refInstances, inst.Name)
 					}
 				}
 			}
@@ -308,9 +322,10 @@ $ limactl disk unlock DISK1 DISK2 ...
 	return diskUnlockCommand
 }
 
-func diskUnlockAction(_ *cobra.Command, args []string) error {
+func diskUnlockAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	for _, diskName := range args {
-		disk, err := store.InspectDisk(diskName)
+		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
 			if errors.Is(err, fs.ErrNotExist) {
 				logrus.Warnf("Ignoring non-existent disk %q", diskName)
@@ -323,14 +338,14 @@ func diskUnlockAction(_ *cobra.Command, args []string) error {
 			continue
 		}
 		// if store.Inspect throws an error, the instance does not exist, and it is safe to unlock
-		inst, err := store.Inspect(disk.Instance)
+		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
 			if len(inst.Errors) > 0 {
 				logrus.Warnf("Cannot unlock disk %q, attached instance %q has errors: %+v",
 					diskName, disk.Instance, inst.Errors)
 				continue
 			}
-			if inst.Status == store.StatusRunning {
+			if inst.Status == limatype.StatusRunning {
 				logrus.Warnf("Cannot unlock disk %q used by running instance %q", diskName, disk.Instance)
 				continue
 			}
@@ -360,6 +375,7 @@ $ limactl disk resize DISK --size SIZE`,
 }
 
 func diskResizeAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	size, err := cmd.Flags().GetString("size")
 	if err != nil {
 		return err
@@ -371,7 +387,7 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	}
 
 	diskName := args[0]
-	disk, err := store.InspectDisk(diskName)
+	disk, err := store.InspectDisk(diskName, nil)
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return fmt.Errorf("disk %q does not exists", diskName)
@@ -385,20 +401,87 @@ func diskResizeAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if disk.Instance != "" {
-		inst, err := store.Inspect(disk.Instance)
+		inst, err := store.Inspect(ctx, disk.Instance)
 		if err == nil {
-			if inst.Status == store.StatusRunning {
+			if inst.Status == limatype.StatusRunning {
 				return fmt.Errorf("cannot resize disk %q used by running instance %q. Please stop the VM instance", diskName, disk.Instance)
 			}
 		}
 	}
-	if err := qemu.ResizeDataDisk(disk.Dir, disk.Format, int(diskSize)); err != nil {
+
+	// qemu may not be available, use it only if needed.
+	dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
+	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	err = diskUtil.ResizeDisk(ctx, dataDisk, diskSize)
+	if err != nil {
 		return fmt.Errorf("failed to resize disk %q: %w", diskName, err)
 	}
+
 	logrus.Infof("Resized disk %q (%q)", diskName, disk.Dir)
 	return nil
 }
 
 func diskBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
 	return bashCompleteDiskNames(cmd)
+}
+
+func newDiskImportCommand() *cobra.Command {
+	diskImportCommand := &cobra.Command{
+		Use: "import DISK FILE",
+		Example: `
+Import a disk:
+$ limactl disk import DISK DISKPATH
+`,
+		Short:             "Import an existing disk to Lima",
+		Args:              WrapArgsError(cobra.ExactArgs(2)),
+		RunE:              diskImportAction,
+		ValidArgsFunction: diskBashComplete,
+	}
+	return diskImportCommand
+}
+
+func diskImportAction(_ *cobra.Command, args []string) error {
+	diskName := args[0]
+	fName := args[1]
+
+	diskDir, err := store.DiskDir(diskName)
+	if err != nil {
+		return err
+	}
+
+	if _, err := os.Stat(diskDir); !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("disk %q already exists (%q)", diskName, diskDir)
+	}
+
+	f, err := os.Open(fName)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	img, err := qcow2reader.Open(f)
+	if err != nil {
+		return err
+	}
+
+	diskSize := img.Size()
+	format := img.Type()
+
+	switch format {
+	case "qcow2", "raw":
+	default:
+		return fmt.Errorf(`disk format %q not supported, use "qcow2" or "raw" instead`, format)
+	}
+
+	if err := os.MkdirAll(diskDir, 0o755); err != nil {
+		return err
+	}
+
+	if err := contfs.CopyFile(filepath.Join(diskDir, filenames.DataDisk), fName); err != nil {
+		return nil
+	}
+
+	logrus.Infof("Imported %s with size %s", diskName, units.BytesSize(float64(diskSize)))
+
+	return nil
 }

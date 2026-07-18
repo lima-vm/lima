@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package sysprof
 
 type SPNetworkDataType struct {
@@ -20,17 +23,17 @@ type IPv4 struct {
 }
 
 type Proxies struct {
-	ExceptionList []string    `json:"ExceptionList"` // default: ["*.local", "169.254/16"]
-	FTPEnable     string      `json:"FTPEnable"`
-	FTPPort       interface{} `json:"FTPPort"`
-	FTPProxy      string      `json:"FTPProxy"`
-	FTPUser       string      `json:"FTPUser"`
-	HTTPEnable    string      `json:"HTTPEnable"`
-	HTTPPort      interface{} `json:"HTTPPort"`
-	HTTPProxy     string      `json:"HTTPProxy"`
-	HTTPUser      string      `json:"HTTPUser"`
-	HTTPSEnable   string      `json:"HTTPSEnable"`
-	HTTPSPort     interface{} `json:"HTTPSPort"`
-	HTTPSProxy    string      `json:"HTTPSProxy"`
-	HTTPSUser     string      `json:"HTTPSUser"`
+	ExceptionList []string `json:"ExceptionList"` // default: ["*.local", "169.254/16"]
+	FTPEnable     string   `json:"FTPEnable"`
+	FTPPort       any      `json:"FTPPort"`
+	FTPProxy      string   `json:"FTPProxy"`
+	FTPUser       string   `json:"FTPUser"`
+	HTTPEnable    string   `json:"HTTPEnable"`
+	HTTPPort      any      `json:"HTTPPort"`
+	HTTPProxy     string   `json:"HTTPProxy"`
+	HTTPUser      string   `json:"HTTPUser"`
+	HTTPSEnable   string   `json:"HTTPSEnable"`
+	HTTPSPort     any      `json:"HTTPSPort"`
+	HTTPSProxy    string   `json:"HTTPSProxy"`
+	HTTPSUser     string   `json:"HTTPSUser"`
 }

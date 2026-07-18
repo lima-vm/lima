@@ -1,20 +1,49 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package driverutil
 
 import (
-	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/limayaml"
-	"github.com/lima-vm/lima/pkg/qemu"
-	"github.com/lima-vm/lima/pkg/vz"
-	"github.com/lima-vm/lima/pkg/wsl2"
+	"fmt"
+
+	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
-func CreateTargetDriverInstance(base *driver.BaseDriver) driver.Driver {
-	limaDriver := base.Yaml.VMType
-	if *limaDriver == limayaml.VZ {
-		return vz.New(base)
+// CreateConfiguredDriver creates a driver.ConfiguredDriver for the given instance.
+func CreateConfiguredDriver(inst *limatype.Instance, sshLocalPort int) (*driver.ConfiguredDriver, error) {
+	limaDriver := inst.Config.VMType
+	extDriver, intDriver, exists := registry.Get(*limaDriver)
+	if !exists {
+		return nil, fmt.Errorf("unknown or unsupported VM type: %s", *limaDriver)
 	}
-	if *limaDriver == limayaml.WSL2 {
-		return wsl2.New(base)
+
+	if extDriver != nil {
+		extDriver.Logger.Debugf("Using external driver %q", extDriver.Name)
+		if extDriver.Client == nil || extDriver.Command == nil {
+			logrus.Debugf("Starting new instance of external driver %q", extDriver.Name)
+			if err := server.Start(extDriver, inst.Name); err != nil {
+				extDriver.Logger.Errorf("Failed to start external driver %q: %v", extDriver.Name, err)
+				return nil, err
+			}
+		} else {
+			logrus.Debugf("Reusing existing external driver %q instance", extDriver.Name)
+			extDriver.InstanceName = inst.Name
+		}
+
+		if !extDriver.Client.Info().Features.StaticSSHPort {
+			inst.SSHLocalPort = sshLocalPort
+		}
+		return extDriver.Client.Configure(inst), nil
 	}
-	return qemu.New(base)
+
+	logrus.Debugf("Using internal driver %q", intDriver.Info().Name)
+	if !intDriver.Info().Features.StaticSSHPort {
+		inst.SSHLocalPort = sshLocalPort
+	}
+	return intDriver.Configure(inst), nil
 }

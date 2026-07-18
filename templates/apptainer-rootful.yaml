@@ -1,0 +1,32 @@
+# A template to use Apptainer instead of containerd & nerdctl
+# $ limactl start ./apptainer-rootful.yaml
+# $ limactl shell apptainer-rootful apptainer run -u -B $HOME:$HOME docker://alpine
+
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/ubuntu-lts
+- template:_default/mounts
+
+containerd:
+  system: false
+  user: false
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v apptainer >/dev/null 2>&1 && exit 0
+    # add the "Official PPA for Apptainer"
+    add-apt-repository -y ppa:apptainer/ppa
+    apt-get update
+    apt-get install -y apptainer-suid
+probes:
+- script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v apptainer >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "apptainer is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest

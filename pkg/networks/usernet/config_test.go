@@ -1,11 +1,15 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package usernet
 
 import (
 	"net"
 	"testing"
 
-	"github.com/lima-vm/lima/pkg/networks"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/networks"
 )
 
 func TestUsernetConfig(t *testing.T) {

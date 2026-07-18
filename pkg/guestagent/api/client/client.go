@@ -1,83 +1,102 @@
-package client
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
 
-// Forked from https://github.com/rootless-containers/rootlesskit/blob/v0.14.2/pkg/api/client/client.go
-// Apache License 2.0
+package client
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
+	"math"
 	"net"
-	"net/http"
+	"time"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/lima-vm/lima/pkg/httpclientutil"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/resolver"
+	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
+
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )
 
-type GuestAgentClient interface {
-	HTTPClient() *http.Client
-	Info(context.Context) (*api.Info, error)
-	Events(context.Context, func(api.Event)) error
+type GuestAgentClient struct {
+	cli  api.GuestServiceClient
+	conn *grpc.ClientConn
 }
 
-// NewGuestAgentClient creates a client.
-// remote is a path to the UNIX socket, without unix:// prefix or a remote hostname/IP address.
-func NewGuestAgentClient(conn net.Conn) (GuestAgentClient, error) {
-	hc, err := httpclientutil.NewHTTPClientWithConn(conn)
+func NewGuestAgentClient(dialFn func(ctx context.Context) (net.Conn, error)) (*GuestAgentClient, error) {
+	opts := []grpc.DialOption{
+		grpc.WithTransportCredentials(NewCredentials()),
+		grpc.WithInitialWindowSize(512 << 20),
+		grpc.WithInitialConnWindowSize(512 << 20),
+		grpc.WithReadBufferSize(8 << 20),
+		grpc.WithWriteBufferSize(8 << 20),
+		grpc.WithDefaultCallOptions(
+			grpc.MaxCallRecvMsgSize(math.MaxInt32),
+			grpc.MaxCallSendMsgSize(math.MaxInt32),
+		),
+		grpc.WithContextDialer(func(ctx context.Context, _ string) (net.Conn, error) {
+			return dialFn(ctx)
+		}),
+	}
+
+	resolver.SetDefaultScheme("passthrough")
+	clientConn, err := grpc.NewClient("", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return NewGuestAgentClientWithHTTPClient(hc), nil
+	client := api.NewGuestServiceClient(clientConn)
+	return &GuestAgentClient{
+		cli:  client,
+		conn: clientConn,
+	}, nil
 }
 
-func NewGuestAgentClientWithHTTPClient(hc *http.Client) GuestAgentClient {
-	return &client{
-		Client:    hc,
-		version:   "v1",
-		dummyHost: "lima-guestagent",
+// Close releases the underlying gRPC connection. It is safe to call on a nil
+// receiver or a client whose connection has already been closed.
+func (c *GuestAgentClient) Close() error {
+	if c == nil || c.conn == nil {
+		return nil
 	}
+	return c.conn.Close()
 }
 
-type client struct {
-	*http.Client
-	// version is always "v1"
-	// TODO(AkihiroSuda): negotiate the version
-	version   string
-	dummyHost string
+func (c *GuestAgentClient) Info(ctx context.Context) (*api.Info, error) {
+	return c.cli.GetInfo(ctx, &emptypb.Empty{})
 }
 
-func (c *client) HTTPClient() *http.Client {
-	return c.Client
-}
-
-func (c *client) Info(ctx context.Context) (*api.Info, error) {
-	u := fmt.Sprintf("http://%s/%s/info", c.dummyHost, c.version)
-	resp, err := httpclientutil.Get(ctx, c.HTTPClient(), u)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	var info api.Info
-	dec := json.NewDecoder(resp.Body)
-	if err := dec.Decode(&info); err != nil {
-		return nil, err
-	}
-	return &info, nil
-}
-
-func (c *client) Events(ctx context.Context, onEvent func(api.Event)) error {
-	u := fmt.Sprintf("http://%s/%s/events", c.dummyHost, c.version)
-	resp, err := httpclientutil.Get(ctx, c.HTTPClient(), u)
+func (c *GuestAgentClient) Events(ctx context.Context, eventCb func(response *api.Event)) error {
+	events, err := c.cli.GetEvents(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
 	}
-	defer resp.Body.Close()
-	dec := json.NewDecoder(resp.Body)
+
 	for {
-		var ev api.Event
-		if err := dec.Decode(&ev); err != nil {
+		recv, err := events.Recv()
+		if err != nil {
 			return err
 		}
-		onEvent(ev)
+		eventCb(recv)
 	}
+}
+
+func (c *GuestAgentClient) Inotify(ctx context.Context) (api.GuestService_PostInotifyClient, error) {
+	inotify, err := c.cli.PostInotify(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return inotify, nil
+}
+
+func (c *GuestAgentClient) Tunnel(ctx context.Context) (api.GuestService_TunnelClient, error) {
+	stream, err := c.cli.Tunnel(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return stream, nil
+}
+
+func (c *GuestAgentClient) SyncTime(ctx context.Context, hostTime time.Time) (*api.TimeSyncResponse, error) {
+	req := &api.TimeSyncRequest{
+		HostTime: timestamppb.New(hostTime),
+	}
+	return c.cli.SyncTime(ctx, req)
 }

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package cidata
 
 import (
@@ -8,10 +11,10 @@ import (
 	"io/fs"
 	"path"
 
-	"github.com/lima-vm/lima/pkg/iso9660util"
-
-	"github.com/containerd/containerd/identifiers"
-	"github.com/lima-vm/lima/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
 //go:embed cidata.TEMPLATE.d
@@ -29,12 +32,14 @@ type Cert struct {
 }
 
 type Containerd struct {
-	System bool
-	User   bool
+	System  bool
+	User    bool
+	Archive string
 }
 type Network struct {
 	MACAddress string
 	Interface  string
+	Metric     uint32
 }
 type Mount struct {
 	Tag        string
@@ -45,6 +50,23 @@ type Mount struct {
 type BootCmds struct {
 	Lines []string
 }
+
+type DataFile struct {
+	FileName    string
+	Overwrite   string
+	Owner       string
+	Path        string
+	Permissions string
+}
+
+type YQProvision struct {
+	FileName    string
+	Format      string
+	Owner       string
+	Path        string
+	Permissions string
+}
+
 type Disk struct {
 	Name   string
 	Device string
@@ -53,11 +75,16 @@ type Disk struct {
 	FSArgs []string
 }
 type TemplateArgs struct {
+	Debug                           bool
+	OS                              limatype.OS
 	Name                            string // instance name
+	Hostname                        string // instance hostname
 	IID                             string // instance id
 	User                            string // user name
+	Comment                         string // user information
 	Home                            string // home directory
-	UID                             int
+	Shell                           string // login shell
+	UID                             uint32
 	SSHPubKeys                      []string
 	Mounts                          []Mount
 	MountType                       string
@@ -73,6 +100,10 @@ type TemplateArgs struct {
 	UDPDNSLocalPort                 int
 	TCPDNSLocalPort                 int
 	Env                             map[string]string
+	Param                           map[string]string
+	BootScripts                     bool
+	DataFiles                       []DataFile
+	YQProvisions                    []YQProvision
 	DNSAddresses                    []string
 	CACerts                         CACerts
 	HostHomeMountPoint              string
@@ -85,15 +116,15 @@ type TemplateArgs struct {
 	VirtioPort                      string
 	Plain                           bool
 	TimeZone                        string
+	NoCloudInit                     bool
 }
 
-func ValidateTemplateArgs(args TemplateArgs) error {
+func ValidateTemplateArgs(args *TemplateArgs) error {
 	if err := identifiers.Validate(args.Name); err != nil {
 		return err
 	}
-	if err := identifiers.Validate(args.User); err != nil {
-		return err
-	}
+	// args.User is intentionally not validated here; the user can override with any name they want
+	// limayaml.FillDefault will validate the default (local) username, but not an explicit setting
 	if args.User == "root" {
 		return errors.New("field User must not be \"root\"")
 	}
@@ -102,6 +133,9 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	}
 	if args.Home == "" {
 		return errors.New("field Home must be set")
+	}
+	if args.Shell == "" {
+		return errors.New("field Shell must be set")
 	}
 	if len(args.SSHPubKeys) == 0 {
 		return errors.New("field SSHPubKeys must be set")
@@ -115,7 +149,21 @@ func ValidateTemplateArgs(args TemplateArgs) error {
 	return nil
 }
 
-func ExecuteTemplate(args TemplateArgs) ([]iso9660util.Entry, error) {
+func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
+	if err := ValidateTemplateArgs(args); err != nil {
+		return nil, err
+	}
+
+	userData, err := templateFS.ReadFile(path.Join(templateFSRoot, "user-data"))
+	if err != nil {
+		return nil, err
+	}
+
+	cloudConfigYaml := string(userData)
+	return textutil.ExecuteTemplate(cloudConfigYaml, args)
+}
+
+func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 	if err := ValidateTemplateArgs(args); err != nil {
 		return nil, err
 	}

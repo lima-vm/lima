@@ -1,21 +1,37 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/snapshot"
-	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
-
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/snapshot"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func newSnapshotCommand() *cobra.Command {
 	snapshotCmd := &cobra.Command{
 		Use:   "snapshot",
 		Short: "Manage instance snapshots",
-		PersistentPreRun: func(cmd *cobra.Command, args []string) {
+		Example: `  List all snapshots of an instance:
+  $ limactl snapshot list default
+
+  Create a snapshot:
+  $ limactl snapshot create default --tag snap1
+
+  Apply (restore) a snapshot:
+  $ limactl snapshot apply default --tag snap1
+
+  Delete a snapshot:
+  $ limactl snapshot delete default --tag snap1
+`,
+		PersistentPreRun: func(*cobra.Command, []string) {
 			logrus.Warn("`limactl snapshot` is experimental")
 		},
 		GroupID: advancedCommand,
@@ -30,22 +46,26 @@ func newSnapshotCommand() *cobra.Command {
 
 func newSnapshotCreateCommand() *cobra.Command {
 	createCmd := &cobra.Command{
-		Use:               "create INSTANCE",
-		Aliases:           []string{"save"},
-		Short:             "Create (save) a snapshot",
+		Use:     "create INSTANCE",
+		Aliases: []string{"save"},
+		Short:   "Create (save) a snapshot",
+		Example: `  Create a snapshot of an instance:
+  $ limactl snapshot create default --tag snap1
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotCreateAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
-	createCmd.Flags().String("tag", "", "name of the snapshot")
+	createCmd.Flags().String("tag", "", "Name of the snapshot")
 
 	return createCmd
 }
 
 func snapshotCreateAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -56,31 +76,34 @@ func snapshotCreateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tag == "" {
-		return fmt.Errorf("expected tag")
+		return errors.New("expected tag")
 	}
 
-	ctx := cmd.Context()
 	return snapshot.Save(ctx, inst, tag)
 }
 
 func newSnapshotDeleteCommand() *cobra.Command {
 	deleteCmd := &cobra.Command{
-		Use:               "delete INSTANCE",
-		Aliases:           []string{"del"},
-		Short:             "Delete (del) a snapshot",
+		Use:     "delete INSTANCE",
+		Aliases: []string{"del"},
+		Short:   "Delete (del) a snapshot",
+		Example: `  Delete a snapshot:
+  $ limactl snapshot delete default --tag snap1
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotDeleteAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
-	deleteCmd.Flags().String("tag", "", "name of the snapshot")
+	deleteCmd.Flags().String("tag", "", "Name of the snapshot")
 
 	return deleteCmd
 }
 
 func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -91,31 +114,34 @@ func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tag == "" {
-		return fmt.Errorf("expected tag")
+		return errors.New("expected tag")
 	}
 
-	ctx := cmd.Context()
 	return snapshot.Del(ctx, inst, tag)
 }
 
 func newSnapshotApplyCommand() *cobra.Command {
 	applyCmd := &cobra.Command{
-		Use:               "apply INSTANCE",
-		Aliases:           []string{"load"},
-		Short:             "Apply (load) a snapshot",
+		Use:     "apply INSTANCE",
+		Aliases: []string{"load"},
+		Short:   "Apply (load) a snapshot",
+		Example: `  Apply (restore) a snapshot:
+  $ limactl snapshot apply default --tag snap1
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotApplyAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
-	applyCmd.Flags().String("tag", "", "name of the snapshot")
+	applyCmd.Flags().String("tag", "", "Name of the snapshot")
 
 	return applyCmd
 }
 
 func snapshotApplyAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -126,18 +152,23 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if tag == "" {
-		return fmt.Errorf("expected tag")
+		return errors.New("expected tag")
 	}
 
-	ctx := cmd.Context()
 	return snapshot.Load(ctx, inst, tag)
 }
 
 func newSnapshotListCommand() *cobra.Command {
 	listCmd := &cobra.Command{
-		Use:               "list INSTANCE",
-		Aliases:           []string{"ls"},
-		Short:             "List existing snapshots",
+		Use:     "list INSTANCE",
+		Aliases: []string{"ls"},
+		Short:   "List existing snapshots",
+		Example: `  List all snapshots of an instance:
+  $ limactl snapshot list default
+
+  List only snapshot tags:
+  $ limactl snapshot list default --quiet
+`,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotListAction,
 		ValidArgsFunction: snapshotBashComplete,
@@ -148,9 +179,10 @@ func newSnapshotListCommand() *cobra.Command {
 }
 
 func snapshotListAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	instName := args[0]
 
-	inst, err := store.Inspect(instName)
+	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
 	}
@@ -159,7 +191,6 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	ctx := cmd.Context()
 	out, err := snapshot.List(ctx, inst)
 	if err != nil {
 		return err
@@ -177,11 +208,11 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 				continue
 			}
 			tag := fields[1]
-			fmt.Printf("%s\n", tag)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", tag)
 		}
 		return nil
 	}
-	fmt.Print(out)
+	fmt.Fprint(cmd.OutOrStdout(), out)
 	return nil
 }
 

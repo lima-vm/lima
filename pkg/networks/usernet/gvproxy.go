@@ -1,13 +1,18 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package usernet
 
 import (
 	"bufio"
 	"context"
+	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"os"
 	"runtime"
+	"strconv"
 	"strings"
 	"time"
 
@@ -99,7 +104,8 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 	if err != nil {
 		return err
 	}
-	httpServe(ctx, g, ln, vn.Mux())
+
+	httpServe(ctx, g, ln, muxWithExtension(vn))
 
 	if opts.QemuSocket != "" {
 		err = listenQEMU(ctx, vn)
@@ -117,16 +123,24 @@ func run(ctx context.Context, g *errgroup.Group, configuration *types.Configurat
 }
 
 func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
-	listener, err := net.Listen("unix", opts.QemuSocket)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(ctx, "unix", opts.QemuSocket)
 	if err != nil {
 		return err
 	}
 
 	go func() {
 		defer listener.Close()
+		<-ctx.Done()
+	}()
+
+	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				logrus.Error("QEMU accept failed", err)
 			}
 
@@ -150,17 +164,26 @@ func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 }
 
 func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
-	listener, err := net.Listen("unix", opts.FdSocket)
+	var lc net.ListenConfig
+	listener, err := lc.Listen(ctx, "unix", opts.FdSocket)
 	if err != nil {
 		return err
 	}
 
 	go func() {
 		defer listener.Close()
+		<-ctx.Done()
+	}()
+
+	go func() {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
+				if errors.Is(err, net.ErrClosed) {
+					return
+				}
 				logrus.Error("FD accept failed", err)
+				continue // since conn is nil
 			}
 
 			files, err := fd.Get(conn.(*net.UnixConn), 1, []string{"client"})
@@ -197,25 +220,77 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 }
 
 func httpServe(ctx context.Context, g *errgroup.Group, ln net.Listener, mux http.Handler) {
+	s := &http.Server{
+		Handler:      mux,
+		ReadTimeout:  10 * time.Second,
+		WriteTimeout: 10 * time.Second,
+	}
 	g.Go(func() error {
 		<-ctx.Done()
-		return ln.Close()
+		return s.Close()
 	})
 	g.Go(func() error {
-		s := &http.Server{
-			Handler:      mux,
-			ReadTimeout:  10 * time.Second,
-			WriteTimeout: 10 * time.Second,
-		}
 		err := s.Serve(ln)
 		if err != nil {
-			if err != http.ErrServerClosed {
-				return err
+			if err == http.ErrServerClosed {
+				return nil
 			}
 			return err
 		}
 		return nil
 	})
+}
+
+func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
+	m := n.Mux()
+	m.HandleFunc("/extension/wait_port", func(w http.ResponseWriter, r *http.Request) {
+		ip := r.URL.Query().Get("ip")
+		if net.ParseIP(ip) == nil {
+			msg := fmt.Sprintf("invalid ip address: %s", ip)
+			http.Error(w, msg, http.StatusBadRequest)
+			return
+		}
+		port16, err := strconv.ParseUint(r.URL.Query().Get("port"), 10, 16)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		port := uint16(port16)
+		addr := fmt.Sprintf("%s:%d", ip, port)
+
+		timeoutSeconds := 10
+		if timeoutString := r.URL.Query().Get("timeout"); timeoutString != "" {
+			timeout16, err := strconv.ParseUint(timeoutString, 10, 16)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusBadRequest)
+				return
+			}
+			timeoutSeconds = int(timeout16)
+		}
+		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(timeoutSeconds)*time.Second)
+		defer cancel()
+		// Wait until the port is available.
+		for {
+			conn, err := n.DialContextTCP(ctx, addr)
+			if err == nil {
+				conn.Close()
+				logrus.Debugf("Port is available on %s", addr)
+				w.WriteHeader(http.StatusOK)
+				break
+			}
+			select {
+			case <-ctx.Done():
+				msg := fmt.Sprintf("timed out waiting for port to become available on %s", addr)
+				logrus.Warn(msg)
+				http.Error(w, msg, http.StatusRequestTimeout)
+				return
+			default:
+			}
+			logrus.Debugf("Waiting for port to become available on %s", addr)
+			time.Sleep(1 * time.Second)
+		}
+	})
+	return m
 }
 
 func searchDomains() []string {
@@ -235,8 +310,8 @@ func resolveSearchDomain(file string) []string {
 	sc := bufio.NewScanner(f)
 	searchPrefix := "search "
 	for sc.Scan() {
-		if strings.HasPrefix(sc.Text(), searchPrefix) {
-			searchDomains := strings.Split(strings.TrimPrefix(sc.Text(), searchPrefix), " ")
+		if after, ok := strings.CutPrefix(sc.Text(), searchPrefix); ok {
+			searchDomains := strings.Split(after, " ")
 			logrus.Debugf("Using search domains: %v", searchDomains)
 			return searchDomains
 		}

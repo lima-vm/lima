@@ -1,57 +1,46 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package snapshot
 
 import (
 	"context"
+	"fmt"
 
-	"github.com/lima-vm/lima/pkg/driver"
-	"github.com/lima-vm/lima/pkg/driverutil"
-	"github.com/lima-vm/lima/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
-func Del(ctx context.Context, inst *store.Instance, tag string) error {
-	y, err := inst.LoadYAML()
+func Del(ctx context.Context, inst *limatype.Instance, tag string) error {
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-		Yaml:     y,
-	})
+
 	return limaDriver.DeleteSnapshot(ctx, tag)
 }
 
-func Save(ctx context.Context, inst *store.Instance, tag string) error {
-	y, err := inst.LoadYAML()
+func Save(ctx context.Context, inst *limatype.Instance, tag string) error {
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-		Yaml:     y,
-	})
 	return limaDriver.CreateSnapshot(ctx, tag)
 }
 
-func Load(ctx context.Context, inst *store.Instance, tag string) error {
-	y, err := inst.LoadYAML()
+func Load(ctx context.Context, inst *limatype.Instance, tag string) error {
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-		Yaml:     y,
-	})
 	return limaDriver.ApplySnapshot(ctx, tag)
 }
 
-func List(ctx context.Context, inst *store.Instance) (string, error) {
-	y, err := inst.LoadYAML()
+func List(ctx context.Context, inst *limatype.Instance) (string, error) {
+	limaDriver, err := driverutil.CreateConfiguredDriver(inst, 0)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("failed to create driver instance: %w", err)
 	}
-	limaDriver := driverutil.CreateTargetDriverInstance(&driver.BaseDriver{
-		Instance: inst,
-		Yaml:     y,
-	})
+
 	return limaDriver.ListSnapshots(ctx)
 }

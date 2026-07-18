@@ -1,6 +1,6 @@
 # Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
 # installed where only root can modify/replace it. This means also none of the
-# parent directories should be writable by the user.
+# parent directories can be writable by the user.
 #
 # The varRun directory also must not be writable by the user because it will
 # include the socket_vmnet pid file. Those will be terminated via sudo, so replacing
@@ -11,11 +11,7 @@
 # instead of /var etc.
 paths:
 # socketVMNet requires Lima >= 0.12 .
-# socketVMNet has precedence over vdeVMNet.
   socketVMNet: "{{.SocketVMNet}}"
-# vdeSwitch and vdeVMNet are DEPRECATED.
-  vdeSwitch: /opt/vde/bin/vde_switch
-  vdeVMNet: /opt/vde/bin/vde_vmnet
   varRun: /private/var/run/lima
   sudoers: /private/etc/sudoers.d/lima
 
@@ -26,8 +22,6 @@ networks:
     mode: user-v2
     gateway: 192.168.104.1
     netmask: 255.255.255.0
-    # user-v2 network is experimental network mode which supports all functionalities of default usernet network and also allows vm -> vm communication.
-    # Doesn't support configuration of custom gateway; hardcoded to 192.168.5.0/24
   shared:
     mode: shared
     gateway: 192.168.105.1

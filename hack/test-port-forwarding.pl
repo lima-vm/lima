@@ -8,7 +8,7 @@
 # ./hack/test-port-forwarding.pl templates/default.yaml
 # limactl --tty=false start templates/default.yaml
 # git restore templates/default.yaml
-# ./hack/test-port-forwarding.pl default
+# ./hack/test-port-forwarding.pl default [nc|socat [nc|socat]] [timeout]
 #
 # TODO: support for ipv6 host addresses
 
@@ -16,11 +16,29 @@ use strict;
 use warnings;
 
 use Config qw(%Config);
+use File::Spec::Functions qw(catfile);
 use IO::Handle qw();
+use JSON::PP;
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
 
+my $connectionTimeout = 1; # seconds
+
 my $instance = shift;
+my $listener;
+my $writer;
+while (my $arg = shift) {
+    if ($arg eq "nc" || $arg eq "socat") {
+        $listener = $arg unless defined $listener;
+        $writer = $arg if defined $listener && !defined $writer;
+    } elsif ($arg =~ /^\d+$/) {
+        $connectionTimeout = $arg;
+    } else {
+        die "Usage: $0 [instance|yaml-file] [nc|socat [nc|socat]] [timeout]\n";
+    }
+}
+$listener ||= "nc";
+$writer ||= $listener;
 
 my $addr = scalar gethostbyname(hostname());
 # If hostname address cannot be determines, use localhost to trigger fallback to system_profiler lookup
@@ -32,6 +50,11 @@ if ($ipv4 eq "127.0.0.1" && $Config{osname} eq "darwin") {
     $ipv4 = qx(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first');
     chomp $ipv4;
 }
+
+my $instDir = qx(limactl list "$instance" --yq .dir);
+chomp $instDir;
+# platform independent way to add trailing path separator
+my $sockDir = catfile($instDir, "sock", "");
 
 # If $instance is a filename, add our portForwards to it to enable testing
 if (-f $instance) {
@@ -54,8 +77,22 @@ if (-f $instance) {
     exit;
 }
 
+# Check if netcat is available before running tests
+my $nc_path = `command -v nc 2>/dev/null`;
+chomp $nc_path;
+unless ($nc_path) {
+    die "Error: 'nc' (netcat) is not installed on the host system.\n" .
+        "Please install netcat to run this test script:\n" .
+        "  - On macOS: brew install netcat\n" .
+        "  - On Ubuntu/Debian: sudo apt-get install netcat\n" .
+        "  - On RHEL/CentOS: sudo yum install nmap-ncat\n";
+}
+
 # Otherwise $instance must be the name of an already running instance that has been
 # configured with our portForwards settings.
+
+my $instanceType = qx(limactl ls --json "$instance" | jq -r '.vmType' | sed s/x/x/);
+chomp $instanceType;
 
 # Get sshLocalPort for lima instance
 my $sshLocalPort;
@@ -80,20 +117,35 @@ while (<DATA>) {
     s/sshLocalPort/$sshLocalPort/g;
     s/ipv4/$ipv4/g;
     s/ipv6/$ipv6/g;
+    s/sockDir\//$sockDir/g;
     # forward: 127.0.0.1 899 → 127.0.0.1 799
     # ignore: 127.0.0.2 8888
-    /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+([0-9.:]+)(?:\s+(\d+))?)?/;
+    /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+(?:([0-9.:]+)(?:\s+(\d+))|(\S+))?)?/;
     die "Cannot parse test '$_'" unless $1;
-    my %test; @test{qw(mode guest_ip guest_port host_ip host_port)} = ($1, $2, $3, $4, $5);
-    if ($test{mode} eq "forward" && $test{host_port} < 1024 && $Config{osname} ne "darwin") {
+    my %test; @test{qw(mode guest_ip guest_port host_ip host_port host_socket)} = ($1, $2, $3, $4, $5, $6);
+
+    $test{host_ip} ||= "127.0.0.1";
+    $test{host_port} ||= $test{guest_port};
+    $test{host_socket} ||= "";
+    if ($test{mode} eq "forward" && $test{host_socket} eq "" && $test{host_port} < 1024 && $Config{osname} ne "darwin") {
         printf "🚧 Not supported on $Config{osname}: # $_\n";
         next;
     }
-    $test{host_ip} ||= "127.0.0.1";
-    $test{host_port} ||= $test{guest_port};
+    if ($test{mode} eq "ignore" && ($test{guest_ip} eq "0.0.0.0" || $test{guest_ip} eq "127.0.0.1") && "$instanceType" eq "wsl2") {
+        printf "🚧 Not supported for $instanceType machines: # $_\n";
+        next;
+    }
+    if ($test{guest_ip} eq "192.168.5.15" && "$instanceType" eq "wsl2") {
+        printf "🚧 Not supported for $instanceType machines: # $_\n";
+        next;
+    }
+    if ($test{host_socket} ne "" && $Config{osname} eq "cygwin") {
+        printf "🚧 Not supported on $Config{osname}: # $_\n";
+        next;
+    }
 
     my $remote = JoinHostPort($test{guest_ip},$test{guest_port});
-    my $local = JoinHostPort($test{host_ip},$test{host_port});
+    my $local = $test{host_socket} eq "" ? JoinHostPort($test{host_ip},$test{host_port}) : $test{host_socket};
     if ($test{mode} eq "ignore") {
         $test{log_msg} = "Not forwarding TCP $remote";
     }
@@ -111,27 +163,37 @@ print $lima <<'EOF';
 set -e
 cd $HOME
 sudo pkill -x nc || true
-rm -f nc.*
+sudo pkill -x socat || true
+rm -f nc.* socat.*
 EOF
 
 # Give the hostagent some time to remove any port forwards from a previous (crashed?) test run
 sleep 5;
 
 # Record current log size, so we can skip prior output
-$ENV{LIMA_HOME} ||= "$ENV{HOME}/.lima";
-my $ha_log = "$ENV{LIMA_HOME}/$instance/ha.stderr.log";
-my $ha_log_size = -s $ha_log or die;
+$ENV{HOME_HOST} ||= "$ENV{HOME}";
+$ENV{LIMA_HOME} ||= "$ENV{HOME_HOST}/.lima";
+my $ha_stdout_log = "$ENV{LIMA_HOME}/$instance/ha.stdout.log";
+my $ha_stderr_log = "$ENV{LIMA_HOME}/$instance/ha.stderr.log";
+my $ha_stdout_log_size = -s $ha_stdout_log or die;
+my $ha_stderr_log_size = -s $ha_stderr_log or die;
 
 # Setup a netcat listener on the guest for each test
 foreach my $id (0..@test-1) {
     my $test = $test[$id];
-    my $nc = "nc -l $test->{guest_ip} $test->{guest_port}";
-    if ($instance =~ /^alpine/) {
-        $nc = "nc -l -s $test->{guest_ip} -p $test->{guest_port}";
+    my $cmd;
+    if ($listener eq "nc") {
+        $cmd = "nc -l $test->{guest_ip} $test->{guest_port}";
+        if ($instance =~ /^alpine/) {
+            $cmd = "nc -l -s $test->{guest_ip} -p $test->{guest_port}";
+        }
+    } elsif ($listener eq "socat") {
+        my $proto = $test->{guest_ip} =~ /:/ ? "TCP6" : "TCP";
+        $cmd = "socat -u $proto-LISTEN:$test->{guest_port},bind=$test->{guest_ip} STDOUT";
     }
 
     my $sudo = $test->{guest_port} < 1024 ? "sudo " : "";
-    print $lima "${sudo}${nc} >nc.${id} 2>/dev/null &\n";
+    print $lima "${sudo}${cmd} >$listener.${id} 2>/dev/null &\n";
 }
 
 # Make sure the guest- and hostagents had enough time to set up the forwards
@@ -140,22 +202,72 @@ sleep 5;
 # Try to reach each listener from the host
 foreach my $test (@test) {
     next if $test->{host_port} == $sshLocalPort;
-    my $nc = "nc -w 1 $test->{host_ip} $test->{host_port}";
-    open(my $netcat, "| $nc") or die "Can't run '$nc': $!";
+    my $cmd;
+    if ($writer eq "nc") {
+        if ($Config{osname} eq "darwin") {
+            # macOS nc doesn't support -w for connection timeout, so use -G instead
+            $cmd = $test->{host_socket} eq "" ? "nc -G $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -G $connectionTimeout -U $test->{host_socket}";
+        } else {
+            $cmd = $test->{host_socket} eq "" ? "nc -w $connectionTimeout $test->{host_ip} $test->{host_port}" : "nc -w $connectionTimeout -U $test->{host_socket}";
+        }
+    } elsif ($writer eq "socat") {
+        my $tcp_dest = $test->{host_ip} =~ /:/ ? "TCP6:[$test->{host_ip}]:$test->{host_port}" : "TCP:$test->{host_ip}:$test->{host_port}";
+        $cmd = $test->{host_socket} eq "" ? "socat -u STDIN $tcp_dest,connect-timeout=$connectionTimeout" : "socat -u STDIN UNIX-CONNECT:$test->{host_socket}";
+    }
+    print "Running: $cmd\n";
+    open(my $netcat, "| $cmd") or die "Can't run '$cmd': $!";
     print $netcat "$test->{log_msg}\n";
     # Don't check for errors on close; macOS nc seems to return non-zero exit code even on success
     close($netcat);
 }
 
-# Extract forwarding log messages from hostagent log
-open(my $log, "< $ha_log") or die "Can't read $ha_log: $!";
-seek($log, $ha_log_size, 0) or die "Can't seek $ha_log to $ha_log_size: $!";
+# Extract forwarding log messages from hostagent JSON event log
+my $json_parser = JSON::PP->new->utf8->relaxed;
+
+open(my $log, "< $ha_stdout_log") or die "Can't read $ha_stdout_log: $!";
+seek($log, $ha_stdout_log_size, 0) or die "Can't seek $ha_stdout_log to $ha_stdout_log_size: $!";
 my %seen;
+my %failed_to_listen_tcp;
+
 while (<$log>) {
-    $seen{$1}++ if /(Forwarding TCP from .*? to (\d.*?|\[.*?\]):\d+)/;
-    $seen{$1}++ if /(Not forwarding TCP .*?:\d+)/;
+    chomp;
+    next unless /^\s*\{/; # Skip non-JSON lines
+
+    my $event = eval { $json_parser->decode($_) };
+    next unless $event;
+
+    my $pf = $event->{status}{portForward};
+    next unless $pf && $pf->{type};
+
+    my $type = $pf->{type};
+    my $protocol = uc($pf->{protocol} || "tcp");
+    my $guest_addr = $pf->{guestAddr} || "";
+    my $host_addr = $pf->{hostAddr} || "";
+    my $error = $pf->{error} || "";
+
+    if ($type eq "forwarding") {
+        my $msg = "Forwarding $protocol from $guest_addr to $host_addr";
+        $seen{$msg}++;
+    } elsif ($type eq "not-forwarding") {
+        my $msg = "Not forwarding $protocol $guest_addr";
+        $seen{$msg}++;
+    } elsif ($type eq "failed" && $error =~ /listen tcp/) {
+        # Extract the address from the error message
+        if ($error =~ /listen tcp (.*?:\d+):/) {
+            my $addr = $1;
+            $failed_to_listen_tcp{$addr} = "failed to listen tcp: $error";
+        }
+    }
 }
 close $log or die;
+
+# Also check stderr log for failed_to_listen_tcp messages (these may not be in JSON events)
+open(my $stderr_log, "< $ha_stderr_log") or die "Can't read $ha_stderr_log: $!";
+seek($stderr_log, $ha_stderr_log_size, 0) or die "Can't seek $ha_stderr_log to $ha_stderr_log_size: $!";
+while (<$stderr_log>) {
+    $failed_to_listen_tcp{$2}=$1 if /(failed to listen tcp: listen tcp (.*?:\d+):[^"]+)/;
+}
+close $stderr_log or die;
 
 my $rc = 0;
 my %expected;
@@ -164,9 +276,9 @@ foreach my $id (0..@test-1) {
     my $err = "";
     $expected{$test->{log_msg}}++;
     unless ($seen{$test->{log_msg}}) {
-        $err .= "\n   Message missing from ha.stderr.log";
+        $err .= "\n   Message missing from ha.stdout.log (JSON events)";
     }
-    my $log = qx(limactl shell --workdir / $instance sh -c "cd; cat nc.$id");
+    my $log = qx(limactl shell --workdir / $instance sh -c "cd; cat $listener.$id");
     chomp $log;
     if ($test->{mode} eq "forward" && $test->{log_msg} ne $log) {
         $err .= "\n   Guest received: '$log'";
@@ -184,8 +296,26 @@ foreach (keys %seen) {
     print "😕 Unexpected log message: $_\n";
 }
 
+if (%failed_to_listen_tcp) {
+    foreach (keys %failed_to_listen_tcp) {
+        print "⚠️  $failed_to_listen_tcp{$_}\n";
+    }
+    my @tcp_list = keys %failed_to_listen_tcp;
+    if ($Config{osname} eq "darwin") {
+        my @lsof_args = map { "-iTCP\@$_" } @tcp_list;
+        print `lsof -P @lsof_args`;
+    } elsif ($Config{osname} eq "linux") {
+        my @lss_args = map { "src = $_" } @tcp_list;
+        my $ss_expression = join(" or ", @lss_args);
+        print `sudo ss -lnpt "$ss_expression"`;
+    } elsif ($Config{osname} eq "cygwin") {
+        my @awk_args = map { "-e'/$_/'" } @tcp_list;
+        print `netstat -aon | awk -e'/^ +Proto/' @awk_args`;
+    }
+}
+
 # Cleanup remaining netcat instances (and port forwards)
-print $lima "sudo pkill -x nc";
+print $lima "sudo pkill -x $listener";
 
 exit $rc;
 
@@ -200,11 +330,11 @@ sub JoinHostPort {
 # "ipv4" and "ipv6" will be replaced by the actual host ipv4 and ipv6 addresses.
 __DATA__
 portForwards:
-  # We can't test that port 22 will be blocked because the guestagent has
-  # been ignoring it since startup, so the log message is in the part of
-  # the log we skipped.
-  # skip: 127.0.0.1 22 → 127.0.0.1 2222
-  # ignore: 127.0.0.1 sshLocalPort
+# We can't test that port 22 will be blocked because the guestagent has
+# been ignoring it since startup, so the log message is in the part of
+# the log we skipped.
+# skip: 127.0.0.1 22 → 127.0.0.1 2222
+# ignore: 127.0.0.1 sshLocalPort
 
 - guestIP: 127.0.0.2
   guestPortRange: [3000, 3009]
@@ -212,16 +342,19 @@ portForwards:
   ignore: true
 
 - guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   guestPortRange: [3010, 3019]
   hostPortRange: [2010, 2019]
   ignore: true
 
 - guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   guestPortRange: [3000, 3029]
   hostPortRange: [2000, 2029]
 
 # The following rule is completely shadowed by the previous one and has no effect
 - guestIP: 0.0.0.0
+  guestIPMustBeZero: false
   guestPortRange: [3020, 3029]
   hostPortRange: [2020, 2029]
   ignore: true
@@ -232,7 +365,7 @@ portForwards:
   # Blocking 127.0.0.2 cannot block forwarding from 0.0.0.0
   # forward: 0.0.0.0   3002 → 127.0.0.1 2002
 
-  # Blocking 0.0.0.0 will block forwarding from any interface
+  # Blocking 0.0.0.0 will block forwarding from any interface because guestIPMustBeZero is false
   # ignore: 0.0.0.0   3010
   # ignore: 127.0.0.1 3011
 
@@ -253,14 +386,41 @@ portForwards:
   # forward: ::        3032 → ipv4 2032
   # forward: ::1       3033 → ipv4 2033
 
-- guestPortRange: [300, 309]
+- guestPortRange: [300, 304]
 
-  # forward: 127.0.0.1 300 → 127.0.0.1 300
+  # forward: 127.0.0.1    300 → 127.0.0.1 300
+  # forward: 0.0.0.0      301 → 127.0.0.1 301
+  # forward: ::           302 → 127.0.0.1 302
+  # forward: ::1          303 → 127.0.0.1 303
+  # ignore:  192.168.5.15 304 → 127.0.0.1 304
 
-- guestPortRange: [310, 319]
+- guestPortRange: [305, 309]
+  guestIPMustBeZero: false
+
+  # forward: 127.0.0.1    325 → 127.0.0.1 325
+  # forward: 0.0.0.0      326 → 127.0.0.1 326
+  # forward: ::           327 → 127.0.0.1 327
+  # forward: ::1          328 → 127.0.0.1 328
+  # ignore:  192.168.5.15 329 → 127.0.0.1 329
+
+- guestPortRange: [310, 314]
   hostIP: 0.0.0.0
 
-  # forward: 127.0.0.1 310 → 0.0.0.0 310
+  # forward: 127.0.0.1    310 → 0.0.0.0 310
+  # forward: 0.0.0.0      311 → 0.0.0.0 311
+  # forward: ::           312 → 0.0.0.0 312
+  # forward: ::1          313 → 0.0.0.0 313
+  # ignore:  192.168.5.15 314 → 0.0.0.0 314
+
+- guestPortRange: [315, 319]
+  guestIPMustBeZero: false
+  hostIP: 0.0.0.0
+
+  # forward: 127.0.0.1    315 → 0.0.0.0 315
+  # forward: 0.0.0.0      316 → 0.0.0.0 316
+  # forward: ::           317 → 0.0.0.0 317
+  # forward: ::1          318 → 0.0.0.0 318
+  # ignore:  192.168.5.15 319 → 0.0.0.0 319
 
   # Things we can't test:
   # - Accessing a forward from a different interface (e.g. connect to ipv4 to connect to 0.0.0.0)
@@ -291,6 +451,7 @@ portForwards:
   # forward: ::1          4025 → ipv4 4025
 
 - guestIP: "0.0.0.0"
+  guestIPMustBeZero: false
   guestPortRange: [4030, 4039]
   hostIP: "ipv4"
 
@@ -305,6 +466,7 @@ portForwards:
   guestPortRange: [4040, 4049]
 
 - guestIP: "0.0.0.0"
+  guestIPMustBeZero: false
   guestPortRange: [4040, 4049]
   ignore: true
 
@@ -319,3 +481,25 @@ portForwards:
 - guestIPMustBeZero: true
   guestPort: 8888
   hostIP: 0.0.0.0
+
+- guestPort: 5000
+  hostSocket: port5000.sock
+
+  # forward: 127.0.0.1    5000 → sockDir/port5000.sock
+
+- guestPort: 5001
+  hostSocket: port5001.sock
+
+  # ignore:  192.168.5.15 5001 → sockDir/port5001.sock
+
+- guestPort: 5002
+  guestIPMustBeZero: false
+  hostSocket: port5002.sock
+
+  # forward: 127.0.0.1    5002 → sockDir/port5002.sock
+
+- guestPort: 5003
+  guestIPMustBeZero: false
+  hostSocket: port5003.sock
+
+  # ignore:  192.168.5.15 5003 → sockDir/port5003.sock

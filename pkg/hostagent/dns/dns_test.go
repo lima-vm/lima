@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package dns
 
 import (
@@ -16,6 +19,114 @@ import (
 )
 
 var dnsResult *dns.Msg
+
+func TestNewHandler(t *testing.T) {
+	t.Run("with upstream servers", func(t *testing.T) {
+		upstreamServers := []string{"8.8.4.4", "1.1.1.1", "9.9.9.9"}
+		opts := HandlerOptions{
+			IPv6:            true,
+			UpstreamServers: upstreamServers,
+			StaticHosts: map[string]string{
+				"test.local":  "192.168.1.1",
+				"alias.local": "test.local",
+			},
+		}
+		h, err := NewHandler(opts)
+		assert.NilError(t, err)
+		assert.Assert(t, h != nil)
+
+		handler := h.(*Handler)
+		assert.Equal(t, handler.ipv6, true)
+		assert.Equal(t, len(handler.clients), 2)
+		assert.DeepEqual(t, handler.clientConfig.Servers, upstreamServers)
+		assert.Equal(t, handler.hostToIP["test.local."].String(), "192.168.1.1")
+		assert.Equal(t, handler.cnameToHost["alias.local."], "test.local.")
+	})
+
+	t.Run("without upstream servers on non-Windows", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("Skipping on Windows")
+		}
+		opts := HandlerOptions{
+			IPv6:        false,
+			StaticHosts: map[string]string{},
+		}
+		h, err := NewHandler(opts)
+		assert.NilError(t, err)
+		assert.Assert(t, h != nil)
+
+		handler := h.(*Handler)
+		assert.Equal(t, handler.ipv6, false)
+		assert.Assert(t, handler.clientConfig != nil)
+	})
+
+	t.Run("without upstream servers on Windows", func(t *testing.T) {
+		if runtime.GOOS != "windows" {
+			t.Skip("Skipping on non-Windows")
+		}
+		opts := HandlerOptions{
+			IPv6:        false,
+			StaticHosts: map[string]string{},
+		}
+		h, err := NewHandler(opts)
+		assert.NilError(t, err)
+		assert.Assert(t, h != nil)
+
+		handler := h.(*Handler)
+		assert.Equal(t, handler.ipv6, false)
+		assert.Assert(t, handler.clientConfig != nil)
+		// Should use default fallback IPs on Windows
+		assert.Assert(t, len(handler.clientConfig.Servers) > 0)
+	})
+
+	t.Run("with invalid upstream servers fallback", func(t *testing.T) {
+		opts := HandlerOptions{
+			IPv6:            true,
+			UpstreamServers: []string{}, // empty should trigger default behavior
+			StaticHosts:     map[string]string{},
+		}
+		h, err := NewHandler(opts)
+		assert.NilError(t, err)
+		assert.Assert(t, h != nil)
+	})
+
+	t.Run("with static hosts IP and CNAME", func(t *testing.T) {
+		opts := HandlerOptions{
+			IPv6:            true,
+			UpstreamServers: []string{"8.8.8.8"},
+			StaticHosts: map[string]string{
+				"host1.local": "10.0.0.1",
+				"host2.local": "10.0.0.2",
+				"cname1":      "host1.local",
+				"cname2":      "cname1",
+			},
+		}
+		h, err := NewHandler(opts)
+		assert.NilError(t, err)
+		assert.Assert(t, h != nil)
+
+		handler := h.(*Handler)
+		assert.Equal(t, handler.hostToIP["host1.local."].String(), "10.0.0.1")
+		assert.Equal(t, handler.hostToIP["host2.local."].String(), "10.0.0.2")
+		assert.Equal(t, handler.cnameToHost["cname1."], "host1.local.")
+		assert.Equal(t, handler.cnameToHost["cname2."], "cname1.")
+	})
+
+	t.Run("with truncate option", func(t *testing.T) {
+		opts := HandlerOptions{
+			IPv6:            false,
+			UpstreamServers: []string{"1.1.1.1"},
+			TruncateReply:   true,
+			StaticHosts:     map[string]string{},
+		}
+		h, err := NewHandler(opts)
+		assert.NilError(t, err)
+		assert.Assert(t, h != nil)
+
+		handler := h.(*Handler)
+		assert.Equal(t, handler.truncate, true)
+	})
+}
 
 func TestDNSRecords(t *testing.T) {
 	if runtime.GOOS == "windows" {
@@ -50,6 +161,9 @@ func TestDNSRecords(t *testing.T) {
 			"host.lima.internal": "10.10.0.34",
 			"my.host":            "host.lima.internal",
 			"default":            "my.domain.com",
+			"cycle1.example.com": "cycle2.example.com",
+			"cycle2.example.com": "cycle1.example.com",
+			"self.example.com":   "self.example.com",
 		},
 	}
 
@@ -117,6 +231,23 @@ func TestDNSRecords(t *testing.T) {
 			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedCNAME))
 		}
 	})
+
+	t.Run("test cyclic CNAME records", func(t *testing.T) {
+		tests := []struct {
+			testDomain    string
+			expectedCNAME string
+		}{
+			{testDomain: "cycle1.example.com", expectedCNAME: `cycle1.example.com.`},
+			{testDomain: "self.example.com", expectedCNAME: `self.example.com.`},
+		}
+
+		for _, tc := range tests {
+			req := new(dns.Msg)
+			req.SetQuestion(dns.Fqdn(tc.testDomain), dns.TypeCNAME)
+			h.ServeDNS(w, req)
+			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedCNAME))
+		}
+	})
 }
 
 type TestResponseWriter struct{}
@@ -129,6 +260,11 @@ func (r TestResponseWriter) LocalAddr() net.Addr {
 // RemoteAddr returns the net.Addr of the client that sent the current request.
 func (r TestResponseWriter) RemoteAddr() net.Addr {
 	return new(TestAddr)
+}
+
+// Network returns the value of the Net field of the Server (e.g., "tcp", "tcp-tls").
+func (r TestResponseWriter) Network() string {
+	return ""
 }
 
 // WriteMsg writes a reply back to the client.

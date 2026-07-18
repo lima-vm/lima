@@ -1,83 +1,108 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package server
 
 import (
 	"context"
-	"encoding/json"
-	"net/http"
+	"net"
+	"time"
 
-	"github.com/gorilla/mux"
-	"github.com/lima-vm/lima/pkg/guestagent"
-	"github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/lima-vm/lima/pkg/httputil"
 	"github.com/sirupsen/logrus"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
+	"google.golang.org/protobuf/types/known/emptypb"
+
+	"github.com/lima-vm/lima/v2/pkg/guestagent"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/api"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/timesync"
+	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
 )
 
-type Backend struct {
-	Agent guestagent.Agent
+func StartServer(ctx context.Context, lis net.Listener, guest *GuestServer) error {
+	server := grpc.NewServer(
+		grpc.InitialWindowSize(512<<20),
+		grpc.InitialConnWindowSize(512<<20),
+		grpc.ReadBufferSize(8<<20),
+		grpc.WriteBufferSize(8<<20),
+		grpc.MaxConcurrentStreams(2048),
+		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 0, Timeout: 0, MaxConnectionIdle: 0}),
+	)
+	api.RegisterGuestServiceServer(server, guest)
+	go func() {
+		<-ctx.Done()
+		logrus.Debug("Stopping the gRPC server")
+		server.GracefulStop()
+		logrus.Debug("Closing the listener used by the gRPC server")
+		lis.Close()
+	}()
+	err := server.Serve(lis)
+	// grpc.Server.Serve() expects to return a non-nil error caused by lis.Accept()
+	if opErr, ok := err.(*net.OpError); ok && opErr.Err.Error() == "use of closed network connection" {
+		return nil
+	}
+	return err
 }
 
-func (b *Backend) onError(w http.ResponseWriter, err error, ec int) {
-	w.WriteHeader(ec)
-	w.Header().Set("Content-Type", "application/json")
-	// err may potentially contain credential info (in a future version),
-	// but it is safe to return the err to the client, because we do not expose the socket to the internet
-	e := httputil.ErrorJSON{
-		Message: err.Error(),
-	}
-	_ = json.NewEncoder(w).Encode(e)
+type GuestServer struct {
+	api.UnimplementedGuestServiceServer
+	Agent   guestagent.Agent
+	TunnelS *portfwdserver.TunnelServer
 }
 
-// GetInfo is the handler for GET /v{N}/info
-func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	info, err := b.Agent.Info(ctx)
-	if err != nil {
-		b.onError(w, err, http.StatusInternalServerError)
-		return
-	}
-	m, err := json.Marshal(info)
-	if err != nil {
-		b.onError(w, err, http.StatusInternalServerError)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	_, _ = w.Write(m)
+func (s *GuestServer) GetInfo(ctx context.Context, _ *emptypb.Empty) (*api.Info, error) {
+	return s.Agent.Info(ctx)
 }
 
-// GetEvents is the handler for GET /v{N}/events.
-func (b *Backend) GetEvents(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
-
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		panic("http.ResponseWriter has to implement http.Flusher")
-	}
-
-	w.Header().Set("Content-Type", "application/x-ndjson")
-	w.WriteHeader(http.StatusOK)
-	flusher.Flush()
-
-	ch := make(chan api.Event)
-	go b.Agent.Events(ctx, ch)
-
-	enc := json.NewEncoder(w)
-	for ev := range ch {
-		if err := enc.Encode(ev); err != nil {
-			logrus.Warn(err)
-			return
+func (s *GuestServer) GetEvents(_ *emptypb.Empty, stream api.GuestService_GetEventsServer) error {
+	responses := make(chan *api.Event)
+	// expects Events() to close the channel when stream.Context() is done or ticker stops
+	go s.Agent.Events(stream.Context(), responses)
+	for response := range responses {
+		err := stream.Send(response)
+		if err != nil {
+			return err
 		}
-		flusher.Flush()
+	}
+	return nil
+}
+
+func (s *GuestServer) PostInotify(server api.GuestService_PostInotifyServer) error {
+	for {
+		recv, err := server.Recv()
+		if err != nil {
+			return err
+		}
+		s.Agent.HandleInotify(recv)
 	}
 }
 
-func AddRoutes(r *mux.Router, b *Backend) {
-	v1 := r.PathPrefix("/v1").Subrouter()
-	v1.Path("/info").Methods("GET").HandlerFunc(b.GetInfo)
-	v1.Path("/events").Methods("GET").HandlerFunc(b.GetEvents)
+func (s *GuestServer) Tunnel(stream api.GuestService_TunnelServer) error {
+	return s.TunnelS.Start(stream)
+}
+
+func (s *GuestServer) SyncTime(_ context.Context, req *api.TimeSyncRequest) (*api.TimeSyncResponse, error) {
+	hostTime := req.HostTime.AsTime()
+	now := time.Now()
+	drift := now.Sub(hostTime)
+
+	resp := &api.TimeSyncResponse{
+		Adjusted: false,
+		DriftMs:  drift.Milliseconds(),
+	}
+
+	const driftThreshold = 100 * time.Millisecond
+	if drift > driftThreshold || drift < -driftThreshold {
+		if err := timesync.SetSystemTime(hostTime); err != nil {
+			logrus.WithError(err).Warn("SyncTime: failed to set system time")
+			resp.Error = err.Error()
+			return resp, nil
+		}
+		resp.Adjusted = true
+		logrus.Infof("SyncTime: system time synchronized with host (drift was %v)", drift)
+	} else {
+		logrus.Debugf("SyncTime: drift %v within threshold, no adjustment needed", drift)
+	}
+
+	return resp, nil
 }

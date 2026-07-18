@@ -1,10 +1,15 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package ioutilx
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os/exec"
+	"path/filepath"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -29,7 +34,7 @@ func ReadAtMaximum(r io.Reader, n int64) ([]byte, error) {
 
 // FromUTF16le returns an io.Reader for UTF16le data.
 // Windows uses little endian by default, use unicode.UseBOM policy to retrieve BOM from the text,
-// and unicode.LittleEndian as a fallback
+// and unicode.LittleEndian as a fallback.
 func FromUTF16le(r io.Reader) io.Reader {
 	o := transform.NewReader(r, unicode.UTF16(unicode.LittleEndian, unicode.UseBOM).NewDecoder())
 	return o
@@ -45,13 +50,20 @@ func FromUTF16leToString(r io.Reader) (string, error) {
 	return string(out), nil
 }
 
-func CanonicalWindowsPath(orig string) string {
-	newPath := orig
-	out, err := exec.Command("cygpath", "-m", orig).CombinedOutput()
+func WindowsSubsystemPath(ctx context.Context, orig string) (string, error) {
+	out, err := exec.CommandContext(ctx, "cygpath", filepath.ToSlash(orig)).CombinedOutput()
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe not using Git ssh?")
-	} else {
-		newPath = strings.TrimSpace(string(out))
+		return "", err
 	}
-	return newPath
+	return strings.TrimSpace(string(out)), nil
+}
+
+func WindowsSubsystemPathForLinux(ctx context.Context, orig, distro string) (string, error) {
+	out, err := exec.CommandContext(ctx, "wsl", "-d", distro, "--exec", "wslpath", filepath.ToSlash(orig)).CombinedOutput()
+	if err != nil {
+		logrus.WithError(err).Errorf("failed to convert path to mingw, maybe wsl command is not operational?")
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
 }

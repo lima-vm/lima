@@ -32,6 +32,7 @@ weight: 6
 - [Filesystem sharing](#filesystem-sharing)
   - ["Filesystem is slow"](#filesystem-is-slow)
   - ["Filesystem is not writable"](#filesystem-is-not-writable)
+  - ["Filesystem is unmounted after upgrading Lima to v1.0"](#filesystem-is-unmounted-after-upgrading-lima-to-v10)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
 - ["Hints for debugging other problems?"](#hints-for-debugging-other-problems)
@@ -41,26 +42,32 @@ weight: 6
 ### Generic
 #### "How does Lima work?"
 
-- Hypervisor: [QEMU with HVF accelerator (default), or Virtualization.framework](../config/vmtype/)
-- Filesystem sharing: [Reverse SSHFS (default),  or virtio-9p-pci aka virtfs, or virtiofs](../config/mount/)
-- Port forwarding: `ssh -L`, automated by watching `/proc/net/tcp` and `iptables` events in the guest
+- Hypervisor: [QEMU (default on Linux), or Virtualization.framework (default on macOS)](../config/vmtype/)
+- Filesystem sharing: [Reverse SSHFS, virtio-9p-pci aka virtfs (default for QEMU), or virtiofs (default for Virtualization.framework)](../config/mount/)
+- Port forwarding: [`ssh -L`](../config/port), automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 #### "What's my login password?"
-Password is disabled and locked by default.
-You have to use `limactl shell bash` (or `lima bash`) to open a shell.
+For Linux and FreeBSD guests, the password is disabled and locked by default.
+You have to use `limactl shell <INSTANCE>` (or `lima`) instead of the video console to open a shell.
 
-Alternatively, you may also directly ssh into the guest: `ssh -p 60022 -i ~/.lima/_config/user -o NoHostAuthenticationForLocalhost=yes 127.0.0.1`.
+{{% fixlinks %}}
+See also [`Usage » SSH`]({{< ref "/docs/usage/ssh" >}}) for SSH with publickey authentication.
+{{% /fixlinks %}}
+
+For macOS guests, the password is randomly generated and stored as `~/password` in the guest.
 
 #### "Does Lima work on ARM Mac?"
-Yes, it should work, but not regularly tested on ARM (due to lack of CI).
+Yes
 
 #### "Can I run non-Ubuntu guests?"
 AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky are also known to work.
 {{% fixlinks %}}
-See [`./examples/`](./examples/).
+See [`./templates/`](./templates/).
 {{% /fixlinks %}}
 
-An image has to satisfy the following requirements:
+Starting with Lima v2.1, non-Linux guests such as [macOS guests](../usage/guests/macos.md) are experimentally supported too.
+
+An image for Linux guests has to satisfy the following requirements:
 - systemd or OpenRC
 - cloud-init
 - The following binaries to be preinstalled:
@@ -74,17 +81,17 @@ An image has to satisfy the following requirements:
 {{% fixlinks %}}
 Yes, any container engine should work with Lima.
 
-Container runtime examples:
-- [`./examples/docker.yaml`](./examples/docker.yaml): Docker
-- [`./examples/podman.yaml`](./examples/podman.yaml): Podman
-- [`./examples/apptainer.yaml`](./examples/apptainer.yaml): Apptainer
+Container runtime templates:
+- [`./templates/docker.yaml`](./templates/docker.yaml): Docker
+- [`./templates/podman.yaml`](./templates/podman.yaml): Podman
+- [`./templates/apptainer.yaml`](./templates/apptainer.yaml): Apptainer
 
-Container image builder examples:
-- [`./examples/buildkit.yaml`](./examples/buildkit.yaml): BuildKit
+Container image builder templates:
+- [`./templates/buildkit.yaml`](./templates/buildkit.yaml): BuildKit
 
-Container orchestrator examples:
-- [`./examples/k3s.yaml`](./examples/k3s.yaml): Kubernetes (k3s)
-- [`./examples/k8s.yaml`](./examples/k8s.yaml): Kubernetes (kubeadm)
+Container orchestrator templates:
+- [`./templates/k3s.yaml`](./templates/k3s.yaml): Kubernetes (k3s)
+- [`./templates/k8s.yaml`](./templates/k8s.yaml): Kubernetes (kubeadm)
 
 The default Ubuntu image also contains LXD. Run `lima sudo lxc init` to set up LXD.
 
@@ -164,7 +171,7 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 #### "QEMU is slow"
 {{% fixlinks %}}
 - Make sure that HVF is enabled with `com.apple.security.hypervisor` entitlement. See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
-- Emulating non-native machines (ARM-on-Intel, Intel-on-ARM) is slow by design. See [`docs/multi-arch.md`](./docs/multi-arch.md) for a workaround.
+- Emulating non-native machines is slow by design. See [`Configuration guide » Intel-on-ARM and ARM-on-Intel`]({{< ref "/docs/config/multi-arch" >}}) for a workaround.
 {{% /fixlinks %}}
 
 #### error "killed -9"
@@ -187,10 +194,9 @@ Try `softwareupdate --install-rosetta` from a terminal.
 {{% fixlinks %}}
 The default guest IP 192.168.5.15 is not accessible from the host and other guests.
 
-To add another IP address that is accessible from the host and other virtual machines, enable [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12)
-or [`vde_vmnet`](https://github.com/lima-vm/vde_vmnet) (Deprecated).
+To add another IP address that is accessible from the host and other virtual machines, enable [`socket_vmnet`](https://github.com/lima-vm/socket_vmnet) (since Lima v0.12).
 
-See [`./docs/network.md`](./docs/network.md).
+See [`Configuration guide » Network`]({{< ref "/docs/config/network" >}}).
 {{% /fixlinks %}}
 
 #### "Ping shows duplicate packets and massive response times"
@@ -216,7 +222,7 @@ sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/boot
 ### Filesystem sharing
 #### "Filesystem is slow"
 {{% fixlinks %}}
-Try virtiofs. See [`docs/mount.md`](./docs/mount.md)
+Try virtiofs. See [`Configuration guide » Filesystem mounts`]({{< ref "/docs/config/mount" >}})
 {{% /fixlinks %}}
 
 #### "Filesystem is not writable"
@@ -230,6 +236,25 @@ mounts:
 ```
 
 Run `limactl edit <INSTANCE>` to open the YAML editor for an existing instance.
+
+#### "Filesystem is unmounted after upgrading Lima to v1.0"
+
+Lima v1.0 changed the default mount type for QEMU from `reverse-sshfs` to `9p`.
+
+The `9p` mount type is known to be incompatible with the following guest operating systems:
+- AlmaLinux, CentOS Stream, Oracle Linux, and RockyLinux
+- Debian GNU/Linux
+- openSUSE
+
+A new instance of these OS still use `reverse-sshfs` by default.
+However, an existing instance created with a previous version of Lima may potentially need
+running the following command (usually not needed):
+
+```
+limactl edit --mount-type=reverse-sshfs <NAME>
+```
+
+Ubuntu users are not affected by this issue.
 
 ### External projects
 #### "I am using Rancher Desktop. How to deal with the underlying Lima?"

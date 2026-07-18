@@ -1,7 +1,9 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package usernet
 
 import (
-	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -13,14 +15,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/lockutil"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/executil"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/lockutil"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 // Start starts a instance a usernet network with the given name.
-// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`
+// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`.
 func Start(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is started")
 	networksDir, err := dirnames.LimaNetworksDir()
@@ -81,6 +86,7 @@ func Start(ctx context.Context, name string) error {
 				args = append(args, "--leases", leasesString)
 			}
 			cmd := exec.CommandContext(ctx, self, args...)
+			cmd.SysProcAttr = executil.BackgroundSysProcAttr
 
 			stdoutPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stdout"))
 			stderrPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stderr"))
@@ -120,7 +126,7 @@ func Start(ctx context.Context, name string) error {
 }
 
 // Stop stops running instance a usernet network with the given name.
-// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`
+// The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`.
 func Stop(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is stopped")
 	pidFile, err := PIDFile(name)
@@ -137,14 +143,9 @@ func Stop(ctx context.Context, name string) error {
 			return err
 		}
 
-		var stdout, stderr bytes.Buffer
-		cmd := exec.Command("/usr/bin/pkill", "-F", pidFile)
-		cmd.Stdout = &stdout
-		cmd.Stderr = &stderr
-		logrus.Debugf("Running: %v", cmd.Args)
-		if err := cmd.Run(); err != nil {
-			return fmt.Errorf("failed to run %v: stdout=%q, stderr=%q: %w",
-				cmd.Args, stdout.String(), stderr.String(), err)
+		if err := osutil.SysKill(pid, osutil.SigInt); err != nil {
+			logrus.Error(err)
+			return fmt.Errorf("failed to kill process with pid %d: %w", pid, err)
 		}
 	}
 
@@ -156,7 +157,10 @@ func Stop(ctx context.Context, name string) error {
 			break
 		}
 		if time.Since(startWaiting) > 5*time.Second {
-			logrus.Infof("usernet network still running after 5 seconds")
+			logrus.Infof("usernet network still running after 5 seconds. Attempting to forcibly kill")
+			if err := osutil.SysKill(pid, osutil.SigKill); err != nil {
+				logrus.Error(err)
+			}
 			break
 		}
 		time.Sleep(500 * time.Millisecond)

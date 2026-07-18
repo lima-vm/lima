@@ -1,42 +1,47 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package store
 
 import (
 	"bytes"
-	"os/user"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
 
-	"github.com/lima-vm/lima/pkg/limayaml"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 const separator = string(filepath.Separator)
 
 var (
-	vmtype = limayaml.QEMU
-	goarch = limayaml.NewArch(runtime.GOARCH)
+	vmtype = limatype.QEMU
+	goarch = limatype.NewArch(runtime.GOARCH)
 	space  = strings.Repeat(" ", len(goarch)-4)
 )
 
-var instance = Instance{
+var instance = limatype.Instance{
 	Name:       "foo",
-	Status:     StatusStopped,
+	Status:     limatype.StatusStopped,
 	VMType:     vmtype,
 	Arch:       goarch,
 	Dir:        "dir",
 	SSHAddress: "127.0.0.1",
 }
 
-var table = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      dir\n"
+// width 0 means the terminal width is unknown (stdout is not a TTY), so all columns are shown.
+var table = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
 
-var tableEmu = "NAME    STATUS     SSH            ARCH       CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    unknown    0       0B        0B      dir\n"
+var tableEmu = "NAME    STATUS     SSH            VMTYPE    ARCH       CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + vmtype + "      unknown    0       0B        0B      dir\n"
 
-var tableHome = "NAME    STATUS     SSH            CPUS    MEMORY    DISK    DIR\n" +
-	"foo     Stopped    127.0.0.1:0    0       0B        0B      ~" + separator + "dir\n"
+var tableHome = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
+	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      ~" + separator + "dir\n"
 
 var tableAll = "NAME    STATUS     SSH            VMTYPE    ARCH" + space + "    CPUS    MEMORY    DISK    DIR\n" +
 	"foo     Stopped    127.0.0.1:0    " + vmtype + "      " + goarch + "    0       0B        0B      dir\n"
@@ -62,9 +67,36 @@ var tableTwo = "NAME    STATUS     SSH            VMTYPE    ARCH       CPUS    M
 	"foo     Stopped    127.0.0.1:0    qemu      x86_64     0       0B        0B\n" +
 	"bar     Stopped    127.0.0.1:0    vz        aarch64    0       0B        0B\n"
 
+func TestSSHPortFromConfig(t *testing.T) {
+	t.Run("valid", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "ssh.config")
+		content := "Host lima-default\n  Hostname 127.0.0.1\n  Port 58786\n  User foo\n"
+		assert.NilError(t, os.WriteFile(f, []byte(content), 0o644))
+		port, err := sshPortFromConfig(f)
+		assert.NilError(t, err)
+		assert.Equal(t, 58786, port)
+	})
+	t.Run("missing file", func(t *testing.T) {
+		_, err := sshPortFromConfig(filepath.Join(t.TempDir(), "nonexistent"))
+		assert.ErrorIs(t, err, os.ErrNotExist)
+	})
+	t.Run("no port line", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "ssh.config")
+		assert.NilError(t, os.WriteFile(f, []byte("Host lima-default\n  Hostname 127.0.0.1\n"), 0o644))
+		_, err := sshPortFromConfig(f)
+		assert.ErrorContains(t, err, "port not found")
+	})
+	t.Run("invalid port", func(t *testing.T) {
+		f := filepath.Join(t.TempDir(), "ssh.config")
+		assert.NilError(t, os.WriteFile(f, []byte("Host lima-default\n  Port abc\n"), 0o644))
+		_, err := sshPortFromConfig(f)
+		assert.ErrorContains(t, err, "invalid syntax")
+	})
+}
+
 func TestPrintInstanceTable(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	err := PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
 	assert.Equal(t, table, buf.String())
@@ -74,7 +106,7 @@ func TestPrintInstanceTableEmu(t *testing.T) {
 	var buf bytes.Buffer
 	instance1 := instance
 	instance1.Arch = "unknown"
-	instances := []*Instance{&instance1}
+	instances := []*limatype.Instance{&instance1}
 	err := PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
 	assert.Equal(t, tableEmu, buf.String())
@@ -82,11 +114,11 @@ func TestPrintInstanceTableEmu(t *testing.T) {
 
 func TestPrintInstanceTableHome(t *testing.T) {
 	var buf bytes.Buffer
-	u, err := user.Current()
+	homeDir, err := os.UserHomeDir()
 	assert.NilError(t, err)
 	instance1 := instance
-	instance1.Dir = filepath.Join(u.HomeDir, "dir")
-	instances := []*Instance{&instance1}
+	instance1.Dir = filepath.Join(homeDir, "dir")
+	instances := []*limatype.Instance{&instance1}
 	err = PrintInstances(&buf, instances, "table", nil)
 	assert.NilError(t, err)
 	assert.Equal(t, tableHome, buf.String())
@@ -94,7 +126,7 @@ func TestPrintInstanceTableHome(t *testing.T) {
 
 func TestPrintInstanceTable60(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 60}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -103,7 +135,7 @@ func TestPrintInstanceTable60(t *testing.T) {
 
 func TestPrintInstanceTable80SameArch(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 80}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -113,8 +145,8 @@ func TestPrintInstanceTable80SameArch(t *testing.T) {
 func TestPrintInstanceTable80DiffArch(t *testing.T) {
 	var buf bytes.Buffer
 	instance1 := instance
-	instance1.Arch = limayaml.NewArch("unknown")
-	instances := []*Instance{&instance1}
+	instance1.Arch = limatype.NewArch("unknown")
+	instances := []*limatype.Instance{&instance1}
 	options := PrintOptions{TerminalWidth: 80}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -123,7 +155,7 @@ func TestPrintInstanceTable80DiffArch(t *testing.T) {
 
 func TestPrintInstanceTable100(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 100}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
@@ -132,35 +164,47 @@ func TestPrintInstanceTable100(t *testing.T) {
 
 func TestPrintInstanceTableAll(t *testing.T) {
 	var buf bytes.Buffer
-	instances := []*Instance{&instance}
+	instances := []*limatype.Instance{&instance}
 	options := PrintOptions{TerminalWidth: 40, AllFields: true}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
 	assert.Equal(t, tableAll, buf.String())
 }
 
+// Regression test for https://github.com/lima-vm/lima/issues/3986:
+// when stdout is not a TTY (TerminalWidth == 0), all columns must be shown,
+// regardless of whether --all-fields was passed.
+func TestPrintInstanceTableNonTTY(t *testing.T) {
+	instances := []*limatype.Instance{&instance}
+	t.Run("AllFields", func(t *testing.T) {
+		var buf bytes.Buffer
+		options := PrintOptions{AllFields: true}
+		err := PrintInstances(&buf, instances, "table", &options)
+		assert.NilError(t, err)
+		assert.Equal(t, tableAll, buf.String())
+	})
+	t.Run("Default", func(t *testing.T) {
+		var buf bytes.Buffer
+		options := PrintOptions{}
+		err := PrintInstances(&buf, instances, "table", &options)
+		assert.NilError(t, err)
+		assert.Equal(t, tableAll, buf.String())
+	})
+}
+
 func TestPrintInstanceTableTwo(t *testing.T) {
 	var buf bytes.Buffer
 	instance1 := instance
 	instance1.Name = "foo"
-	instance1.VMType = limayaml.QEMU
-	instance1.Arch = limayaml.X8664
+	instance1.VMType = limatype.QEMU
+	instance1.Arch = limatype.X8664
 	instance2 := instance
 	instance2.Name = "bar"
-	instance2.VMType = limayaml.VZ
-	instance2.Arch = limayaml.AARCH64
-	instances := []*Instance{&instance1, &instance2}
+	instance2.VMType = limatype.VZ
+	instance2.Arch = limatype.AARCH64
+	instances := []*limatype.Instance{&instance1, &instance2}
 	options := PrintOptions{TerminalWidth: 80}
 	err := PrintInstances(&buf, instances, "table", &options)
 	assert.NilError(t, err)
 	assert.Equal(t, tableTwo, buf.String())
-}
-
-func TestLimaVersionGreaterThan(t *testing.T) {
-	assert.Equal(t, LimaVersionGreaterThan("", "0.1.0"), false)
-	assert.Equal(t, LimaVersionGreaterThan("0.0.1", "0.1.0"), false)
-	assert.Equal(t, LimaVersionGreaterThan("0.1.0", "0.1.0"), false)
-	assert.Equal(t, LimaVersionGreaterThan("0.1.0-2", "0.1.0"), true)
-	assert.Equal(t, LimaVersionGreaterThan("0.2.0", "0.1.0"), true)
-	assert.Equal(t, LimaVersionGreaterThan("abacab", "0.1.0"), true)
 }

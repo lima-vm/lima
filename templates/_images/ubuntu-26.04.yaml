@@ -1,0 +1,45 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:8ed228c9f08a50122fa72307623d9f88d9209ba26e7e849edd584fa675e34863"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:9daa955c3d4cafc5a0c1c3fff51672b79a6bb36b5074b21eecddb696c5710dcb"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+  digest: "sha256:24dd879801d5a22e32f932e78e2a30c95fe2bf1dbeaa86202f12ee9d91df7fb8"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:002308e0e2b5750fa5c99d0d47f0089f96e6eb97bc020b7e97e95efba7b40a66"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:3c53fa6678ed25437e2fe5f42cc7d0f93cff2a131778e40dca7ed63be0522471"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260421/ubuntu-26.04-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:cb8f8d3140378cfaa5238a505e63a64de2502a5fd74055360a898a3d33f2613e"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img
+  arch: x86_64
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-arm64.img
+  arch: aarch64
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-riscv64.img
+  arch: riscv64
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-armhf.img
+  arch: armv7l
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-s390x.img
+  arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-ppc64el.img
+  arch: ppc64le
+
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu

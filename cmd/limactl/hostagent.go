@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -12,36 +15,42 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/gorilla/mux"
-	"github.com/lima-vm/lima/pkg/hostagent"
-	"github.com/lima-vm/lima/pkg/hostagent/api/server"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/hostagent"
+	"github.com/lima-vm/lima/v2/pkg/hostagent/api/server"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func newHostagentCommand() *cobra.Command {
 	hostagentCommand := &cobra.Command{
 		Use:    "hostagent INSTANCE",
-		Short:  "run hostagent",
+		Short:  "Run hostagent",
 		Args:   WrapArgsError(cobra.ExactArgs(1)),
 		RunE:   hostagentAction,
 		Hidden: true,
 	}
-	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
-	hostagentCommand.Flags().String("socket", "", "hostagent socket")
-	hostagentCommand.Flags().Bool("run-gui", false, "run gui synchronously within hostagent")
-	hostagentCommand.Flags().String("nerdctl-archive", "", "local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
+	hostagentCommand.Flags().StringP("pidfile", "p", "", "Write PID to file")
+	hostagentCommand.Flags().String("socket", "", "Path of hostagent socket")
+	hostagentCommand.Flags().Bool("run-gui", false, "Run GUI synchronously within hostagent")
+	hostagentCommand.Flags().String("guestagent", "", "Local file path (not URL) of lima-guestagent.OS-ARCH[.gz]")
+	hostagentCommand.Flags().String("nerdctl-archive", "", "Local file path (not URL) of nerdctl-full-VERSION-GOOS-GOARCH.tar.gz")
+	hostagentCommand.Flags().Bool("progress", false, "Show provision script progress by monitoring cloud-init logs")
 	return hostagentCommand
 }
 
 func hostagentAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	pidfile, err := cmd.Flags().GetString("pidfile")
 	if err != nil {
 		return err
 	}
 	if pidfile != "" {
-		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("pidfile %q already exists", pidfile)
+		if existingPID, err := store.ReadPIDFile(pidfile); existingPID != 0 {
+			return fmt.Errorf("another hostagent may already be running with pid %d (pidfile %q)", existingPID, pidfile)
+		} else if err != nil {
+			return fmt.Errorf("failed to determine if another hostagent is running: %w", err)
 		}
 		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 			return err
@@ -53,7 +62,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if socket == "" {
-		return fmt.Errorf("socket must be specified (limactl version mismatch?)")
+		return errors.New("socket must be specified (limactl version mismatch?)")
 	}
 
 	instName := args[0]
@@ -76,6 +85,13 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 
 	initLogrus(stderr)
 	var opts []hostagent.Opt
+	guestagentBinary, err := cmd.Flags().GetString("guestagent")
+	if err != nil {
+		return err
+	}
+	if guestagentBinary != "" {
+		opts = append(opts, hostagent.WithGuestAgentBinary(guestagentBinary))
+	}
 	nerdctlArchive, err := cmd.Flags().GetString("nerdctl-archive")
 	if err != nil {
 		return err
@@ -83,7 +99,14 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	if nerdctlArchive != "" {
 		opts = append(opts, hostagent.WithNerdctlArchive(nerdctlArchive))
 	}
-	ha, err := hostagent.New(instName, stdout, signalCh, opts...)
+	showProgress, err := cmd.Flags().GetBool("progress")
+	if err != nil {
+		return err
+	}
+	if showProgress {
+		opts = append(opts, hostagent.WithCloudInitProgress(showProgress))
+	}
+	ha, err := hostagent.New(ctx, instName, stdout, signalCh, opts...)
 	if err != nil {
 		return err
 	}
@@ -91,29 +114,29 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	backend := &server.Backend{
 		Agent: ha,
 	}
-	r := mux.NewRouter()
+	r := http.NewServeMux()
 	server.AddRoutes(r, backend)
 	srv := &http.Server{Handler: r}
 	err = os.RemoveAll(socket)
 	if err != nil {
 		return err
 	}
-	l, err := net.Listen("unix", socket)
+	var lc net.ListenConfig
+	l, err := lc.Listen(ctx, "unix", socket)
 	logrus.Infof("hostagent socket created at %s", socket)
 	if err != nil {
 		return err
 	}
 	go func() {
-		defer os.RemoveAll(socket)
-		defer srv.Close()
-		if serveErr := srv.Serve(l); serveErr != nil {
+		if serveErr := srv.Serve(l); serveErr != http.ErrServerClosed {
 			logrus.WithError(serveErr).Warn("hostagent API server exited with an error")
 		}
 	}()
+	defer srv.Close()
 	return ha.Run(cmd.Context())
 }
 
-// syncer is implemented by *os.File
+// syncer is implemented by *os.File.
 type syncer interface {
 	Sync() error
 }
