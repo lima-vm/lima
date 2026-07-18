@@ -122,6 +122,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	}
 
 	for i, f := range y.Mounts {
+		if f.MountPoint == nil {
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must be specified explicitly (failed to automatically determine default mount point)", i))
+			continue
+		}
 		if !filepath.IsAbs(f.Location) && !strings.HasPrefix(f.Location, "~") {
 			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` must be an absolute path, got %#q",
 				i, f.Location))

@@ -727,14 +727,24 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		}
 		if mount.MountPoint == nil {
 			mountLocation := mount.Location
+			var err error
 			if runtime.GOOS == "windows" {
-				var err error
-				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
-				if err != nil {
-					logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
+				if y.VMType != nil && *y.VMType == limatype.WSL2 {
+					mountLocation, err = ioutilx.TranslateWindowsToWSLPath(mountLocation)
+					if err != nil {
+						logrus.WithError(err).Warnf("Couldn't convert location %#q into WSL mount target", mount.Location)
+						mountLocation = ""
+					}
+				} else {
+					mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
+					if err != nil {
+						logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
+					}
 				}
 			}
-			mount.MountPoint = ptr.Of(mountLocation)
+			if mountLocation != "" {
+				mount.MountPoint = ptr.Of(mountLocation)
+			}
 		} else {
 			if out, err := executeGuestTemplate(*mount.MountPoint, instDir, y.User, y.Param); err == nil {
 				mount.MountPoint = ptr.Of(out.String())
