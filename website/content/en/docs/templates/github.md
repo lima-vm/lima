@@ -74,7 +74,7 @@ FATA[0000] file "https://raw.githubusercontent.com/lima-vm/lima/master/.lima.yam
 
 ## Symbolic links
 
-Lima will check if the template file referenced by the `github:` URL is a symlink (or a text file whose content has no spaces, newlines, or colons). In that case it will treat the content as a relative path and return the address of that target file.
+Lima will check if the template file referenced by the `github:` URL is a symlink (or a text file whose content has no spaces, newlines, or colons). In that case it will treat the content as a relative path and return the address of that target file. The target must stay within the repository; Lima rejects one that climbs above the repo root via `../`.
 
 For example the `fedora` template is a symlink to `fedora-43.yaml`:
 
@@ -97,7 +97,7 @@ Org repos support two additional features that enable shorter URLs, even when th
 
 **Redirects:**
 
-In an org repo a template file can not only be a symlink, but also a text file containing a `github:` URL. The URL must point to the same GitHub org and must NOT include a `@TAG`. It will be used to replace the original URL.
+In an org repo a template file can not only be a symlink, but also a text file containing a `github:` URL. The URL must point to the same GitHub org and must NOT include a `@TAG`. It will be used to replace the original URL. Lima rejects a URL that uses `../` to climb out of the org.
 
 For example assume the `lima-vm` projects wants to support this URL:
 
