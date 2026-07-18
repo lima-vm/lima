@@ -14,7 +14,7 @@ $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 $newPassword = -join ((1..16) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
 
 # Store the password under the user directory so that user can know/change it.
-$newPassword | Out-File -FilePath "C:\Users\{{.User}}\password.txt" -Encoding utf8 -NoNewline
+[System.IO.File]::WriteAllText("C:\Users\{{.User}}\password.txt", $newPassword, (New-Object System.Text.UTF8Encoding $false))
 
 # Change the password
 $username = $env:USERNAME
