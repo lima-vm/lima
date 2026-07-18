@@ -13,7 +13,7 @@ The GitHub repo of Lima can be found at <https://github.com/lima-vm/lima>.
   - New account: <https://slack.cncf.io/>
   - Login: <https://cloud-native.slack.com/>
 
-- Zoom meetings (tentatively monthly)
+- Community meetings on Zoom (tentatively monthly)
   - Meeting notes & agenda proposals: https://github.com/lima-vm/lima/discussions/categories/meetings
   - Calendar: https://zoom-lfx.platform.linuxfoundation.org/meetings/lima
 
