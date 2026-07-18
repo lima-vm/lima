@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // This file has been adapted from https://github.com/containerd/nerdctl/blob/v1.0.0/pkg/reflectutil/reflectutil.go
 /*
    Copyright The containerd Authors.
@@ -19,7 +22,7 @@ import (
 	"reflect"
 )
 
-func UnknownNonEmptyFields(structOrStructPtr interface{}, knownNames ...string) []string {
+func UnknownNonEmptyFields(structOrStructPtr any, knownNames ...string) []string {
 	var unknown []string
 	knownNamesMap := make(map[string]struct{}, len(knownNames))
 	for _, name := range knownNames {
@@ -35,7 +38,7 @@ func UnknownNonEmptyFields(structOrStructPtr interface{}, knownNames ...string) 
 	default:
 		panic(fmt.Errorf("expected Ptr or Struct, got %+v", kind))
 	}
-	for i := 0; i < val.NumField(); i++ {
+	for i := range val.NumField() {
 		iField := val.Field(i)
 		if isEmpty(iField) {
 			continue

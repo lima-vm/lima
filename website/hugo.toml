@@ -116,18 +116,11 @@ github_subdir = "website"
 # or specify a new value if you want to reference another branch in your GitHub links
 github_branch= "master"
 
-# Enable Algolia DocSearch
-algolia_docsearch = false
-
 # Enable Lunr.js offline search
-offlineSearch = false
+offlineSearch = true
 
 # Enable syntax highlighting and copy buttons on code blocks with Prism
 prism_syntax_highlighting = false
-
-[[params.versions]]
-version = "master"
-url = "https://lima-vm.io"
 
 # User interface configuration
 [params.ui]
@@ -142,7 +135,7 @@ navbar_translucent_over_cover_disable = false
 # Enable to show the side bar menu in its compact state.
 sidebar_menu_compact = false
 # Set to true to hide the sidebar search box (the top nav search box will still be displayed if search is enabled)
-sidebar_search_disable = false
+sidebar_search_disable = true
 sidebar_menu_foldable = true
 ul_show = 1
 
@@ -157,6 +150,7 @@ enable = false
 enable = false
 
 [params.links]
+# TODO: unify developer and user links
 [[params.links.developer]]
   name = "GitHub"
   url = "https://github.com/lima-vm/lima"
@@ -167,6 +161,16 @@ enable = false
   url = "https://slack.cncf.io/"
   icon = "fab fa-slack"
   desc = "Chat with other project developers"
+[[params.links.developer]]
+  name = "X (Twitter)"
+  url = "https://x.com/@TheLimaProject"
+  icon = "fab fa-x-twitter"
+  desc = "Follow for updates"
+[[params.links.developer]]
+  name = "Mastodon"
+  url = "https://mastodon.social/@TheLimaProject"
+  icon = "fab fa-mastodon"
+  desc = "Follow for updates"
 [[params.links.user]]
   name = "Discussion"
   url = "https://github.com/lima-vm/lima/discussions"
@@ -177,6 +181,16 @@ enable = false
   url = "https://slack.cncf.io/"
   icon = "fab fa-slack"
   desc = "Chat with other project users"
+[[params.links.user]]
+  name = "X (Twitter)"
+  url = "https://x.com/@TheLimaProject"
+  icon = "fab fa-x-twitter"
+  desc = "Follow for updates"
+[[params.links.user]]
+  name = "Mastodon"
+  url = "https://mastodon.social/@TheLimaProject"
+  icon = "fab fa-mastodon"
+  desc = "Follow for updates"
 
 [params.mermaid]
   enable = true
@@ -185,6 +199,12 @@ enable = false
   name = "GitHub"
   url = "https://github.com/lima-vm/lima"
   pre = '<i class="fab fa-github"></i>'
+[[menus.main]]
+  name = "Community"
+  url = "/docs/community"
+[[menus.main]]
+  name = "Releases"
+  url = "https://github.com/lima-vm/lima/releases"
 
 [module]
   # uncomment line below for temporary local development of module
@@ -205,11 +225,15 @@ enable = false
     source="docsy"
     target="content/docs/Reference"
     language="en"
-  # Import examples README.md from examples folder
+  [[module.imports.mounts]]
+    source="docsy-mcp"
+    target="content/docs/config/ai/outside"
+    language="en"
+  # Import templates README.md from templates folder
   [[module.imports]]
     path="../.."
   [[module.imports.mounts]]
-    source="examples"
-    target="static/examples"
+    source="templates"
+    target="static/templates"
     language="en"
     includeFiles = "README.md"

@@ -1,4 +1,7 @@
-package networks
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
+package reconcile
 
 import (
 	"bytes"
@@ -11,16 +14,18 @@ import (
 	"sync"
 	"time"
 
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/networks/usernet"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 func Reconcile(ctx context.Context, newInst string) error {
-	config, err := networks.Config()
+	cfg, err := networks.LoadConfig()
 	if err != nil {
 		return err
 	}
@@ -30,31 +35,31 @@ func Reconcile(ctx context.Context, newInst string) error {
 	}
 	activeNetwork := make(map[string]bool, 3)
 	for _, instName := range instances {
-		instance, err := store.Inspect(instName)
+		instance, err := store.Inspect(ctx, instName)
 		if err != nil {
 			return err
 		}
 		// newInst is about to be started, so its networks should be running
-		if instance.Status != store.StatusRunning && instName != newInst {
+		if instance.Status != limatype.StatusRunning && instName != newInst {
 			continue
 		}
 		for _, nw := range instance.Networks {
 			if nw.Lima == "" {
 				continue
 			}
-			if _, ok := config.Networks[nw.Lima]; !ok {
+			if _, ok := cfg.Networks[nw.Lima]; !ok {
 				logrus.Errorf("network %q (used by instance %q) is missing from networks.yaml", nw.Lima, instName)
 				continue
 			}
 			activeNetwork[nw.Lima] = true
 		}
 	}
-	for name := range config.Networks {
+	for name := range cfg.Networks {
 		var err error
 		if activeNetwork[name] {
-			err = startNetwork(ctx, &config, name)
+			err = startNetwork(ctx, &cfg, name)
 		} else {
-			err = stopNetwork(ctx, &config, name)
+			err = stopNetwork(ctx, &cfg, name)
 		}
 		if err != nil {
 			return err
@@ -63,11 +68,11 @@ func Reconcile(ctx context.Context, newInst string) error {
 	return nil
 }
 
-func sudo(user, group, command string) error {
+func sudo(ctx context.Context, user, group, command string) error {
 	args := []string{"--user", user, "--group", group, "--non-interactive"}
 	args = append(args, strings.Split(command, " ")...)
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command("sudo", args...)
+	cmd := exec.CommandContext(ctx, "sudo", args...)
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	logrus.Debugf("Running: %v", cmd.Args)
@@ -78,8 +83,8 @@ func sudo(user, group, command string) error {
 	return nil
 }
 
-func makeVarRun(config *networks.YAML) error {
-	err := sudo("root", "wheel", config.MkdirCmd())
+func makeVarRun(ctx context.Context, cfg *networks.Config) error {
+	err := sudo(ctx, "root", "wheel", cfg.MkdirCmd())
 	if err != nil {
 		return err
 	}
@@ -87,14 +92,14 @@ func makeVarRun(config *networks.YAML) error {
 	// Check that VarRun is daemon-group writable. If we don't report it here, the error would only be visible
 	// in the vde_switch daemon log. This has not been checked by networks.Validate() because only the VarRun
 	// directory itself needs to be daemon-group writable, any parents just need to be daemon-group executable.
-	fi, err := os.Stat(config.Paths.VarRun)
+	fi, err := os.Stat(cfg.Paths.VarRun)
 	if err != nil {
 		return err
 	}
 	stat, ok := osutil.SysStat(fi)
 	if !ok {
 		// should never happen
-		return fmt.Errorf("could not retrieve stat buffer for %q", config.Paths.VarRun)
+		return fmt.Errorf("could not retrieve stat buffer for %q", cfg.Paths.VarRun)
 	}
 	daemon, err := osutil.LookupUser("daemon")
 	if err != nil {
@@ -102,13 +107,13 @@ func makeVarRun(config *networks.YAML) error {
 	}
 	if fi.Mode()&0o20 == 0 || stat.Gid != daemon.Gid {
 		return fmt.Errorf("%q doesn't seem to be writable by the daemon (gid:%d) group",
-			config.Paths.VarRun, daemon.Gid)
+			cfg.Paths.VarRun, daemon.Gid)
 	}
 	return nil
 }
 
-func startDaemon(ctx context.Context, config *networks.YAML, name, daemon string) error {
-	if err := makeVarRun(config); err != nil {
+func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string) error {
+	if err := makeVarRun(ctx, cfg); err != nil {
 		return err
 	}
 	networksDir, err := dirnames.LimaNetworksDir()
@@ -118,20 +123,20 @@ func startDaemon(ctx context.Context, config *networks.YAML, name, daemon string
 	if err := os.MkdirAll(networksDir, 0o755); err != nil {
 		return err
 	}
-	user, err := config.User(daemon)
+	user, err := cfg.User(daemon)
 	if err != nil {
 		return err
 	}
 
 	args := []string{"--user", user.User, "--group", user.Group, "--non-interactive"}
-	args = append(args, strings.Split(config.StartCmd(name, daemon), " ")...)
+	args = append(args, strings.Split(cfg.StartCmd(name, daemon), " ")...)
 	cmd := exec.CommandContext(ctx, "sudo", args...)
 	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
 	// can fail when called from directories like ~/Downloads, which has 700 permissions
-	cmd.Dir = config.Paths.VarRun
+	cmd.Dir = cfg.Paths.VarRun
 
-	stdoutPath := config.LogFile(name, daemon, "stdout")
-	stderrPath := config.LogFile(name, daemon, "stderr")
+	stdoutPath := cfg.LogFile(name, daemon, "stdout")
+	stderrPath := cfg.LogFile(name, daemon, "stderr")
 	if err := os.RemoveAll(stdoutPath); err != nil {
 		return err
 	}
@@ -160,22 +165,22 @@ var validation struct {
 	err error
 }
 
-func validateConfig(config *networks.YAML) error {
+func validateConfig(ctx context.Context, cfg *networks.Config) error {
 	validation.Do(func() {
-		// make sure all config.Paths.* are secure
-		validation.err = config.Validate()
+		// make sure all cfg.Paths.* are secure
+		validation.err = cfg.Validate()
 		if validation.err == nil {
-			validation.err = config.VerifySudoAccess(config.Paths.Sudoers)
+			validation.err = cfg.VerifySudoAccess(ctx, cfg.Paths.Sudoers)
 		}
 	})
 	return validation.err
 }
 
-func startNetwork(ctx context.Context, config *networks.YAML, name string) error {
+func startNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 	logrus.Debugf("Make sure %q network is running", name)
 
 	// Handle usernet first without sudo requirements
-	isUsernet, err := config.Usernet(name)
+	isUsernet, err := cfg.Usernet(name)
 	if err != nil {
 		return err
 	}
@@ -190,27 +195,24 @@ func startNetwork(ctx context.Context, config *networks.YAML, name string) error
 		return nil
 	}
 
-	if err := validateConfig(config); err != nil {
+	if err := validateConfig(ctx, cfg); err != nil {
 		return err
 	}
 	var daemons []string
-	ok, err := config.IsDaemonInstalled(networks.SocketVMNet)
+	ok, err := cfg.IsDaemonInstalled(networks.SocketVMNet)
 	if err != nil {
 		return err
 	}
 	if ok {
 		daemons = append(daemons, networks.SocketVMNet)
-		if ok, _ := config.IsDaemonInstalled(networks.VDEVMNet); ok {
-			logrus.Debugf("Ignoring deprecated vde_vmnet (%q)", networks.VDEVMNet)
-		}
 	} else {
-		daemons = append(daemons, networks.VDESwitch, networks.VDEVMNet)
+		return fmt.Errorf("daemon %q needs to be installed", networks.SocketVMNet)
 	}
 	for _, daemon := range daemons {
-		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
+		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid == 0 {
 			logrus.Infof("Starting %s daemon for %q network", daemon, name)
-			if err := startDaemon(ctx, config, name, daemon); err != nil {
+			if err := startDaemon(ctx, cfg, name, daemon); err != nil {
 				return err
 			}
 		}
@@ -218,10 +220,10 @@ func startNetwork(ctx context.Context, config *networks.YAML, name string) error
 	return nil
 }
 
-func stopNetwork(ctx context.Context, config *networks.YAML, name string) error {
+func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 	logrus.Debugf("Make sure %q network is stopped", name)
 	// Handle usernet first without sudo requirements
-	isUsernet, err := config.Usernet(name)
+	isUsernet, err := cfg.Usernet(name)
 	if err != nil {
 		return err
 	}
@@ -237,22 +239,22 @@ func stopNetwork(ctx context.Context, config *networks.YAML, name string) error 
 	}
 
 	// Don't call validateConfig() until we actually need to stop a daemon because
-	// stopNetwork() may be called even when the vde daemons are not installed.
-	for _, daemon := range []string{networks.SocketVMNet, networks.VDEVMNet, networks.VDESwitch} {
-		if ok, _ := config.IsDaemonInstalled(daemon); !ok {
+	// stopNetwork() may be called even when the daemons are not installed.
+	for _, daemon := range []string{networks.SocketVMNet} {
+		if ok, _ := cfg.IsDaemonInstalled(daemon); !ok {
 			continue
 		}
-		pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon))
+		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid != 0 {
 			logrus.Infof("Stopping %s daemon for %q network", daemon, name)
-			if err := validateConfig(config); err != nil {
+			if err := validateConfig(ctx, cfg); err != nil {
 				return err
 			}
-			user, err := config.User(daemon)
+			user, err := cfg.User(daemon)
 			if err != nil {
 				return err
 			}
-			err = sudo(user.User, user.Group, config.StopCmd(name, daemon))
+			err = sudo(ctx, user.User, user.Group, cfg.StopCmd(name, daemon))
 			if err != nil {
 				return err
 			}
@@ -261,7 +263,7 @@ func stopNetwork(ctx context.Context, config *networks.YAML, name string) error 
 		// will cause subsequent start commands to fail.
 		startWaiting := time.Now()
 		for {
-			if pid, _ := store.ReadPIDFile(config.PIDFile(name, daemon)); pid == 0 {
+			if pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon)); pid == 0 {
 				break
 			}
 			if time.Since(startWaiting) > 5*time.Second {

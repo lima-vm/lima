@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package textutil
 
 import (
@@ -9,18 +12,16 @@ import (
 )
 
 func TestPrefixString(t *testing.T) {
+	assert.Equal(t, "", PrefixString("- ", ""))
+	assert.Equal(t, "\n", PrefixString("- ", "\n"))
 	assert.Equal(t, "- foo", PrefixString("- ", "foo"))
 	assert.Equal(t, "- foo\n- bar\n", PrefixString("- ", "foo\nbar\n"))
+	assert.Equal(t, "- foo\n\n- bar\n", PrefixString("- ", "foo\n\nbar\n"))
 }
 
 func TestIndentString(t *testing.T) {
 	assert.Equal(t, "  foo", IndentString(2, "foo"))
 	assert.Equal(t, "  foo\n  bar\n", IndentString(2, "foo\nbar\n"))
-}
-
-func TestTrimString(t *testing.T) {
-	assert.Equal(t, "foo", TrimString("\n", "foo"))
-	assert.Equal(t, "bar", TrimString("\n", "bar\n"))
 }
 
 func TestMissingString(t *testing.T) {

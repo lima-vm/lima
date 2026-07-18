@@ -1,25 +1,24 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // This file has been adapted from https://github.com/norouter/norouter/blob/v0.6.4/pkg/agent/dns/dns.go
 
 package dns
 
 import (
-	"fmt"
+	"context"
 	"net"
 	"runtime"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/miekg/dns"
 	"github.com/sirupsen/logrus"
 )
 
-const (
-	// Truncate for avoiding "Parse error" from `busybox nslookup`
-	// https://github.com/lima-vm/lima/issues/380
-	truncateSize      = 512
-	ipv6ResponseDelay = time.Second
-)
+// Truncate for avoiding "Parse error" from `busybox nslookup`
+// https://github.com/lima-vm/lima/issues/380
+const truncateSize = 512
 
 var defaultFallbackIPs = []string{"8.8.8.8", "1.1.1.1"}
 
@@ -69,21 +68,13 @@ func (s *Server) Shutdown() {
 
 func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
 	logrus.Tracef("newStaticClientConfig creating config for the following IPs: %v", ips)
-	s := ``
-	for _, ip := range ips {
-		s += fmt.Sprintf("nameserver %s\n", ip)
-	}
-	r := strings.NewReader(s)
-	return dns.ClientConfigFromReader(r)
+	config := "nameserver " + strings.Join(ips, "\nnameserver ") + "\n"
+	return dns.ClientConfigFromReader(strings.NewReader(config))
 }
 
 func (h *Handler) lookupCnameToHost(cname string) string {
 	seen := make(map[string]bool)
-	for {
-		// break cyclic definition
-		if seen[cname] {
-			break
-		}
+	for !seen[cname] { // break cyclic definition
 		if _, ok := h.cnameToHost[cname]; ok {
 			seen[cname] = true
 			cname = h.cnameToHost[cname]
@@ -146,7 +137,7 @@ func NewHandler(opts HandlerOptions) (dns.Handler, error) {
 	return h, nil
 }
 
-func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
+func (h *Handler) handleQuery(ctx context.Context, w dns.ResponseWriter, req *dns.Msg) {
 	var (
 		reply   dns.Msg
 		handled bool
@@ -165,12 +156,6 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 		switch q.Qtype {
 		case dns.TypeAAAA:
 			if !h.ipv6 {
-				// Unfortunately some older resolvers use a slow random source to set the Transaction ID.
-				// This creates a problem on M1 computers, which are too fast for that implementation:
-				// Both the A and AAAA queries might end up with the same id. Therefore, we wait for
-				// 1 second and then we return NODATA for AAAA. This will allow the client to receive
-				// the correct response even when both Transaction IDs are the same.
-				time.Sleep(ipv6ResponseDelay)
 				// See RFC 2308 section 2.2 which suggests that NODATA is indicated by setting the
 				// RCODE to NOERROR along with zero entries in the response.
 				reply.SetRcode(req, dns.RcodeSuccess)
@@ -186,7 +171,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			if _, ok := h.hostToIP[cname]; ok {
 				addrs = []net.IP{h.hostToIP[cname]}
 			} else {
-				addrs, err = net.LookupIP(cname)
+				addrs, err = net.DefaultResolver.LookupIP(ctx, "ip", cname)
 				if err != nil {
 					logrus.WithError(err).Debug("handleQuery lookup IP failed")
 					continue
@@ -217,7 +202,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 			cname := h.lookupCnameToHost(q.Name)
 			var err error
 			if _, ok := h.hostToIP[cname]; !ok {
-				cname, err = net.LookupCNAME(cname)
+				cname, err = net.DefaultResolver.LookupCNAME(ctx, cname)
 				if err != nil {
 					logrus.WithError(err).Debug("handleQuery lookup CNAME failed")
 					continue
@@ -233,7 +218,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				handled = true
 			}
 		case dns.TypeTXT:
-			txt, err := net.LookupTXT(q.Name)
+			txt, err := net.DefaultResolver.LookupTXT(ctx, q.Name)
 			if err != nil {
 				logrus.WithError(err).Debug("handleQuery lookup TXT failed")
 				continue
@@ -250,7 +235,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				handled = true
 			}
 		case dns.TypeNS:
-			ns, err := net.LookupNS(q.Name)
+			ns, err := net.DefaultResolver.LookupNS(ctx, q.Name)
 			if err != nil {
 				logrus.WithError(err).Debug("handleQuery lookup NS failed")
 				continue
@@ -266,7 +251,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				}
 			}
 		case dns.TypeMX:
-			mx, err := net.LookupMX(q.Name)
+			mx, err := net.DefaultResolver.LookupMX(ctx, q.Name)
 			if err != nil {
 				logrus.WithError(err).Debugf("handleQuery lookup MX failed")
 				continue
@@ -283,7 +268,7 @@ func (h *Handler) handleQuery(w dns.ResponseWriter, req *dns.Msg) {
 				}
 			}
 		case dns.TypeSRV:
-			_, addrs, err := net.LookupSRV("", "", q.Name)
+			_, addrs, err := net.DefaultResolver.LookupSRV(ctx, "", "", q.Name)
 			if err != nil {
 				logrus.WithError(err).Debug("handleQuery lookup SRV failed")
 				continue
@@ -349,7 +334,7 @@ func (h *Handler) handleDefault(w dns.ResponseWriter, req *dns.Msg) {
 func (h *Handler) ServeDNS(w dns.ResponseWriter, req *dns.Msg) {
 	switch req.Opcode {
 	case dns.OpcodeQuery:
-		h.handleQuery(w, req)
+		h.handleQuery(context.Background(), w, req)
 	default:
 		h.handleDefault(w, req)
 	}
@@ -400,7 +385,7 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 
 func chunkify(buffer string, limit int) []string {
 	var result []string
-	for len(buffer) > 0 {
+	for buffer != "" {
 		if len(buffer) < limit {
 			limit = len(buffer)
 		}

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Label</key>
+	<string>io.lima-vm.autostart.{{ .Instance }}</string>
+	<key>ProgramArguments</key>
+	<array>
+		<string>{{ .Binary }}</string>
+		<string>start</string>
+		<string>{{ .Instance }}</string>
+		<string>--foreground</string>
+	</array>
+	<key>RunAtLoad</key>
+	<true/>
+	<key>StandardErrorPath</key>
+	<string>launchd.stderr.log</string>
+	<key>StandardOutPath</key>
+	<string>launchd.stdout.log</string>
+	<key>WorkingDirectory</key>
+	<string>{{ .WorkDir }}</string>
+	<key>ProcessType</key>
+	<string>Background</string>
+</dict>
+</plist>

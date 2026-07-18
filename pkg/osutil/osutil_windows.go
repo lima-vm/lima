@@ -1,6 +1,11 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package osutil
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"io/fs"
 	"os"
@@ -12,7 +17,7 @@ import (
 // UnixPathMax is the value of UNIX_PATH_MAX.
 const UnixPathMax = 108
 
-// Stat is a selection of syscall.Stat_t
+// Stat is a selection of syscall.Stat_t.
 type Stat struct {
 	Uid uint32
 	Gid uint32
@@ -34,12 +39,8 @@ func SysKill(pid int, _ Signal) error {
 	return windows.GenerateConsoleCtrlEvent(syscall.CTRL_BREAK_EVENT, uint32(pid))
 }
 
-func Dup2(oldfd int, newfd syscall.Handle) (err error) {
-	return fmt.Errorf("unimplemented")
-}
-
-func Ftruncate(_ int, _ int64) (err error) {
-	return fmt.Errorf("unimplemented")
+func Dup2(_ int, _ syscall.Handle) error {
+	return errors.New("unimplemented")
 }
 
 func SignalName(sig os.Signal) string {
@@ -51,4 +52,12 @@ func SignalName(sig os.Signal) string {
 	default:
 		return fmt.Sprintf("Signal(%d)", sig)
 	}
+}
+
+func Sysctl(_ context.Context, _ string) (string, error) {
+	return "", errors.New("sysctl: unimplemented on Windows")
+}
+
+func IsEACCES(err error) bool {
+	return errors.Is(err, syscall.ERROR_ACCESS_DENIED) || errors.Is(err, syscall.WSAEACCES)
 }

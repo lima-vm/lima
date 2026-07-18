@@ -1,0 +1,32 @@
+name: 'upload failure-logs if exists'
+description: 'upload failure-logs if exists'
+inputs:
+  suffix:
+    description: suffix to append to the name of the artifact
+    required: false
+    default: ''
+runs:
+  using: "composite"
+  steps:
+  - name: "Check if failure-logs exists"
+    if: always()
+    id: check-if-failure-logs-exists
+    run: echo "exists=$([ -d "failure-logs" ] && echo "true" || echo "false")" >> "$GITHUB_OUTPUT"
+    shell: bash
+  - id: normalize-suffix
+    # To avoid using special characters in artifact name, normalize the suffix
+    if: steps.check-if-failure-logs-exists.outputs.exists == 'true'
+    run: |
+      suffix="${INPUTS_SUFFIX}"
+      suffix="${suffix//[^a-zA-Z0-9_]/_}"
+      suffix="${suffix:+-$suffix}"
+      echo "result=$suffix" >> "$GITHUB_OUTPUT"
+    shell: bash
+    env:
+      INPUTS_SUFFIX: ${{ inputs.suffix }}
+  - name: "Upload failure-logs"
+    if: steps.check-if-failure-logs-exists.outputs.exists == 'true'
+    uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f  # v7.0.0
+    with:
+      name: failure-logs-${{ github.job }}${{ steps.normalize-suffix.outputs.result }}
+      path: failure-logs/

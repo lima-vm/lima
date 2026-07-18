@@ -1,8 +1,13 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package osutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/xml"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -12,33 +17,26 @@ import (
 	"sync"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/plist"
 )
 
-var (
-	machineIDCached string
-	machineIDOnce   sync.Once
-)
+var MachineID = sync.OnceValue(func() string {
+	x, err := machineID(context.Background())
+	if err == nil && x != "" {
+		return x
+	}
+	logrus.WithError(err).Debug("failed to get machine ID, falling back to use hostname instead")
+	hostname, err := os.Hostname()
+	if err != nil {
+		panic(fmt.Errorf("failed to get hostname: %w", err))
+	}
+	return hostname
+})
 
-func MachineID() string {
-	machineIDOnce.Do(func() {
-		x, err := machineID()
-		if err == nil && x != "" {
-			machineIDCached = x
-			return
-		}
-		logrus.WithError(err).Debug("failed to get machine ID, falling back to use hostname instead")
-		hostname, err := os.Hostname()
-		if err != nil {
-			panic(err)
-		}
-		machineIDCached = hostname
-	})
-	return machineIDCached
-}
-
-func machineID() (string, error) {
+func machineID(ctx context.Context) (string, error) {
 	if runtime.GOOS == "darwin" {
-		ioPlatformExpertDeviceCmd := exec.Command("/usr/sbin/ioreg", "-a", "-d2", "-c", "IOPlatformExpertDevice")
+		ioPlatformExpertDeviceCmd := exec.CommandContext(ctx, "/usr/sbin/ioreg", "-a", "-d2", "-c", "IOPlatformExpertDevice")
 		ioPlatformExpertDevice, err := ioPlatformExpertDeviceCmd.CombinedOutput()
 		if err != nil {
 			return "", err
@@ -61,31 +59,28 @@ func machineID() (string, error) {
 }
 
 func parseIOPlatformUUIDFromIOPlatformExpertDevice(r io.Reader) (string, error) {
-	d := xml.NewDecoder(r)
-	var (
-		elem            string
-		elemKeyCharData string
-	)
-	for {
-		tok, err := d.Token()
-		if err != nil {
-			return "", err
-		}
-		switch v := tok.(type) {
-		case xml.StartElement:
-			elem = v.Name.Local
-		case xml.EndElement:
-			elem = ""
-			if v.Name.Local != "key" {
-				elemKeyCharData = ""
-			}
-		case xml.CharData:
-			if elem == "string" && elemKeyCharData == "IOPlatformUUID" {
-				return string(v), nil
-			}
-			if elem == "key" {
-				elemKeyCharData = string(v)
-			}
-		}
+	var p plist.Plist
+	dec := xml.NewDecoder(r)
+	if err := dec.Decode(&p); err != nil {
+		return "", err
 	}
+	if p.Value.Dict == nil {
+		return "", errors.New("invalid plist: top-level value is not a dict")
+	}
+	ioRegistryEntryChildren, ok := p.Value.Dict["IORegistryEntryChildren"]
+	if !ok || ioRegistryEntryChildren.Array == nil || len(ioRegistryEntryChildren.Array) == 0 {
+		return "", errors.New("invalid plist: IORegistryEntryChildren not found or empty")
+	}
+	for _, child := range ioRegistryEntryChildren.Array {
+		if child.Dict == nil {
+			continue
+		}
+		ioPlatformUUID, ok := child.Dict["IOPlatformUUID"]
+		if !ok || ioPlatformUUID.String == nil {
+			continue
+		}
+		return *ioPlatformUUID.String, nil
+	}
+
+	return "", errors.New("invalid plist: IOPlatformUUID not found in any child of IORegistryEntryChildren")
 }
