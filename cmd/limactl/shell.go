@@ -25,8 +25,8 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/copytool"
 	"github.com/lima-vm/lima/v2/pkg/envutil"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/instance"
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
@@ -784,9 +784,9 @@ func rsyncDirectory(ctx context.Context, cmd *cobra.Command, rsync copytool.Copy
 func mountDirFromWindowsDir(ctx context.Context, inst *limatype.Instance, dir string) (string, error) {
 	if inst.VMType == limatype.WSL2 {
 		distroName := "lima-" + inst.Name
-		return ioutilx.WindowsSubsystemPathForLinux(ctx, dir, distroName)
+		return fsutil.WindowsSubsystemPathForLinux(ctx, dir, distroName)
 	}
-	return ioutilx.WindowsSubsystemPath(ctx, dir)
+	return fsutil.WindowsSubsystemPath(ctx, dir)
 }
 
 func shellBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

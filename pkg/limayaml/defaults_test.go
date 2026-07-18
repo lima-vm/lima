@@ -19,7 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -240,7 +240,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts = slices.Clone(y.Mounts)
 	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
 	if runtime.GOOS == "windows" {
-		mountLocation, err := ioutilx.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
+		mountLocation, err := fsutil.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
 			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
 		}
@@ -477,7 +477,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts = slices.Clone(d.Mounts)
 	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
 	if runtime.GOOS == "windows" {
-		mountLocation, err := ioutilx.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
+		mountLocation, err := fsutil.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
 			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
 		}

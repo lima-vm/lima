@@ -26,8 +26,8 @@ import (
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -729,7 +729,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			mountLocation := mount.Location
 			if runtime.GOOS == "windows" {
 				var err error
-				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
+				mountLocation, err = fsutil.WindowsSubsystemPath(ctx, mountLocation)
 				if err != nil {
 					logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
 				}
