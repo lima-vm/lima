@@ -307,6 +307,19 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 				rawImgConvPath := filepath.Join(shad, "imgconv", "raw")
 				rawImgConvDigestPath := filepath.Join(shad, "imgconv", "raw.digest")
 
+				// The raw copy has a digest of its own, so o.expectedDigest is replaced
+				// below and the check at the end of this function then compares
+				// imgconv/raw.digest against a value read from that same file. When the
+				// cache entry carries no recorded digest there is nothing that has
+				// compared the caller's digest against any bytes yet, so do it here.
+				if o.expectedDigest != "" {
+					if _, err := os.Stat(shadDigest); err != nil {
+						if err := validateLocalFileDigest(shadData, o.expectedDigest); err != nil {
+							return nil, err
+						}
+					}
+				}
+
 				needConvert := false
 				if rawStat, err := os.Stat(rawImgConvPath); err != nil {
 					if errors.Is(err, os.ErrNotExist) {
