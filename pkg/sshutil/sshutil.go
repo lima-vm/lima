@@ -1,29 +1,74 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package sshutil
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/fs"
+	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/coreos/go-semver/semver"
-	"github.com/lima-vm/lima/pkg/ioutilx"
-	"github.com/lima-vm/lima/pkg/lockutil"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
+
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/lockutil"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
+
+// Environment variable that allows configuring the command (alias) to execute
+// in place of the 'ssh' executable.
+const EnvShellSSH = "SSH"
+
+type SSHExe struct {
+	Exe  string
+	Args []string
+}
+
+func NewSSHExe() (SSHExe, error) {
+	var sshExe SSHExe
+
+	if sshShell := os.Getenv(EnvShellSSH); sshShell != "" {
+		sshShellFields, err := shellwords.Parse(sshShell)
+		switch {
+		case err != nil:
+			logrus.WithError(err).Warnf("Failed to split %s variable into shell tokens. "+
+				"Falling back to 'ssh' command", EnvShellSSH)
+		case len(sshShellFields) > 0:
+			sshExe.Exe = sshShellFields[0]
+			if len(sshShellFields) > 1 {
+				sshExe.Args = sshShellFields[1:]
+			}
+			return sshExe, nil
+		}
+	}
+
+	executable, err := exec.LookPath("ssh")
+	if err != nil {
+		return SSHExe{}, err
+	}
+	sshExe.Exe = executable
+
+	return sshExe, nil
+}
 
 type PubKey struct {
 	Filename string
@@ -38,7 +83,7 @@ func readPublicKey(f string) (PubKey, error) {
 	if err == nil {
 		entry.Content = strings.TrimSpace(string(content))
 	} else {
-		err = fmt.Errorf("failed to read ssh public key %q: %w", f, err)
+		err = fmt.Errorf("failed to read ssh public key %#q: %w", f, err)
 	}
 	return entry, err
 }
@@ -48,7 +93,7 @@ func readPublicKey(f string) (PubKey, error) {
 //
 // When loadDotSSH is true, ~/.ssh/*.pub will be appended to make the VM accessible without specifying
 // an identity explicitly.
-func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
+func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 	// Read $LIMA_HOME/_config/user.pub
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
@@ -60,14 +105,22 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 			return nil, err
 		}
 		if err := os.MkdirAll(configDir, 0o700); err != nil {
-			return nil, fmt.Errorf("could not create %q directory: %w", configDir, err)
+			return nil, fmt.Errorf("could not create %#q directory: %w", configDir, err)
 		}
 		if err := lockutil.WithDirLock(configDir, func() error {
-			keygenCmd := exec.Command("ssh-keygen", "-t", "ed25519", "-q", "-N", "", "-f",
-				filepath.Join(configDir, filenames.UserPrivateKey))
+			// no passphrase, no user@host comment
+			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
+			if runtime.GOOS == "windows" {
+				privPath, err = ioutilx.WindowsSubsystemPath(ctx, privPath)
+				if err != nil {
+					return err
+				}
+			}
+			keygenCmd := exec.CommandContext(ctx, "ssh-keygen", "-t", "ed25519", "-q", "-N", "",
+				"-C", "lima", "-f", privPath)
 			logrus.Debugf("executing %v", keygenCmd.Args)
 			if out, err := keygenCmd.CombinedOutput(); err != nil {
-				return fmt.Errorf("failed to run %v: %q: %w", keygenCmd.Args, string(out), err)
+				return fmt.Errorf("failed to run %v: %#q: %w", keygenCmd.Args, string(out), err)
 			}
 			return nil
 		}); err != nil {
@@ -95,12 +148,12 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	}
 	for _, f := range files {
 		if !strings.HasSuffix(f, ".pub") {
-			panic(fmt.Errorf("unexpected ssh public key filename %q", f))
+			panic(fmt.Errorf("unexpected ssh public key filename %#q", f))
 		}
 		entry, err := readPublicKey(f)
 		if err == nil {
 			if !detectValidPublicKey(entry.Content) {
-				logrus.Warnf("public key %q doesn't seem to be in ssh format", entry.Filename)
+				logrus.Warnf("public key %#q doesn't seem to be in ssh format", entry.Filename)
 			} else {
 				res = append(res, entry)
 			}
@@ -111,13 +164,22 @@ func DefaultPubKeys(loadDotSSH bool) ([]PubKey, error) {
 	return res, nil
 }
 
+type openSSHInfo struct {
+	// Version is set to the version of OpenSSH, or semver.New("0.0.0") if the version cannot be determined.
+	Version semver.Version
+
+	// Some distributions omit this feature by default, for example, Alpine, NixOS.
+	GSSAPISupported bool
+}
+
 var sshInfo struct {
 	sync.Once
 	// aesAccelerated is set to true when AES acceleration is available.
 	// Available on almost all modern Intel/AMD processors.
 	aesAccelerated bool
-	// openSSHVersion is set to the version of OpenSSH, or semver.New("0.0.0") if the version cannot be determined.
-	openSSHVersion semver.Version
+
+	// OpenSSH executable information for the version and supported options.
+	openSSH openSSHInfo
 }
 
 // CommonOpts returns ssh option key-value pairs like {"IdentityFile=/path/to/id_foo"}.
@@ -125,7 +187,7 @@ var sshInfo struct {
 //
 // The result always contains the IdentityFile option.
 // The result never contains the Port option.
-func CommonOpts(useDotSSH bool) ([]string, error) {
+func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -136,12 +198,11 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 		return nil, err
 	}
 	var opts []string
-	if runtime.GOOS == "windows" {
-		privateKeyPath = ioutilx.CanonicalWindowsPath(privateKeyPath)
-		opts = []string{fmt.Sprintf(`IdentityFile='%s'`, privateKeyPath)}
-	} else {
-		opts = []string{fmt.Sprintf(`IdentityFile="%s"`, privateKeyPath)}
+	idf, err := identityFileEntry(ctx, privateKeyPath)
+	if err != nil {
+		return nil, err
 	}
+	opts = []string{idf}
 
 	// Append all private keys corresponding to ~/.ssh/*.pub to keep old instances working
 	// that had been created before lima started using an internal identity.
@@ -156,7 +217,7 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 		}
 		for _, f := range files {
 			if !strings.HasSuffix(f, ".pub") {
-				panic(fmt.Errorf("unexpected ssh public key filename %q", f))
+				panic(fmt.Errorf("unexpected ssh public key filename %#q", f))
 			}
 			privateKeyPath := strings.TrimSuffix(f, ".pub")
 			_, err = os.Stat(privateKeyPath)
@@ -172,11 +233,11 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			if runtime.GOOS == "windows" {
-				opts = append(opts, fmt.Sprintf(`IdentityFile='%s'`, privateKeyPath))
-			} else {
-				opts = append(opts, fmt.Sprintf(`IdentityFile="%s"`, privateKeyPath))
+			idf, err = identityFileEntry(ctx, privateKeyPath)
+			if err != nil {
+				return nil, err
 			}
+			opts = append(opts, idf)
 		}
 	}
 
@@ -184,7 +245,6 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 		"StrictHostKeyChecking=no",
 		"UserKnownHostsFile=/dev/null",
 		"NoHostAuthenticationForLocalhost=yes",
-		"GSSAPIAuthentication=no",
 		"PreferredAuthentications=publickey",
 		"Compression=no",
 		"BatchMode=yes",
@@ -193,11 +253,15 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSHVersion = DetectOpenSSHVersion()
+		sshInfo.openSSH = detectOpenSSHInfo(ctx, sshExe)
 	})
 
+	if sshInfo.openSSH.GSSAPISupported {
+		opts = append(opts, "GSSAPIAuthentication=no")
+	}
+
 	// Only OpenSSH version 8.1 and later support adding ciphers to the front of the default set
-	if !sshInfo.openSSHVersion.LessThan(*semver.New("8.1.0")) {
+	if !sshInfo.openSSH.Version.LessThan(*semver.New("8.1.0")) {
 		// By default, `ssh` choose chacha20-poly1305@openssh.com, even when AES accelerator is available.
 		// (OpenSSH_8.1p1, macOS 11.6, MacBookPro 2020, Core i7-1068NG7)
 		//
@@ -221,27 +285,110 @@ func CommonOpts(useDotSSH bool) ([]string, error) {
 	return opts, nil
 }
 
-// SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist
-func SSHOpts(instDir string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
+func identityFileEntry(ctx context.Context, privateKeyPath string) (string, error) {
+	if runtime.GOOS == "windows" {
+		privateKeyPath, err := ioutilx.WindowsSubsystemPath(ctx, privateKeyPath)
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf(`IdentityFile='%s'`, privateKeyPath), nil
+	}
+	return fmt.Sprintf(`IdentityFile="%s"`, privateKeyPath), nil
+}
+
+// DisableControlMasterOptsFromSSHArgs returns ssh args that disable ControlMaster, ControlPath, and ControlPersist.
+func DisableControlMasterOptsFromSSHArgs(sshArgs []string) []string {
+	argsForOverridingConfigFile := []string{
+		"-o", "ControlMaster=no",
+		"-o", "ControlPath=none",
+		"-o", "ControlPersist=no",
+	}
+	return slices.Concat(argsForOverridingConfigFile, removeOptsFromSSHArgs(sshArgs, "ControlMaster", "ControlPath", "ControlPersist"))
+}
+
+func removeOptsFromSSHArgs(sshArgs []string, removeOpts ...string) []string {
+	res := make([]string, 0, len(sshArgs))
+	isOpt := false
+	for _, arg := range sshArgs {
+		if isOpt {
+			isOpt = false
+			if !slices.ContainsFunc(removeOpts, func(opt string) bool {
+				return strings.HasPrefix(arg, opt)
+			}) {
+				res = append(res, "-o", arg)
+			}
+		} else if arg == "-o" {
+			isOpt = true
+		} else {
+			res = append(res, arg)
+		}
+	}
+	return res
+}
+
+// IsControlMasterExisting returns true if the control socket file exists.
+func IsControlMasterExisting(instDir string) bool {
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	_, err := os.Stat(controlSock)
+	return err == nil
+}
+
+// IsControlMasterRunning reports whether an SSH ControlMaster process is
+// actively listening on the instance's control socket. Unlike
+// IsControlMasterExisting, which only checks that the socket file is present,
+// this dials the socket to verify that a master is alive. A stale socket left
+// behind by an unclean master exit (kill -9, OOM, host crash, or the Cygwin
+// emulation file outliving its process) has no listener and returns false.
+func IsControlMasterRunning(ctx context.Context, instDir string) bool {
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	var dialer net.Dialer
+	conn, err := dialer.DialContext(ctx, "unix", controlSock)
+	if err != nil {
+		return false
+	}
+	_ = conn.Close()
+	return true
+}
+
+// RemoveStaleControlMaster removes the SSH control socket only when no master
+// process is listening on it. It returns true when a stale socket was removed.
+// A live master's socket is never touched (returns false), and a missing socket
+// is treated as a no-op (returns false). This lets callers recover from a wedged
+// session without clobbering a healthy ControlMaster.
+func RemoveStaleControlMaster(ctx context.Context, instDir string) (bool, error) {
+	if IsControlMasterRunning(ctx, instDir) {
+		return false, nil
+	}
+	existed := IsControlMasterExisting(instDir)
+	controlSock := filepath.Join(instDir, filenames.SSHSock)
+	if err := os.RemoveAll(controlSock); err != nil {
+		return false, err
+	}
+	return existed, nil
+}
+
+// SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
+func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
-		return nil, fmt.Errorf("socket path %q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
+		return nil, fmt.Errorf("socket path %#q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	u, err := osutil.LimaUser(false)
-	if err != nil {
-		return nil, err
-	}
-	opts, err := CommonOpts(useDotSSH)
+	opts, err := CommonOpts(ctx, sshExe, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
 	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
 	if runtime.GOOS == "windows" {
-		controlSock = ioutilx.CanonicalWindowsPath(controlSock)
+		controlSock, err = ioutilx.WindowsSubsystemPath(ctx, controlSock)
+		if err != nil {
+			return nil, err
+		}
 		controlPath = fmt.Sprintf(`ControlPath='%s'`, controlSock)
 	}
 	opts = append(opts,
-		fmt.Sprintf("User=%s", u.Username), // guest and host have the same username, but we should specify the username explicitly (#85)
+		fmt.Sprintf("User=%s", username), // guest and host have the same username, but we should specify the username explicitly (#85)
 		"ControlMaster=auto",
 		controlPath,
 		"ControlPersist=yes",
@@ -268,8 +415,17 @@ func SSHArgsFromOpts(opts []string) []string {
 	return args
 }
 
+// SSHOptsRemovingControlPath removes ControlMaster, ControlPath, and ControlPersist options from SSH options.
+func SSHOptsRemovingControlPath(opts []string) []string {
+	// Create a copy of opts to avoid modifying the original slice, since slices.DeleteFunc modifies the slice in place.
+	copiedOpts := slices.Clone(opts)
+	return slices.DeleteFunc(copiedOpts, func(s string) bool {
+		return strings.HasPrefix(s, "ControlMaster") || strings.HasPrefix(s, "ControlPath") || strings.HasPrefix(s, "ControlPersist")
+	})
+}
+
 func ParseOpenSSHVersion(version []byte) *semver.Version {
-	regex := regexp.MustCompile(`^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
+	regex := regexp.MustCompile(`(?m)^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
 	matches := regex.FindSubmatch(version)
 	if len(matches) == 3 {
 		if len(matches[2]) == 0 {
@@ -280,20 +436,64 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 	return &semver.Version{}
 }
 
-func DetectOpenSSHVersion() semver.Version {
+func parseOpenSSHGSSAPISupported(version string) bool {
+	return !strings.Contains(version, `Unsupported option "gssapiauthentication"`)
+}
+
+// sshExecutable beyond path also records size and mtime, in the case of ssh upgrades.
+type sshExecutable struct {
+	Path    string
+	Size    int64
+	ModTime time.Time
+}
+
+var (
+	// openSSHInfos caches the parsed version and supported options of each ssh executable, if it is needed again.
+	openSSHInfos   = map[sshExecutable]*openSSHInfo{}
+	openSSHInfosRW sync.RWMutex
+)
+
+func detectOpenSSHInfo(ctx context.Context, sshExe SSHExe) openSSHInfo {
 	var (
-		v      semver.Version
+		info   openSSHInfo
+		exe    sshExecutable
 		stderr bytes.Buffer
 	)
-	cmd := exec.Command("ssh", "-V")
+	// Note: For SSH wrappers like "kitten ssh", os.Stat will check the wrapper
+	// executable (kitten) instead of the underlying ssh binary. This means
+	// cache invalidation won't work properly - ssh upgrades won't be detected
+	// since kitten's size/mtime won't change. This is probably acceptable.
+	if st, err := os.Stat(sshExe.Exe); err == nil {
+		exe = sshExecutable{Path: sshExe.Exe, Size: st.Size(), ModTime: st.ModTime()}
+		openSSHInfosRW.RLock()
+		info := openSSHInfos[exe]
+		openSSHInfosRW.RUnlock()
+		if info != nil {
+			return *info
+		}
+	}
+	sshArgs := append([]string{}, sshExe.Args...)
+	// -V should be last
+	sshArgs = append(sshArgs, "-o", "GSSAPIAuthentication=no", "-V")
+	cmd := exec.CommandContext(ctx, sshExe.Exe, sshArgs...)
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stderr=%q", cmd.Args, stderr.String())
+		logrus.Warnf("failed to run %v: stderr=%#q", cmd.Args, stderr.String())
 	} else {
-		v = *ParseOpenSSHVersion(stderr.Bytes())
-		logrus.Debugf("OpenSSH version %s detected", v)
+		info = openSSHInfo{
+			Version:         *ParseOpenSSHVersion(stderr.Bytes()),
+			GSSAPISupported: parseOpenSSHGSSAPISupported(stderr.String()),
+		}
+		logrus.Debugf("OpenSSH version %s detected, is GSSAPI supported: %t", info.Version, info.GSSAPISupported)
+		openSSHInfosRW.Lock()
+		openSSHInfos[exe] = &info
+		openSSHInfosRW.Unlock()
 	}
-	return v
+	return info
+}
+
+func DetectOpenSSHVersion(ctx context.Context, sshExe SSHExe) semver.Version {
+	return detectOpenSSHInfo(ctx, sshExe).Version
 }
 
 // detectValidPublicKey returns whether content represent a public key.
@@ -314,7 +514,11 @@ func detectValidPublicKey(content string) bool {
 		return false
 	}
 	sigLength := binary.BigEndian.Uint32(decodedKey)
-	if uint32(len(decodedKey)) < sigLength {
+	// The format identifier occupies decodedKey[4 : 4+sigLength], so the buffer
+	// must hold sigLength bytes beyond the 4-byte length prefix, not just
+	// sigLength bytes in total. len(decodedKey) >= 4 is guaranteed above, so the
+	// subtraction cannot underflow.
+	if sigLength > uint32(len(decodedKey))-4 {
 		return false
 	}
 	sigFormat := string(decodedKey[4 : 4+sigLength])
@@ -323,6 +527,11 @@ func detectValidPublicKey(content string) bool {
 
 func detectAESAcceleration() bool {
 	if !cpu.Initialized {
+		if runtime.GOOS == "linux" && runtime.GOARCH == "arm64" {
+			// cpu.Initialized seems to always be false, even when the cpu.ARM64 struct is filled out
+			// it is only being set by readARM64Registers, but not by readHWCAP or readLinuxProcCPUInfo
+			return cpu.ARM64.HasAES
+		}
 		if runtime.GOOS == "darwin" && runtime.GOARCH == "arm64" {
 			// golang.org/x/sys/cpu supports darwin/amd64, linux/amd64, and linux/arm64,
 			// but apparently lacks support for darwin/arm64: https://github.com/golang/sys/blob/v0.5.0/cpu/cpu_arm64.go#L43-L60
@@ -339,5 +548,5 @@ func detectAESAcceleration() bool {
 		logrus.Warn("Failed to detect CPU features. Assuming that AES acceleration is not available.")
 		return false
 	}
-	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.S390X.HasAES || cpu.X86.HasAES
+	return cpu.ARM.HasAES || cpu.ARM64.HasAES || cpu.PPC64.IsPOWER8 || cpu.S390X.HasAES || cpu.X86.HasAES
 }

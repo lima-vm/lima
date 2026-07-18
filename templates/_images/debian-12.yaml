@@ -1,0 +1,59 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260615-2510/debian-12-genericcloud-amd64-20260615-2510.qcow2"
+  arch: "x86_64"
+  digest: "sha512:800df5e7a08fb4e1f8e955c3cd866e6b2303b85d60d3eef1fc3c8600b0c3dc34a8fc7c47ab46942bd8ae5dedcba160ee58208ed4885bd6ac98b51cac21b5fcb9"
+  variant: "genericcloud"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260615-2510/debian-12-genericcloud-arm64-20260615-2510.qcow2"
+  arch: "aarch64"
+  digest: "sha512:0e59d55897ada3307ac68fd4145d76a6897d27cfde1722ca5d04f6a83f20c2ed92fc708c32d999fbbf988d970fc4089184caad6053ec09ab54ee7b603659c7cc"
+  variant: "genericcloud"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260615-2510/debian-12-generic-ppc64el-20260615-2510.qcow2"
+  arch: "ppc64le"
+  digest: "sha512:bc0cee83ea982f55f1f87045cb7c2a6d3b8d16d146b985dd55d612a0317d25e512c62ca8ae4045784d689f608208d8e148f147a3bc1f8f8e28ca998c3453499d"
+  variant: "generic"
+
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-amd64.qcow2
+  arch: x86_64
+  variant: "genericcloud"
+
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-genericcloud-arm64.qcow2
+  arch: aarch64
+  variant: "genericcloud"
+
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-generic-ppc64el.qcow2
+  arch: ppc64le
+  variant: "generic"
+
+# Try to use release-yyyyMMdd nocloud image if available.
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260615-2510/debian-12-nocloud-amd64-20260615-2510.qcow2"
+  arch: "x86_64"
+  digest: "sha512:ce54e8970d8f7c1448a52767417cc7b7a6bb87dc2a9b60ec954a214dad9aa7f2ff1e1373aba1321a1df6e0cb4f9ec5cbfc619ebb2d7ceab620bc7839e2cab938"
+  variant: "nocloud"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260615-2510/debian-12-nocloud-arm64-20260615-2510.qcow2"
+  arch: "aarch64"
+  digest: "sha512:6f0772ab93a023e0eb046ce0af11800161677ed8f23d00087de653a529fcc71d88215dd3bef75de6348a2b0da1c54e11156d4dd141d26bb55c487fda4718977e"
+  variant: "nocloud"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20260615-2510/debian-12-nocloud-ppc64el-20260615-2510.qcow2"
+  arch: "ppc64le"
+  digest: "sha512:7cf4ca5b92f22084551e8d2211256c2b1cba8496a6c172a87666b3fb7bcb8939d7802d29db851d24dc202d1fd1b2b73dcf3c9c1a02eef40e661c7f3d307d5e53"
+  variant: "nocloud"
+
+# Fallback nocloud images
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-amd64.qcow2
+  arch: x86_64
+  variant: "nocloud"
+
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-arm64.qcow2
+  arch: aarch64
+  variant: "nocloud"
+
+- location: https://cloud.debian.org/images/cloud/bookworm/latest/debian-12-nocloud-ppc64el.qcow2
+  arch: ppc64le
+  variant: "nocloud"
+
+mountTypesUnsupported: [9p]

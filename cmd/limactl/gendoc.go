@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
@@ -69,7 +72,7 @@ func gendocAction(cmd *cobra.Command, args []string) error {
 }
 
 func genMan(cmd *cobra.Command, dir string) error {
-	logrus.Infof("Generating man %q", dir)
+	logrus.Infof("Generating man %#q", dir)
 	// lima(1)
 	filePath := filepath.Join(dir, "lima.1")
 	md := "LIMA 1\n======" + `
@@ -98,7 +101,26 @@ and $LIMA_WORKDIR.
 	return doc.GenManTree(cmd.Root(), header, dir)
 }
 
+func escapeMarkdown(text string) string {
+	lines := strings.Split(text, "\n")
+	for i := range lines {
+		// Need to escape backticks first, before adding more
+		for c := range strings.SplitSeq("\\`*_[]()#+-.|", "") {
+			lines[i] = strings.ReplaceAll(lines[i], c, "\\"+c)
+		}
+		if i < len(lines)-1 {
+			if lines[i] != "" && lines[i+1] != "" {
+				lines[i] += "  " // line break
+			}
+		}
+	}
+	return strings.Join(lines, "\n")
+}
+
 func genDocsy(cmd *cobra.Command, dir string) error {
+	for _, c := range cmd.Root().Commands() {
+		c.Long = escapeMarkdown(c.Long)
+	}
 	return doc.GenMarkdownTreeCustom(cmd.Root(), dir, func(s string) string {
 		// Replace limactl_completion_bash to completion bash for docsy title
 		name := filepath.Base(s)
@@ -116,9 +138,9 @@ weight: 3
 	})
 }
 
-// replaceAll replaces all occurrences of new with old, for all files in dir
-func replaceAll(dir, old, new string) error {
-	logrus.Infof("Replacing %q with %q", old, new)
+// replaceAll replaces all occurrences of text with replacement, for all files in dir.
+func replaceAll(dir, text, replacement string) error {
+	logrus.Infof("Replacing %#q with %#q", text, replacement)
 	return filepath.Walk(dir, func(path string, info fs.FileInfo, err error) error {
 		if err != nil {
 			return err
@@ -133,7 +155,7 @@ func replaceAll(dir, old, new string) error {
 		if err != nil {
 			return err
 		}
-		out := bytes.ReplaceAll(in, []byte(old), []byte(new))
+		out := bytes.ReplaceAll(in, []byte(text), []byte(replacement))
 		err = os.WriteFile(path, out, 0o644)
 		if err != nil {
 			return err

@@ -1,0 +1,82 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:3ee4f67f322abb2d1d1f0fffc957f7411404ad6635dd35b026c8ff05ac6e534c"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:3d8db37fa9a8a0c8676dfc0ee3eb41fd0049d66cb055a792bddc8f4123443ae1"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+  digest: "sha256:117843962e8228a2bbd7e6ea76d22156064280f03736a21692834c2bb8572dd5"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:104eea355a9547d06131fd6c59e544110b01d4f3a7fb05068e3aafbd325e37bf"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:3b66fd7adf2084a25643da6dfb7f063d2409a43ba36408bfdaf5255e3cc25744"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260627/ubuntu-26.04-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:f2eaf924c5cc2a45602446eceafbd50fb6f04be0c183f0542d613d5d938535e3"
+  variant: "server"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img
+  arch: x86_64
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-arm64.img
+  arch: aarch64
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-riscv64.img
+  arch: riscv64
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-armhf.img
+  arch: armv7l
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-s390x.img
+  arch: s390x
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-ppc64el.img
+  arch: ppc64le
+  variant: "server"
+
+# Try to use release-yyyyMMdd minimal image if available.
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20260618/ubuntu-26.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:67023f4652d02102ec75b6b1b9c14fb24166d892345f64f941837f96b67b4fe5"
+  variant: "minimal"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20260618/ubuntu-26.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:9c506f9471f09b7efe484e68fdcb9a3d25eca6a2ce74a8a116fa95d0f4cc929e"
+  variant: "minimal"
+
+# Fallback minimal images
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  variant: "minimal"
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release/ubuntu-26.04-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  variant: "minimal"
+
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu
+
+# Do not require Lima NICs for systemd-networkd-wait-online: the first-boot
+# rename to eth0 fails on 26.04 (LP: #2136392) and would block boot for 120s.
+# Lima's cidata bootcmd renames the NIC and waits for it instead.
+param:
+  internal_netplanOptional: "true"

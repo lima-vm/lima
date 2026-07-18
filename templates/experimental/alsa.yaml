@@ -1,0 +1,41 @@
+# A template to run ubuntu using device: default
+
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/ubuntu-lts
+- template:_default/mounts
+
+vmType: qemu
+audio:
+  device: default
+
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    test -e /lib/modules/$(uname -r)/kernel/sound/pci/hda/snd-hda-intel.ko* && exit 0
+    apt-get install -y linux-modules-extra-$(uname -r)
+    modprobe snd-hda-intel
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v aplay >/dev/null 2>&1 && exit 0
+    apt-get install -y --no-install-recommends alsa-utils
+probes:
+- description: "alsa to be installed"
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    if ! timeout 30s bash -c "until command -v aplay >/dev/null 2>&1; do sleep 3; done"; then
+      echo >&2 "alsa is not installed yet"
+      exit 1
+    fi
+  hint: See "/var/log/cloud-init-output.log" in the guest
+message: |
+  To get a list of all available audio devices:
+  $ sudo aplay -L
+  To test the audio device, use something like:
+  $ sudo speaker-test -c2 -twav

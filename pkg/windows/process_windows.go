@@ -1,6 +1,10 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package windows
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -11,8 +15,8 @@ type CommandLineJSON []struct {
 }
 
 // GetProcessCommandLine returns a slice of string containing all commandlines for a given process name.
-func GetProcessCommandLine(name string) ([]string, error) {
-	out, err := exec.Command(
+func GetProcessCommandLine(ctx context.Context, name string) ([]string, error) {
+	out, err := exec.CommandContext(ctx,
 		"powershell.exe",
 		"-nologo",
 		"-noprofile",
@@ -26,8 +30,8 @@ func GetProcessCommandLine(name string) ([]string, error) {
 	}
 
 	var outJSON CommandLineJSON
-	if err = json.Unmarshal([]byte(out), &outJSON); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal %q as %T: %w", out, outJSON, err)
+	if err = json.Unmarshal(out, &outJSON); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal %#q as %T: %w", out, outJSON, err)
 	}
 
 	var ret []string

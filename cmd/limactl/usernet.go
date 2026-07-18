@@ -1,30 +1,36 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
 	"errors"
 	"fmt"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 
-	"github.com/lima-vm/lima/pkg/networks/usernet"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 )
 
 func newUsernetCommand() *cobra.Command {
 	hostagentCommand := &cobra.Command{
 		Use:    "usernet",
-		Short:  "run usernet",
+		Short:  "Run usernet",
 		Args:   cobra.ExactArgs(0),
 		RunE:   usernetAction,
 		Hidden: true,
 	}
-	hostagentCommand.Flags().StringP("pidfile", "p", "", "write pid to file")
-	hostagentCommand.Flags().StringP("endpoint", "e", "", "exposes usernet api(s) on this endpoint")
-	hostagentCommand.Flags().String("listen-qemu", "", "listen for qemu connections")
-	hostagentCommand.Flags().String("listen", "", "listen on a Unix socket and receive Bess-compatible FDs as SCM_RIGHTS messages")
-	hostagentCommand.Flags().String("subnet", "192.168.5.0/24", "sets subnet value for the usernet network")
+	hostagentCommand.Flags().StringP("pidfile", "p", "", "Write PID to file")
+	hostagentCommand.Flags().StringP("endpoint", "e", "", "Exposes usernet API(s) on this endpoint")
+	hostagentCommand.Flags().String("listen-qemu", "", "Listen for QMEU connections")
+	hostagentCommand.Flags().String("listen", "", "Listen on a Unix socket and receive Bess-compatible FDs as SCM_RIGHTS messages")
+	hostagentCommand.Flags().String("subnet", "192.168.5.0/24", "Sets subnet value for the usernet network")
 	hostagentCommand.Flags().Int("mtu", 1500, "mtu")
-	hostagentCommand.Flags().StringToString("leases", nil, "pass default static leases for startup. Eg: '192.168.104.1=52:55:55:b3:bc:d9,192.168.104.2=5a:94:ef:e4:0c:df' ")
+	hostagentCommand.Flags().StringToString("leases", nil, "Pass default static leases for startup. Eg: '192.168.104.1=52:55:55:b3:bc:d9,192.168.104.2=5a:94:ef:e4:0c:df' ")
 	return hostagentCommand
 }
 
@@ -35,7 +41,7 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	}
 	if pidfile != "" {
 		if _, err := os.Stat(pidfile); !errors.Is(err, os.ErrNotExist) {
-			return fmt.Errorf("pidfile %q already exists", pidfile)
+			return fmt.Errorf("pidfile %#q already exists", pidfile)
 		}
 		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
 			return err
@@ -73,7 +79,13 @@ func usernetAction(cmd *cobra.Command, _ []string) error {
 	os.RemoveAll(qemuSocket)
 	os.RemoveAll(fdSocket)
 
-	return usernet.StartGVisorNetstack(cmd.Context(), &usernet.GVisorNetstackOpts{
+	ctx, cancel := signal.NotifyContext(cmd.Context(), os.Interrupt, syscall.SIGTERM)
+	defer cancel()
+
+	// Environment Variables
+	// LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT: Specifies the timeout duration for resolving IP addresses in minutes. Default is 2 minutes.
+
+	return usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
 		MTU:           mtu,
 		Endpoint:      endpoint,
 		QemuSocket:    qemuSocket,

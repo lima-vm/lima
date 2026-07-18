@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package textutil
 
 import (
@@ -12,7 +15,7 @@ import (
 )
 
 // ExecuteTemplate executes a text/template template.
-func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
+func ExecuteTemplate(tmpl string, args any) ([]byte, error) {
 	x, err := template.New("").Parse(tmpl)
 	if err != nil {
 		return nil, err
@@ -24,31 +27,24 @@ func ExecuteTemplate(tmpl string, args interface{}) ([]byte, error) {
 	return b.Bytes(), nil
 }
 
-// PrefixString adds prefix to beginning of each line
+// PrefixString adds prefix to beginning of each line.
 func PrefixString(prefix, text string) string {
-	result := []string{}
-	for _, line := range strings.Split(text, "\n") {
-		if line == "" {
-			result = append(result, "")
-			continue
+	lines := strings.Split(text, "\n")
+	for i, line := range lines {
+		if line != "" {
+			lines[i] = prefix + line
 		}
-		result = append(result, prefix+line)
 	}
-	return strings.Join(result, "\n")
+	return strings.Join(lines, "\n")
 }
 
-// IndentString add spaces to beginning of each line
+// IndentString add spaces to beginning of each line.
 func IndentString(size int, text string) string {
 	prefix := strings.Repeat(" ", size)
 	return PrefixString(prefix, text)
 }
 
-// TrimString removes characters from beginning and end
-func TrimString(cutset, text string) string {
-	return strings.Trim(text, cutset)
-}
-
-// MissingString returns message if the text is empty
+// MissingString returns message if the text is empty.
 func MissingString(message, text string) string {
 	if text == "" {
 		return message
@@ -58,7 +54,7 @@ func MissingString(message, text string) string {
 
 // TemplateFuncMap is a text/template FuncMap.
 var TemplateFuncMap = template.FuncMap{
-	"json": func(v interface{}) string {
+	"json": func(v any) string {
 		var b bytes.Buffer
 		enc := json.NewEncoder(&b)
 		enc.SetEscapeHTML(false)
@@ -67,7 +63,7 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return strings.TrimSuffix(b.String(), "\n")
 	},
-	"yaml": func(v interface{}) string {
+	"yaml": func(v any) string {
 		var b bytes.Buffer
 		enc := yaml.NewEncoder(&b)
 		if err := enc.Encode(v); err != nil {
@@ -75,7 +71,7 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return "---\n" + strings.TrimSuffix(b.String(), "\n")
 	},
-	"indent": func(a ...interface{}) (string, error) {
+	"indent": func(a ...any) (string, error) {
 		if len(a) == 0 {
 			return "", errors.New("function takes at least one string argument")
 		}
@@ -95,7 +91,7 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return IndentString(size, text), nil
 	},
-	"missing": func(a ...interface{}) (string, error) {
+	"missing": func(a ...any) (string, error) {
 		if len(a) == 0 {
 			return "", errors.New("function takes at least one string argument")
 		}
@@ -117,7 +113,7 @@ var TemplateFuncMap = template.FuncMap{
 	},
 }
 
-// TemplateFuncHelp is help for TemplateFuncMap.
+// FuncHelp is help for TemplateFuncMap.
 var FuncHelp = []string{
 	"indent <size>: add spaces to beginning of each line",
 	"missing <message>: return message if the text is empty",

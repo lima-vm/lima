@@ -1,0 +1,5 @@
+minimumLimaVersion: 2.0.0
+
+base:
+- template:_images/oraclelinux-8
+- template:_default/mounts

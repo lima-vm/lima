@@ -1,28 +1,42 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package limayaml
 
 import (
 	"bytes"
+	"context"
 	"crypto/sha256"
+	_ "embed"
+	"errors"
 	"fmt"
+	"maps"
 	"net"
 	"os"
+	"os/user"
 	"path/filepath"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 	"text/template"
 
 	"github.com/docker/go-units"
+	"github.com/goccy/go-yaml"
 	"github.com/pbnjay/memory"
 	"github.com/sirupsen/logrus"
-	"golang.org/x/sys/cpu"
 
-	"github.com/lima-vm/lima/pkg/guestagent/api"
-	"github.com/lima-vm/lima/pkg/networks"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/ptr"
-	"github.com/lima-vm/lima/pkg/store/dirnames"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+	"github.com/lima-vm/lima/v2/pkg/instance/hostname"
+	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	. "github.com/lima-vm/lima/v2/pkg/must"
+	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
 const (
@@ -37,37 +51,32 @@ const (
 	DefaultVirtiofsQueueSize int = 1024
 )
 
-func defaultContainerdArchives() []File {
-	const nerdctlVersion = "1.7.3"
-	location := func(goos string, goarch string) string {
-		return "https://github.com/containerd/nerdctl/releases/download/v" + nerdctlVersion + "/nerdctl-full-" + nerdctlVersion + "-" + goos + "-" + goarch + ".tar.gz"
-	}
-	return []File{
-		{
-			Location: location("linux", "amd64"),
-			Arch:     X8664,
-			Digest:   "sha256:f373aab78f04379557285590ee60ed953d12c9a60e08a52ba159004cf5e3d212",
-		},
-		{
-			Location: location("linux", "arm64"),
-			Arch:     AARCH64,
-			Digest:   "sha256:4bf3e05c7203a1b86c84a506d022f7f4d2727143c8031cd5e4b78ef03f0fdcda",
-		},
-		// No arm-v7
-		// No riscv64
-	}
+var (
+	IPv4loopback1 = net.IPv4(127, 0, 0, 1)
+
+	userHomeDir = Must(os.UserHomeDir())
+	currentUser = Must(user.Current())
+)
+
+//go:embed containerd.yaml
+var defaultContainerdYAML []byte
+
+type ContainerdYAML struct {
+	Archives []limatype.File
 }
 
-// FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found
-func FirstUsernetIndex(l *LimaYAML) int {
-	for i := range l.Networks {
-		nwName := l.Networks[i].Lima
-		isUsernet, _ := networks.Usernet(nwName)
-		if isUsernet {
-			return i
-		}
+func defaultContainerdArchives() []limatype.File {
+	var containerd ContainerdYAML
+	err := yaml.UnmarshalWithOptions(defaultContainerdYAML, &containerd, yaml.Strict())
+	if err != nil {
+		panic(fmt.Errorf("failed to unmarshal as YAML: %w", err))
 	}
-	return -1
+	return containerd.Archives
+}
+
+// FirstUsernetIndex gets the index of first usernet network under l.Network[]. Returns -1 if no usernet network found.
+func FirstUsernetIndex(l *limatype.LimaYAML) int {
+	return slices.IndexFunc(l.Networks, func(network limatype.Network) bool { return networks.IsUsernet(network.Lima) })
 }
 
 func MACAddress(uniqueID string) string {
@@ -78,29 +87,16 @@ func MACAddress(uniqueID string) string {
 	// But the second hex number is changed to 2 to satisfy the convention for
 	// local MAC addresses (https://en.wikipedia.org/wiki/MAC_address#Ranges_of_group_and_locally_administered_addresses)
 	//
-	// See also https://gitlab.com/wireshark/wireshark/-/blob/master/manuf to confirm the uniqueness of this prefix.
+	// See also https://gitlab.com/wireshark/wireshark/-/blob/release-4.0/manuf to confirm the uniqueness of this prefix.
 	hw := append(net.HardwareAddr{0x52, 0x55, 0x55}, sha[0:3]...)
 	return hw.String()
 }
 
-func hostTimeZone() string {
-	// WSL2 will automatically set the timezone
-	if runtime.GOOS != "windows" {
-		tz, err := os.ReadFile("/etc/timezone")
-		if err == nil {
-			return strings.TrimSpace(string(tz))
-		}
-		zoneinfoFile, err := filepath.EvalSymlinks("/etc/localtime")
-		if err == nil {
-			for baseDir := filepath.Dir(zoneinfoFile); baseDir != "/"; baseDir = filepath.Dir(baseDir) {
-				if _, err = os.Stat(filepath.Join(baseDir, "Etc/UTC")); err == nil {
-					return strings.TrimPrefix(zoneinfoFile, baseDir+"/")
-				}
-			}
-			logrus.Warnf("could not locate zoneinfo directory from %q", zoneinfoFile)
-		}
-	}
-	return ""
+// MountTag generates a stable mount tag from location and mountPoint.
+// Both paths are hashed to handle the same location mounted to multiple mount points.
+func MountTag(location, mountPoint string) string {
+	sha := sha256.Sum256([]byte(location + ":" + mountPoint))
+	return fmt.Sprintf("lima-%x", sha[0:8])
 }
 
 func defaultCPUs() int {
@@ -146,14 +142,12 @@ func defaultGuestInstallPrefix() string {
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
-func FillDefault(y, d, o *LimaYAML, filePath string) {
-	if y.VMType == nil {
-		y.VMType = d.VMType
-	}
-	if o.VMType != nil {
-		y.VMType = o.VMType
-	}
-	y.VMType = ptr.Of(ResolveVMType(y.VMType))
+func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath string, warn bool) {
+	instDir := filepath.Dir(filePath)
+
+	existingLimaVersion := ExistingLimaVersion(instDir)
+
+	// OS has to be resolved before User
 	if y.OS == nil {
 		y.OS = d.OS
 	}
@@ -161,6 +155,85 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.OS = o.OS
 	}
 	y.OS = ptr.Of(ResolveOS(y.OS))
+
+	if y.User.Name == nil {
+		y.User.Name = d.User.Name
+	}
+	if y.User.Comment == nil {
+		y.User.Comment = d.User.Comment
+	}
+	if y.User.Home == nil {
+		y.User.Home = d.User.Home
+	}
+	if y.User.Shell == nil {
+		y.User.Shell = d.User.Shell
+	}
+	if y.User.UID == nil {
+		y.User.UID = d.User.UID
+	}
+	if o.User.Name != nil {
+		y.User.Name = o.User.Name
+	}
+	if o.User.Comment != nil {
+		y.User.Comment = o.User.Comment
+	}
+	if o.User.Home != nil {
+		y.User.Home = o.User.Home
+	}
+	if o.User.Shell != nil {
+		y.User.Shell = o.User.Shell
+	}
+	if o.User.UID != nil {
+		y.User.UID = o.User.UID
+	}
+	if y.User.Name == nil {
+		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Username)
+		warn = false
+	}
+	if y.User.Comment == nil {
+		y.User.Comment = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Name)
+		warn = false
+	}
+	if y.User.Home == nil {
+		y.User.Home = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).HomeDir)
+		warn = false
+	}
+	if y.User.Shell == nil {
+		switch *y.OS {
+		case limatype.FREEBSD:
+			y.User.Shell = ptr.Of("/bin/sh")
+		case limatype.DARWIN:
+			y.User.Shell = ptr.Of("/bin/zsh")
+		case limatype.WINDOWS:
+			y.User.Shell = ptr.Of("cmd.exe")
+		default:
+			y.User.Shell = ptr.Of("/bin/bash")
+		}
+	}
+	if y.User.UID == nil {
+		uidString := osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Uid
+		if uid, err := strconv.ParseUint(uidString, 10, 32); err == nil {
+			y.User.UID = ptr.Of(uint32(uid))
+		} else {
+			// This should never happen; LimaUser() makes sure that .Uid is numeric
+			logrus.WithError(err).Warnf("Can't parse `user.uid` %#q", uidString)
+			y.User.UID = ptr.Of(uint32(1000))
+		}
+		// warn = false
+	}
+	if out, err := executeGuestTemplate(*y.User.Home, instDir, y.User, y.Param); err == nil {
+		y.User.Home = ptr.Of(out.String())
+	} else {
+		logrus.WithError(err).Warnf("Couldn't process `user.home` value %#q as a template", *y.User.Home)
+	}
+
+	if y.VMType == nil {
+		y.VMType = d.VMType
+	}
+	if o.VMType != nil {
+		y.VMType = o.VMType
+	}
+
 	if y.Arch == nil {
 		y.Arch = d.Arch
 	}
@@ -169,7 +242,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	y.Arch = ptr.Of(ResolveArch(y.Arch))
 
-	y.Images = append(append(o.Images, y.Images...), d.Images...)
+	y.Images = slices.Concat(o.Images, y.Images, d.Images)
 	for i := range y.Images {
 		img := &y.Images[i]
 		if img.Arch == "" {
@@ -181,54 +254,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if img.Initrd != nil && img.Initrd.Arch == "" {
 			img.Initrd.Arch = img.Arch
 		}
-	}
-
-	cpuType := map[Arch]string{
-		AARCH64: "cortex-a72",
-		ARMV7L:  "cortex-a7",
-		// Since https://github.com/lima-vm/lima/pull/494, we use qemu64 cpu for better emulation of x86_64.
-		X8664:   "qemu64",
-		RISCV64: "rv64", // FIXME: what is the right choice for riscv64?
-	}
-	for arch := range cpuType {
-		if IsNativeArch(arch) && IsAccelOS() {
-			if HasHostCPU() {
-				cpuType[arch] = "host"
-			} else if HasMaxCPU() {
-				cpuType[arch] = "max"
-			}
-		}
-		if arch == X8664 && runtime.GOOS == "darwin" {
-			switch cpuType[arch] {
-			case "host", "max":
-				// Disable pdpe1gb on Intel Mac
-				// https://github.com/lima-vm/lima/issues/1485
-				// https://stackoverflow.com/a/72863744/5167443
-				cpuType[arch] += ",-pdpe1gb"
-			}
-		}
-	}
-	var overrideCPUType bool
-	for k, v := range d.CPUType {
-		if len(v) > 0 {
-			overrideCPUType = true
-			cpuType[k] = v
-		}
-	}
-	for k, v := range y.CPUType {
-		if len(v) > 0 {
-			overrideCPUType = true
-			cpuType[k] = v
-		}
-	}
-	for k, v := range o.CPUType {
-		if len(v) > 0 {
-			overrideCPUType = true
-			cpuType[k] = v
-		}
-	}
-	if *y.VMType == QEMU || overrideCPUType {
-		y.CPUType = cpuType
 	}
 
 	if y.CPUs == nil {
@@ -261,7 +286,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Disk = ptr.Of(defaultDiskSizeAsString())
 	}
 
-	y.AdditionalDisks = append(append(o.AdditionalDisks, y.AdditionalDisks...), d.AdditionalDisks...)
+	y.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, d.AdditionalDisks)
 
 	if y.Audio.Device == nil {
 		y.Audio.Device = d.Audio.Device
@@ -271,6 +296,16 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 	if y.Audio.Device == nil {
 		y.Audio.Device = ptr.Of("")
+	}
+
+	if y.Audio.Interface == nil {
+		y.Audio.Interface = d.Audio.Interface
+	}
+	if o.Audio.Interface != nil {
+		y.Audio.Interface = o.Audio.Interface
+	}
+	if y.Audio.Interface == nil {
+		y.Audio.Interface = ptr.Of("")
 	}
 
 	if y.Video.Display == nil {
@@ -289,9 +324,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.Video.VNC.Display != nil {
 		y.Video.VNC.Display = o.Video.VNC.Display
 	}
-	if (y.Video.VNC.Display == nil || *y.Video.VNC.Display == "") && *y.VMType == QEMU {
-		y.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
-	}
 
 	if y.Firmware.LegacyBIOS == nil {
 		y.Firmware.LegacyBIOS = d.Firmware.LegacyBIOS
@@ -303,7 +335,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Firmware.LegacyBIOS = ptr.Of(false)
 	}
 
-	y.Firmware.Images = append(append(o.Firmware.Images, y.Firmware.Images...), d.Firmware.Images...)
+	y.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, d.Firmware.Images)
 	for i := range y.Firmware.Images {
 		f := &y.Firmware.Images[i]
 		if f.Arch == "" {
@@ -338,7 +370,7 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.LoadDotSSHPubKeys = o.SSH.LoadDotSSHPubKeys
 	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
-		y.SSH.LoadDotSSHPubKeys = ptr.Of(true)
+		y.SSH.LoadDotSSHPubKeys = ptr.Of(false) // was true before Lima v1.0
 	}
 
 	if y.SSH.ForwardAgent == nil {
@@ -371,32 +403,104 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.SSH.ForwardX11Trusted = ptr.Of(false)
 	}
 
+	if y.SSH.OverVsock == nil {
+		y.SSH.OverVsock = d.SSH.OverVsock
+	}
+	if o.SSH.OverVsock != nil {
+		y.SSH.OverVsock = o.SSH.OverVsock
+	}
+	// y.SSH.OverVsock default value depends on the driver; filled in driver-specific FillDefault()
+
+	// The deprecated environment variable LIMA_SSH_OVER_VSOCK takes precedence over .ssh.overVsock
+	if envVar := os.Getenv("LIMA_SSH_OVER_VSOCK"); envVar != "" {
+		logrus.Warn("The environment variable LIMA_SSH_OVER_VSOCK is deprecated in favor of the YAML field .ssh.overVsock")
+		b, err := strconv.ParseBool(envVar)
+		if err != nil {
+			logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %#q", envVar)
+		} else {
+			logrus.Debugf("Overriding ssh.overVsock from %v to %v via LIMA_SSH_OVER_VSOCK", y.SSH.OverVsock, &b)
+			y.SSH.OverVsock = ptr.Of(b)
+		}
+	}
+
 	hosts := make(map[string]string)
 	// Values can be either names or IP addresses. Name values are canonicalized in the hostResolver.
-	for k, v := range d.HostResolver.Hosts {
-		hosts[k] = v
-	}
-	for k, v := range y.HostResolver.Hosts {
-		hosts[k] = v
-	}
-	for k, v := range o.HostResolver.Hosts {
-		hosts[k] = v
-	}
+	maps.Copy(hosts, d.HostResolver.Hosts)
+	maps.Copy(hosts, y.HostResolver.Hosts)
+	maps.Copy(hosts, o.HostResolver.Hosts)
 	y.HostResolver.Hosts = hosts
 
-	y.Provision = append(append(o.Provision, y.Provision...), d.Provision...)
+	y.Provision = slices.Concat(o.Provision, y.Provision, d.Provision)
 	for i := range y.Provision {
 		provision := &y.Provision[i]
 		if provision.Mode == "" {
-			provision.Mode = ProvisionModeSystem
+			provision.Mode = limatype.ProvisionModeSystem
 		}
-		if provision.Mode == ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
+		if provision.Mode == limatype.ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
 			provision.SkipDefaultDependencyResolution = ptr.Of(false)
 		}
-		if out, err := executeGuestTemplate(provision.Script); err == nil {
-			provision.Script = out.String()
-		} else {
-			logrus.WithError(err).Warnf("Couldn't process provisioning script %q as a template", provision.Script)
+		if provision.Mode == limatype.ProvisionModeData {
+			if provision.Content == nil {
+				provision.Content = ptr.Of("")
+			} else {
+				if out, err := executeGuestTemplate(*provision.Content, instDir, y.User, y.Param); err == nil {
+					provision.Content = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process data content %#q as a template", *provision.Content)
+				}
+			}
+			if provision.Overwrite == nil {
+				provision.Overwrite = ptr.Of(true)
+			}
+		}
+		if provision.Mode == limatype.ProvisionModeYQ {
+			if provision.Expression != nil {
+				if out, err := executeGuestTemplate(*provision.Expression, instDir, y.User, y.Param); err == nil {
+					provision.Expression = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process expression %#q as a template", *provision.Expression)
+				}
+			}
+			if provision.Format == nil {
+				provision.Format = ptr.Of("auto")
+			}
+		}
+		if provision.Mode == limatype.ProvisionModeData || provision.Mode == limatype.ProvisionModeYQ {
+			if provision.Owner == nil {
+				switch *y.OS {
+				case limatype.DARWIN, limatype.FREEBSD:
+					provision.Owner = ptr.Of("root:wheel")
+				default:
+					provision.Owner = ptr.Of("root:root")
+				}
+			} else {
+				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {
+					provision.Owner = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process owner %#q as a template", *provision.Owner)
+				}
+			}
+			// Path is required; validation will throw an error when it is nil
+			if provision.Path != nil {
+				if out, err := executeGuestTemplate(*provision.Path, instDir, y.User, y.Param); err == nil {
+					provision.Path = ptr.Of(out.String())
+				} else {
+					logrus.WithError(err).Warnf("Couldn't process path %#q as a template", *provision.Path)
+				}
+			}
+			if provision.Permissions == nil {
+				provision.Permissions = ptr.Of("644")
+			}
+		}
+		if provision.Script == nil {
+			provision.Script = ptr.Of("")
+		}
+		if *provision.Script != "" {
+			if out, err := executeGuestTemplate(*provision.Script, instDir, y.User, y.Param); err == nil {
+				*provision.Script = out.String()
+			} else {
+				logrus.WithError(err).Warnf("Couldn't process provisioning script %#q as a template", *provision.Script)
+			}
 		}
 	}
 
@@ -436,10 +540,22 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Containerd.User = o.Containerd.User
 	}
 	if y.Containerd.User == nil {
-		y.Containerd.User = ptr.Of(true)
+		// nerdctl is a Linux-only container runtime; only default
+		// containerd.user=true when the guest OS is Linux. Otherwise
+		// downloading the nerdctl archive (~250 MiB) is wasted I/O.
+		if *y.OS == limatype.LINUX {
+			switch *y.Arch {
+			case limatype.X8664, limatype.AARCH64:
+				y.Containerd.User = ptr.Of(true)
+			default:
+				y.Containerd.User = ptr.Of(false)
+			}
+		} else {
+			y.Containerd.User = ptr.Of(false)
+		}
 	}
 
-	y.Containerd.Archives = append(append(o.Containerd.Archives, y.Containerd.Archives...), d.Containerd.Archives...)
+	y.Containerd.Archives = slices.Concat(o.Containerd.Archives, y.Containerd.Archives, d.Containerd.Archives)
 	if len(y.Containerd.Archives) == 0 {
 		y.Containerd.Archives = defaultContainerdArchives()
 	}
@@ -450,27 +566,34 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		}
 	}
 
-	y.Probes = append(append(o.Probes, y.Probes...), d.Probes...)
+	y.Probes = slices.Concat(o.Probes, y.Probes, d.Probes)
 	for i := range y.Probes {
 		probe := &y.Probes[i]
 		if probe.Mode == "" {
-			probe.Mode = ProbeModeReadiness
+			probe.Mode = limatype.ProbeModeReadiness
 		}
 		if probe.Description == "" {
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
 		}
+		if probe.Script == nil {
+			probe.Script = ptr.Of("")
+		}
+		if out, err := executeGuestTemplate(*probe.Script, instDir, y.User, y.Param); err == nil {
+			probe.Script = ptr.Of(out.String())
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process probing script %#q as a template", *probe.Script)
+		}
 	}
 
-	y.PortForwards = append(append(o.PortForwards, y.PortForwards...), d.PortForwards...)
-	instDir := filepath.Dir(filePath)
+	y.PortForwards = slices.Concat(o.PortForwards, y.PortForwards, d.PortForwards)
 	for i := range y.PortForwards {
-		FillPortForwardDefaults(&y.PortForwards[i], instDir)
+		FillPortForwardDefaults(&y.PortForwards[i], instDir, y.User, y.Param)
 		// After defaults processing the singular HostPort and GuestPort values should not be used again.
 	}
 
-	y.CopyToHost = append(append(o.CopyToHost, y.CopyToHost...), d.CopyToHost...)
+	y.CopyToHost = slices.Concat(o.CopyToHost, y.CopyToHost, d.CopyToHost)
 	for i := range y.CopyToHost {
-		FillCopyToHostDefaults(&y.CopyToHost[i], instDir)
+		FillCopyToHostDefaults(&y.CopyToHost[i], instDir, y.User, y.Param)
 	}
 
 	if y.HostResolver.Enabled == nil {
@@ -503,45 +626,28 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.PropagateProxyEnv = ptr.Of(true)
 	}
 
-	networks := make([]Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
+	networks := make([]limatype.Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
 	iface := make(map[string]int)
-	for _, nw := range append(append(d.Networks, y.Networks...), o.Networks...) {
+	for _, nw := range slices.Concat(d.Networks, y.Networks, o.Networks) {
 		if i, ok := iface[nw.Interface]; ok {
-			if nw.VNLDeprecated != "" {
-				networks[i].VNLDeprecated = nw.VNLDeprecated
-				networks[i].SwitchPortDeprecated = nw.SwitchPortDeprecated
-				networks[i].Socket = ""
-				networks[i].Lima = ""
-			}
 			if nw.Socket != "" {
-				if nw.VNLDeprecated != "" {
-					// We can't return an error, so just log it, and prefer `socket` over `vnl`
-					logrus.Errorf("Network %q has both vnl=%q and socket=%q fields; ignoring vnl",
-						nw.Interface, nw.VNLDeprecated, nw.Socket)
-				}
 				networks[i].Socket = nw.Socket
-				networks[i].VNLDeprecated = ""
-				networks[i].SwitchPortDeprecated = 0
 				networks[i].Lima = ""
 			}
 			if nw.Lima != "" {
-				if nw.VNLDeprecated != "" {
-					// We can't return an error, so just log it, and prefer `lima` over `vnl`
-					logrus.Errorf("Network %q has both vnl=%q and lima=%q fields; ignoring vnl",
-						nw.Interface, nw.VNLDeprecated, nw.Lima)
-				}
 				if nw.Socket != "" {
 					// We can't return an error, so just log it, and prefer `lima` over `socket`
-					logrus.Errorf("Network %q has both socket=%q and lima=%q fields; ignoring socket",
+					logrus.Errorf("Network %#q has both socket=%#q and lima=%#q fields; ignoring socket",
 						nw.Interface, nw.Socket, nw.Lima)
 				}
 				networks[i].Lima = nw.Lima
 				networks[i].Socket = ""
-				networks[i].VNLDeprecated = ""
-				networks[i].SwitchPortDeprecated = 0
 			}
 			if nw.MACAddress != "" {
 				networks[i].MACAddress = nw.MACAddress
+			}
+			if nw.Metric != nil {
+				networks[i].Metric = nw.Metric
 			}
 		} else {
 			// unnamed network definitions are not combined/overwritten
@@ -561,7 +667,12 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if nw.Interface == "" {
 			nw.Interface = "lima" + strconv.Itoa(i)
 		}
+		if nw.Metric == nil {
+			nw.Metric = ptr.Of(uint32(100))
+		}
 	}
+
+	y.MountTypesUnsupported = slices.Concat(o.MountTypesUnsupported, y.MountTypesUnsupported, d.MountTypesUnsupported)
 
 	// MountType has to be resolved before resolving Mounts
 	if y.MountType == nil {
@@ -570,20 +681,53 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	if o.MountType != nil {
 		y.MountType = o.MountType
 	}
-	if y.MountType == nil || *y.MountType == "" {
-		if *y.VMType == VZ {
-			y.MountType = ptr.Of(VIRTIOFS)
-		} else {
-			y.MountType = ptr.Of(REVSSHFS)
-		}
+
+	if y.MountInotify == nil {
+		y.MountInotify = d.MountInotify
+	}
+	if o.MountInotify != nil {
+		y.MountInotify = o.MountInotify
+	}
+	if y.MountInotify == nil {
+		y.MountInotify = ptr.Of(false)
 	}
 
 	// Combine all mounts; highest priority entry determines writable status.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
-	mounts := make([]Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
-	location := make(map[string]int)
-	for _, mount := range append(append(d.Mounts, y.Mounts...), o.Mounts...) {
-		if i, ok := location[mount.Location]; ok {
+	mounts := make([]limatype.Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
+	mountPoint := make(map[string]int)
+	for _, mount := range slices.Concat(d.Mounts, y.Mounts, o.Mounts) {
+		if out, err := executeHostTemplate(mount.Location, instDir, y.Param); err == nil {
+			mount.Location = filepath.Clean(out.String())
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process mount location %#q as a template", mount.Location)
+		}
+		// Expand a path that begins with `~`. Relative paths are not modified, and rejected by Validate() later.
+		if localpathutil.IsTildePath(mount.Location) {
+			if location, err := localpathutil.Expand(mount.Location); err == nil {
+				mount.Location = location
+			} else {
+				logrus.WithError(err).Warnf("Couldn't expand location %#q", mount.Location)
+			}
+		}
+		if mount.MountPoint == nil {
+			mountLocation := mount.Location
+			if runtime.GOOS == "windows" {
+				var err error
+				mountLocation, err = ioutilx.WindowsSubsystemPath(ctx, mountLocation)
+				if err != nil {
+					logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
+				}
+			}
+			mount.MountPoint = ptr.Of(mountLocation)
+		} else {
+			if out, err := executeGuestTemplate(*mount.MountPoint, instDir, y.User, y.Param); err == nil {
+				mount.MountPoint = ptr.Of(out.String())
+			} else {
+				logrus.WithError(err).Warnf("Couldn't process mount point %#q as a template", *mount.MountPoint)
+			}
+		}
+		if i, ok := mountPoint[*mount.MountPoint]; ok {
 			if mount.SSHFS.Cache != nil {
 				mounts[i].SSHFS.Cache = mount.SSHFS.Cache
 			}
@@ -611,11 +755,11 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			if mount.Writable != nil {
 				mounts[i].Writable = mount.Writable
 			}
-			if mount.MountPoint != "" {
+			if mount.MountPoint != nil {
 				mounts[i].MountPoint = mount.MountPoint
 			}
 		} else {
-			location[mount.Location] = len(mounts)
+			mountPoint[*mount.MountPoint] = len(mounts)
 			mounts = append(mounts, mount)
 		}
 	}
@@ -641,9 +785,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		if mount.NineP.Msize == nil {
 			mounts[i].NineP.Msize = ptr.Of(Default9pMsize)
 		}
-		if mount.Virtiofs.QueueSize == nil && *y.VMType == QEMU && *y.MountType == VIRTIOFS {
-			mounts[i].Virtiofs.QueueSize = ptr.Of(DefaultVirtiofsQueueSize)
-		}
 		if mount.Writable == nil {
 			mount.Writable = ptr.Of(false)
 		}
@@ -653,9 +794,6 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 			} else {
 				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
 			}
-		}
-		if mount.MountPoint == "" {
-			mounts[i].MountPoint = mount.Location
 		}
 	}
 
@@ -668,16 +806,22 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 	}
 
 	env := make(map[string]string)
-	for k, v := range d.Env {
-		env[k] = v
-	}
-	for k, v := range y.Env {
-		env[k] = v
-	}
-	for k, v := range o.Env {
-		env[k] = v
-	}
+	maps.Copy(env, d.Env)
+	maps.Copy(env, y.Env)
+	maps.Copy(env, o.Env)
 	y.Env = env
+
+	param := make(map[string]string)
+	maps.Copy(param, d.Param)
+	maps.Copy(param, y.Param)
+	maps.Copy(param, o.Param)
+	y.Param = param
+
+	vmOpts := make(limatype.VMOpts)
+	maps.Copy(vmOpts, d.VMOpts)
+	maps.Copy(vmOpts, y.VMOpts)
+	maps.Copy(vmOpts, o.VMOpts)
+	y.VMOpts = vmOpts
 
 	if y.CACertificates.RemoveDefaults == nil {
 		y.CACertificates.RemoveDefaults = d.CACertificates.RemoveDefaults
@@ -689,34 +833,17 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.CACertificates.RemoveDefaults = ptr.Of(false)
 	}
 
-	caFiles := unique(append(append(d.CACertificates.Files, y.CACertificates.Files...), o.CACertificates.Files...))
-	y.CACertificates.Files = caFiles
+	y.CACertificates.Files = unique(slices.Concat(d.CACertificates.Files, y.CACertificates.Files, o.CACertificates.Files))
+	y.CACertificates.Certs = unique(slices.Concat(d.CACertificates.Certs, y.CACertificates.Certs, o.CACertificates.Certs))
 
-	caCerts := unique(append(append(d.CACertificates.Certs, y.CACertificates.Certs...), o.CACertificates.Certs...))
-	y.CACertificates.Certs = caCerts
-
-	if runtime.GOOS == "darwin" && IsNativeArch(AARCH64) {
-		if y.Rosetta.Enabled == nil {
-			y.Rosetta.Enabled = d.Rosetta.Enabled
-		}
-		if o.Rosetta.Enabled != nil {
-			y.Rosetta.Enabled = o.Rosetta.Enabled
-		}
-		if y.Rosetta.Enabled == nil {
-			y.Rosetta.Enabled = ptr.Of(false)
-		}
-	} else {
-		y.Rosetta.Enabled = ptr.Of(false)
+	if y.NestedVirtualization == nil {
+		y.NestedVirtualization = d.NestedVirtualization
 	}
-
-	if y.Rosetta.BinFmt == nil {
-		y.Rosetta.BinFmt = d.Rosetta.BinFmt
+	if o.NestedVirtualization != nil {
+		y.NestedVirtualization = o.NestedVirtualization
 	}
-	if o.Rosetta.BinFmt != nil {
-		y.Rosetta.BinFmt = o.Rosetta.BinFmt
-	}
-	if y.Rosetta.BinFmt == nil {
-		y.Rosetta.BinFmt = ptr.Of(false)
+	if y.NestedVirtualization == nil {
+		y.NestedVirtualization = ptr.Of(false)
 	}
 
 	if y.Plain == nil {
@@ -729,76 +856,132 @@ func FillDefault(y, d, o *LimaYAML, filePath string) {
 		y.Plain = ptr.Of(false)
 	}
 
+	if y.TPM == nil {
+		y.TPM = d.TPM
+	}
+	if o.TPM != nil {
+		y.TPM = o.TPM
+	}
+	if y.TPM == nil {
+		y.TPM = ptr.Of(false)
+	}
+	osOpts := make(limatype.OsOpts)
+	maps.Copy(osOpts, d.OsOpts)
+	maps.Copy(osOpts, y.OsOpts)
+	maps.Copy(osOpts, o.OsOpts)
+	y.OsOpts = osOpts
+
 	fixUpForPlainMode(y)
 }
 
-func fixUpForPlainMode(y *LimaYAML) {
+// ExistingLimaVersion returns empty if the instance was created with Lima prior to v0.20.
+func ExistingLimaVersion(instDir string) string {
+	if !IsExistingInstanceDir(instDir) {
+		return version.Version
+	}
+
+	limaVersionFile := filepath.Join(instDir, filenames.LimaVersion)
+	if b, err := os.ReadFile(limaVersionFile); err == nil {
+		return strings.TrimSpace(string(b))
+	} else if !errors.Is(err, os.ErrNotExist) {
+		logrus.WithError(err).Warnf("Failed to read %#q", limaVersionFile)
+	}
+
+	return version.Version
+}
+
+func fixUpForPlainMode(y *limatype.LimaYAML) {
 	if !*y.Plain {
 		return
 	}
+	deleteNonStaticPortForwards(&y.PortForwards)
 	y.Mounts = nil
-	y.PortForwards = nil
 	y.Containerd.System = ptr.Of(false)
 	y.Containerd.User = ptr.Of(false)
-	y.Rosetta.BinFmt = ptr.Of(false)
-	y.Rosetta.Enabled = ptr.Of(false)
 	y.TimeZone = ptr.Of("")
 }
 
-func executeGuestTemplate(format string) (bytes.Buffer, error) {
+// deleteNonStaticPortForwards removes all non-static port forwarding rules in case of Plain mode.
+func deleteNonStaticPortForwards(portForwards *[]limatype.PortForward) {
+	staticPortForwards := make([]limatype.PortForward, 0, len(*portForwards))
+	for _, rule := range *portForwards {
+		if rule.Static {
+			staticPortForwards = append(staticPortForwards, rule)
+		}
+	}
+	*portForwards = staticPortForwards
+}
+
+func executeGuestTemplate(format, instDir string, user limatype.User, param map[string]string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
-		user, _ := osutil.LimaUser(false)
-		data := map[string]string{
-			"Home": fmt.Sprintf("/home/%s.linux", user.Username),
-			"UID":  user.Uid,
-			"User": user.Username,
+		name := filepath.Base(instDir)
+		data := map[string]any{
+			"Name":     name,
+			"Hostname": hostname.FromInstName(name), // TODO: support customization
+			"UID":      *user.UID,
+			"User":     *user.Name,
+			"Home":     *user.Home,
+			"Param":    param,
 		}
 		var out bytes.Buffer
-		if err := tmpl.Execute(&out, data); err == nil {
+		err = tmpl.Execute(&out, data)
+		if err == nil {
 			return out, nil
 		}
 	}
 	return bytes.Buffer{}, err
 }
 
-func executeHostTemplate(format, instDir string) (bytes.Buffer, error) {
+func executeHostTemplate(format, instDir string, param map[string]string) (bytes.Buffer, error) {
 	tmpl, err := template.New("").Parse(format)
 	if err == nil {
-		user, _ := osutil.LimaUser(false)
-		home, _ := os.UserHomeDir()
 		limaHome, _ := dirnames.LimaDir()
-		data := map[string]string{
+		globalTempDir := "/tmp"
+		if runtime.GOOS == "windows" {
+			// On Windows the global temp directory "%SystemRoot%\Temp" (normally "C:\Windows\Temp")
+			// is not writable by regular users.
+			globalTempDir = os.TempDir()
+		}
+		data := map[string]any{
 			"Dir":  instDir,
-			"Home": home,
 			"Name": filepath.Base(instDir),
-			"UID":  user.Uid,
-			"User": user.Username,
+			// TODO: add hostname fields for the host and the guest
+			"UID":           currentUser.Uid,
+			"User":          currentUser.Username,
+			"Home":          userHomeDir,
+			"Param":         param,
+			"GlobalTempDir": globalTempDir,
+			"TempDir":       os.TempDir(),
 
 			"Instance": filepath.Base(instDir), // DEPRECATED, use `{{.Name}}`
 			"LimaHome": limaHome,               // DEPRECATED, use `{{.Dir}}` instead of `{{.LimaHome}}/{{.Instance}}`
 		}
 		var out bytes.Buffer
-		if err := tmpl.Execute(&out, data); err == nil {
+		err = tmpl.Execute(&out, data)
+		if err == nil {
 			return out, nil
 		}
 	}
 	return bytes.Buffer{}, err
 }
 
-func FillPortForwardDefaults(rule *PortForward, instDir string) {
+func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user limatype.User, param map[string]string) {
 	if rule.Proto == "" {
-		rule.Proto = TCP
+		rule.Proto = limatype.ProtoAny
 	}
 	if rule.GuestIP == nil {
-		if rule.GuestIPMustBeZero {
+		if rule.GuestIPMustBeZero != nil && *rule.GuestIPMustBeZero {
 			rule.GuestIP = net.IPv4zero
 		} else {
-			rule.GuestIP = api.IPv4loopback1
+			rule.GuestIP = IPv4loopback1
 		}
 	}
+	if rule.GuestIPMustBeZero == nil {
+		rule.GuestIPMustBeZero = ptr.Of(rule.GuestIP.Equal(net.IPv4zero))
+	}
 	if rule.HostIP == nil {
-		rule.HostIP = api.IPv4loopback1
+		rule.HostIP = IPv4loopback1
 	}
 	if rule.GuestPortRange[0] == 0 && rule.GuestPortRange[1] == 0 {
 		if rule.GuestPort == 0 {
@@ -809,7 +992,23 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 			rule.GuestPortRange[1] = rule.GuestPort
 		}
 	}
-	if rule.HostPortRange[0] == 0 && rule.HostPortRange[1] == 0 {
+	if rule.GuestSocket != "" {
+		if out, err := executeGuestTemplate(rule.GuestSocket, instDir, user, param); err == nil {
+			rule.GuestSocket = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process guestSocket %#q as a template", rule.GuestSocket)
+		}
+	}
+	if rule.HostSocket != "" {
+		if out, err := executeHostTemplate(rule.HostSocket, instDir, param); err == nil {
+			rule.HostSocket = out.String()
+		} else {
+			logrus.WithError(err).Warnf("Couldn't process hostSocket %#q as a template", rule.HostSocket)
+		}
+		if !filepath.IsAbs(rule.HostSocket) {
+			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
+		}
+	} else if rule.HostPortRange[0] == 0 && rule.HostPortRange[1] == 0 {
 		if rule.HostPort == 0 {
 			rule.HostPortRange = rule.GuestPortRange
 		} else {
@@ -817,156 +1016,52 @@ func FillPortForwardDefaults(rule *PortForward, instDir string) {
 			rule.HostPortRange[1] = rule.HostPort
 		}
 	}
-	if rule.GuestSocket != "" {
-		if out, err := executeGuestTemplate(rule.GuestSocket); err == nil {
-			rule.GuestSocket = out.String()
-		} else {
-			logrus.WithError(err).Warnf("Couldn't process guestSocket %q as a template", rule.GuestSocket)
-		}
-	}
-	if rule.HostSocket != "" {
-		if out, err := executeHostTemplate(rule.HostSocket, instDir); err == nil {
-			rule.HostSocket = out.String()
-		} else {
-			logrus.WithError(err).Warnf("Couldn't process hostSocket %q as a template", rule.HostSocket)
-		}
-		if !filepath.IsAbs(rule.HostSocket) {
-			rule.HostSocket = filepath.Join(instDir, filenames.SocketDir, rule.HostSocket)
-		}
-	}
 }
 
-func FillCopyToHostDefaults(rule *CopyToHost, instDir string) {
+func FillCopyToHostDefaults(rule *limatype.CopyToHost, instDir string, user limatype.User, param map[string]string) {
 	if rule.GuestFile != "" {
-		if out, err := executeGuestTemplate(rule.GuestFile); err == nil {
+		if out, err := executeGuestTemplate(rule.GuestFile, instDir, user, param); err == nil {
 			rule.GuestFile = out.String()
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process guest %q as a template", rule.GuestFile)
+			logrus.WithError(err).Warnf("Couldn't process guest %#q as a template", rule.GuestFile)
 		}
 	}
 	if rule.HostFile != "" {
-		if out, err := executeHostTemplate(rule.HostFile, instDir); err == nil {
+		if out, err := executeHostTemplate(rule.HostFile, instDir, param); err == nil {
 			rule.HostFile = out.String()
 		} else {
-			logrus.WithError(err).Warnf("Couldn't process host %q as a template", rule.HostFile)
+			logrus.WithError(err).Warnf("Couldn't process host %#q as a template", rule.HostFile)
 		}
 	}
 }
 
-func NewOS(osname string) OS {
-	switch osname {
-	case "linux":
-		return LINUX
-	default:
-		logrus.Warnf("Unknown os: %s", osname)
-		return osname
-	}
-}
-
-func goarm() int {
-	if runtime.GOOS != "linux" {
-		return 0
-	}
-	if runtime.GOARCH != "arm" {
-		return 0
-	}
-	if cpu.ARM.HasVFPv3 {
-		return 7
-	}
-	if cpu.ARM.HasVFP {
-		return 6
-	}
-	return 5 // default
-}
-
-func NewArch(arch string) Arch {
-	switch arch {
-	case "amd64":
-		return X8664
-	case "arm64":
-		return AARCH64
-	case "arm":
-		arm := goarm()
-		if arm == 7 {
-			return ARMV7L
+func IsExistingInstanceDir(dir string) bool {
+	// existence of "lima.yaml" does not signify existence of the instance,
+	// because the file is created during the initialization of the instance.
+	for _, f := range []string{
+		filenames.HostAgentStdoutLog, filenames.HostAgentStderrLog,
+		filenames.VzIdentifier, filenames.Image, filenames.Disk, filenames.BaseDiskLegacy, filenames.DiffDiskLegacy, filenames.CIDataISO,
+	} {
+		file := filepath.Join(dir, f)
+		if _, err := os.Lstat(file); !errors.Is(err, os.ErrNotExist) {
+			return true
 		}
-		logrus.Warnf("Unknown arm: %d", arm)
-		return arch
-	case "riscv64":
-		return RISCV64
-	default:
-		logrus.Warnf("Unknown arch: %s", arch)
-		return arch
 	}
+	return false
 }
 
-func NewVMType(driver string) VMType {
-	switch driver {
-	case "vz":
-		return VZ
-	case "qemu":
-		return QEMU
-	case "wsl2":
-		return WSL2
-	default:
-		logrus.Warnf("Unknown driver: %s", driver)
-		return driver
-	}
-}
-
-func ResolveVMType(s *string) VMType {
+func ResolveOS(s *string) limatype.OS {
 	if s == nil || *s == "" || *s == "default" {
-		return QEMU
-	}
-	return NewVMType(*s)
-}
-
-func ResolveOS(s *string) OS {
-	if s == nil || *s == "" || *s == "default" {
-		return NewOS("linux")
+		return limatype.NewOS("linux")
 	}
 	return *s
 }
 
-func ResolveArch(s *string) Arch {
+func ResolveArch(s *string) limatype.Arch {
 	if s == nil || *s == "" || *s == "default" {
-		return NewArch(runtime.GOARCH)
+		return limatype.NewArch(runtime.GOARCH)
 	}
 	return *s
-}
-
-func IsAccelOS() bool {
-	switch runtime.GOOS {
-	case "darwin", "linux", "netbsd", "windows":
-		// Accelerator
-		return true
-	}
-	// Using TCG
-	return false
-}
-
-func HasHostCPU() bool {
-	switch runtime.GOOS {
-	case "darwin", "linux":
-		return true
-	case "netbsd", "windows":
-		return false
-	}
-	// Not reached
-	return false
-}
-
-func HasMaxCPU() bool {
-	// WHPX: Unexpected VP exit code 4
-	return runtime.GOOS != "windows"
-}
-
-func IsNativeArch(arch Arch) bool {
-	nativeX8664 := arch == X8664 && runtime.GOARCH == "amd64"
-	nativeAARCH64 := arch == AARCH64 && runtime.GOARCH == "arm64"
-	nativeARMV7L := arch == ARMV7L && runtime.GOARCH == "arm" && goarm() == 7
-	nativeRISCV64 := arch == RISCV64 && runtime.GOARCH == "riscv64"
-	return nativeX8664 || nativeAARCH64 || nativeARMV7L || nativeRISCV64
 }
 
 func unique(s []string) []string {

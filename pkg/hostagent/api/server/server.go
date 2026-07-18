@@ -1,13 +1,19 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package server
 
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/gorilla/mux"
-	"github.com/lima-vm/lima/pkg/hostagent"
-	"github.com/lima-vm/lima/pkg/httputil"
+	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/hostagent"
+	"github.com/lima-vm/lima/v2/pkg/httputil"
 )
 
 type Backend struct {
@@ -15,8 +21,9 @@ type Backend struct {
 }
 
 func (b *Backend) onError(w http.ResponseWriter, err error, ec int) {
-	w.WriteHeader(ec)
+	// Set headers before WriteHeader — calling WriteHeader flushes headers.
 	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(ec)
 	// err may potentially contain credential info (in a future version),
 	// but it is safe to return the err to the client, because we do not expose the socket to the internet
 	e := httputil.ErrorJSON{
@@ -25,8 +32,13 @@ func (b *Backend) onError(w http.ResponseWriter, err error, ec int) {
 	_ = json.NewEncoder(w).Encode(e)
 }
 
-// GetInfo is the handler for GET /v{N}/info
+// GetInfo is the handler for GET /v1/info.
 func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	ctx := r.Context()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -46,7 +58,47 @@ func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(m)
 }
 
-func AddRoutes(r *mux.Router, b *Backend) {
-	v1 := r.PathPrefix("/v1").Subrouter()
-	v1.Path("/info").Methods("GET").HandlerFunc(b.GetInfo)
+// GetScreenshot is the handler for GET /v1/screenshot.
+func (b *Backend) GetScreenshot(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	ctx := r.Context()
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	format := strings.ToLower(r.URL.Query().Get("format"))
+	if format == "" {
+		format = "png"
+	}
+	if format != "png" && format != "bmp" {
+		b.onError(w, fmt.Errorf("unsupported format %q: must be png or bmp", format), http.StatusBadRequest)
+		return
+	}
+	data, err := b.Agent.Screenshot(ctx, format)
+	if err != nil {
+		ec := http.StatusInternalServerError
+		switch {
+		case errors.Is(err, driver.ErrDriverNotScreenshotter):
+			ec = http.StatusNotImplemented
+		case errors.Is(err, driver.ErrNoDisplay):
+			ec = http.StatusUnprocessableEntity
+		}
+		b.onError(w, err, ec)
+		return
+	}
+	ct := "image/png"
+	if format == "bmp" {
+		ct = "image/bmp"
+	}
+	w.Header().Set("Content-Type", ct)
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(data)
+}
+
+func AddRoutes(r *http.ServeMux, b *Backend) {
+	r.Handle("/v1/info", http.HandlerFunc(b.GetInfo))
+	r.Handle("/v1/screenshot", http.HandlerFunc(b.GetScreenshot))
 }

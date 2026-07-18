@@ -1,25 +1,42 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package main
 
 import (
-	"errors"
-	"fmt"
-	"os"
-	"os/exec"
-	"strings"
-
-	"github.com/coreos/go-semver/semver"
-	"github.com/lima-vm/lima/pkg/osutil"
-	"github.com/lima-vm/lima/pkg/sshutil"
-	"github.com/lima-vm/lima/pkg/store"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+
+	"github.com/lima-vm/lima/v2/pkg/copytool"
 )
 
 const copyHelp = `Copy files between host and guest
 
 Prefix guest filenames with the instance name and a colon.
 
-Example: limactl copy default:/etc/os-release .
+Backends:
+  auto   - Automatically selects the best available backend (rsync preferred, falls back to scp)
+  rsync  - Uses rsync for faster transfers with resume capability (requires rsync on both host and guest)
+  scp    - Uses scp for reliable transfers (always available)
+
+Not to be confused with 'limactl clone'.
+`
+
+const copyExample = `
+  # Copy file from guest to host (auto backend)
+  limactl copy default:/etc/os-release .
+
+  # Copy file from host to guest with verbose output
+  limactl copy -v myfile.txt default:/tmp/
+
+  # Copy directory recursively using rsync backend
+  limactl copy --backend=rsync -r ./mydir default:/tmp/
+
+  # Copy using scp backend specifically
+  limactl copy --backend=scp default:/var/log/app.log ./logs/
+
+  # Copy multiple files
+  limactl copy file1.txt file2.txt default:/tmp/
 `
 
 func newCopyCommand() *cobra.Command {
@@ -28,107 +45,64 @@ func newCopyCommand() *cobra.Command {
 		Aliases: []string{"cp"},
 		Short:   "Copy files between host and guest",
 		Long:    copyHelp,
+		Example: copyExample,
 		Args:    WrapArgsError(cobra.MinimumNArgs(2)),
 		RunE:    copyAction,
 		GroupID: advancedCommand,
 	}
 
-	copyCommand.Flags().BoolP("recursive", "r", false, "copy directories recursively")
+	copyCommand.Flags().BoolP("recursive", "r", false, "Copy directories recursively")
+	copyCommand.Flags().BoolP("verbose", "v", false, "Enable verbose output")
+	copyCommand.Flags().String("backend", "auto", "Copy backend (scp|rsync|auto)")
 
 	return copyCommand
 }
 
 func copyAction(cmd *cobra.Command, args []string) error {
+	ctx := cmd.Context()
 	recursive, err := cmd.Flags().GetBool("recursive")
 	if err != nil {
 		return err
 	}
 
-	arg0, err := exec.LookPath("scp")
+	verbose, err := cmd.Flags().GetBool("verbose")
 	if err != nil {
 		return err
 	}
-	u, err := osutil.LimaUser(false)
-	if err != nil {
-		return err
-	}
-	instDirs := make(map[string]string)
-	scpFlags := []string{}
-	scpArgs := []string{}
+
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
 		return err
 	}
+
 	if debug {
-		scpFlags = append(scpFlags, "-v")
+		verbose = true
 	}
-	if recursive {
-		scpFlags = append(scpFlags, "-r")
-	}
-	legacySSH := false
-	if sshutil.DetectOpenSSHVersion().LessThan(*semver.New("8.0.0")) {
-		legacySSH = true
-	}
-	for _, arg := range args {
-		path := strings.Split(arg, ":")
-		switch len(path) {
-		case 1:
-			scpArgs = append(scpArgs, arg)
-		case 2:
-			instName := path[0]
-			inst, err := store.Inspect(instName)
-			if err != nil {
-				if errors.Is(err, os.ErrNotExist) {
-					return fmt.Errorf("instance %q does not exist, run `limactl create %s` to create a new instance", instName, instName)
-				}
-				return err
-			}
-			if inst.Status == store.StatusStopped {
-				return fmt.Errorf("instance %q is stopped, run `limactl start %s` to start the instance", instName, instName)
-			}
-			if legacySSH {
-				scpFlags = append(scpFlags, "-P", fmt.Sprintf("%d", inst.SSHLocalPort))
-				scpArgs = append(scpArgs, fmt.Sprintf("%s@127.0.0.1:%s", u.Username, path[1]))
-			} else {
-				scpArgs = append(scpArgs, fmt.Sprintf("scp://%s@127.0.0.1:%d/%s", u.Username, inst.SSHLocalPort, path[1]))
-			}
-			instDirs[instName] = inst.Dir
-		default:
-			return fmt.Errorf("path %q contains multiple colons", arg)
-		}
-	}
-	if legacySSH && len(instDirs) > 1 {
-		return fmt.Errorf("More than one (instance) host is involved in this command, this is only supported for openSSH v8.0 or higher")
-	}
-	scpFlags = append(scpFlags, "-3", "--")
-	scpArgs = append(scpFlags, scpArgs...)
 
-	var sshOpts []string
-	if len(instDirs) == 1 {
-		// Only one (instance) host is involved; we can use the instance-specific
-		// arguments such as ControlPath.  This is preferred as we can multiplex
-		// sessions without re-authenticating (MaxSessions permitting).
-		for _, instDir := range instDirs {
-			sshOpts, err = sshutil.SSHOpts(instDir, false, false, false, false)
-			if err != nil {
-				return err
-			}
-		}
-	} else {
-		// Copying among multiple hosts; we can't pass in host-specific options.
-		sshOpts, err = sshutil.CommonOpts(false)
-		if err != nil {
-			return err
-		}
+	backend, err := cmd.Flags().GetString("backend")
+	if err != nil {
+		return err
 	}
-	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 
-	sshCmd := exec.Command(arg0, append(sshArgs, scpArgs...)...)
-	sshCmd.Stdin = cmd.InOrStdin()
-	sshCmd.Stdout = cmd.OutOrStdout()
-	sshCmd.Stderr = cmd.ErrOrStderr()
-	logrus.Debugf("executing scp (may take a long time)): %+v", sshCmd.Args)
+	cpTool, err := copytool.New(ctx, backend, args, &copytool.Options{
+		Recursive: recursive,
+		Verbose:   verbose,
+	})
+	if err != nil {
+		return err
+	}
+	logrus.Debugf("using copy tool %#q", cpTool.Name())
+
+	copyCmd, err := cpTool.Command(ctx, args, nil)
+	if err != nil {
+		return err
+	}
+
+	copyCmd.Stdin = cmd.InOrStdin()
+	copyCmd.Stdout = cmd.OutOrStdout()
+	copyCmd.Stderr = cmd.ErrOrStderr()
+	logrus.Debugf("executing %v (may take a long time)", copyCmd)
 
 	// TODO: use syscall.Exec directly (results in losing tty?)
-	return sshCmd.Run()
+	return copyCmd.Run()
 }

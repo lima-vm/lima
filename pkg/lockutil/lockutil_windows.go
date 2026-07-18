@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://github.com/containerd/nerdctl/blob/v0.13.0/pkg/lockutil/lockutil_windows.go
 /*
    Copyright The containerd Authors.
@@ -26,12 +29,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-// LockFile modified from https://github.com/boltdb/bolt/blob/v1.3.1/bolt_windows.go using MIT
+// LockFile modified from https://github.com/boltdb/bolt/blob/v1.3.1/bolt_windows.go using MIT.
 var (
 	modkernel32      = syscall.NewLazyDLL("kernel32.dll")
 	procLockFileEx   = modkernel32.NewProc("LockFileEx")
 	procUnlockFileEx = modkernel32.NewProc("UnlockFileEx")
 )
+
+// LOCKFILE_EXCLUSIVE_LOCK from https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
+const flagLockfileExclusiveLock = 0x00000002
 
 func WithDirLock(dir string, fn func() error) error {
 	dirFile, err := os.OpenFile(dir+".lock", os.O_CREATE, 0o644)
@@ -39,15 +45,26 @@ func WithDirLock(dir string, fn func() error) error {
 		return err
 	}
 	defer dirFile.Close()
-	// see https://msdn.microsoft.com/en-us/library/windows/desktop/aa365203(v=vs.85).aspx
-	// 1 lock immediately
-	if err := lockFileEx(syscall.Handle(dirFile.Fd()), 1, 0, 1, 0, &syscall.Overlapped{}); err != nil {
-		return fmt.Errorf("failed to lock %q: %w", dir, err)
+	if err := lockFileEx(
+		syscall.Handle(dirFile.Fd()), // hFile
+		flagLockfileExclusiveLock,    // dwFlags
+		0,                            // dwReserved
+		1,                            // nNumberOfBytesToLockLow
+		0,                            // nNumberOfBytesToLockHigh
+		&syscall.Overlapped{},        // lpOverlapped
+	); err != nil {
+		return fmt.Errorf("failed to lock %#q: %w", dir, err)
 	}
 
 	defer func() {
-		if err := unlockFileEx(syscall.Handle(dirFile.Fd()), 0, 1, 0, &syscall.Overlapped{}); err != nil {
-			logrus.WithError(err).Errorf("failed to unlock %q", dir)
+		if err := unlockFileEx(
+			syscall.Handle(dirFile.Fd()), // hFile
+			0,                            // dwReserved
+			1,                            // nNumberOfBytesToLockLow
+			0,                            // nNumberOfBytesToLockHigh
+			&syscall.Overlapped{},        // lpOverlapped
+		); err != nil {
+			logrus.WithError(err).Errorf("failed to unlock %#q", dir)
 		}
 	}()
 	return fn()

@@ -1,15 +1,19 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package osutil
 
 import (
 	"fmt"
 	"os/exec"
 	"strings"
+	"sync"
 
 	"github.com/coreos/go-semver/semver"
 )
 
 // ProductVersion returns the macOS product version like "12.3.1".
-func ProductVersion() (*semver.Version, error) {
+var ProductVersion = sync.OnceValues(func() (*semver.Version, error) {
 	cmd := exec.Command("sw_vers", "-productVersion")
 	// output is like "12.3.1\n"
 	b, err := cmd.Output()
@@ -23,7 +27,7 @@ func ProductVersion() (*semver.Version, error) {
 	}
 	verSem, err := semver.NewVersion(verTrimmed)
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse macOS version %q: %w", verTrimmed, err)
+		return nil, fmt.Errorf("failed to parse macOS version %#q: %w", verTrimmed, err)
 	}
 	return verSem, nil
-}
+})

@@ -1,0 +1,21 @@
+minimumLimaVersion: 2.0.0
+
+base: template:_default/mounts
+
+images:
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-genericcloud-amd64-daily.qcow2
+  arch: x86_64
+
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-genericcloud-arm64-daily.qcow2
+  arch: aarch64
+
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-generic-riscv64-daily.qcow2
+  arch: riscv64
+
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-generic-ppc64el-daily.qcow2
+  arch: ppc64le
+
+- location: https://cloud.debian.org/images/cloud/sid/daily/latest/debian-sid-generic-s390x-daily.qcow2
+  arch: s390x
+
+mountTypesUnsupported: [9p]

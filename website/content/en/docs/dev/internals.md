@@ -1,0 +1,247 @@
+---
+title: Internal data structure
+weight: 10
+---
+
+## Lima home directory (`${LIMA_HOME}`)
+
+Defaults to `~/.lima`.
+
+Note that we intentionally avoid using `~/Library/Application Support/Lima` on macOS.
+
+We use `~/.lima` so that we can have enough space for the length of the socket path,
+which must be less than 104 characters on macOS.
+
+Unix: The directory can not be located on an NFS file system, it needs to be local.
+
+### Config directory (`${LIMA_HOME}/_config`)
+
+The config directory contains global lima settings that apply to all instances.
+
+User identity:
+
+Lima creates a default identity and uses its public key as the authorized key
+to access all lima instances. In addition, lima will also configure all public
+keys from `~/.ssh/*.pub` as well, so the user can use the ssh endpoint without
+having to specify an identity explicitly.
+- `user`: private key
+- `user.pub`: public key
+
+### Instance directory (`${LIMA_HOME}/<INSTANCE>`)
+
+An instance directory contains the following files:
+
+Metadata:
+- `lima-version`: the Lima version used to create this instance
+- `lima.yaml`: the YAML
+- `protected`: empty file, used by `limactl protect`
+
+cloud-init:
+- `cloud-config.yaml`: cloud-init configuration, for reference only.
+- `cidata.iso`: cloud-init ISO9660 image. See [`cidata.iso`](#cidataiso).
+
+Ansible:
+- `ansible-inventory.yaml`: the Ansible node inventory. See [ansible](#ansible).
+
+disk:
+- `image`: the downloaded VM image; renamed to `disk` or `iso` during setup
+- `image.ipsw`: hardlink to `image`, created for running `VZMacOSInstaller` that requires the image file to have the `.ipsw` suffix
+- `disk`: the VM disk (can be a symlink to legacy `diffdisk`)
+- `iso`: optional CDROM image for ISO-based installations (can be a symlink to legacy `basedisk`)
+- `basedisk`: legacy name for the downloaded image (pre-v2.1 instances; may remain as a qcow2 backing file)
+- `diffdisk`: legacy name for `disk` (pre-v2.1 instances)
+
+disk mount:
+- `mnt`: the mount point directory for the `disk`, used for macOS guests
+
+kernel:
+- `kernel`: the kernel
+- `kernel.cmdline`: the kernel cmdline
+- `initrd`: the initrd
+
+QEMU:
+- `qemu.pid`: QEMU PID
+- `qmp.sock`: QMP socket
+- `qemu-efi-code.fd`: QEMU UEFI code (not always present)
+
+VZ:
+- `vz.pid`: VZ PID
+- `vz-identifier`: Unique machine identifier file for a VM
+- `vz-hwmodel`: Hardware model information for a Mac VM
+- `vz-aux`: Auxiliary storage for a Mac VM
+- `vz-efi`: EFIVariable store file for a VM
+
+Serial:
+- `serial.log`: default serial log (QEMU only), for debugging
+- `serial.sock`: default serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
+- `serialp.log`: PCI serial log (QEMU (ARM) only), for debugging
+- `serialp.sock`: PCI serial socket (QEMU (ARM) only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serialp.sock`)
+- `serialv.log`: virtio serial log, for debugging
+- `serialv.sock`: virtio serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serialv.sock`)
+
+SSH:
+- `ssh.sock`: SSH control master socket
+- `ssh.config`: SSH config file for `ssh -F`. Not consumed by Lima itself.
+
+VNC:
+- `vncdisplay`: VNC display host/port
+- `vncpassword`: VNC display password
+
+TPM:
+- `swtpm.sock`: SWTPM (Software TPM Emulator) socket.
+- `swtpm`: A directory where TPM's state will be written.
+
+Guest agent:
+
+Each drivers use their own mode of communication
+- `qemu`: uses virtio-port `io.lima-vm.guest_agent.0`
+- `vz`: uses vsock port 2222
+- `wsl2`: uses free random vsock port
+The fallback is to use port forward over ssh port
+- `ga.sock`: Forwarded to `/run/lima-guestagent.sock` in the guest, via SSH
+
+Host agent:
+- `ha.pid`: hostagent PID
+- `ha.sock`: hostagent REST API
+- `ha.stdout.log`: hostagent stdout (JSON lines, see `pkg/hostagent/events.Event`)
+- `ha.stderr.log`: hostagent stderr (human-readable messages)
+
+External drivers:
+- `lima-driver-<driver-name>-<owner>.pid`: external driver process PID, where `<owner>` is either `ha` (written by the hostagent) or `cli` (written by the CLI process). Used by `limactl stop --force` and `limactl rm --force` to discover and kill orphaned external driver processes. Each process only removes its own PID file on graceful exit; force stop globs all matching files and kills them.
+
+## Disk directory (`${LIMA_HOME}/_disk/<DISK>`)
+
+A disk directory contains the following files:
+
+data disk:
+- `datadisk`: the qcow2 or raw disk that is attached to an instance
+
+lock:
+- `in_use_by`: symlink to the instance directory that is using the disk
+
+When using `vmType: vz` (Virtualization.framework), on boot, any qcow2 (default) formatted disks that are specified in `additionalDisks` will be converted to RAW since [Virtualization.framework only supports mounting RAW disks](https://developer.apple.com/documentation/virtualization/vzdiskimagestoragedeviceattachment). This conversion enables additional disks to work with both Virtualization.framework and QEMU, but it has some consequences when it comes to interacting with the disks. Most importantly, a regular macOS default `cp` command will copy the _entire_ virtual disk size, instead of just the _used/allocated_ portion. The easiest way to copy only the used data is by adding the `-c` option to cp: `cp -c old_path new_path`. `cp -c` uses clonefile(2) to create a copy-on-write clone of the disk, and should return instantly.
+
+`ls` will also only show the full/virtual size of the disks. To see the allocated space, `du -h disk_path` or `qemu-img info disk_path` can be used instead. See [#1405](https://github.com/lima-vm/lima/pull/1405) for more details.
+
+## Templates directory (`${LIMA_HOME}/_templates`)
+
+The templates directory can store additional template files that can be referenced with the `template:` schema.
+
+If the template directory exists (and `$LIMA_TEMPLATES_PATH` is not set), then this directory will be searched before the `/usr/local/share/lima/templates` default directory that contains all the templates bundled with Lima itself.
+
+## Lima cache directory (`~/Library/Caches/lima`)
+
+Currently hard-coded to `~/Library/Caches/lima` on macOS.
+
+Uses `$XDG_CACHE_HOME/lima`, normally `$HOME/.cache/lima`, on Linux.
+
+Uses `%LocalAppData%\lima`, `C:\Users\<USERNAME>\AppData\Local\lima`, on Windows.
+
+### Download cache (`~/Library/Caches/lima/download/by-url-sha256/<SHA256_OF_URL>`)
+
+The directory contains the following files:
+
+- `url`: raw url text, without "\n"
+- `data`: data
+- `data.part`: (Optional) a partial download that has not completed yet. It is renamed to `data` once the download finishes and its digest (if any) is verified. When a download is interrupted, this file is kept so the next attempt can resume it with an HTTP `Range` request (guarded by `If-Range`). At most one `data.part` exists per URL. A leftover partial is only removed together with its cache entry: `limactl prune` deletes the entire cache, and when `limactl prune --keep-referred` deletes an unused cache entry, any `data.part` in that entry is removed with it.
+- `time`: value of the `Last-Modified` response header, used to detect changes of digest-less images and as an `If-Range` validator when resuming.
+- `type`: value of the `Content-Type` response header.
+- `etag`: (Optional) value of the `ETag` response header, used as the preferred `If-Range` validator when resuming.
+- `<ALGO>.digest`: digest of the data, in OCI format.
+   e.g., file name `sha256.digest`, with content `sha256:5ba3d476707d510fe3ca3928e9cda5d0b4ce527d42b343404c92d563f82ba967`
+- `imgconv/`: (Optional) a converted copy of the image, in a format the current driver can use. The downloader creates this on demand when the driver reports its `SupportedImageFormats` and the cached `data` is not one of them (for example, a `qcow2` image requested by the `vz` driver, which only boots raw). The original `data` and its digest file are left as-is, so another driver can still use them.
+  - `raw`: the converted raw image. If `data` is newer than `raw`, the raw copy is treated as stale and rebuilt.
+  - `raw.digest`: digest of the raw image. Uses the same algorithm as the digest the caller passed in, and is only read back when the caller passes an expected digest.
+
+
+## Ansible
+The instance directory contains an inventory file, that might be used with Ansible playbooks and commands.
+See [Building Ansible inventories](https://docs.ansible.com/ansible/latest/inventory_guide/) about dynamic inventories.
+
+## `cidata.iso`
+`cidata.iso` contains the following files:
+
+- `user-data`: [Cloud-init user-data](https://docs.cloud-init.io/en/latest/explanation/format.html)
+- `meta-data`: [Cloud-init meta-data](https://docs.cloud-init.io/en/latest/explanation/instancedata.html)
+- `network-config`: [Cloud-init Networking Config Version 2](https://docs.cloud-init.io/en/latest/reference/network-config-format-v2.html)
+- `lima.env`: The `LIMA_CIDATA_*` environment variables (see below) available during `boot.sh` processing
+- `param.env`: The `PARAM_*` environment variables corresponding to the `param` settings from `lima.yaml`
+- `lima-guestagent`: Lima guest agent binary. On Linux, omitted in [plain mode](../config/plain.md) (the guest agent daemon does not run). On macOS, always injected, as it is required for fake-cloud-init.
+- `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-<OS>-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
+- `boot.sh`: Boot script
+- `boot.<OS>/*`: Boot script modules
+- `boot.essential.<OS>/*`: Essential boot script modules, executed in [plain mode](../config/plain.md) too (unlike `boot.<OS>/*`, which is skipped in plain mode).
+- `util/*`: Utility command scripts, executed in the boot script modules
+- `provision.data/*`: Custom provision files (data)
+- `provision.dependency/*`: Custom provision scripts (dependency)
+- `provision.system/*`: Custom provision scripts (system)
+- `provision.user/*`: Custom provision scripts (user)
+- `provision.yq/*`: Custom provision scripts (yq)
+- `etc_environment`: Environment variables to be added to `/etc/environment` (also loaded during `boot.sh`)
+
+Max file name length = 30
+
+### Volume label
+The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cloud-init.io/en/latest/reference/datasources/nocloud.html).
+
+### Environment variables
+- `LIMA_CIDATA_DEBUG`: the value of the `--debug` flag of the `limactl start` command.
+- `LIMA_CIDATA_IID`: the instance ID, regenerated on every boot.
+- `LIMA_CIDATA_NAME`: the lima instance name.
+- `LIMA_CIDATA_MNT`: the mount point of the disk. `/mnt/lima-cidata`.
+- `LIMA_CIDATA_USER`: the username string.
+- `LIMA_CIDATA_UID`: the numeric UID.
+- `LIMA_CIDATA_COMMENT`: the full name or comment string.
+- `LIMA_CIDATA_HOME`: the guest home directory.
+- `LIMA_CIDATA_SHELL`: the guest login shell.
+- `LIMA_CIDATA_HOSTHOME_MOUNTPOINT`: the mount point of the host home directory, or empty if not mounted.
+- `LIMA_CIDATA_MOUNTS`: the number of the Lima mounts.
+- `LIMA_CIDATA_MOUNTS_%d_MOUNTPOINT`: the N-th mount point of Lima mounts (N=0, 1, ...).
+- `LIMA_CIDATA_MOUNTTYPE`: the type of the Lima mounts ("reverse-sshfs", "9p", ...).
+- `LIMA_CIDATA_DISKS`: the number of additional disks attached to the instance.
+- `LIMA_CIDATA_DISK_%d_NAME`: the name of the N-th additional disk (N=0, 1, ...).
+- `LIMA_CIDATA_DISK_%d_DEVICE`: the guest block device path of the N-th additional disk.
+- `LIMA_CIDATA_DISK_%d_FORMAT`: set to "true" when the N-th additional disk should be formatted on first boot.
+- `LIMA_CIDATA_DISK_%d_FSTYPE`: the filesystem type to format the N-th additional disk with (e.g. `ext4`).
+- `LIMA_CIDATA_DISK_%d_FSARGS`: extra arguments passed to mkfs for the N-th additional disk (space-separated).
+- `LIMA_CIDATA_DATAFILE_%08d_OVERWRITE`: set to "true" if the datafile should be overwritten if it already exists.
+- `LIMA_CIDATA_DATAFILE_%08d_OWNER`: set to the owner of the datafile.
+- `LIMA_CIDATA_DATAFILE_%08d_PATH`: set to the path the datafile should be copied to.
+- `LIMA_CIDATA_DATAFILE_%08d_PERMISSIONS`: set to the file permissions (in octal) for the datafile.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_FORMAT`: the input format ("yaml" or "json") for the N-th yq provision step.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_OWNER`: the owner (user[:group]) for the file produced by the N-th yq provision step.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_PATH`: the destination path for the N-th yq provision step.
+- `LIMA_CIDATA_YQ_PROVISION_%08d_PERMISSIONS`: the file permissions (in octal) for the N-th yq provision step.
+- `LIMA_CIDATA_GUEST_INSTALL_PREFIX`: the install prefix used for guest tools (e.g. `/usr/local`).
+- `LIMA_CIDATA_UPGRADE_PACKAGES`: set to "1" if `upgradePackages` is enabled in `lima.yaml`, empty otherwise.
+- `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up.
+- `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up.
+- `LIMA_CIDATA_CONTAINERD_ARCHIVE`: the name of the containerd archive. `nerdctl-full.tgz`.
+- `LIMA_CIDATA_SLIRP_GATEWAY`: set to the IP address of the host on the SLIRP network. `192.168.5.2`.
+- `LIMA_CIDATA_SLIRP_DNS`: set to the IP address of the DNS on the SLIRP network. `192.168.5.3`.
+- `LIMA_CIDATA_SLIRP_IP_ADDRESS`: set to the IP address of the guest on the SLIRP network. `192.168.5.15`.
+- `LIMA_CIDATA_UDP_DNS_LOCAL_PORT`: set to the udp port number of the hostagent dns server (or 0 when not enabled).
+- `LIMA_CIDATA_TCP_DNS_LOCAL_PORT`: set to the tcp port number of the hostagent dns server (or 0 when not enabled).
+- `LIMA_CIDATA_ROSETTA_ENABLED`: set to "true" if Rosetta x86_64 emulation is enabled in the guest (Apple Silicon, `vz` driver).
+- `LIMA_CIDATA_ROSETTA_BINFMT`: set to "true" if the guest should register the Rosetta binfmt_misc handler at boot.
+- `LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION`: set to "1" to skip Lima's built-in package dependency resolution during provisioning, empty otherwise.
+- `LIMA_CIDATA_VMTYPE`: the VM driver type ("qemu", "vz", "wsl2", ...), used to conditionally enable VM-specific behavior (e.g. virtiofs mounts on `vz`).
+- `LIMA_CIDATA_VSOCK_PORT`: the vsock port used by the guest agent (0 when vsock is not used).
+- `LIMA_CIDATA_VIRTIO_PORT`: the virtio-serial port name used by the guest agent (empty when virtio-serial is not used).
+- `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in [plain mode](../config/plain.md) (no mounts, port forwarding, or containerd), empty otherwise.
+- `LIMA_CIDATA_NO_CLOUD_INIT`: set to "1" if cloud-init should be skipped on this boot, empty otherwise.
+
+
+## Guest runtime files
+
+Boot scripts create the following marker files inside the guest at `/run/`:
+
+- `/run/lima-boot-done`: Written by `boot.sh` when provisioning is complete. Contains `LIMA_CIDATA_IID`.
+- `/run/lima-ssh-ready`: Written by `boot.Linux/07-etc-environment.sh` when SSH is ready. Contains `LIMA_CIDATA_IID`.
+- `/run/lima-fuse-ready`: Written by `boot.Linux/35-setup-packages.sh` after fuse.conf is configured for `allow_other`. Contains `LIMA_CIDATA_IID`. Only created when `LIMA_CIDATA_MOUNTTYPE=reverse-sshfs`.
+
+# VM lifecycle
+
+![](/images/internals/lima-sequence-diagram.png)
+
+(based on Lima 0.8.3)

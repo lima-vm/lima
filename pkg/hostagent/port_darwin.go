@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package hostagent
 
 import (
@@ -9,16 +12,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/lima-vm/lima/pkg/bicopy"
-	"github.com/lima-vm/lima/pkg/guestagent/api"
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/bicopy"
+	"github.com/lima-vm/lima/v2/pkg/portfwd"
 )
 
-// forwardTCP is not thread-safe
-func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, remote, verb string) error {
+// forwardTCP is not thread-safe.
+func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote, verb string) error {
 	if strings.HasPrefix(local, "/") {
-		return forwardSSH(ctx, sshConfig, port, local, remote, verb, false)
+		return forwardSSH(ctx, sshConfig, sshAddress, sshPort, local, remote, verb, false)
 	}
 	localIPStr, localPortStr, err := net.SplitHostPort(local)
 	if err != nil {
@@ -30,15 +34,15 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		return err
 	}
 
-	if !localIP.Equal(api.IPv4loopback1) || localPort >= 1024 {
-		return forwardSSH(ctx, sshConfig, port, local, remote, verb, false)
+	if !localIP.Equal(IPv4loopback1) || localPort >= 1024 {
+		return forwardSSH(ctx, sshConfig, sshAddress, sshPort, local, remote, verb, false)
 	}
 
 	// on macOS, listening on 127.0.0.1:80 requires root while 0.0.0.0:80 does not require root.
 	// https://twitter.com/_AkihiroSuda_/status/1403403845842075648
 	//
 	// We use "pseudoloopback" forwarder that listens on 0.0.0.0:80 but rejects connections from non-loopback src IP.
-	logrus.Debugf("using pseudoloopback port forwarder for %q", local)
+	logrus.Debugf("using pseudoloopback port forwarder for %#q", local)
 
 	if verb == verbCancel {
 		plf, ok := pseudoLoopbackForwarders[local]
@@ -46,11 +50,11 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 			localUnix := plf.unixAddr.Name
 			_ = plf.Close()
 			delete(pseudoLoopbackForwarders, local)
-			if err := forwardSSH(ctx, sshConfig, port, localUnix, remote, verb, false); err != nil {
+			if err := forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verb, false); err != nil {
 				return err
 			}
 		} else {
-			logrus.Warnf("forwarding for %q seems already cancelled?", local)
+			logrus.Warnf("forwarding for %#q seems already cancelled?", local)
 		}
 		return nil
 	}
@@ -60,14 +64,14 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, port int, local, 
 		return err
 	}
 	localUnix := filepath.Join(localUnixDir, "sock")
-	logrus.Debugf("forwarding %q to %q", localUnix, remote)
-	if err := forwardSSH(ctx, sshConfig, port, localUnix, remote, verb, false); err != nil {
+	logrus.Debugf("forwarding %#q to %#q", localUnix, remote)
+	if err := forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verb, false); err != nil {
 		return err
 	}
 	plf, err := newPseudoLoopbackForwarder(localPort, localUnix)
 	if err != nil {
-		if cancelErr := forwardSSH(ctx, sshConfig, port, localUnix, remote, verbCancel, false); cancelErr != nil {
-			logrus.WithError(cancelErr).Warnf("failed to cancel forwarding %q to %q", localUnix, remote)
+		if cancelErr := forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verbCancel, false); cancelErr != nil {
+			logrus.WithError(cancelErr).Warnf("failed to cancel forwarding %#q to %#q", localUnix, remote)
 		}
 		return err
 	}
@@ -97,11 +101,12 @@ func newPseudoLoopbackForwarder(localPort int, unixSock string) (*pseudoLoopback
 		return nil, err
 	}
 
-	lnAddr, err := net.ResolveTCPAddr("tcp4", fmt.Sprintf("0.0.0.0:%d", localPort))
+	// use "tcp" network to listen on both "tcp4" and "tcp6"
+	lnAddr, err := net.ResolveTCPAddr("tcp", fmt.Sprintf("0.0.0.0:%d", localPort))
 	if err != nil {
 		return nil, err
 	}
-	ln, err := net.ListenTCP("tcp4", lnAddr)
+	ln, err := net.ListenTCP("tcp", lnAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -124,12 +129,12 @@ func (plf *pseudoLoopbackForwarder) Serve() error {
 		remoteAddr := ac.RemoteAddr().String() // ip:port
 		remoteAddrIP, _, err := net.SplitHostPort(remoteAddr)
 		if err != nil {
-			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q (unparsable)", remoteAddr)
+			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q (unparsable)", remoteAddr)
 			ac.Close()
 			continue
 		}
-		if remoteAddrIP != "127.0.0.1" {
-			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %q", remoteAddr)
+		if !portfwd.IsLoopback(remoteAddrIP) {
+			logrus.WithError(err).Debugf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q", remoteAddr)
 			ac.Close()
 			continue
 		}
@@ -155,8 +160,4 @@ func (plf *pseudoLoopbackForwarder) forward(ac *net.TCPConn) error {
 func (plf *pseudoLoopbackForwarder) Close() error {
 	_ = plf.ln.Close()
 	return plf.onClose()
-}
-
-func getFreeVSockPort() (int, error) {
-	return 0, nil
 }

@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package limayaml
 
 import (
@@ -7,7 +10,7 @@ import (
 )
 
 func TestLoadEmpty(t *testing.T) {
-	_, err := Load([]byte{}, "empty.yaml")
+	_, err := Load(t.Context(), []byte{}, "empty.yaml")
 	assert.NilError(t, err)
 }
 
@@ -27,8 +30,8 @@ provision:
     #!/bin/sh
     echo three
 `
-	_, err := Load([]byte(s), "error.yaml")
-	assert.ErrorContains(t, err, "failed to unmarshal YAML")
+	_, err := Load(t.Context(), []byte(s), "error.yaml")
+	assert.ErrorContains(t, err, "map key-value is pre-defined")
 }
 
 func TestLoadDiskString(t *testing.T) {
@@ -36,7 +39,7 @@ func TestLoadDiskString(t *testing.T) {
 additionalDisks:
 - name
 `
-	y, err := Load([]byte(s), "disk.yaml")
+	y, err := Load(t.Context(), []byte(s), "disk.yaml")
 	assert.NilError(t, err)
 	assert.Equal(t, len(y.AdditionalDisks), 1)
 	assert.Equal(t, y.AdditionalDisks[0].Name, "name")
@@ -53,7 +56,7 @@ additionalDisks:
   fsType: "xfs"
   fsArgs: ["-i","size=512"]
 `
-	y, err := Load([]byte(s), "disk.yaml")
+	y, err := Load(t.Context(), []byte(s), "disk.yaml")
 	assert.NilError(t, err)
 	assert.Assert(t, len(y.AdditionalDisks) == 1)
 	assert.Equal(t, y.AdditionalDisks[0].Name, "name")

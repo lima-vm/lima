@@ -1,5 +1,8 @@
 //go:build !windows
 
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://github.com/containerd/nerdctl/blob/v0.13.0/pkg/lockutil/lockutil_unix.go
 /*
    Copyright The containerd Authors.
@@ -34,11 +37,11 @@ func WithDirLock(dir string, fn func() error) error {
 	}
 	defer dirFile.Close()
 	if err := Flock(dirFile, unix.LOCK_EX); err != nil {
-		return fmt.Errorf("failed to lock %q: %w", dir, err)
+		return fmt.Errorf("failed to lock %#q: %w", dir, err)
 	}
 	defer func() {
 		if err := Flock(dirFile, unix.LOCK_UN); err != nil {
-			logrus.WithError(err).Errorf("failed to unlock %q", dir)
+			logrus.WithError(err).Errorf("failed to unlock %#q", dir)
 		}
 	}()
 	return fn()

@@ -1,9 +1,14 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package editflags
 
 import (
+	"errors"
 	"fmt"
 	"math/bits"
 	"runtime"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -11,18 +16,17 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	flag "github.com/spf13/pflag"
+
+	"github.com/lima-vm/lima/v2/pkg/localpathutil"
+	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.
-func RegisterEdit(cmd *cobra.Command) {
-	registerEdit(cmd, "")
-}
-
-func registerEdit(cmd *cobra.Command, commentPrefix string) {
+func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	flags := cmd.Flags()
 
-	flags.Int("cpus", 0, commentPrefix+"number of CPUs") // Similar to colima's --cpu, but the flag name is slightly different (cpu vs cpus)
-	_ = cmd.RegisterFlagCompletionFunc("cpus", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	flags.Int("cpus", 0, commentPrefix+"Number of CPUs") // Similar to colima's --cpu, but the flag name is slightly different (cpu vs cpus)
+	_ = cmd.RegisterFlagCompletionFunc("cpus", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		var res []string
 		for _, f := range completeCPUs(runtime.NumCPU()) {
 			res = append(res, strconv.Itoa(f))
@@ -30,10 +34,10 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 		return res, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.IPSlice("dns", nil, commentPrefix+"specify custom DNS (disable host resolver)") // colima-compatible
+	flags.IPSlice("dns", nil, commentPrefix+"Specify custom DNS (disable host resolver)") // colima-compatible
 
-	flags.Float32("memory", 0, commentPrefix+"memory in GiB") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("memory", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	flags.Float32("memory", 0, commentPrefix+"Memory in GiB") // colima-compatible
+	_ = cmd.RegisterFlagCompletionFunc("memory", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		var res []string
 		for _, f := range completeMemoryGiB(memory.TotalMemory()) {
 			res = append(res, fmt.Sprintf("%.1f", f))
@@ -41,91 +45,209 @@ func registerEdit(cmd *cobra.Command, commentPrefix string) {
 		return res, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.StringSlice("mount", nil, commentPrefix+"directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
+	flags.StringSlice("mount", nil, commentPrefix+"Directories to mount, suffix ':w' for writable (Do not specify directories that overlap with the existing mounts)") // colima-compatible
+	flags.StringSlice("mount-only", nil, commentPrefix+"Similar to --mount, but overrides the existing mounts")
 
-	flags.String("mount-type", "", commentPrefix+"mount type (reverse-sshfs, 9p, virtiofs)") // Similar to colima's --mount-type=(sshfs|9p|virtiofs), but "reverse-sshfs" is Lima is called "sshfs" in colima
-	_ = cmd.RegisterFlagCompletionFunc("mount-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	flags.Bool("mount-none", false, commentPrefix+"Remove all mounts")
+
+	flags.String("mount-type", "", commentPrefix+"Mount type (reverse-sshfs, 9p, virtiofs)") // Similar to colima's --mount-type=(sshfs|9p|virtiofs), but "reverse-sshfs" is Lima is called "sshfs" in colima
+	_ = cmd.RegisterFlagCompletionFunc("mount-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"reverse-sshfs", "9p", "virtiofs"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Bool("mount-writable", false, commentPrefix+"make all mounts writable")
+	flags.Bool("mount-writable", false, commentPrefix+"Make all mounts writable")
+	flags.Bool("mount-inotify", false, commentPrefix+"Enable inotify for mounts")
 
-	flags.StringSlice("network", nil, commentPrefix+"additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
-	_ = cmd.RegisterFlagCompletionFunc("network", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	flags.StringSlice("network", nil, commentPrefix+"Additional networks, e.g., \"vzNAT\" or \"lima:shared\" to assign vmnet IP")
+	_ = cmd.RegisterFlagCompletionFunc("network", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		// TODO: retrieve the lima:* network list from networks.yaml
 		return []string{"lima:shared", "lima:bridged", "lima:host", "lima:user-v2", "vzNAT"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Bool("rosetta", false, commentPrefix+"enable Rosetta (for vz instances)")
+	flags.Bool("nested-virt", false, commentPrefix+"Enable nested virtualization")
 
-	flags.String("set", "", commentPrefix+"modify the template inplace, using yq syntax")
+	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
+
+	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times. See 'limactl help yq-restrictions' for limitations.")
+	flags.StringArray("param", []string{}, commentPrefix+"Set a template parameter, e.g. name=value. Can be passed multiple times.")
+
+	flags.Uint16("ssh-port", 0, commentPrefix+"SSH port (0 for random)") // colima-compatible
+	_ = cmd.RegisterFlagCompletionFunc("ssh-port", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		// Until Lima v2.0, 60022 was the default SSH port for the instance named "default".
+		return []string{"60022"}, cobra.ShellCompDirectiveNoFileComp
+	})
 
 	// negative performance impact: https://gitlab.com/qemu-project/qemu/-/issues/334
-	flags.Bool("video", false, commentPrefix+"enable video output (has negative performance impact for QEMU)")
+	flags.Bool("video", false, commentPrefix+"Enable video output (has negative performance impact for QEMU)")
+
+	flags.Float32("disk", 0, commentPrefix+"Disk size in GiB") // colima-compatible
+	_ = cmd.RegisterFlagCompletionFunc("disk", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	flags.String("vm-type", "", commentPrefix+"Virtual machine type")
+	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		var drivers []string
+		for k := range registry.List() {
+			drivers = append(drivers, k)
+		}
+		return drivers, cobra.ShellCompDirectiveNoFileComp
+	})
+
+	flags.String("shell", "", commentPrefix+"User login shell in the guest (e.g. /bin/bash, /bin/zsh)")
+	_ = cmd.RegisterFlagCompletionFunc("shell", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"/bin/bash", "/bin/zsh", "cmd.exe", "powershell.exe", "pwsh.exe"}, cobra.ShellCompDirectiveNoFileComp
+	})
 }
 
 // RegisterCreate registers flags related to in-place YAML modification, for `limactl create`.
 func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
-	registerEdit(cmd, commentPrefix)
+	RegisterEdit(cmd, commentPrefix)
 	flags := cmd.Flags()
 
-	flags.String("arch", "", commentPrefix+"machine architecture (x86_64, aarch64, riscv64)") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("arch", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{"x86_64", "aarch64", "riscv64"}, cobra.ShellCompDirectiveNoFileComp
+	flags.String("arch", "", commentPrefix+"Machine architecture (x86_64, aarch64, riscv64, armv7l, s390x, ppc64le)") // colima-compatible
+	_ = cmd.RegisterFlagCompletionFunc("arch", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"x86_64", "aarch64", "riscv64", "armv7l", "s390x", "ppc64le"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
+	flags.String("image-variant", "", commentPrefix+"Image variant")
+
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
-	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+	_ = cmd.RegisterFlagCompletionFunc("containerd", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.Float32("disk", 0, commentPrefix+"disk size in GiB") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("memory", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
+	flags.Bool("plain", false, commentPrefix+"Plain mode. Disables mounts, port forwarding, containerd, etc.")
+
+	flags.StringArray("port-forward", nil, commentPrefix+"Port forwards (host:guest), e.g., '8080:80' or '9090:9090,static=true' for static port-forwards")
+	_ = cmd.RegisterFlagCompletionFunc("port-forward", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
+		return []string{"8080:80", "3000:3000", "8080:80,static=true"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
-	flags.String("vm-type", "", commentPrefix+"virtual machine type (qemu, vz)") // colima-compatible
-	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
-		return []string{"qemu", "vz"}, cobra.ShellCompDirectiveNoFileComp
-	})
-
-	flags.Bool("plain", false, commentPrefix+"plain mode. Disable mounts, port forwarding, containerd, etc.")
+	flags.String("audio-device", "", commentPrefix+"Audio device backend (e.g., 'pa', 'coreaudio', 'none')")
+	flags.String("audio-interface", "", commentPrefix+"Audio virtual hardware interface ('hda' or 'virtio')")
 }
 
-func defaultExprFunc(expr string) func(v *flag.Flag) (string, error) {
-	return func(v *flag.Flag) (string, error) {
-		return fmt.Sprintf(expr, v.Value), nil
+func defaultExprFunc(expr string) func(v *flag.Flag) ([]string, error) {
+	return func(v *flag.Flag) ([]string, error) {
+		return []string{fmt.Sprintf(expr, v.Value)}, nil
 	}
 }
 
+func ParsePortForward(spec string) (hostPort, guestPort string, isStatic bool, err error) {
+	parts := strings.Split(spec, ",")
+	if len(parts) > 2 {
+		return "", "", false, fmt.Errorf("invalid port forward format %#q, expected HOST:GUEST or HOST:GUEST,static=true", spec)
+	}
+
+	portParts := strings.Split(strings.TrimSpace(parts[0]), ":")
+	if len(portParts) != 2 {
+		return "", "", false, fmt.Errorf("invalid port forward format %#q, expected HOST:GUEST", parts[0])
+	}
+
+	hostPort = strings.TrimSpace(portParts[0])
+	guestPort = strings.TrimSpace(portParts[1])
+
+	if len(parts) == 2 {
+		staticPart := strings.TrimSpace(parts[1])
+		if staticValue, ok := strings.CutPrefix(staticPart, "static="); ok {
+			isStatic, err = strconv.ParseBool(staticValue)
+			if err != nil {
+				return "", "", false, fmt.Errorf("invalid value for static parameter: %#q", staticValue)
+			}
+		} else {
+			return "", "", false, fmt.Errorf("invalid parameter %#q, expected `static=` followed by a boolean value", staticPart)
+		}
+	}
+
+	return hostPort, guestPort, isStatic, nil
+}
+
+func BuildPortForwardExpression(portForwards []string) (string, error) {
+	if len(portForwards) == 0 {
+		return "", nil
+	}
+
+	ports := make([]string, len(portForwards))
+	for i, spec := range portForwards {
+		hostPort, guestPort, isStatic, err := ParsePortForward(spec)
+		if err != nil {
+			return "", err
+		}
+		ports[i] = fmt.Sprintf(`{"guestPort": %q, "hostPort": %q, "static": %v}`, guestPort, hostPort, isStatic)
+	}
+	expr := fmt.Sprintf(".portForwards += [%s]", strings.Join(ports, ","))
+	return expr, nil
+}
+
+func BuildParamExpressions(params []string, allowedParams map[string]string) ([]string, error) {
+	exprs := make([]string, len(params))
+	for i, param := range params {
+		key, value, ok := strings.Cut(param, "=")
+		if !ok {
+			return nil, fmt.Errorf("invalid parameter %#q, expected NAME=VALUE", param)
+		}
+		if _, ok := allowedParams[key]; !ok {
+			return nil, fmt.Errorf("template does not define param %#q", key)
+		}
+		exprs[i] = fmt.Sprintf(".param[%q] = %q", key, value)
+	}
+	return exprs, nil
+}
+
+func buildMountListExpression(ss []string) (string, error) {
+	mounts := make([]string, len(ss))
+	for i, s := range ss {
+		writable := strings.HasSuffix(s, ":w")
+		loc, err := localpathutil.Expand(strings.TrimSuffix(s, ":w"))
+		if err != nil {
+			return "", err
+		}
+		mounts[i] = fmt.Sprintf(`{"location": %q, "mountPoint": %q, "writable": %v}`, loc, loc, writable)
+	}
+	expr := fmt.Sprintf("[%s]", strings.Join(mounts, ","))
+	return expr, nil
+}
+
 // YQExpressions returns YQ expressions.
-func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
+func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]string) ([]string, error) {
 	type def struct {
 		flagName                 string
-		exprFunc                 func(*flag.Flag) (string, error)
+		exprFunc                 func(*flag.Flag) ([]string, error)
 		onlyValidForNewInstances bool
 		experimental             bool
 	}
 	d := defaultExprFunc
 	defs := []def{
-		{"cpus", d(".cpus = %s"), false, false},
+		{
+			"cpus",
+			func(_ *flag.Flag) ([]string, error) {
+				numCpus, err := flags.GetInt("cpus")
+				if err != nil {
+					return nil, err
+				}
+				if numCpus < 0 {
+					return nil, errors.New("invalid value for number of cpus, must be >= 0")
+				}
+				return []string{fmt.Sprintf(".cpus = %d", numCpus)}, nil
+			},
+			false,
+			false,
+		},
 		{
 			"dns",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ipSlice, err := flags.GetIPSlice("dns")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
-				expr := `.dns += [`
+				ips := make([]string, len(ipSlice))
 				for i, ip := range ipSlice {
-					expr += fmt.Sprintf("%q", ip)
-					if i < len(ipSlice)-1 {
-						expr += ","
-					}
+					ips[i] = `"` + ip.String() + `"`
 				}
-				expr += `] | .dns |= unique | .hostResolver.enabled=false`
+				expr := fmt.Sprintf(".dns += [%s] | .dns |= unique | .hostResolver.enabled=false", strings.Join(ips, ","))
 				logrus.Warnf("Disabling HostResolver, as custom DNS addresses (%v) are specified", ipSlice)
-				return expr, nil
+				return []string{expr}, nil
 			},
 			false,
 			false,
@@ -133,112 +255,196 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 		{"memory", d(".memory = \"%sGiB\""), false, false},
 		{
 			"mount",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ss, err := flags.GetStringSlice("mount")
+				slices.Reverse(ss)
 				if err != nil {
-					return "", err
+					return nil, err
 				}
-				expr := `.mounts += [`
-				for i, s := range ss {
-					writable := strings.HasSuffix(s, ":w")
-					loc := strings.TrimSuffix(s, ":w")
-					expr += fmt.Sprintf(`{"location": %q, "writable": %v}`, loc, writable)
-					if i < len(ss)-1 {
-						expr += ","
+				mountListExpr, err := buildMountListExpression(ss)
+				if err != nil {
+					return nil, err
+				}
+				// mount options take precedence over template settings
+				expr := fmt.Sprintf(".mounts = %s + .mounts", mountListExpr)
+				mountOnly, err := flags.GetStringSlice("mount-only")
+				if err != nil {
+					return nil, err
+				}
+				if len(mountOnly) > 0 {
+					return nil, errors.New("flag `--mount` conflicts with `--mount-only`")
+				}
+				return []string{expr}, nil
+			},
+			false,
+			false,
+		},
+		{
+			"mount-only",
+			func(_ *flag.Flag) ([]string, error) {
+				ss, err := flags.GetStringSlice("mount-only")
+				if err != nil {
+					return nil, err
+				}
+				mountListExpr, err := buildMountListExpression(ss)
+				if err != nil {
+					return nil, err
+				}
+				expr := `.mounts = ` + mountListExpr
+				return []string{expr}, nil
+			},
+			false,
+			false,
+		},
+		{
+			"mount-none",
+			func(_ *flag.Flag) ([]string, error) {
+				incompatibleFlagNames := []string{"mount", "mount-only"}
+				for _, name := range incompatibleFlagNames {
+					ss, err := flags.GetStringSlice(name)
+					if err != nil {
+						return nil, err
+					}
+					if len(ss) > 0 {
+						return nil, errors.New("flag `--mount-none` conflicts with `" + name + "`")
 					}
 				}
-				expr += `] | .mounts |= unique_by(.location)`
-				return expr, nil
+				return []string{".mounts = null"}, nil
 			},
 			false,
 			false,
 		},
 		{"mount-type", d(".mountType = %q"), false, false},
+		{"vm-type", d(".vmType = %q"), false, false},
+		{"mount-inotify", d(".mountInotify = %s"), false, true},
 		{"mount-writable", d(".mounts[].writable = %s"), false, false},
 		{
 			"network",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				ss, err := flags.GetStringSlice("network")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
-				expr := `.networks += [`
+				networks := make([]string, len(ss))
 				for i, s := range ss {
 					// CLI syntax is still experimental (YAML syntax is out of experimental)
 					switch {
 					case s == "vzNAT":
-						expr += `{"vzNAT": true}`
+						networks[i] = `{"vzNAT": true}`
 					case strings.HasPrefix(s, "lima:"):
 						network := strings.TrimPrefix(s, "lima:")
-						expr += fmt.Sprintf(`{"lima": %q}`, network)
+						networks[i] = fmt.Sprintf(`{"lima": %q}`, network)
 					default:
-						return "", fmt.Errorf("network name must be \"vzNAT\" or \"lima:*\", got %q", s)
-					}
-					if i < len(ss)-1 {
-						expr += ","
+						return nil, fmt.Errorf("network name must be `vzNAT` or `lima:*`, got %#q", s)
 					}
 				}
-				expr += `] | .networks |= unique_by(.lima)`
-				return expr, nil
+				expr := fmt.Sprintf(`.networks += [%s] | .networks |= unique_by(.lima)`, strings.Join(networks, ","))
+				return []string{expr}, nil
 			},
 			false,
 			false,
 		},
+
+		{"nested-virt", d(".nestedVirtualization = %s"), false, false},
 		{
 			"rosetta",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				b, err := flags.GetBool("rosetta")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
-				return fmt.Sprintf(".rosetta.enabled = %v | .rosetta.binfmt = %v", b, b), nil
+				return []string{fmt.Sprintf(".vmOpts.vz.rosetta.enabled = %v | .vmOpts.vz.rosetta.binfmt = %v", b, b)}, nil
 			},
 			false,
-			true,
+			false,
 		},
-		{"set", d("%s"), false, false},
+		{"set", func(v *flag.Flag) ([]string, error) {
+			return v.Value.(flag.SliceValue).GetSlice(), nil
+		}, false, false},
+		{"param", func(_ *flag.Flag) ([]string, error) {
+			ss, err := flags.GetStringArray("param")
+			if err != nil {
+				return nil, err
+			}
+			return BuildParamExpressions(ss, params)
+		}, false, false},
 		{
 			"video",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				b, err := flags.GetBool("video")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				if b {
-					return ".video.display = \"default\"", nil
+					return []string{".video.display = \"default\""}, nil
 				}
-				return ".video.display = \"none\"", nil
+				return []string{".video.display = \"none\""}, nil
 			},
 			false,
+			false,
+		},
+		{"audio-device", d(".audio.device = %q"), false, true},
+		{"audio-interface", d(".audio.interface = %q"), false, true},
+		{"ssh-port", d(".ssh.localPort = %s"), false, false},
+		{
+			"image-variant",
+			func(_ *flag.Flag) ([]string, error) {
+				variant, err := flags.GetString("image-variant")
+				if err != nil {
+					return nil, err
+				}
+				if variant == "" {
+					return nil, errors.New("`--image-variant` must not be empty")
+				}
+				expr := fmt.Sprintf(`.images = [.images[] | select(.variant == %q)]`, variant)
+				return []string{expr}, nil
+			},
+			true,
 			false,
 		},
 		{"arch", d(".arch = %q"), true, false},
 		{
 			"containerd",
-			func(_ *flag.Flag) (string, error) {
+			func(_ *flag.Flag) ([]string, error) {
 				s, err := flags.GetString("containerd")
 				if err != nil {
-					return "", err
+					return nil, err
 				}
 				switch s {
 				case "user":
-					return `.containerd.user = true | .containerd.system = false`, nil
+					return []string{`.containerd.user = true | .containerd.system = false`}, nil
 				case "system":
-					return `.containerd.user = false | .containerd.system = true`, nil
+					return []string{`.containerd.user = false | .containerd.system = true`}, nil
 				case "user+system", "system+user":
-					return `.containerd.user = true | .containerd.system = true`, nil
+					return []string{`.containerd.user = true | .containerd.system = true`}, nil
 				case "none":
-					return `.containerd.user = false | .containerd.system = false`, nil
+					return []string{`.containerd.user = false | .containerd.system = false`}, nil
 				default:
-					return "", fmt.Errorf(`expected one of ["user", "system", "user+system", "none"], got %q`, s)
+					return nil, fmt.Errorf("expected one of [`user`, `system`, `user+system`, `none`], got %#q", s)
 				}
 			},
 			true,
 			false,
 		},
-		{"disk", d(".disk= \"%sGiB\""), true, false},
-		{"vm-type", d(".vmType = %q"), true, false},
+		{"disk", d(".disk= \"%sGiB\""), false, false},
 		{"plain", d(".plain = %s"), true, false},
+		{
+			"port-forward",
+			func(_ *flag.Flag) ([]string, error) {
+				ss, err := flags.GetStringArray("port-forward")
+				if err != nil {
+					return nil, err
+				}
+				value, err := BuildPortForwardExpression(ss)
+				if err != nil {
+					return nil, err
+				}
+				return []string{value}, nil
+			},
+			false,
+			false,
+		},
+		{"shell", d(".user.shell = %q"), false, false},
 	}
 	var exprs []string
 	for _, def := range defs {
@@ -252,11 +458,11 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool) ([]string, error) {
 					def.flagName, def.flagName, v.Value.String())
 				continue
 			}
-			expr, err := def.exprFunc(v)
+			newExprs, err := def.exprFunc(v)
 			if err != nil {
-				return exprs, fmt.Errorf("error while processing flag %q: %w", def.flagName, err)
+				return exprs, fmt.Errorf("error while processing flag %#q: %w", def.flagName, err)
 			}
-			exprs = append(exprs, expr)
+			exprs = append(exprs, newExprs...)
 		}
 	}
 	return exprs, nil
