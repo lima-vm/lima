@@ -14,7 +14,9 @@ $chars = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
 $newPassword = -join ((1..16) | ForEach-Object { $chars[(Get-Random -Maximum $chars.Length)] })
 
 # Store the password under the user directory so that user can know/change it.
-$newPassword | Out-File -FilePath "C:\Users\{{.User}}\password.txt" -Encoding utf8 -NoNewline
+# Use ASCII encoding to avoid the UTF-8 BOM that Windows PowerShell's `Out-File -Encoding utf8`
+# prepends; the generated password only contains ASCII characters.
+$newPassword | Out-File -FilePath "C:\Users\{{.User}}\password.txt" -Encoding ascii -NoNewline
 
 # Change the password
 $username = $env:USERNAME
