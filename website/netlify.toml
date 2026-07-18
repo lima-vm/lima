@@ -5,8 +5,11 @@
 command = "make -C .. docsy && npm run build:preview"
 publish = "public"
 
-[build.environment]
-GO_VERSION = "1.20.5"
-
 [context.production]
 command = "make -C .. docsy && npm run build:production"
+
+[[redirects]]
+from = "/community"
+to = "/docs/community"
+status = 301
+force = true

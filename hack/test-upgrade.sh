@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+
+# SPDX-FileCopyrightText: Copyright The Lima Authors
+# SPDX-License-Identifier: Apache-2.0
+
 set -eu -o pipefail
 
 scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -20,7 +24,7 @@ function install_lima() {
 	git checkout "${ver}"
 	make clean
 	make
-	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ]; then
+	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ] && [ -w "${PREFIX}/libexec" ]; then
 		make install
 	else
 		sudo make install
@@ -30,15 +34,15 @@ function install_lima() {
 function install_lima_binary() {
 	ver="$1"
 	tar="tar"
-	if [ ! -w "${PREFIX}/bin" ] || [ ! -w "${PREFIX}/share" ]; then
+	if [ ! -w "${PREFIX}/bin" ] || [ ! -w "${PREFIX}/share" ] || [ ! -w "${PREFIX}/libexec" ]; then
 		tar="sudo ${tar}"
 	fi
 	curl -fsSL "https://github.com/lima-vm/lima/releases/download/${ver}/lima-${ver:1}-$(uname -s)-$(uname -m).tar.gz" | ${tar} Cxzvm "${PREFIX}"
 }
 
 function uninstall_lima() {
-	files="${PREFIX}/bin/lima ${PREFIX}/bin/limactl ${PREFIX}/share/lima ${PREFIX}/share/doc/lima"
-	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ]; then
+	files="${PREFIX}/bin/lima ${PREFIX}/bin/limactl ${PREFIX}/share/lima ${PREFIX}/share/doc/lima ${PREFIX}/libexec/lima"
+	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ] && [ -w "${PREFIX}/libexec" ]; then
 		# shellcheck disable=SC2086
 		rm -rf $files
 	else
@@ -49,6 +53,9 @@ function uninstall_lima() {
 
 function show_lima_log() {
 	tail -n 100 ~/.lima/"${LIMA_INSTANCE}"/*.log || true
+	mkdir -p failure-logs
+	cp -pf ~/.lima/"${LIMA_INSTANCE}"/*.log failure-logs/ || true
+	limactl shell "${LIMA_INSTANCE}" sudo cat /var/log/cloud-init-output.log | tee failure-logs/cloud-init-output.log || true
 }
 
 INFO "Uninstalling lima"
@@ -88,8 +95,11 @@ INFO "==========================================================================
 INFO "Installing the new Lima ${NEWVER}"
 install_lima "${NEWVER}"
 
+INFO "Editing the instance to specify vm-type as qemu explicitly"
+limactl edit --vm-type=qemu "${LIMA_INSTANCE}"
+
 INFO "Restarting the instance"
-limactl start --tty=false "${LIMA_INSTANCE}"
+limactl start --tty=false --vm-type=qemu "${LIMA_INSTANCE}" || show_lima_log
 lima nerdctl info
 
 INFO "Confirming that the host filesystem is still mounted"

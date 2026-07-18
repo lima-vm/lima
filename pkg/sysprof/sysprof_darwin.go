@@ -1,7 +1,11 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package sysprof
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"os/exec"
@@ -11,31 +15,26 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-var (
-	networkDataOnce   sync.Once
-	networkDataCached SPNetworkDataType
-	networkDataError  error
-)
+var NetworkData = sync.OnceValues(func() ([]NetworkDataType, error) {
+	b, err := SystemProfiler(context.Background(), "SPNetworkDataType")
+	if err != nil {
+		return nil, err
+	}
+	var networkData SPNetworkDataType
+	if err := json.Unmarshal(b, &networkData); err != nil {
+		return nil, err
+	}
+	return networkData.SPNetworkDataType, nil
+})
 
-func NetworkData() ([]NetworkDataType, error) {
-	networkDataOnce.Do(func() {
-		var jsonBytes []byte
-		jsonBytes, networkDataError = SystemProfiler("SPNetworkDataType")
-		if networkDataError == nil {
-			networkDataError = json.Unmarshal(jsonBytes, &networkDataCached)
-		}
-	})
-	return networkDataCached.SPNetworkDataType, networkDataError
-}
-
-func SystemProfiler(dataType string) ([]byte, error) {
+func SystemProfiler(ctx context.Context, dataType string) ([]byte, error) {
 	exe, err := exec.LookPath("system_profiler")
 	if err != nil {
 		// $PATH may lack /usr/sbin
 		exe = "/usr/sbin/system_profiler"
 	}
 	var stdout, stderr bytes.Buffer
-	cmd := exec.Command(exe, dataType, "-json")
+	cmd := exec.CommandContext(ctx, exe, dataType, "-json")
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {

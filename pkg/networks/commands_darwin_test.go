@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package networks
 
 import (
@@ -12,14 +15,6 @@ func TestSock(t *testing.T) {
 
 	sock := config.Sock("foo")
 	assert.Equal(t, sock, "/private/var/run/lima/socket_vmnet.foo")
-}
-
-func TestVDESock(t *testing.T) {
-	config, err := DefaultConfig()
-	assert.NilError(t, err)
-
-	vdeSock := config.VDESock("foo")
-	assert.Equal(t, vdeSock, "/private/var/run/lima/foo.ctl")
 }
 
 func TestPIDFile(t *testing.T) {

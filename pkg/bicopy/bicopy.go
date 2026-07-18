@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://raw.githubusercontent.com/norouter/norouter/v0.6.5/pkg/agent/bicopy/bicopy.go
 /*
    Copyright (C) NoRouter authors.
@@ -27,7 +30,7 @@ import (
 )
 
 // Bicopy is from https://github.com/rootless-containers/rootlesskit/blob/v0.10.1/pkg/port/builtin/parent/tcp/tcp.go#L73-L104
-// (originally from libnetwork, Apache License 2.0)
+// (originally from libnetwork, Apache License 2.0).
 func Bicopy(x, y io.ReadWriter, quit <-chan struct{}) {
 	type closeReader interface {
 		CloseRead() error

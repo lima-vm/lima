@@ -1,0 +1,11 @@
+minimumLimaVersion: 2.0.0
+
+base: template:_default/mounts
+
+images:
+# Hint: run `limactl prune` to invalidate the "Current" cache
+- location: https://download.opensuse.org/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.x86_64-Cloud.qcow2
+  arch: x86_64
+
+- location: https://download.opensuse.org/ports/aarch64/tumbleweed/appliances/openSUSE-Tumbleweed-Minimal-VM.aarch64-Cloud.qcow2
+  arch: aarch64

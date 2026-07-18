@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 // From https://raw.githubusercontent.com/abiosoft/colima/v0.5.5/daemon/process/gvproxy/dnshosts_test.go
 /*
 	MIT License
@@ -32,7 +35,7 @@ import (
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
 )
 
-func ExtractZones(hosts hostMap) (zones []types.Zone) {
+func ExtractZones(hosts hostMap) []types.Zone {
 	list := make(map[string]types.Zone)
 
 	for host := range hosts {
@@ -57,10 +60,11 @@ func ExtractZones(hosts hostMap) (zones []types.Zone) {
 		list[h.name()] = zone
 	}
 
+	zones := make([]types.Zone, 0, len(list))
 	for _, zone := range list {
 		zones = append(zones, zone)
 	}
-	return
+	return zones
 }
 
 type hostMap map[string]string

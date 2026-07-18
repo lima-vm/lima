@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package store
 
 import (
@@ -8,8 +11,8 @@ import (
 	"path/filepath"
 
 	"github.com/lima-vm/go-qcow2reader"
-	"github.com/lima-vm/lima/pkg/qemu/imgutil"
-	"github.com/lima-vm/lima/pkg/store/filenames"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 type Disk struct {
@@ -20,11 +23,15 @@ type Disk struct {
 	Instance    string `json:"instance"`
 	InstanceDir string `json:"instanceDir"`
 	MountPoint  string `json:"mountPoint"`
+
+	// if the Disk is in use and the FSType is specified
+	FSType *string `json:"fsType,omitempty"`
 }
 
-func InspectDisk(diskName string) (*Disk, error) {
+func InspectDisk(diskName string, fsType *string) (*Disk, error) {
 	disk := &Disk{
-		Name: diskName,
+		Name:   diskName,
+		FSType: fsType,
 	}
 
 	diskDir, err := DiskDir(diskName)
@@ -53,38 +60,32 @@ func InspectDisk(diskName string) (*Disk, error) {
 		disk.InstanceDir = instDir
 	}
 
-	disk.MountPoint = fmt.Sprintf("/mnt/lima-%s", diskName)
+	if disk.FSType != nil && *disk.FSType == "swap" {
+		disk.MountPoint = "[SWAP]" // only used for log message
+	} else {
+		disk.MountPoint = fmt.Sprintf("/mnt/lima-%s", diskName)
+	}
 
 	return disk, nil
 }
 
-// inspectDisk attempts to inspect the disk size and format by itself,
-// and falls back to inspectDiskWithQemuImg on an error.
+// inspectDisk attempts to inspect the disk size and format with qcow2reader.
 func inspectDisk(fName string) (size int64, format string, _ error) {
 	f, err := os.Open(fName)
 	if err != nil {
-		return inspectDiskWithQemuImg(fName)
+		return -1, "", err
 	}
 	defer f.Close()
 	img, err := qcow2reader.Open(f)
 	if err != nil {
-		return inspectDiskWithQemuImg(fName)
+		return -1, "", err
 	}
 	sz := img.Size()
 	if sz < 0 {
-		return inspectDiskWithQemuImg(fName)
+		return -1, "", fmt.Errorf("cannot determine size of %q", fName)
 	}
 
 	return sz, string(img.Type()), nil
-}
-
-// inspectDiskSizeWithQemuImg invokes `qemu-img` binary to inspect the disk size and format.
-func inspectDiskWithQemuImg(fName string) (size int64, format string, _ error) {
-	info, err := imgutil.GetInfo(fName)
-	if err != nil {
-		return -1, "", err
-	}
-	return info.VSize, info.Format, nil
 }
 
 func (d *Disk) Lock(instanceDir string) error {
@@ -95,4 +96,16 @@ func (d *Disk) Lock(instanceDir string) error {
 func (d *Disk) Unlock() error {
 	inUseBy := filepath.Join(d.Dir, filenames.InUseBy)
 	return os.Remove(inUseBy)
+}
+
+func (d *Disk) LockForInstance(instanceDir string) error {
+	if d.Instance != "" {
+		if d.InstanceDir != instanceDir {
+			return fmt.Errorf("in use by instance %q", d.Instance)
+		}
+		if err := d.Unlock(); err != nil {
+			return fmt.Errorf("failed to unlock for reuse in the same instance: %w", err)
+		}
+	}
+	return d.Lock(instanceDir)
 }

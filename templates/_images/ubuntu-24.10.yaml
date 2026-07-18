@@ -1,0 +1,45 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:69f31d3208895e5f646e345fbc95190e5e311ecd1359a4d6ee2c0b6483ceca03"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:3d1d134d66318f982d32f02aec00fe879bfeb0338147b4038a25d1f9cddb527f"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+  digest: "sha256:0803a88c98fe7f511f379ce378751ce4f435e24da756540583b5dc269116d83a"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:818741e7c423248fdc18d503beea094acad9ed1710ba14e5df3fae54f2a76b72"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:ae5bd8d899b6b9908c76b0416a3e82e899654c6048d0eea8e18159a51e01b774"
+- location: "https://cloud-images.ubuntu.com/releases/oracular/release-20250701/ubuntu-24.10-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:e78b9b8df911926de80f4fbeb9465256c77ac1da7c1b058d236b603fc4eb755f"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-amd64.img
+  arch: x86_64
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-arm64.img
+  arch: aarch64
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-riscv64.img
+  arch: riscv64
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-armhf.img
+  arch: armv7l
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-s390x.img
+  arch: s390x
+
+- location: https://cloud-images.ubuntu.com/releases/oracular/release/ubuntu-24.10-server-cloudimg-ppc64el.img
+  arch: ppc64le
+
+# 9p is broken in Linux v6.9, v6.10, and v6.11 (used by Ubuntu 24.10).
+# The issue was fixed in Linux v6.12-rc5 (https://github.com/torvalds/linux/commit/be2ca38).
+mountTypesUnsupported: [9p]

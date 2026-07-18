@@ -1,0 +1,10 @@
+root = true
+
+[*]
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Protobuf descriptors are binary files
+[*.pb.desc]
+insert_final_newline = unset
+trim_trailing_whitespace = unset

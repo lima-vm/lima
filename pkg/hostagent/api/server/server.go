@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: Copyright The Lima Authors
+// SPDX-License-Identifier: Apache-2.0
+
 package server
 
 import (
@@ -5,9 +8,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gorilla/mux"
-	"github.com/lima-vm/lima/pkg/hostagent"
-	"github.com/lima-vm/lima/pkg/httputil"
+	"github.com/lima-vm/lima/v2/pkg/hostagent"
+	"github.com/lima-vm/lima/v2/pkg/httputil"
 )
 
 type Backend struct {
@@ -25,8 +27,13 @@ func (b *Backend) onError(w http.ResponseWriter, err error, ec int) {
 	_ = json.NewEncoder(w).Encode(e)
 }
 
-// GetInfo is the handler for GET /v{N}/info
+// GetInfo is the handler for GET /v1/info.
 func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
 	ctx := r.Context()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
@@ -46,7 +53,6 @@ func (b *Backend) GetInfo(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(m)
 }
 
-func AddRoutes(r *mux.Router, b *Backend) {
-	v1 := r.PathPrefix("/v1").Subrouter()
-	v1.Path("/info").Methods("GET").HandlerFunc(b.GetInfo)
+func AddRoutes(r *http.ServeMux, b *Backend) {
+	r.Handle("/v1/info", http.HandlerFunc(b.GetInfo))
 }
