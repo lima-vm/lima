@@ -279,7 +279,7 @@ for template in "${templates[@]}"; do
 				image_entry=$(jq ".kernel.cmdline = \"${kernel_cmdline}\"" <<<"${image_entry}")
 			echo "${image_entry}" | jq
 			limactl edit --log-level error --set "
-				.images[${index}] = ${image_entry}|
+				.images[${index}] *= ${image_entry}|
 				(.images[${index}] | ..) style = \"double\"
 			" "${template}"
 		fi
