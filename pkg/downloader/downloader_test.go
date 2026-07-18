@@ -591,3 +591,41 @@ func TestDownloadImageConversionCached(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, rawPath, r.CachePath)
 }
+
+func TestDownloadImageConversionCachedDigestMismatch(t *testing.T) {
+	_, err := exec.LookPath("qemu-img")
+	if err != nil {
+		t.Skipf("qemu-img does not seem installed: %v", err)
+	}
+
+	const lastModified = "Mon, 02 Jan 2006 15:04:05 GMT"
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Last-Modified", lastModified)
+	}))
+	t.Cleanup(ts.Close)
+
+	ctx := t.Context()
+	tmpDir := t.TempDir()
+	cacheDir := filepath.Join(tmpDir, "cache")
+	remoteURL := ts.URL + "/test.qcow2"
+
+	// Pre-populate the cache the way a digest-less download does: "data" and
+	// "time", but no "<ALGO>.digest" file.
+	shad := cacheDirectoryPath(cacheDir, remoteURL)
+	assert.NilError(t, os.MkdirAll(shad, 0o700))
+	shadData := filepath.Join(shad, "data")
+	assert.NilError(t, exec.CommandContext(ctx, "qemu-img", "create", "-f", "qcow2", shadData, "64K").Run())
+	assert.NilError(t, os.WriteFile(filepath.Join(shad, "time"), []byte(lastModified), 0o644))
+
+	localPath := filepath.Join(tmpDir, "local")
+
+	// The cached image does not match the expected digest, so the download must fail
+	// even though the driver only supports raw and the image gets converted.
+	_, err = Download(ctx, localPath, remoteURL,
+		WithCacheDir(cacheDir),
+		WithDescription("image"),
+		WithImageFormats([]string{"raw"}),
+		WithExpectedDigest(digest.SHA256.FromString("unrelated")),
+	)
+	assert.ErrorContains(t, err, "expected digest")
+}
