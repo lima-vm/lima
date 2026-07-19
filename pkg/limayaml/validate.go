@@ -430,9 +430,9 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		y.User.PasswordlessSudo != nil && *y.User.PasswordlessSudo {
 		errs = errors.Join(errs, errors.New("`user.passwordlessSudo: true` is not supported on macOS guests"))
 	}
-	if y.VMType != nil && *y.VMType == limatype.WSL2 &&
+	if y.VMType != nil && limatype.IsContainerDriver(*y.VMType) &&
 		y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo {
-		errs = errors.Join(errs, errors.New("`user.passwordlessSudo: false` is not supported on WSL2 guest"))
+		errs = errors.Join(errs, fmt.Errorf("`user.passwordlessSudo: false` is not supported on %s guest", *y.VMType))
 	}
 	// GHSA-2j9v-p4xj-cjw2 constraint: require plain mode when passwordless sudo is disabled
 	if y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo {
