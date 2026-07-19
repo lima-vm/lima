@@ -21,7 +21,9 @@ import (
 )
 
 // OCI runtime for container.
-const ociRuntime = "io.containerd.kata.v2"
+const (
+	ociRuntime = "runc"
+)
 
 // createVM calls DC to create a VM.
 func createVM(ctx context.Context, distroName string, cpus, memory int, initSystem, guestUser string) error {
