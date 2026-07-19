@@ -1,0 +1,22 @@
+vmType: ac
+
+arch: aarch64
+cpus: 4
+memory: 1GiB
+disk: 512GiB
+
+images:
+- location: "https://partner-images.canonical.com/oci/noble/current/ubuntu-ubuntu-noble-oci-arm64-root.tar.gz"
+  arch: "aarch64"
+  digest: "sha256:fdc0d7e862272a3f341dc9b045b572ccb6ed9f78c2f2f1c19f4fdd0315e60ff2"
+
+mountType: virtiofs
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
+containerd:
+  system: false
+  user: false
