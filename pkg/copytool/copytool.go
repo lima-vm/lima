@@ -15,7 +15,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -124,7 +124,7 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 		if runtime.GOOS == "windows" {
 			if filepath.IsAbs(path) {
 				var err error
-				path, err = ioutilx.WindowsSubsystemPath(ctx, path)
+				path, err = fsutil.WindowsSubsystemPath(ctx, path)
 				if err != nil {
 					return nil, err
 				}

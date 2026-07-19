@@ -27,7 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sys/cpu"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
@@ -232,7 +232,7 @@ func PathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error)
 		return orig, nil
 	}
 	if cygpathExe, ok := cygpathForSSH(sshExe); ok {
-		return ioutilx.WindowsSubsystemPathWithCygpath(ctx, cygpathExe, orig)
+		return fsutil.WindowsSubsystemPathWithCygpath(ctx, cygpathExe, orig)
 	}
 	return filepath.ToSlash(orig), nil
 }

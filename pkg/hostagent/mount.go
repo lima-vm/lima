@@ -13,7 +13,7 @@ import (
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
@@ -55,7 +55,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	resolvedLocation := m.Location
 	if runtime.GOOS == "windows" {
 		var err error
-		resolvedLocation, err = ioutilx.WindowsSubsystemPath(ctx, m.Location)
+		resolvedLocation, err = fsutil.WindowsSubsystemPath(ctx, m.Location)
 		if err != nil {
 			return nil, err
 		}
