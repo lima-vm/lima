@@ -663,6 +663,8 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		virtioBlk = "virtio-blk-ccw"
 	}
 
+	args = append(args, "-device", "qemu-xhci,id=usb-bus")
+
 	isoPresent := osutil.FileExists(isoPath)
 	if osutil.FileExists(diskPath) {
 		if isoPresent {
@@ -684,8 +686,6 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			// For aarch64, QEMU uses `virt` machine type but it doesn't recognize CDROM drive.
 			// In order to attach ISO files, we need to use USB devices instead.
 			if *y.Arch == limatype.AARCH64 {
-				// Those two lines are necessary here, otherwise QEMU raises an error `No 'usb-bus' bus found for device 'usb-storage'`.
-				args = append(args, "-device", "qemu-xhci")
 				args = append(args, "-device", "usb-kbd")
 				args = append(args, "-drive", fmt.Sprintf("file=%s,if=none,id=cd0,format=raw,media=cdrom,readonly=on", isoPath))
 				args = append(args, "-device", "usb-storage,drive=cd0")
@@ -913,7 +913,6 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 		args = append(args, "-device", "virtio-keyboard-pci")
 		args = append(args, "-device", "virtio-"+input+"-pci")
-		args = append(args, "-device", "qemu-xhci,id=usb-bus")
 	} else {
 		// Suppress any machine-default VGA adapter so the guest needs no VGA
 		// ROM. Only x86_64's q35/pc attach one (a std-vga needing
