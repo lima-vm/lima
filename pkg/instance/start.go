@@ -40,6 +40,10 @@ import (
 // to be running before timing out.
 const DefaultWatchHostAgentEventsTimeout = 10 * time.Minute
 
+// Since the initial boot of Windows usually takes longer than DefaultWatchHostAgentEventsTimeout,
+// use a windows-specific default timeout duration.
+const WinDefaultWatchHostAgentEventsTimeout = 30 * time.Minute
+
 type Prepared struct {
 	Driver              driver.Driver
 	GuestAgent          string

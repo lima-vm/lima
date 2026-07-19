@@ -36,4 +36,3 @@ For Windows server 2025, TPM emulation is disabled by default. However, there ar
 - QEMU is the only VM driver that supports Windows guests
 - Only plain mode is supported (no file mount, no dynamic port-forwarding)
 - Booting Windows 11 may occasionally fail. If it fails, please delete the instance and try it again from scratch.
-- Booting Windows 11 usually takes longer than default timeout (10 minutes). Please consider extending the timeout.(example: `--timeout=30m`)
