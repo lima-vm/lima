@@ -14,6 +14,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 type portForwarder struct {
@@ -28,6 +29,26 @@ type portForwarder struct {
 const sshGuestPort = 22
 
 var IPv4loopback1 = limayaml.IPv4loopback1
+
+// portForwardRules returns the rules used by both forwarders: the SSH ports are
+// blocked on every guest IP, then the instance rules, then the default forward
+// for the remaining ports.
+func portForwardRules(instDir string, user limatype.User, param map[string]string, sshLocalPort int, instRules []limatype.PortForward) []limatype.PortForward {
+	rules := make([]limatype.PortForward, 0, 3+len(instRules))
+	for _, port := range []int{sshGuestPort, sshLocalPort} {
+		// GuestIPMustBeZero must be set explicitly. FillPortForwardDefaults would otherwise
+		// derive it from GuestIP and turn the rule into an exact 0.0.0.0 match, which leaves
+		// a guest listening on 127.0.0.1 or ::1 unblocked.
+		rule := limatype.PortForward{GuestIP: net.IPv4zero, GuestIPMustBeZero: ptr.Of(false), GuestPort: port, Ignore: true}
+		limayaml.FillPortForwardDefaults(&rule, instDir, user, param)
+		rules = append(rules, rule)
+	}
+	rules = append(rules, instRules...)
+	// Default forwards for all non-privileged ports from "127.0.0.1" and "::1"
+	rule := limatype.PortForward{}
+	limayaml.FillPortForwardDefaults(&rule, instDir, user, param)
+	return append(rules, rule)
+}
 
 func newPortForwarder(sshConfig *ssh.SSHConfig, sshAddressPort func() (string, int), rules []limatype.PortForward, ignore bool, vmType limatype.VMType, onEvent func(*events.PortForwardEvent)) *portForwarder {
 	return &portForwarder{
