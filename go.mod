@@ -38,7 +38,7 @@ require (
 	github.com/inetaf/tcpproxy v0.0.0-20250222171855-c4b9df066048
 	github.com/invopop/jsonschema v0.14.0
 	github.com/mattn/go-isatty v0.0.22
-	github.com/mattn/go-shellwords v1.0.13
+	github.com/mattn/go-shellwords v1.0.14
 	github.com/mdlayher/netlink v1.11.2
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
