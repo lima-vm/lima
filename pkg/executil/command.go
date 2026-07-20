@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"github.com/lima-vm/lima/v2/pkg/ioutilx"
+	"github.com/lima-vm/lima/v2/pkg/strutil"
 )
 
 type options struct {
@@ -44,7 +44,7 @@ func RunUTF16leCommand(args []string, opts ...Opt) (string, error) {
 	outString := ""
 	out, err := cmd.CombinedOutput()
 	if out != nil {
-		s, err := ioutilx.FromUTF16leToString(bytes.NewReader(out))
+		s, err := strutil.FromUTF16leToString(bytes.NewReader(out))
 		if err != nil {
 			return "", fmt.Errorf("failed to convert output from UTF16 when running command %v, err: %w", args, err)
 		}
