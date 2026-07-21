@@ -55,7 +55,7 @@ anchor = "smart"
 
 [languages]
 [languages.en]
-languageName ="English"
+label = "English"
 # Weight used for sorting.
 weight = 1
 [languages.en.params]
@@ -206,12 +206,21 @@ enable = false
   name = "Releases"
   url = "https://github.com/lima-vm/lima/releases"
 
+# Allow HTML content files such as content/en/_index.html
+# (denied by default since Hugo 0.157)
+[security]
+  allowContent = ['.*']
+  # Node.js runs PostCSS (autoprefixer); browserslist reads parent
+  # directories, which the default sandbox (allowRead = ['.']) denies.
+  [security.node.permissions]
+    disable = true
+
 [module]
   # uncomment line below for temporary local development of module
   # replacements = "github.com/google/docsy -> ../../docsy"
   [module.hugoVersion]
     extended = true
-    min = "0.110.0"
+    min = "0.157.0"
   [[module.imports]]
     path = "github.com/google/docsy"
     disable = false
@@ -236,4 +245,4 @@ enable = false
     source="templates"
     target="static/templates"
     language="en"
-    includeFiles = "README.md"
+    files = "README.md"
