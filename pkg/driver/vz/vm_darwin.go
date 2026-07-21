@@ -52,8 +52,34 @@ type virtualMachineWrapper struct {
 	stopped bool
 }
 
-// Hold all *os.File created via socketpair() so that they won't get garbage collected. f.FD() gets invalid if f gets garbage collected.
-var vmNetworkFiles = make([]*os.File, 1)
+// retainedFileDescriptors holds descriptors that Virtualization.framework keeps
+// using after VM configuration is created. Keep this per VM so one VM lifecycle
+// cannot leak or close descriptors that belong to another VM in the same process.
+type retainedFileDescriptors struct {
+	mu    sync.Mutex
+	files []*os.File
+}
+
+func newRetainedFileDescriptors() *retainedFileDescriptors {
+	return &retainedFileDescriptors{}
+}
+
+var processRetainedFDs = newRetainedFileDescriptors()
+
+func (r *retainedFileDescriptors) Append(files ...*os.File) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.files = append(r.files, files...)
+}
+
+func (r *retainedFileDescriptors) CloseAll() {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	for _, file := range r.files {
+		_ = file.Close()
+	}
+	r.files = nil
+}
 
 func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
@@ -61,7 +87,8 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 		return nil, nil, nil, err
 	}
 
-	machine, err := createVM(ctx, inst)
+	retainedFDs := newRetainedFileDescriptors()
+	machine, err := createVM(ctx, inst, retainedFDs)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -78,9 +105,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
-			for i := range vmNetworkFiles {
-				vmNetworkFiles[i].Close()
-			}
+			retainedFDs.CloseAll()
 		}()
 		for {
 			select {
@@ -210,7 +235,7 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 	return usernet.NewClient(endpointSock, subnetIP), cancel, err
 }
 
-func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine, error) {
+func createVM(ctx context.Context, inst *limatype.Instance, retainedFDs *retainedFileDescriptors) (*vz.VirtualMachine, error) {
 	vmConfig, err := createInitialConfig(inst)
 	if err != nil {
 		return nil, err
@@ -224,11 +249,11 @@ func createVM(ctx context.Context, inst *limatype.Instance) (*vz.VirtualMachine,
 		return nil, err
 	}
 
-	if err = attachNetwork(ctx, inst, vmConfig); err != nil {
+	if err = attachNetwork(ctx, inst, vmConfig, retainedFDs); err != nil {
 		return nil, err
 	}
 
-	if err = attachDisks(ctx, inst, vmConfig); err != nil {
+	if err = attachDisks(ctx, inst, vmConfig, retainedFDs); err != nil {
 		return nil, err
 	}
 
@@ -411,7 +436,7 @@ func newVirtioNetworkDeviceConfiguration(attachment vz.NetworkDeviceAttachment, 
 	return networkConfig, nil
 }
 
-func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration, retainedFDs *retainedFileDescriptors) error {
 	var configurations []*vz.VirtioNetworkDeviceConfiguration
 
 	// Configure default usernetwork with limayaml.MACAddress(inst.Dir) for eth0 interface
@@ -422,7 +447,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 		if err != nil {
 			return err
 		}
-		networkConn, err := PassFDToUnix(vzSock)
+		networkConn, err := passFDToUnix(vzSock, retainedFDs)
 		if err != nil {
 			return err
 		}
@@ -436,7 +461,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 		if err != nil {
 			return err
 		}
-		networkConn, err := PassFDToUnix(vzSock)
+		networkConn, err := passFDToUnix(vzSock, retainedFDs)
 		if err != nil {
 			return err
 		}
@@ -475,7 +500,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				if err != nil {
 					return err
 				}
-				clientFile, err := PassFDToUnix(vzSock)
+				clientFile, err := passFDToUnix(vzSock, retainedFDs)
 				if err != nil {
 					return err
 				}
@@ -499,7 +524,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 						return err
 					}
 
-					clientFile, err := DialQemu(ctx, sock)
+					clientFile, err := dialQemu(ctx, sock, retainedFDs)
 					if err != nil {
 						return err
 					}
@@ -511,7 +536,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				}
 			}
 		} else if nw.Socket != "" {
-			clientFile, err := DialQemu(ctx, nw.Socket)
+			clientFile, err := dialQemu(ctx, nw.Socket, retainedFDs)
 			if err != nil {
 				return err
 			}
@@ -544,7 +569,7 @@ func validateDiskFormat(diskPath string) error {
 	return nil
 }
 
-func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration) error {
+func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.VirtualMachineConfiguration, retainedFDs *retainedFileDescriptors) (retErr error) {
 	diskPath := filepath.Join(inst.Dir, filenames.Disk)
 	isoPath := filepath.Join(inst.Dir, filenames.ISO)
 	ciDataPath := filepath.Join(inst.Dir, filenames.CIDataISO)
@@ -580,6 +605,14 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 	}
 
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
+	var lockedDisks []*store.Disk
+	defer func() {
+		if retErr != nil {
+			for _, disk := range lockedDisks {
+				_ = disk.Unlock()
+			}
+		}
+	}()
 
 	for _, d := range inst.Config.AdditionalDisks {
 		diskName := d.Name
@@ -592,6 +625,7 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 		if err = disk.LockForInstance(inst.Dir); err != nil {
 			return fmt.Errorf("failed to attach disk %#q: %w", diskName, err)
 		}
+		lockedDisks = append(lockedDisks, disk)
 		extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 		// ConvertToRaw is a NOP if no conversion is needed
 		logrus.Debugf("Converting extra disk %#q to a raw disk (if it is not a raw)", extraDiskPath)
@@ -608,6 +642,11 @@ func attachDisks(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Virt
 			return fmt.Errorf("failed to create new virtio block device config for extra disk %#q: %w", extraDiskPath, err)
 		}
 		configurations = append(configurations, extraDisk)
+	}
+
+	configurations, err := attachHostBlockDevices(ctx, inst, configurations, retainedFDs)
+	if err != nil {
+		return err
 	}
 
 	if err := validateDiskFormat(ciDataPath); err != nil {
@@ -932,7 +971,7 @@ func getEFI(inst *limatype.Instance) (*vz.EFIVariableStore, error) {
 	return vz.NewEFIVariableStore(efi)
 }
 
-func createSockPair() (server, client *os.File, _ error) {
+func createSockPair(retainedFDs *retainedFileDescriptors) (server, client *os.File, _ error) {
 	pairs, err := syscall.Socketpair(syscall.AF_UNIX, syscall.SOCK_DGRAM, 0)
 	if err != nil {
 		return nil, nil, err
@@ -960,7 +999,9 @@ func createSockPair() (server, client *os.File, _ error) {
 	runtime.SetFinalizer(client, func(*os.File) {
 		logrus.Debugf("Client network file GC'ed")
 	})
-	vmNetworkFiles = append(vmNetworkFiles, server, client)
+	if retainedFDs != nil {
+		retainedFDs.Append(server, client)
+	}
 	return server, client, nil
 }
 

@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/balajiv113/fd"
 	"gotest.tools/v3/assert"
 )
 
@@ -36,7 +37,9 @@ func TestDialQemu(t *testing.T) {
 	}()
 
 	// Connect to the fake vmnet server.
-	client, err := DialQemu(t.Context(), listener.Addr().String())
+	retainedFDs := newRetainedFileDescriptors()
+	defer retainedFDs.CloseAll()
+	client, err := dialQemu(t.Context(), listener.Addr().String(), retainedFDs)
 	assert.NilError(t, err)
 	t.Log("Connected to fake vment server")
 
@@ -100,6 +103,40 @@ func TestDialQemu(t *testing.T) {
 		err := <-errc
 		assert.NilError(t, err)
 	}
+}
+
+func TestPassFDToUnixUsesProcessRetainer(t *testing.T) {
+	processRetainedFDs.CloseAll()
+	t.Cleanup(processRetainedFDs.CloseAll)
+
+	listener, err := listenUnix(t.TempDir())
+	assert.NilError(t, err)
+	defer listener.Close()
+
+	errCh := make(chan error, 1)
+	go func() {
+		conn, err := listener.AcceptUnix()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer conn.Close()
+		files, err := fd.Get(conn, 1, []string{"server"})
+		for _, file := range files {
+			_ = file.Close()
+		}
+		errCh <- err
+	}()
+
+	client, err := PassFDToUnix(listener.Addr().String())
+	assert.NilError(t, err)
+	assert.NilError(t, <-errCh)
+	assert.Assert(t, client != nil)
+
+	processRetainedFDs.mu.Lock()
+	retained := len(processRetainedFDs.files)
+	processRetainedFDs.mu.Unlock()
+	assert.Equal(t, retained, 2)
 }
 
 // TestQemuPacketConnReadOversize verifies that a packet whose size prefix

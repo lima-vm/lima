@@ -44,6 +44,7 @@ var knownYamlProperties = []string{
 	"AdditionalDisks",
 	"Arch",
 	"Audio",
+	"BlockDevices",
 	"CACertificates",
 	"Containerd",
 	"CopyToHost",
@@ -262,6 +263,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if cfg == nil {
 		return errors.New("configuration is nil")
 	}
+	if len(cfg.BlockDevices) > 0 && externalVZ {
+		return errors.New("field `blockDevices` is not supported for external VZ driver builds")
+	}
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
 		return err
@@ -355,6 +359,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	default:
 		return fmt.Errorf("field `vmOpts.vz.diskImageFormat` must be %#q or %#q, got %#q", raw.Type, asif.Type, *vzOpts.DiskImageFormat)
+	}
+	if len(cfg.BlockDevices) > 0 && macOSProductVersion.LessThan(*semver.New("14.0.0")) {
+		return fmt.Errorf("field `blockDevices` requires macOS 14 or higher to run, got %q", macOSProductVersion)
 	}
 	return nil
 }

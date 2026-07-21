@@ -63,6 +63,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	if !slices.Contains(limatype.ArchTypes, *y.Arch) {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %#q", limatype.ArchTypes, *y.Arch))
 	}
+	errs = errors.Join(errs, validateBlockDevices(y.BlockDevices))
 
 	if y.User.Shell != nil {
 		shell := *y.User.Shell
@@ -484,6 +485,23 @@ func IsSupportedWindowsShell(shell string) bool {
 		}
 	}
 	return false
+}
+
+func validateBlockDevices(blockDevices []string) error {
+	var errs error
+
+	for i, blockDevice := range blockDevices {
+		field := fmt.Sprintf("blockDevices[%d]", i)
+		if blockDevice == "" {
+			errs = errors.Join(errs, fmt.Errorf("field `%s` must not be empty", field))
+			continue
+		}
+		if !filepath.IsAbs(blockDevice) && !path.IsAbs(blockDevice) {
+			errs = errors.Join(errs, fmt.Errorf("field `%s` must be an absolute path, got %q", field, blockDevice))
+		}
+	}
+
+	return errs
 }
 
 func validateFileObject(f limatype.File, fieldName string) error {

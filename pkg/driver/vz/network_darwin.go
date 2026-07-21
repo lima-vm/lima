@@ -21,7 +21,14 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
+// PassFDToUnix sends one side of a socketpair to unixSock and returns the other
+// side to the caller. VZ VM setup uses passFDToUnix instead so descriptors that
+// Virtualization.framework keeps using can be retained for exactly one VM.
 func PassFDToUnix(unixSock string) (*os.File, error) {
+	return passFDToUnix(unixSock, processRetainedFDs)
+}
+
+func passFDToUnix(unixSock string, retainedFDs *retainedFileDescriptors) (*os.File, error) {
 	unixAddr, err := net.ResolveUnixAddr("unix", unixSock)
 	if err != nil {
 		return nil, err
@@ -31,7 +38,7 @@ func PassFDToUnix(unixSock string) (*os.File, error) {
 		return nil, err
 	}
 
-	server, client, err := createSockPair()
+	server, client, err := createSockPair(retainedFDs)
 	if err != nil {
 		return nil, err
 	}
@@ -42,9 +49,14 @@ func PassFDToUnix(unixSock string) (*os.File, error) {
 	return client, nil
 }
 
-// DialQemu support connecting to QEMU supported network stack via unix socket.
-// Returns os.File, connected dgram connection to be used for vz.
+// DialQemu connects to a QEMU-compatible network stack via Unix socket and
+// returns a datagram connection file for VZ. VZ VM setup uses dialQemu instead
+// to retain Virtualization.framework-owned descriptors for the VM lifetime.
 func DialQemu(ctx context.Context, unixSock string) (*os.File, error) {
+	return dialQemu(ctx, unixSock, processRetainedFDs)
+}
+
+func dialQemu(ctx context.Context, unixSock string, retainedFDs *retainedFileDescriptors) (*os.File, error) {
 	var dialer net.Dialer
 	unixConn, err := dialer.DialContext(ctx, "unix", unixSock)
 	if err != nil {
@@ -52,7 +64,7 @@ func DialQemu(ctx context.Context, unixSock string) (*os.File, error) {
 	}
 	qemuConn := &qemuPacketConn{Conn: unixConn}
 
-	server, client, err := createSockPair()
+	server, client, err := createSockPair(retainedFDs)
 	if err != nil {
 		return nil, err
 	}

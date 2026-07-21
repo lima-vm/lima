@@ -131,6 +131,13 @@ additionalDisks:
 #   format: true
 #   fsType: "ext4"
 
+# Attach host block devices directly to supported backends.
+# Each entry is a host device path whose exact format is backend-specific.
+# The Darwin VZ helper accepts disk device paths like /dev/disk4 or /dev/rdisk4s1
+# and requires limactl sudoers --block-device=/dev/diskN.
+# 🟢 Builtin default: []
+blockDevices: []
+
 ssh:
   # A localhost port of the host. Forwarded to port 22 of the guest.
   # 🟢 Builtin default: 0 (automatically assigned to a free port)

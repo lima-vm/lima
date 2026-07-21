@@ -302,6 +302,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 
 	y.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, d.AdditionalDisks)
+	y.BlockDevices = slices.Concat(o.BlockDevices, y.BlockDevices, d.BlockDevices)
 
 	if y.Audio.Device == nil {
 		y.Audio.Device = d.Audio.Device
