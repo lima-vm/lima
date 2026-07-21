@@ -15,6 +15,8 @@ $dark: black;
 // Bootstrap derives $link-color from $primary (white); pin it to the blue
 // that Docsy < 0.12 used.
 $link-color: $blue;
+// Load "Open Sans" from Google Fonts, as Docsy < 0.12 did by default.
+$td-enable-google-fonts: true;
 $td-sidebar-tree-root-color: #222 !default;
 
 .nav-shadow {
