@@ -265,12 +265,22 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		if d.FSType != nil {
 			fstype = *d.FSType
 		}
+		mount := true
+		if d.Mount != nil {
+			mount = *d.Mount
+		}
+		mountPoint := ""
+		if d.MountPoint != nil {
+			mountPoint = *d.MountPoint
+		}
 		args.Disks = append(args.Disks, Disk{
-			Name:   d.Name,
-			Device: diskDeviceNameFromOrder(i),
-			Format: format,
-			FSType: fstype,
-			FSArgs: d.FSArgs,
+			Name:       d.Name,
+			Device:     diskDeviceNameFromOrder(i),
+			Format:     format,
+			FSType:     fstype,
+			FSArgs:     d.FSArgs,
+			Mount:      mount,
+			MountPoint: mountPoint,
 		})
 	}
 

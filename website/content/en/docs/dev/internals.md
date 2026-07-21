@@ -204,6 +204,8 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_DISK_%d_FORMAT`: set to "true" when the N-th additional disk should be formatted on first boot.
 - `LIMA_CIDATA_DISK_%d_FSTYPE`: the filesystem type to format the N-th additional disk with (e.g. `ext4`).
 - `LIMA_CIDATA_DISK_%d_FSARGS`: extra arguments passed to mkfs for the N-th additional disk (space-separated).
+- `LIMA_CIDATA_DISK_%d_MOUNT`: set to "true" when the N-th additional disk should be mounted by the guest (default "true").
+- `LIMA_CIDATA_DISK_%d_MOUNTPOINT`: the guest path to mount the N-th additional disk at. Empty means the default `/mnt/lima-<name>`.
 - `LIMA_CIDATA_DATAFILE_%08d_OVERWRITE`: set to "true" if the datafile should be overwritten if it already exists.
 - `LIMA_CIDATA_DATAFILE_%08d_OWNER`: set to the owner of the datafile.
 - `LIMA_CIDATA_DATAFILE_%08d_PATH`: set to the path the datafile should be copied to.

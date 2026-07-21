@@ -158,10 +158,12 @@ type Image struct {
 }
 
 type Disk struct {
-	Name   string   `yaml:"name" json:"name"` // REQUIRED
-	Format *bool    `yaml:"format,omitempty" json:"format,omitempty"`
-	FSType *string  `yaml:"fsType,omitempty" json:"fsType,omitempty"`
-	FSArgs []string `yaml:"fsArgs,omitempty" json:"fsArgs,omitempty"`
+	Name       string   `yaml:"name" json:"name"` // REQUIRED
+	Format     *bool    `yaml:"format,omitempty" json:"format,omitempty"`
+	FSType     *string  `yaml:"fsType,omitempty" json:"fsType,omitempty"`
+	FSArgs     []string `yaml:"fsArgs,omitempty" json:"fsArgs,omitempty"`
+	Mount      *bool    `yaml:"mount,omitempty" json:"mount,omitempty"`
+	MountPoint *string  `yaml:"mountPoint,omitempty" json:"mountPoint,omitempty"`
 }
 
 type Mount struct {

@@ -82,11 +82,13 @@ type YQProvision struct {
 }
 
 type Disk struct {
-	Name   string
-	Device string
-	Format bool
-	FSType string
-	FSArgs []string
+	Name       string
+	Device     string
+	Format     bool
+	FSType     string
+	FSArgs     []string
+	Mount      bool
+	MountPoint string
 }
 type TemplateArgs struct {
 	Debug                           bool
