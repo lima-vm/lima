@@ -622,8 +622,10 @@ func startAction(cmd *cobra.Command, args []string) error {
 	}
 
 	if !cmd.Flags().Changed("timeout") && *inst.Config.OS == limatype.WINDOWS {
-		timeout = instance.WinDefaultWatchHostAgentEventsTimeout
-		logrus.Infof("Extended the default timeout to %v for Windows guest boot.", timeout)
+		if _, err := os.Stat(filepath.Join(inst.Dir, filenames.WinDoneInstallation)); err != nil {
+			timeout = instance.WinDefaultWatchHostAgentEventsTimeout
+			logrus.Infof("Extended the default timeout to %v for Windows guest initial boot.", timeout)
+		}
 	}
 
 	if timeout > 0 {
