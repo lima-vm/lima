@@ -284,6 +284,16 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		// store.Inspect() will validate the template name (in case it has been set to arg)
 		inst, err := store.Inspect(ctx, tmpl.Name)
 		if err == nil {
+			configErr := errors.Join(inst.Errors...)
+			if configErr != nil {
+				logrus.WithError(configErr).Errorf("Instance %q has configuration errors", tmpl.Name)
+			}
+			if inst.Config == nil {
+				if configErr != nil {
+					return nil, fmt.Errorf("instance %q has configuration errors: %w", tmpl.Name, configErr)
+				}
+				return nil, fmt.Errorf("instance %q has no configuration", tmpl.Name)
+			}
 			if createOnly {
 				return nil, fmt.Errorf("instance %#q already exists", tmpl.Name)
 			}
