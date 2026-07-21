@@ -1316,7 +1316,9 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 			return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 		}
 	}
-	if err := os.WriteFile(local, out, 0o600); err != nil {
+	// The destination may sit inside a writable mount, so don't follow a
+	// symlink planted there by the guest.
+	if err := osutil.WriteFileBeneathDir(local, out, 0o600); err != nil {
 		return fmt.Errorf("can't write to local file %#q: %w", local, err)
 	}
 	return nil
