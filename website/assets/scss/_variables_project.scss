@@ -7,9 +7,14 @@ Add styles or override variables from the theme here.
 $display1-weight: 500 !default;
 $display2-weight: 100 !default;
 
-$primary: rgb(255, 255, 255) !default;
-$secondary: rgb(66.274512%, 81.176472%, 21.960784%) !default;
-$dark: black !default;
+// No `!default` here: Docsy >= 0.12 pre-declares these variables in
+// _variables_forward.scss, so `!default` assignments would be ignored.
+$primary: rgb(255, 255, 255);
+$secondary: rgb(66.274512%, 81.176472%, 21.960784%);
+$dark: black;
+// Bootstrap derives $link-color from $primary (white); pin it to the blue
+// that Docsy < 0.12 used.
+$link-color: $blue;
 $td-sidebar-tree-root-color: #222 !default;
 
 .nav-shadow {
