@@ -7,7 +7,7 @@ go 1.25.7
 //gosocialcheck:trusted
 require (
 	github.com/lima-vm/go-qcow2reader v0.7.1
-	github.com/lima-vm/sshocker v0.3.9 // gomodjail:unconfined
+	github.com/lima-vm/sshocker v0.3.11 // gomodjail:unconfined
 	golang.org/x/net v0.57.0
 	golang.org/x/sync v0.22.0
 	golang.org/x/sys v0.47.0 // gomodjail:unconfined
