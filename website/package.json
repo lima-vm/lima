@@ -32,7 +32,11 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.21",
-    "hugo-extended": "0.133.1",
-    "postcss-cli": "^11.0.1"
-  }
+    "hugo-extended": "0.164.0",
+    "postcss-cli": "^11.0.1",
+    "sass-embedded": "^1.104.0"
+  },
+  "workspaces": [
+    "packages/hugoautogen"
+  ]
 }
