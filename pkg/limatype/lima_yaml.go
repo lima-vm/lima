@@ -76,7 +76,7 @@ type (
 	VMType    = string
 )
 
-type CPUType = map[Arch]string
+type CPUType map[Arch]string
 
 const (
 	LINUX   OS = "Linux"
@@ -173,7 +173,7 @@ type Mount struct {
 	Virtiofs   Virtiofs `yaml:"virtiofs,omitempty" json:"virtiofs,omitempty"`
 }
 
-type SFTPDriver = string
+type SFTPDriver string
 
 const (
 	SFTPDriverBuiltin           = "builtin"
@@ -236,7 +236,7 @@ type Video struct {
 	VNC     VNCOptions `yaml:"vnc,omitempty" json:"vnc,omitempty"`
 }
 
-type ProvisionMode = string
+type ProvisionMode string
 
 const (
 	ProvisionModeSystem     ProvisionMode = "system"
@@ -275,7 +275,7 @@ type Containerd struct {
 	Archives []File `yaml:"archives,omitempty" json:"archives,omitempty"`                   // default: see defaultContainerdArchives
 }
 
-type ProbeMode = string
+type ProbeMode string
 
 const (
 	ProbeModeReadiness ProbeMode = "readiness"
@@ -289,7 +289,7 @@ type Probe struct {
 	Hint        string             `yaml:"hint,omitempty" json:"hint,omitempty"`
 }
 
-type Proto = string
+type Proto string
 
 const (
 	ProtoTCP Proto = "tcp"
