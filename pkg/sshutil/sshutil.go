@@ -535,9 +535,8 @@ func removeOptsFromSSHArgs(sshArgs []string, removeOpts ...string) []string {
 
 // IsControlMasterExisting returns true if the control socket file exists.
 func IsControlMasterExisting(instDir string) bool {
-	controlSock := filepath.Join(instDir, filenames.SSHSock)
-	_, err := os.Stat(controlSock)
-	return err == nil
+	matches, err := filepath.Glob(filepath.Join(instDir, filenames.SSHSock) + "*")
+	return err == nil && len(matches) > 0
 }
 
 // IsControlMasterRunning reports whether an SSH ControlMaster process is
@@ -586,13 +585,13 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 	if err != nil {
 		return nil, err
 	}
-	controlPath := fmt.Sprintf(`ControlPath="%s"`, controlSock)
+	controlPath := fmt.Sprintf(`ControlPath="%s.%%r"`, controlSock)
 	if runtime.GOOS == "windows" {
 		controlSock, err = PathForSSH(ctx, sshExe, controlSock)
 		if err != nil {
 			return nil, err
 		}
-		controlPath = fmt.Sprintf(`ControlPath='%s'`, controlSock)
+		controlPath = fmt.Sprintf(`ControlPath='%s.%%r'`, controlSock)
 	}
 	opts = append(opts,
 		fmt.Sprintf("User=%s", username), // guest and host have the same username, but we should specify the username explicitly (#85)
