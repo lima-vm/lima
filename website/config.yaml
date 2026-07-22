@@ -12,4 +12,4 @@
 module:
   hugoVersion:
     extended: true
-    min: 0.110.0
+    min: 0.157.0
