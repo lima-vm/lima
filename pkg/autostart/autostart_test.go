@@ -34,6 +34,16 @@ var (
 		autoStartedIdentifier: systemd.AutoStartedUnitName,
 		requestStart:          systemd.RequestStart,
 		requestStop:           systemd.RequestStop,
+		extraTemplateVars:     map[string]string{"Restart": "on-failure"},
+	}
+	SystemdNoKeepAlive = &TemplateFileBasedManager{
+		filePath:              systemd.GetUnitPath,
+		template:              systemd.Template,
+		enabler:               systemd.EnableDisableUnit,
+		autoStartedIdentifier: systemd.AutoStartedUnitName,
+		requestStart:          systemd.RequestStart,
+		requestStop:           systemd.RequestStop,
+		extraTemplateVars:     map[string]string{"Restart": "no"},
 	}
 )
 
@@ -135,6 +145,29 @@ WorkingDirectory=%h
 Type=simple
 TimeoutSec=10
 Restart=on-failure
+
+[Install]
+WantedBy=default.target
+`,
+			GetExecutable: func() (string, error) {
+				return "/limactl", nil
+			},
+			WorkDir: "/some/path",
+		},
+		{
+			Manager:      SystemdNoKeepAlive,
+			Name:         "render linux systemd service with keep-alive disabled",
+			InstanceName: "default",
+			Expected: `[Unit]
+Description=Lima - Linux virtual machines, with a focus on running containers.
+Documentation=man:lima(1)
+
+[Service]
+ExecStart=/limactl start %i --foreground
+WorkingDirectory=%h
+Type=simple
+TimeoutSec=10
+Restart=no
 
 [Install]
 WantedBy=default.target

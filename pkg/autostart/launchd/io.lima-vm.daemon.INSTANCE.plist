@@ -15,6 +15,10 @@
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
+{{- if .KeepAlive }}
+	<key>KeepAlive</key>
+	<true/>
+{{- end }}
 	<key>StandardErrorPath</key>
 	<string>launchd.stderr.log</string>
 	<key>StandardOutPath</key>

@@ -594,7 +594,35 @@ func startAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	if len(inst.Errors) > 0 {
-		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+		if isOrphanedDriverError(inst.Errors) {
+			// The VM driver process is running but the host agent is not — this happens when
+			// the host agent exits uncleanly (e.g. launchd SIGTERM at shutdown). Force-stop
+			// to clean up the orphaned driver so we can start fresh.
+			logrus.Warnf("Instance %q has an orphaned driver process; attempting force stop to recover", inst.Name)
+			instance.StopForcibly(inst)
+			inst, err = store.Inspect(cmd.Context(), inst.Name)
+			if err != nil {
+				return err
+			}
+			if len(inst.Errors) > 0 {
+				return fmt.Errorf("errors inspecting instance after force stop: %+v", inst.Errors)
+			}
+		} else if isStaleHostAgentError(inst.Errors) {
+			// The host agent PID file exists but the socket is unreachable — the PID was
+			// likely reused by another process after a reboot. Remove stale temp files
+			// without sending any signal (the PID may belong to an unrelated process).
+			logrus.Warnf("Instance %q has a stale host agent socket; removing stale files to recover", inst.Name)
+			removeStaleTempFiles(inst.Dir)
+			inst, err = store.Inspect(cmd.Context(), inst.Name)
+			if err != nil {
+				return err
+			}
+			if len(inst.Errors) > 0 {
+				return fmt.Errorf("errors inspecting instance after removing stale files: %+v", inst.Errors)
+			}
+		} else {
+			return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+		}
 	}
 	switch inst.Status {
 	case limatype.StatusRunning:
@@ -648,6 +676,51 @@ func startAction(cmd *cobra.Command, args []string) error {
 	}
 
 	return instance.Start(ctx, inst, launchHostAgentForeground, progress)
+}
+
+// isOrphanedDriverError returns true when the instance errors indicate that the VM driver
+// process is running but the host agent is not — the recoverable broken state that occurs
+// after an unclean shutdown (e.g. launchd SIGTERM before the host agent could stop the VM).
+func isOrphanedDriverError(errs []error) bool {
+	for _, err := range errs {
+		if errors.Is(err, store.ErrDriverRunningHostAgentStopped) {
+			return true
+		}
+	}
+	return false
+}
+
+// isStaleHostAgentError returns true when the instance errors indicate that the host agent
+// socket is unreachable despite a PID file existing — the recoverable broken state that
+// occurs when the PID is reused by another process after a reboot.
+func isStaleHostAgentError(errs []error) bool {
+	for _, err := range errs {
+		if errors.Is(err, store.ErrHostAgentUnreachable) {
+			return true
+		}
+	}
+	return false
+}
+
+// removeStaleTempFiles removes all .pid, .sock, and .tmp files from the instance directory.
+// Used to recover from a stale host agent state without sending signals to any process.
+func removeStaleTempFiles(instDir string) {
+	entries, err := os.ReadDir(instDir)
+	if err != nil {
+		logrus.WithError(err).Warnf("Failed to read instance dir %q", instDir)
+		return
+	}
+	for _, entry := range entries {
+		path := filepath.Join(instDir, entry.Name())
+		for _, suffix := range filenames.TmpFileSuffixes {
+			if strings.HasSuffix(path, suffix) {
+				logrus.Infof("Removing stale file %q", path)
+				if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+					logrus.WithError(err).Warnf("Failed to remove %q", path)
+				}
+			}
+		}
+	}
 }
 
 func createBashComplete(cmd *cobra.Command, _ []string, toComplete string) ([]string, cobra.ShellCompDirective) {

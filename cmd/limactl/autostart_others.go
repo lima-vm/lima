@@ -35,7 +35,12 @@ func autostartEnableAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if err := autostart.RegisterToStartAtLogin(ctx, inst); err != nil {
+	keepAlive, err := cmd.Flags().GetBool("keep-alive")
+	if err != nil {
+		return err
+	}
+	mgr := autostart.ManagerWith(keepAlive)
+	if err := mgr.RegisterToStartAtLogin(ctx, inst); err != nil {
 		return fmt.Errorf("failed to register instance %#q to start at login: %w", inst.Name, err)
 	}
 	logrus.Infof("Instance %#q registered to start at login", inst.Name)
