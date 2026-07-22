@@ -5,47 +5,20 @@ package wsl2
 
 import (
 	"context"
-	"embed"
-	"errors"
 	"fmt"
 	"net"
-	"regexp"
 
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/go-winio/pkg/guid"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/freeport"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
-	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/windows"
 )
-
-var knownYamlProperties = []string{
-	"Arch",
-	"Containerd",
-	"CopyToHost",
-	"CPUType",
-	"Disk",
-	"DNS",
-	"Env",
-	"HostResolver",
-	"Images",
-	"Message",
-	"Mounts",
-	"MountType",
-	"Param",
-	"Plain",
-	"PortForwards",
-	"Probes",
-	"PropagateProxyEnv",
-	"Provision",
-	"SSH",
-	"TPM",
-	"VMType",
-}
 
 const Enabled = true
 
@@ -96,109 +69,11 @@ func (l *LimaWslDriver) Validate(ctx context.Context) error {
 }
 
 func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
-	if cfg == nil {
-		return errors.New("configuration is nil")
-	}
-	if cfg.MountType != nil && *cfg.MountType != limatype.WSLMount {
-		return fmt.Errorf("field `mountType` must be %#q for WSL2 driver, got %#q", limatype.WSLMount, *cfg.MountType)
-	}
-	// TODO: revise this list for WSL2
-	if cfg.VMType != nil {
-		if unknown := reflectutil.UnknownNonEmptyFields(cfg, knownYamlProperties...); len(unknown) > 0 {
-			logrus.Warnf("Ignoring: vmType %s: %+v", *cfg.VMType, unknown)
-		}
-	}
-
-	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
-		return errors.New("currently Windows guest OS is only supported on QEMU")
-	}
-
-	if !limatype.IsNativeArch(*cfg.Arch) {
-		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
-	}
-
-	if cfg.TPM != nil && *cfg.TPM {
-		return errors.New("field `tpm` is not supported on WSL2 driver")
-	}
-
-	if cfg.VMType != nil {
-		if cfg.Images != nil && cfg.Arch != nil {
-			// TODO: real filetype checks
-			tarFileRegex := regexp.MustCompile(`\.(tar|tgz|txz|tbz2|tzst|tar\.(gz|xz|bz2|zstd|zst))$`)
-			unsupportedVMImgRegex := regexp.MustCompile(`\.(qcow2|raw|img|iso|ipsw)(\.(gz|xz|bz2|zstd|zst))?$`)
-			squashfsRegex := regexp.MustCompile(`\.squashfs(\.(gz|xz|bz2|zstd|zst))?$`)
-			for i, image := range cfg.Images {
-				if unknown := reflectutil.UnknownNonEmptyFields(image, "File", "Variant"); len(unknown) > 0 {
-					logrus.Warnf("Ignoring: vmType %s: images[%d]: %+v", *cfg.VMType, i, unknown)
-				}
-				if image.Arch == *cfg.Arch {
-					location := image.Location
-					if !tarFileRegex.MatchString(location) {
-						if unsupportedVMImgRegex.MatchString(location) {
-							return fmt.Errorf("unsupported image type for %s: %q. %s only supports importing tar archive root filesystems, not standard VM disk images", *cfg.VMType, location, *cfg.VMType)
-						}
-						if squashfsRegex.MatchString(location) {
-							return fmt.Errorf("unsupported image type for %s: %q. %s does not natively support importing SquashFS images; please convert the image to a tar archive before importing", *cfg.VMType, location, *cfg.VMType)
-						}
-						return fmt.Errorf("unsupported image type for %s: %q. A tar archive root filesystem (.tar, .tar.gz, .tar.xz, etc.) is required", *cfg.VMType, location)
-					}
-				}
-			}
-		}
-
-		if cfg.Mounts != nil {
-			for i, mount := range cfg.Mounts {
-				if unknown := reflectutil.UnknownNonEmptyFields(mount); len(unknown) > 0 {
-					logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *cfg.VMType, i, unknown)
-				}
-			}
-		}
-
-		if cfg.Networks != nil {
-			for i, network := range cfg.Networks {
-				if unknown := reflectutil.UnknownNonEmptyFields(network); len(unknown) > 0 {
-					logrus.Warnf("Ignoring: vmType %s: networks[%d]: %+v", *cfg.VMType, i, unknown)
-				}
-			}
-		}
-
-		if cfg.Audio.Device != nil {
-			audioDevice := *cfg.Audio.Device
-			if audioDevice != "" {
-				logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *cfg.VMType, audioDevice)
-			}
-		}
-	}
-
-	return nil
+	return driverutil.ValidateContainerDriverConfig(cfg, "wsl2", []limatype.MountType{limatype.WSLMount})
 }
 
-//go:embed boot.Linux/*.sh
-var bootLinuxFS embed.FS
-
 func (l *LimaWslDriver) BootScripts(_ context.Context) (map[string][]byte, error) {
-	scripts := make(map[string][]byte)
-
-	entries, err := bootLinuxFS.ReadDir("boot.Linux")
-	if err != nil {
-		return scripts, err
-	}
-
-	for _, entry := range entries {
-		if entry.IsDir() {
-			continue
-		}
-		entryPath := "boot.Linux/" + entry.Name()
-
-		content, err := bootLinuxFS.ReadFile(entryPath)
-		if err != nil {
-			return nil, err
-		}
-
-		scripts[entryPath] = content
-	}
-
-	return scripts, nil
+	return nil, nil
 }
 
 func (l *LimaWslDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) string {

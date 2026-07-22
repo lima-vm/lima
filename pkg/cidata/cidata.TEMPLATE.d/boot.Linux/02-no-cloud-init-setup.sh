@@ -22,4 +22,15 @@ chmod 600 "${LIMA_CIDATA_HOME}"/.ssh/authorized_keys
 echo "${LIMA_CIDATA_USER} ALL=(ALL) NOPASSWD:ALL" | tee -a /etc/sudoers.d/99_lima_sudoers
 
 # symlink CIDATA to the hardcoded path for requirement checks (TODO: make this not hardcoded)
+# symlink CIDATA to the hardcoded path for requirement checks (TODO: make this not hardcoded)
 [ "$LIMA_CIDATA_MNT" = "/mnt/lima-cidata" ] || ln -sfFn "${LIMA_CIDATA_MNT}" /mnt/lima-cidata
+
+# Generate SSH host keys if not present and start SSH service
+if [ -e /etc/ssh ] && command -v ssh-keygen >/dev/null 2>&1; then
+	ssh-keygen -A
+fi
+if command -v systemctl >/dev/null 2>&1; then
+	systemctl reset-failed ssh || true
+	systemctl reset-failed sshd || true
+	systemctl enable --now ssh || systemctl enable --now sshd || true
+fi

@@ -99,14 +99,20 @@ const (
 	QEMU VMType = "qemu"
 	VZ   VMType = "vz"
 	WSL2 VMType = "wsl2"
+	AC   VMType = "ac"
+	DC   VMType = "dc"
 )
 
 var (
 	OSTypes    = []OS{LINUX, DARWIN, FREEBSD, WINDOWS}
 	ArchTypes  = []Arch{X8664, AARCH64, ARMV7L, PPC64LE, RISCV64, S390X}
 	MountTypes = []MountType{REVSSHFS, NINEP, VIRTIOFS, WSLMount}
-	VMTypes    = []VMType{QEMU, VZ, WSL2}
+	VMTypes    = []VMType{QEMU, VZ, WSL2, AC, DC}
 )
+
+func IsContainerDriver(vmType VMType) bool {
+	return vmType == WSL2 || vmType == AC || vmType == DC
+}
 
 type User struct {
 	Name             *string `yaml:"name,omitempty" json:"name,omitempty" jsonschema:"nullable"`

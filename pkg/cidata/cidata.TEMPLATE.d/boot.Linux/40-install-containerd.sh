@@ -104,16 +104,25 @@ EOF
 abi <abi/4.0>,
 include <tunables/global>
 
-/usr/local/bin/rootlesskit flags=(unconfined) {
+/usr/local/bin/rootlesskit flags=(attach_disconnected,mediate_deleted,unconfined) {
   userns,
 
   # Site-specific additions and overrides. See local/README for details.
   include if exists <local/usr.local.bin.rootlesskit>
 }
 EOF
-		systemctl restart apparmor.service
+		if [ -e /sys/kernel/security/apparmor/.load ]; then
+			apparmor_parser -r /etc/apparmor.d/usr.local.bin.rootlesskit
+		elif mount -t securityfs securityfs /sys/kernel/security 2>/dev/null; then
+			apparmor_parser -r /etc/apparmor.d/usr.local.bin.rootlesskit
+		else
+			systemctl restart apparmor.service || true
+		fi
 	fi
 	if [ ! -e "${LIMA_CIDATA_HOME}/.config/systemd/user/containerd.service" ]; then
+		if command -v systemctl >/dev/null 2>&1; then
+			systemctl start "user@${LIMA_CIDATA_UID}.service" || true
+		fi
 		until [ -e "/run/user/${LIMA_CIDATA_UID}/systemd/private" ]; do sleep 3; done
 		if [ -n "$selinux" ]; then
 			echo "Temporarily disabling SELinux, during installing containerd units"

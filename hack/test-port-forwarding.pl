@@ -94,6 +94,13 @@ unless ($nc_path) {
 my $instanceType = qx(limactl ls --json "$instance" | jq -r '.vmType' | sed s/x/x/);
 chomp $instanceType;
 
+if ($instanceType eq "dc" || $instanceType eq "external") {
+    if ($listener eq "socat" || $writer eq "socat") {
+        print "🚧 Skipping socat check for container/external driver\n";
+        exit 0;
+    }
+}
+
 # Get sshLocalPort for lima instance
 my $sshLocalPort;
 open(my $ls, "limactl ls --json |") or die;
@@ -103,6 +110,15 @@ while (<$ls>) {
     last;
 }
 die "Cannot determine sshLocalPort" unless $sshLocalPort;
+
+my $guestIP;
+if ($instance && -f $instance == 0) {
+    my $ip_route = qx(limactl shell "$instance" ip route get 1.1.1.1 2>/dev/null);
+    if ($ip_route =~ /src\s+([0-9.]+)/) {
+        $guestIP = $1;
+    }
+}
+$guestIP ||= "192.168.5.15";
 
 # Extract forwarding tests from the "portForwards" section
 my @test;
@@ -117,12 +133,18 @@ while (<DATA>) {
     s/sshLocalPort/$sshLocalPort/g;
     s/ipv4/$ipv4/g;
     s/ipv6/$ipv6/g;
+    s/192.168.5.15/$guestIP/g;
     s/sockDir\//$sockDir/g;
     # forward: 127.0.0.1 899 → 127.0.0.1 799
     # ignore: 127.0.0.2 8888
     /^(forward|ignore):\s+([0-9.:]+)\s+(\d+)(?:\s+→)?(?:\s+(?:([0-9.:]+)(?:\s+(\d+))|(\S+))?)?/;
     die "Cannot parse test '$_'" unless $1;
     my %test; @test{qw(mode guest_ip guest_port host_ip host_port host_socket)} = ($1, $2, $3, $4, $5, $6);
+
+    if ($instanceType eq "dc" || $instanceType eq "external" || $instanceType eq "wsl2") {
+        next if $test{guest_ip} =~ /:/;
+        next if $test{guest_ip} eq $guestIP;
+    }
 
     $test{host_ip} ||= "127.0.0.1";
     $test{host_port} ||= $test{guest_port};

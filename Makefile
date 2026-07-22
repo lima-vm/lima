@@ -37,6 +37,10 @@ ifeq ($(shell test $(MACOS_SDK_VERSION) -ge 14; echo $$?),0)
 DEFAULT_ADDITIONAL_DRIVERS += krunkit
 endif
 endif
+DEFAULT_ADDITIONAL_DRIVERS += ac
+endif
+ifeq ($(GOOS),linux)
+DEFAULT_ADDITIONAL_DRIVERS += dc
 endif
 ADDITIONAL_DRIVERS ?= $(DEFAULT_ADDITIONAL_DRIVERS)
 
@@ -210,6 +214,7 @@ CONFIG_GUESTAGENT_COMPRESS=y
 .PHONY: binaries
 binaries: limactl helpers limactl-plugins guestagents \
 	templates template_experimentals \
+	additional-drivers \
 	documentation create-links-in-doc-dir
 
 ################################################################################
@@ -596,7 +601,9 @@ uninstall:
 		"$(DEST)/libexec/lima/lima-driver-qemu$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)" \
-		"$(DEST)/libexec/lima/lima-driver-krunkit$(exe)"
+		"$(DEST)/libexec/lima/lima-driver-krunkit$(exe)" \
+		"$(DEST)/libexec/lima/lima-driver-ac$(exe)" \
+		"$(DEST)/libexec/lima/lima-driver-dc$(exe)"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 

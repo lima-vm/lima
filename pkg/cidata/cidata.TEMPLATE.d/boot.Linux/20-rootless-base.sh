@@ -28,6 +28,8 @@ for f in .profile .bashrc .zshrc; do
 # Make sure iptables and mount.fuse3 are available
 PATH="\$PATH:/usr/sbin:/sbin"
 export PATH
+XDG_RUNTIME_DIR="/run/user/${LIMA_CIDATA_UID}"
+export XDG_RUNTIME_DIR
 EOF
 		if compare_version.sh "$(uname -r)" -lt "5.13"; then
 			cat >>"${LIMA_CIDATA_HOME}/$f" <<EOF
@@ -77,6 +79,9 @@ for f in /etc/subuid /etc/subgid; do
 	grep -qw "${LIMA_CIDATA_USER}" $f || echo "${LIMA_CIDATA_USER}:${subuid_begin}:1073741824" >>$f
 done
 
+echo "XDG_RUNTIME_DIR=\"/run/user/${LIMA_CIDATA_UID}\"" >>/etc/environment
+export XDG_RUNTIME_DIR
+
 # Start systemd session
-systemctl start systemd-logind.service
-loginctl enable-linger "${LIMA_CIDATA_USER}"
+systemctl start systemd-logind.service || true
+loginctl enable-linger "${LIMA_CIDATA_USER}" || true

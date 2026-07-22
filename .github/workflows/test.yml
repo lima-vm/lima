@@ -683,3 +683,34 @@ jobs:
         sudo ./hack/install-qemu.sh
     - name: Smoke test
       run: limactl start --tty=false
+
+  dc:
+    name: "Integration tests (dc)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0  # v7.0.0
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16  # v6.5.0
+      with:
+        go-version: stable
+        cache: false
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: Cache image used by templates/experimental/dc.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/experimental/dc.yaml
+    - name: Install test dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends socat w3m
+    - name: Test
+      run: ./hack/test-templates.sh templates/experimental/dc.yaml
+    - if: failure()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+      with:
+        suffix: dc.yaml
