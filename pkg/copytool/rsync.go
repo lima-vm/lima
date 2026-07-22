@@ -168,6 +168,10 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 		}
 	}
 
+	// End option parsing so a path starting with a dash is treated as a path,
+	// not as an rsync option. scp.go does the same.
+	rsyncArgs = append(rsyncArgs, "--")
+
 	for _, cp := range copyPaths {
 		if cp.IsRemote {
 			rsyncArgs = append(rsyncArgs, fmt.Sprintf("%s:%s", *cp.Instance.Config.User.Name+"@"+cp.Instance.SSHAddress, cp.Path))

@@ -4,6 +4,7 @@
 package copytool
 
 import (
+	"slices"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -24,4 +25,22 @@ func TestCommandDoesNotMutateOptions(t *testing.T) {
 
 	assert.Equal(t, tool.Options.Verbose, false, "Command() must not mutate stored Options.Verbose")
 	assert.Equal(t, tool.Options.Recursive, false, "Command() must not mutate stored Options.Recursive")
+}
+
+// TestRsyncCommandEndsOptionParsing verifies that a path starting with a dash is
+// passed after "--", so rsync cannot mistake it for an option such as --rsh.
+func TestRsyncCommandEndsOptionParsing(t *testing.T) {
+	tool, err := newRsyncTool(&Options{})
+	if err != nil {
+		t.Skip("rsync not found:", err)
+	}
+
+	const dashPath = "--rsh=touch pwned"
+	// Use local paths to avoid instance lookup
+	cmd, err := tool.Command(t.Context(), []string{dashPath, "/tmp/dst"}, nil)
+	assert.NilError(t, err)
+
+	sep := slices.Index(cmd.Args, "--")
+	assert.Assert(t, sep != -1, "rsync args must contain the %#q separator: %v", "--", cmd.Args)
+	assert.Assert(t, slices.Index(cmd.Args, dashPath) > sep, "path %#q must come after %#q: %v", dashPath, "--", cmd.Args)
 }
