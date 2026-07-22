@@ -23,7 +23,18 @@ package editorcmd
 import (
 	"os"
 	"os/exec"
+	"strings"
 )
+
+// ShellMetaChars is the set of characters that, when present in an editor
+// command string, require it to be executed via a shell rather than as a
+// direct argv. The list matches git's prepare_shell_cmd in run-command.c.
+const ShellMetaChars = "|&;<>()$`\\\"' \t\n*?[#~=%"
+
+// HasShellMeta reports whether s contains any character from ShellMetaChars.
+func HasShellMeta(s string) bool {
+	return strings.ContainsAny(s, ShellMetaChars)
+}
 
 // Detect detects a text editor command.
 // Returns an empty string when no editor is found.
@@ -39,6 +50,9 @@ func Detect() string {
 	for _, f := range candidates {
 		if f == "" {
 			continue
+		}
+		if HasShellMeta(f) {
+			return f
 		}
 		x, err := exec.LookPath(f)
 		if err == nil {
