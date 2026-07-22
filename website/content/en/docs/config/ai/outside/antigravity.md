@@ -1,5 +1,5 @@
 ---
-title: Gemini
+title: Antigravity
 weight: 20
 
 ---
@@ -7,10 +7,10 @@ weight: 20
 | ⚡ Requirement | Lima >= 2.0 |
 |---------------|-------------|
 
-This page describes how to use Lima as an sandbox for [Google Gemini CLI](https://github.com/google-gemini/gemini-cli).
+This page describes how to use Lima as a sandbox for [Google Antigravity CLI](https://github.com/google-antigravity/antigravity-cli).
 
 ## Prerequisite
-In addition to Gemini and Lima, make sure that `limactl mcp` plugin is installed:
+In addition to Antigravity CLI and Lima, make sure that `limactl mcp` plugin is installed:
 
 ```console
 $ limactl mcp -v
@@ -28,11 +28,9 @@ limactl start --mount-only "$(pwd):w" default
 
 Drop the `:w` suffix if you do not want to allow writing to the mounted directory.
 
-2. Create `.gemini/extensions/lima/gemini-extension.json` as follows:
+2. Create `~/.gemini/antigravity-cli/mcp_config.json` as follows:
 ```json
 {
-  "name": "lima",
-  "version": "2.0.0",
   "mcpServers": {
     "lima": {
       "command": "limactl",
@@ -46,15 +44,18 @@ Drop the `:w` suffix if you do not want to allow writing to the mounted director
 }
 ```
 
-3. Modify `.gemini/settings.json` so as to disable Gemini CLI's [built-in tools](https://github.com/google-gemini/gemini-cli/tree/main/docs/tools)
-except ones that do not relate to local command execution and file I/O:
+3. Modify `~/.gemini/antigravity-cli/settings.json` to configure the permissions granted to Antigravity CLI. For example:
 ```json
 {
-  "coreTools": ["WebFetchTool", "WebSearchTool", "MemoryTool"]
+  "permissions": {
+    "allow": [],
+    "ask": [],
+    "deny": []
+  }
 }
 ```
 
 ## Usage
-Just run `gemini` in your project directory.
+Just run `agy` in your project directory.
 
-Gemini automatically recognizes the MCP tools provided by Lima.
+Antigravity CLI automatically recognizes the configured MCP server provided by Lima.
