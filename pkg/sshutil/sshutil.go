@@ -632,7 +632,9 @@ func SSHOptsRemovingControlPath(opts []string) []string {
 }
 
 func ParseOpenSSHVersion(version []byte) *semver.Version {
-	regex := regexp.MustCompile(`(?m)^OpenSSH_(\d+\.\d+)(?:p(\d+))?\b`)
+	// Win32-OpenSSH banners: "OpenSSH_for_Windows_9.5p2", and older releases
+	// with a space before the version.
+	regex := regexp.MustCompile(`(?m)^OpenSSH(?:_for_Windows[_ ]|_)(\d+\.\d+)(?:p(\d+))?\b`)
 	matches := regex.FindSubmatch(version)
 	if len(matches) == 3 {
 		if len(matches[2]) == 0 {
@@ -640,6 +642,9 @@ func ParseOpenSSHVersion(version []byte) *semver.Version {
 		}
 		return semver.New(fmt.Sprintf("%s.%s", matches[1], matches[2]))
 	}
+	// A 0.0.0 return silently downgrades version-gated behavior, so log the
+	// unparsed banner for --debug traces.
+	logrus.Debugf("ParseOpenSSHVersion: no match in %q; returning 0.0.0", string(version))
 	return &semver.Version{}
 }
 
