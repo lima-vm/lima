@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -124,6 +125,78 @@ func ShareLima() ([]string, error) {
 		}
 	}
 	return candidates, nil
+}
+
+func readFileFromDirs(name string, dirs []string) ([]byte, error) {
+	var attempted []string
+	for _, dir := range dirs {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		attempted = append(attempted, path)
+		b, err := os.ReadFile(path)
+		if err == nil {
+			return b, nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("failed to read %q: %w", path, err)
+		}
+	}
+	return nil, fmt.Errorf("%w: attempted %v", fs.ErrNotExist, attempted)
+}
+
+func ReadFile(name string) ([]byte, error) {
+	if !fs.ValidPath(name) || strings.ContainsRune(name, '\\') || filepath.IsAbs(filepath.FromSlash(name)) {
+		return nil, fmt.Errorf("invalid resource path %q", name)
+	}
+
+	dirs, err := ShareLima()
+	if err != nil {
+		return nil, err
+	}
+	if sourceDir := sourceShareLima(); sourceDir != "" {
+		dirs = append(dirs, sourceDir)
+	}
+	b, err := readFileFromDirs(name, dirs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to locate Lima resource %q: %w", name, err)
+	}
+	return b, nil
+}
+
+func sourceShareLima() string {
+	_, currentFile, _, ok := runtime.Caller(0)
+	if ok && filepath.IsAbs(currentFile) {
+		return filepath.Clean(filepath.Join(filepath.Dir(currentFile), "..", "..", "share", "lima"))
+	}
+
+	executable := strings.TrimSuffix(filepath.Base(os.Args[0]), ".exe")
+	if !strings.HasSuffix(executable, ".test") {
+		return ""
+	}
+	dir, err := os.Getwd()
+	if err != nil {
+		return ""
+	}
+	for {
+		goMod, err := os.ReadFile(filepath.Join(dir, "go.mod"))
+		if err == nil && isLimaGoMod(goMod) {
+			return filepath.Join(dir, "share", "lima")
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return ""
+		}
+		dir = parent
+	}
+}
+
+func isLimaGoMod(b []byte) bool {
+	for line := range strings.SplitSeq(string(b), "\n") {
+		fields := strings.Fields(line)
+		if len(fields) == 2 && fields[0] == "module" {
+			return fields[1] == "github.com/lima-vm/lima/v2"
+		}
+	}
+	return false
 }
 
 // GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.

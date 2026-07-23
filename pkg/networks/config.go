@@ -4,7 +4,6 @@
 package networks
 
 import (
-	_ "embed"
 	"errors"
 	"fmt"
 	"os"
@@ -18,10 +17,10 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
-//go:embed networks.TEMPLATE.yaml
-var defaultConfigTemplate string
+const defaultConfigTemplatePath = "defaults/networks.TEMPLATE.yaml"
 
 type defaultConfigTemplateArgs struct {
 	SocketVMNet string // "/opt/socket_vmnet/bin/socket_vmnet"
@@ -52,7 +51,11 @@ func defaultConfigBytes() ([]byte, error) {
 	if args.SocketVMNet == "" {
 		args.SocketVMNet = candidates[0] // the hard-coded path before v0.14
 	}
-	return textutil.ExecuteTemplate(defaultConfigTemplate, args)
+	defaultConfigTemplate, err := usrlocal.ReadFile(defaultConfigTemplatePath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read default network configuration template: %w", err)
+	}
+	return textutil.ExecuteTemplate(string(defaultConfigTemplate), args)
 }
 
 func fillDefaults(cfg Config) (Config, error) {
