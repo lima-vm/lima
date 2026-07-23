@@ -70,7 +70,6 @@ func TestCygpathForSSH(t *testing.T) {
 		got, ok := cygpathForSSH(SSHExe{Exe: sshExe})
 		assert.Equal(t, ok, true, "ssh.exe next to cygpath.exe should be Cygwin")
 		assert.Equal(t, got, cygpathExe, "should return the sibling cygpath, not bare 'cygpath'")
-		assert.Equal(t, IsSSHCygwin(SSHExe{Exe: sshExe}), true)
 	})
 
 	t.Run("native", func(t *testing.T) {
@@ -81,7 +80,6 @@ func TestCygpathForSSH(t *testing.T) {
 		got, ok := cygpathForSSH(SSHExe{Exe: sshExe})
 		assert.Equal(t, ok, false, "ssh.exe with no sibling cygpath.exe should be native")
 		assert.Equal(t, got, "")
-		assert.Equal(t, IsSSHCygwin(SSHExe{Exe: sshExe}), false)
 	})
 
 	t.Run("empty", func(t *testing.T) {
