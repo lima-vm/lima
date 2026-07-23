@@ -215,7 +215,7 @@ binaries: limactl helpers limactl-plugins guestagents \
 ################################################################################
 # _output/bin
 .PHONY: limactl lima helpers
-limactl: _output/bin/limactl$(exe) lima
+limactl: _output/bin/limactl$(exe) lima defaults
 
 ### Listing Dependencies
 
@@ -437,6 +437,17 @@ $(DARWIN_GUESTAGENT_PATH_COMMON)%.gz: $(DARWIN_GUESTAGENT_PATH_COMMON)% $$(call 
 	@set -x; gzip -n $<
 
 MKDIR_TARGETS += _output/share/lima
+
+LIMA_DEFAULTS = $(addprefix _output/share/lima/defaults/,$(notdir $(wildcard share/lima/defaults/*)))
+
+.PHONY: defaults
+defaults: $(LIMA_DEFAULTS)
+
+$(LIMA_DEFAULTS): | _output/share/lima/defaults
+MKDIR_TARGETS += _output/share/lima/defaults
+
+_output/share/lima/defaults/%: share/lima/defaults/%
+	cp -aL $< $@
 
 ################################################################################
 # _output/share/lima/templates
@@ -722,6 +733,7 @@ artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS_DEPS) \
 	$(NATIVE_GUESTAGENT) \
+	$(LIMA_DEFAULTS) \
 	$(TEMPLATES) $(TEMPLATE_IMAGES) $(TEMPLATE_DEFAULTS) $(TEMPLATE_EXPERIMENTALS) \
 	additional-drivers \
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
