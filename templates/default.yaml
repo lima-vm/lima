@@ -563,9 +563,11 @@ networks:
 # copyToHost:
 # - guest: "/etc/myconfig.cfg"
 #   host: "{{.Dir}}/copied-from-guest/myconfig"
+# # skipIfMissing: false
 # # deleteOnStop: false
 # # "guest" can include these template variables: {{.Home}}, {{.Name}}, {{.Hostname}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
 # # "host" can include {{.Home}}, {{.Dir}}, {{.Name}}, {{.UID}}, {{.User}}, and {{.Param.Key}}.
+# # "skipIfMissing" will skip copying the file from the guest if the file is missing.
 # # "deleteOnStop" will delete the file from the host when the instance is stopped.
 
 # Message. Information to be shown to the user, given as a Go template for the instance.

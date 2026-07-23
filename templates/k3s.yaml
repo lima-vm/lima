@@ -52,9 +52,6 @@ probes:
             echo >&2 "k3s is not running yet"
             exit 1
     fi
-    {{else}}
-    # create an empty file so that the "copyToHost" does not fail
-    sudo mkdir -p /etc/rancher/k3s && sudo touch /etc/rancher/k3s/k3s.yaml
     {{end}}
   hint: |
     The k3s kubeconfig file has not yet been created.
@@ -63,6 +60,7 @@ probes:
 copyToHost:
 - guest: "/etc/rancher/k3s/k3s.yaml"
   host: "{{.Dir}}/copied-from-guest/kubeconfig.yaml"
+  skipIfMissing: true
   deleteOnStop: true
 message: |
   {{- if not ( and .Param.url .Param.token ) -}}
