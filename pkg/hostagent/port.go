@@ -83,6 +83,13 @@ func hostAddress(rule limatype.PortForward, guest *api.IPPort) string {
 
 func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr string) {
 	guestIP := net.ParseIP(guest.Ip)
+	// guest.Ip and guest.Protocol arrive from the guest agent over gRPC and are
+	// otherwise untrusted. Drop entries that are not a valid ip / known protocol so
+	// raw guest bytes never reach the forwarded address, the host logs, or the
+	// port-forward events that limactl prints to the user's terminal.
+	if guestIP == nil || (guest.Protocol != "tcp" && guest.Protocol != "udp") {
+		return "", ""
+	}
 	for _, rule := range pf.rules {
 		if rule.GuestSocket != "" {
 			continue
