@@ -379,6 +379,15 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 		if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, "", ""); err != nil {
 			return nil, err
 		}
+	} else if o.expectedDigest != "" {
+		// The cache has no digest sidecar (e.g. it was populated by an earlier
+		// digest-less download of the same URL), but a digest is expected now.
+		// Verify the cached data against it instead of falling back to the
+		// last-modified comparison below, which would otherwise reuse the file
+		// with no integrity check when the remote HEAD request fails.
+		if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
+			return nil, err
+		}
 	} else {
 		if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 			return nil, err
