@@ -53,6 +53,22 @@ kubectl apply -f ...
 
 See <https://lima-vm.io/docs/> for the further information.
 
+## Software Bill of Materials (SBOM)
+
+The "sbom" download contains SBOM in the CycloneDX format.
+
+There are both "app" \*.bom.json and "mod" bom.json files:
+
+- SBOMs generated with "app" include only those modules that the target application
+  actually depends on. Modules required by tests or packages that are not imported
+  by the application are not included. Build constraints are evaluated, which enables
+  a very detailed view of what's really compiled into an application's binary.
+
+- SBOMs generated with "mod" include the aggregate of modules required by all
+  packages in the target module. This optionally includes modules required by
+  tests and test packages. Build constraints are NOT evaluated, allowing for
+  a "whole picture" view on the target module's dependencies.
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](https://lima-vm.io/docs/community/contributing/) for details on:
