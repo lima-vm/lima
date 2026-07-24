@@ -107,5 +107,5 @@ EOF
 else
 	# Remove CDI configuration for Rosetta AOT Caching
 	[ ! -f /etc/cdi/rosetta.yaml ] || rm /etc/cdi/rosetta.yaml
-	[ ! -d "${LIMA_CIDATA_HOME}/.config/cdi/rosetta.yaml" ] || rm "${LIMA_CIDATA_HOME}/.config/cdi/rosetta.yaml"
+	[ ! -L "${LIMA_CIDATA_HOME}/.config/cdi/rosetta.yaml" ] || rm "${LIMA_CIDATA_HOME}/.config/cdi/rosetta.yaml"
 fi
