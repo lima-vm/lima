@@ -139,14 +139,6 @@ var (
 	cygwinDetectCacheRW sync.RWMutex
 )
 
-// IsSSHCygwin reports whether sshExe is a Cygwin-based OpenSSH (Git for
-// Windows, MSYS2, Cygwin) rather than native Windows OpenSSH; always false
-// on non-Windows. See cygpathForSSH for the detection and caching.
-func IsSSHCygwin(sshExe SSHExe) bool {
-	_, ok := cygpathForSSH(sshExe)
-	return ok
-}
-
 // resolvedSSHPath returns the absolute, symlink-resolved path of sshExe's
 // binary — the directory Lima reads its companion tools from. It returns
 // ("", false) when a bare name does not resolve on PATH.
