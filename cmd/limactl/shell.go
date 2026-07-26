@@ -386,7 +386,6 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		//   - Prevents error messages such as:
 		//     > mux_client_request_session: read from master failed: Connection reset by peer
 		//     > ControlSocket ....sock already exists, disabling multiplexing
-		// Only remove these options when writing the SSH config file and executing `limactl shell`, since multiplexing seems to work with port forwarding.
 		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 	}
 	sshArgs := append([]string{}, sshExe.Args...)
