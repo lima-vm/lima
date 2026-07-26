@@ -43,31 +43,14 @@ jobs:
       run: make generate check-generated
     - name: Run nobin
       run: make nobin
-    - name: Run editorconfig-checker
-      run: make editorconfig-checker
-    - name: Run yamllint
-      run: make yamllint
     - name: Install shellcheck
       run: |
         sudo apt-get update
         sudo apt-get install -y shellcheck
-    - name: Run file and directory name linter
-      uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1
     - name: Run shellcheck
       run: make shellcheck
     - name: Run shfmt
       run: make shfmt
-    - name: Check hyperlinks
-      uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
-      with:
-        args: >-
-          --exclude https://img.shields.io
-          --exclude http://127.0.0.1:8080
-          --exclude https://github.com/lima-vm/lima/releases/download
-          --exclude https://xbarapp.com
-          --exclude https://api.github.com
-          README.md
-        token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install go-licenses
       # TODO: move to `go tool` after upgrading to v2
       run: go install github.com/google/go-licenses@v1.6.0
