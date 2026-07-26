@@ -39,6 +39,7 @@ func (t *rsyncTool) Name() string {
 func (t *rsyncTool) IsAvailableOnGuest(ctx context.Context, paths []string) bool {
 	copyPaths, err := parseCopyPaths(ctx, paths)
 	if err != nil {
+		// New() has already reported this to the user.
 		logrus.Debugf("failed to parse copy paths for rsync availability check: %v", err)
 		return false
 	}
