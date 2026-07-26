@@ -63,9 +63,9 @@ func (p *ClosableListeners) Forward(ctx context.Context, dialContext func(ctx co
 	protocol string, hostAddress string, guestAddress string,
 ) {
 	switch protocol {
-	case "tcp", "tcp6":
+	case "tcp":
 		go p.forwardTCP(ctx, dialContext, hostAddress, guestAddress)
-	case "udp", "udp6":
+	case "udp":
 		go p.forwardUDP(ctx, dialContext, hostAddress, guestAddress)
 	}
 }
@@ -74,7 +74,7 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 	logrus.Debugf("removing listener for hostAddress: %s, guestAddress: %s", hostAddress, guestAddress)
 	key := key(protocol, hostAddress, guestAddress)
 	switch protocol {
-	case "tcp", "tcp6":
+	case "tcp":
 		p.listenersRW.Lock()
 		defer p.listenersRW.Unlock()
 		listener, ok := p.listeners[key]
@@ -82,7 +82,7 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 			listener.Close()
 			delete(p.listeners, key)
 		}
-	case "udp", "udp6":
+	case "udp":
 		p.udpListenersRW.Lock()
 		defer p.udpListenersRW.Unlock()
 		listener, ok := p.udpListeners[key]
