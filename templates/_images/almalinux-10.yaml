@@ -2,6 +2,13 @@ images:
 - location: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64/images/AlmaLinux-10-GenericCloud-10.2-20260526.0.x86_64.qcow2"
   arch: "x86_64"
   digest: "sha256:47f2218668dd4776be140dd92fa3bea700be1766e2c7d88bdfd6a4b50f477b4d"
+# AlmaLinux 10 ships x86-64-v3 by default (x86_64) and offers x86-64-v2 for older
+# hardware. Still runs as x86_64, distinguished by archVariant.
+# Select it with `limactl start --arch-variant v2`.
+- location: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-10.2-20260526.0.x86_64_v2.qcow2"
+  arch: "x86_64"
+  digest: "sha256:cd17bcbd7ac62a7f179c30fb24f5795c411d540650b4f060d2167859e2fd3d95"
+  archVariant: "v2"
 - location: "https://repo.almalinux.org/almalinux/10.2/cloud/aarch64/images/AlmaLinux-10-GenericCloud-10.2-20260526.0.aarch64.qcow2"
   arch: "aarch64"
   digest: "sha256:336c6861fe0ba9115af00f557ed1b09385a3525612dd0cb9cce7e0486f8e74a4"
@@ -16,6 +23,10 @@ images:
 
 - location: https://repo.almalinux.org/almalinux/10/cloud/x86_64/images/AlmaLinux-10-GenericCloud-latest.x86_64.qcow2
   arch: x86_64
+
+- location: https://repo.almalinux.org/almalinux/10/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-latest.x86_64_v2.qcow2
+  arch: x86_64
+  archVariant: "v2"
 
 - location: https://repo.almalinux.org/almalinux/10/cloud/aarch64/images/AlmaLinux-10-GenericCloud-latest.aarch64.qcow2
   arch: aarch64

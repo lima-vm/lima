@@ -112,6 +112,8 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 
 	flags.String("image-variant", "", commentPrefix+"Image variant")
 
+	flags.String("arch-variant", "", commentPrefix+`Architecture variant (e.g. "v3" for x86-64-v3)`)
+
 	flags.String("containerd", "", commentPrefix+"containerd mode (user, system, user+system, none)")
 	_ = cmd.RegisterFlagCompletionFunc("containerd", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"user", "system", "user+system", "none"}, cobra.ShellCompDirectiveNoFileComp
@@ -397,6 +399,22 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 					return nil, errors.New("`--image-variant` must not be empty")
 				}
 				expr := fmt.Sprintf(`.images = [.images[] | select(.variant == %q)]`, variant)
+				return []string{expr}, nil
+			},
+			true,
+			false,
+		},
+		{
+			"arch-variant",
+			func(_ *flag.Flag) ([]string, error) {
+				archVariant, err := flags.GetString("arch-variant")
+				if err != nil {
+					return nil, err
+				}
+				if archVariant == "" {
+					return nil, errors.New("`--arch-variant` must not be empty")
+				}
+				expr := fmt.Sprintf(`.images = [.images[] | select(.archVariant == %q)]`, archVariant)
 				return []string{expr}, nil
 			},
 			true,

@@ -5,6 +5,13 @@ images:
   arch: "x86_64"
   digest: "sha256:117816726abbdefc5ef3e38902e81a76f1c76c3610e709999d0885f9d5d9b477"
   variant: "server"
+# x86-64-v3 optimized image. Still runs as x86_64, distinguished by archVariant.
+# Select it with `limactl start --arch-variant v3`.
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260720/ubuntu-26.04-server-cloudimg-amd64v3.img"
+  arch: "x86_64"
+  digest: "sha256:2e7bc9471ec729b7d9ee59958258da6d3943c86b50b6c98d7dedb84cc6724bbf"
+  variant: "server"
+  archVariant: "v3"
 - location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260720/ubuntu-26.04-server-cloudimg-arm64.img"
   arch: "aarch64"
   digest: "sha256:7bcf159e29ad0000bfed9c57875908c39268f5ed1257f4958fa6a9f5f60edd54"
@@ -31,6 +38,11 @@ images:
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64.img
   arch: x86_64
   variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-amd64v3.img
+  arch: x86_64
+  variant: "server"
+  archVariant: "v3"
 
 - location: https://cloud-images.ubuntu.com/releases/resolute/release/ubuntu-26.04-server-cloudimg-arm64.img
   arch: aarch64
