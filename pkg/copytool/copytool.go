@@ -62,23 +62,28 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 		if err != nil {
 			return nil, err
 		}
-
+		// Report a bad path as itself; IsAvailableOnGuest would reduce it to
+		// "rsync not available on guest(s)".
+		if _, err := parseCopyPaths(ctx, paths); err != nil {
+			return nil, err
+		}
 		if !rsync.IsAvailableOnGuest(ctx, paths) {
 			return nil, errors.New("rsync not available on guest(s)")
 		}
 		return rsync, nil
 	case BackendAuto:
-		var (
-			tool CopyTool
-			err  error
-		)
-
 		// For rsync, the source and destination cannot both be remote
-		if !hasRemoteSourceAndDestination(ctx, paths) {
-			tool, err = newRsyncTool(opts)
+		bothRemote, err := hasRemoteSourceAndDestination(ctx, paths)
+		if err != nil {
+			// A bad path is fatal for every backend, so report it here. Falling
+			// through to scp would replace it with "scp not found on host".
+			return nil, err
+		}
+		if !bothRemote {
+			rsync, err := newRsyncTool(opts)
 			if err == nil {
-				if tool.IsAvailableOnGuest(ctx, paths) {
-					return tool, nil
+				if rsync.IsAvailableOnGuest(ctx, paths) {
+					return rsync, nil
 				}
 				logrus.Debugf("rsync not available on guest(s), falling back to scp")
 			} else {
@@ -86,9 +91,11 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 			}
 		}
 
-		tool, err = newSCPTool(opts)
+		tool, err := newSCPTool(opts)
 		if err != nil {
-			return nil, fmt.Errorf("neither rsync nor scp found on host: %w", err)
+			// rsync may well have been found and rejected above, so name the
+			// outcome rather than guessing which tool is missing.
+			return nil, fmt.Errorf("no usable copy tool on host: %w", err)
 		}
 		return tool, nil
 	default:
@@ -96,10 +103,10 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 	}
 }
 
-func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
+func hasRemoteSourceAndDestination(ctx context.Context, paths []string) (bool, error) {
 	copyPaths, err := parseCopyPaths(ctx, paths)
 	if err != nil {
-		return true
+		return false, err
 	}
 
 	var hasRemoteSource, hasRemoteDestination bool
@@ -113,7 +120,7 @@ func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
 		}
 	}
 
-	return hasRemoteSource && hasRemoteDestination
+	return hasRemoteSource && hasRemoteDestination, nil
 }
 
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
