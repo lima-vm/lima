@@ -121,7 +121,6 @@ esac
 # enabled checks is missing. Tools that are optional at runtime (guarded by `command -v`,
 # e.g. rsync, w3m) are intentionally not required here.
 required_commands=(limactl curl jq timeout diff)
-[[ -n ${CHECKS["port-forwards"]} ]] && required_commands+=(perl nc socat)
 [[ -n ${CHECKS["container-engine"]} && ${OS_HOST} != "Msys" ]] && required_commands+=(dig)
 [[ -n ${CHECKS["vmnet"]} ]] && required_commands+=("${IPERF3}")
 check_required_commands "${required_commands[@]}"
@@ -131,15 +130,29 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	mkdir -p "${tmpconfig}"
 	defer "rm -rf \"$tmpconfig\""
 	tmpfile="${tmpconfig}/${NAME}.yaml"
-	cp "$FILE" "${tmpfile}"
+	# The rule is used by the "${CONTAINER_ENGINE} run" test below to check that a
+	# container port bound to 0.0.0.0 is forwarded to the external host IP.
+	# The port forwarding rule matrix itself is tested by hack/bats/tests/port-forwarding.bats.
+	# Existing rules are replaced, not appended to: all instances share the host port
+	# namespace, so rules from the template (e.g. test-misc.yaml) would collide with a
+	# concurrently running instance created from the same template.
+	INFO "Adding a port forwarding rule for guest port 8888 to \"${tmpfile}\""
+	# The intermediate file must keep the .yaml extension, or the "base:" reference
+	# below would be interpreted as a disk image instead of a template.
+	rawfile="${tmpconfig}/${NAME}.raw.yaml"
+	limactl yq '.portForwards = [{"guestIPMustBeZero": true, "guestPort": 8888, "hostIP": "0.0.0.0"}]' <"$FILE" >"$rawfile"
+	rawfile_host="$rawfile"
+	if [ "${OS_HOST}" = "Msys" ]; then
+		rawfile_host="$(cygpath -w "$rawfile_host")"
+	fi
+	# Round-trip through the embed encoder: limactl yq indents sequences differently,
+	# which would fail the "template embedding copies exactly" check below.
+	echo -n "base: $rawfile_host" | limactl tmpl copy --embed - - >"$tmpfile"
 	FILE="${tmpfile}"
 	FILE_HOST=$FILE
 	if [ "${OS_HOST}" = "Msys" ]; then
 		FILE_HOST="$(cygpath -w "$FILE")"
 	fi
-
-	INFO "Setup port forwarding rules for testing in \"${FILE}\""
-	"${scriptdir}/test-port-forwarding.pl" "${FILE}"
 	INFO "Validating \"$FILE_HOST\""
 	limactl validate "$FILE_HOST"
 fi
@@ -443,42 +456,16 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	PORT_FORWARDING_CONNECTION_TIMEOUT=1
-	INFO "Testing port forwarding rules using netcat and socat with connection timeout ${PORT_FORWARDING_CONNECTION_TIMEOUT}s"
+	# The port forwarding rule matrix is tested by hack/bats/tests/port-forwarding.bats;
+	# this section only tests the interaction with the container engine.
 	set -x
-	if [[ ${NAME} == "alpine"* ]]; then
-		limactl shell "${NAME}" sudo apk add socat
-	fi
-	if [[ ${NAME} == "archlinux" ]]; then
-		limactl shell "${NAME}" sudo pacman -Syu --noconfirm openbsd-netcat socat
-	fi
-	if [[ ${NAME} == "debian" || ${NAME} == "default" || ${NAME} == "docker" || ${NAME} == "test-misc" ]]; then
-		limactl shell "${NAME}" sudo apt-get install -y netcat-openbsd socat
-	fi
-	if [[ ${NAME} == "fedora" || ${NAME} == "wsl2" ]]; then
-		limactl shell "${NAME}" sudo dnf install -y nc socat
-	fi
-	if [[ ${NAME} == "opensuse" ]]; then
-		limactl shell "${NAME}" sudo zypper in -y netcat-openbsd socat
-	fi
-	if limactl shell "${NAME}" command -v dnf; then
-		limactl shell "${NAME}" sudo dnf install -y nc socat
-	fi
-	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
-		INFO "Port forwarding rules work"
-	else
-		ERROR "Port forwarding rules do not work with socat"
-		diagnose "$NAME"
-		exit 1
-	fi
-
 	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
-		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via test-port-forwarding.pl)"
+		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via the guest port 8888 rule)"
 		if [ "$(uname)" = "Darwin" ]; then
-			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
+			# macOS runners seem to use `localhost` as the hostname, so ask system_profiler instead
 			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
 		else
-			hostip=$(perl -MSocket -MSys::Hostname -E 'say inet_ntoa(scalar gethostbyname(hostname()))')
+			hostip=$(getent ahostsv4 "$(hostname)" | awk '{print $1; exit}' || true)
 		fi
 		if [ -n "${hostip}" ]; then
 			sudo=""
