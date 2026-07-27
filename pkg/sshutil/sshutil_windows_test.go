@@ -51,6 +51,42 @@ func TestPickCompleteSSHOnWindows(t *testing.T) {
 		t.Setenv("PATH", mingit)
 		assert.Equal(t, pickCompleteSSHOnWindows(), nativeSSH)
 	})
+
+	t.Run("incomplete native install disqualifies it too", func(t *testing.T) {
+		fakeRoot := resolvedTempDir(t)
+		nativeDir := filepath.Join(fakeRoot, "System32", "OpenSSH")
+		assert.NilError(t, os.MkdirAll(nativeDir, 0o755))
+		assert.NilError(t, os.WriteFile(filepath.Join(nativeDir, "ssh.exe"), nil, 0o644))
+		t.Setenv("SystemRoot", fakeRoot)
+		t.Setenv("PATH", "")
+
+		assert.Equal(t, pickCompleteSSHOnWindows(), "",
+			"an ssh.exe without its companions never qualifies, wherever it lives")
+	})
+}
+
+// TestNewSSHExeFallsBackToPATH: when no directory holds a complete install,
+// NewSSHExe stops being selective and takes whatever `ssh` PATH resolves. The
+// binary it returns is therefore reachable only through PATH, which is why a
+// host check that only proves the files exist cannot show which ssh Lima runs.
+func TestNewSSHExeFallsBackToPATH(t *testing.T) {
+	if runtime.GOOS != "windows" {
+		t.Skip("Windows-only PATH walk")
+	}
+
+	partial := resolvedTempDir(t)
+	sshExe := filepath.Join(partial, "ssh.exe")
+	assert.NilError(t, os.WriteFile(sshExe, nil, 0o644))
+
+	t.Setenv("SystemRoot", resolvedTempDir(t))
+	t.Setenv("PATH", partial)
+	t.Setenv(EnvShellSSH, "")
+
+	assert.Equal(t, pickCompleteSSHOnWindows(), "", "the partial install must not qualify")
+
+	got, err := NewSSHExe()
+	assert.NilError(t, err)
+	assert.Equal(t, got.Exe, sshExe)
 }
 
 // TestCygpathForSSH: an ssh.exe next to cygpath.exe is Cygwin-based and
