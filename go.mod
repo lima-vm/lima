@@ -51,7 +51,7 @@ require (
 	github.com/pkg/sftp v1.13.11
 	github.com/rjeczalik/notify v0.9.3
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.2
-	github.com/sethvargo/go-password v0.3.1
+	github.com/sethvargo/go-password v0.4.0
 	github.com/sirupsen/logrus v1.9.4
 	github.com/spf13/cobra v1.10.2 // gomodjail:unconfined
 	github.com/spf13/pflag v1.0.10
