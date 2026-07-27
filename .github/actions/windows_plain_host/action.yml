@@ -1,0 +1,183 @@
+name: 'windows plain host'
+description: >
+  Uninstalls MSYS2 and Git for Windows from the windows-2025 runner so the
+  job runs against a vanilla Windows toolchain: native OpenSSH from
+  %SystemRoot%\System32\OpenSSH, wsl.exe, and tar. Then verifies they are
+  gone across four layers (filesystem, PATH, binaries, registry) and that the
+  native OpenSSH client is there, so a runner-image change in either direction
+  fails the job loudly.
+
+  Destructive and irreversible: it also rewrites the Machine and User PATH in
+  the registry, so run it only on an ephemeral runner.
+
+  Run AFTER steps that need git CLI (checkout, windows_plain_templates) and
+  BEFORE the build / smoke test steps.
+runs:
+  using: composite
+  steps:
+  - name: Uninstall Git for Windows
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      $uninstaller = 'C:\Program Files\Git\unins000.exe'
+      if (Test-Path $uninstaller) {
+        Write-Host "Running Git for Windows Inno Setup uninstaller..."
+        & $uninstaller /VERYSILENT /NORESTART /SUPPRESSMSGBOXES
+        # The parent exits at once and Inno Setup finishes the work in a copy
+        # of itself under %TEMP%, named _iu*.tmp rather than unins000, so wait
+        # on both before wiping the leftover dir.
+        $deadline = (Get-Date).AddSeconds(120)
+        while ((Get-Date) -lt $deadline -and
+               (Get-Process -Name 'unins000', '_iu*' -ErrorAction SilentlyContinue)) {
+          Start-Sleep -Seconds 2
+        }
+      } else {
+        Write-Host "No Git for Windows uninstaller at $uninstaller; skipping."
+      }
+      foreach ($d in 'C:\Program Files\Git', 'C:\Program Files (x86)\Git') {
+        if (Test-Path $d) {
+          Write-Host "Removing leftover $d"
+          Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+        }
+      }
+      # The uninstaller forks, so its own exit status says nothing about the
+      # result. Discard it and let the verify step below be the gate.
+      exit 0
+
+  - name: Uninstall MSYS2 and standalone mingw
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # MSYS2 on this runner image is an extracted tree, not a package, so
+      # "uninstall" means killing any process still mapping msys-2.0.dll
+      # then removing the dir. C:\mingw64 and C:\mingw32 are the same shape.
+      $procs = Get-Process | Where-Object {
+        try { $_.Modules.ModuleName -contains 'msys-2.0.dll' } catch { $false }
+      }
+      if ($procs) {
+        Write-Host "Stopping $($procs.Count) process(es) still mapping msys-2.0.dll"
+        $procs | Stop-Process -Force -ErrorAction SilentlyContinue
+        Start-Sleep -Seconds 1
+      }
+      foreach ($d in 'C:\msys64', 'C:\tools\msys64', 'C:\msys32',
+                     'C:\mingw64', 'C:\mingw32') {
+        if (Test-Path $d) {
+          Write-Host "Removing $d"
+          Remove-Item $d -Recurse -Force -ErrorAction SilentlyContinue
+        }
+      }
+
+  - name: Scrub forbidden entries from Machine + User PATH
+    shell: pwsh
+    # The PATH= we publish here is the runner's own Machine + User PATH
+    # with a static deny-list of toolchain prefixes removed — no
+    # PR-controlled data reaches the env file.
+    run: | # zizmor: ignore[github-env]
+      $ErrorActionPreference = 'Stop'
+      # The uninstall removes the dirs, but the Machine/User PATH still has
+      # stale entries (C:\mingw64\bin stays registered). Rewrite both scopes
+      # so the verify step sees a clean host, then publish the combined PATH
+      # via $GITHUB_ENV, because registry changes do not reach the running
+      # runner process. $GITHUB_PATH entries from earlier steps are still
+      # prepended on top of this value, so the scrub cannot reach them.
+      $forbidden = '(?i)(msys|mingw|cygwin|\\Git\\(cmd|bin|usr))'
+      foreach ($scope in @('Machine','User')) {
+        $orig = [Environment]::GetEnvironmentVariable('Path', $scope)
+        if (-not $orig) { continue }
+        $cleaned = ($orig -split ';' | Where-Object { $_ -and ($_ -notmatch $forbidden) }) -join ';'
+        if ($cleaned -ne $orig) {
+          Write-Host "Scrubbing $scope PATH"
+          [Environment]::SetEnvironmentVariable('Path', $cleaned, $scope)
+        }
+      }
+      $machine = [Environment]::GetEnvironmentVariable('Path','Machine')
+      $user = [Environment]::GetEnvironmentVariable('Path','User')
+      $combined = (@($machine, $user) | Where-Object { $_ }) -join ';'
+      Add-Content -Path $env:GITHUB_ENV -Value "PATH=$combined"
+
+  - name: Verify host is vanilla Windows (no MSYS2 / Git for Windows / Cygwin)
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      # The PATH= published by the scrub step already applies to this step, so
+      # the inherited PATH is what later steps see. Check it as inherited
+      # rather than rebuilding it, which would only re-read the scrub's input.
+      $fail = @()
+
+      # --- Layer 1: filesystem ---
+      $fsForbidden = @(
+        'C:\msys64', 'C:\tools\msys64', 'C:\msys32',
+        'C:\Program Files\Git', 'C:\Program Files (x86)\Git',
+        'C:\mingw64', 'C:\mingw32',
+        'C:\cygwin', 'C:\cygwin64', 'C:\tools\cygwin'
+      )
+      foreach ($d in $fsForbidden) {
+        if (Test-Path $d) { $fail += "filesystem: $d still exists" }
+      }
+
+      # --- Layer 2: PATH (process + machine + user) ---
+      $pathRegex = '(?i)(msys|mingw|cygwin|\\Git\\(cmd|bin|usr))'
+      foreach ($scope in @('Process','Machine','User')) {
+        $p = [Environment]::GetEnvironmentVariable('Path', $scope)
+        if (-not $p) { continue }
+        foreach ($entry in $p -split ';') {
+          if ($entry -and ($entry -match $pathRegex)) {
+            $fail += ("PATH ({0}): {1}" -f $scope, $entry)
+          }
+        }
+      }
+
+      # --- Layer 3: smoking-gun binaries ---
+      # Any of these resolving on PATH means a toolchain is still reachable.
+      # bash is special: WSL ships %SystemRoot%\System32\bash.exe which is
+      # legitimately present on the wsl2 plain job, so allow only that path.
+      $forbiddenCmds = @('cygpath','pacman','mintty','git','git-bash','git-cmd')
+      foreach ($cmd in $forbiddenCmds) {
+        $g = Get-Command $cmd -ErrorAction SilentlyContinue
+        if ($g) { $fail += ("binary: {0} -> {1}" -f $cmd, $g.Source) }
+      }
+      $allowedBash = Join-Path $env:SystemRoot 'System32\bash.exe'
+      $bash = Get-Command bash -ErrorAction SilentlyContinue
+      if ($bash -and ($bash.Source -ne $allowedBash)) {
+        $fail += "binary: bash -> $($bash.Source) (only $allowedBash is allowed)"
+      }
+      $sh = Get-Command sh -ErrorAction SilentlyContinue
+      if ($sh) { $fail += "binary: sh -> $($sh.Source)" }
+
+      # --- Layer 4: registry uninstall keys ---
+      $uninstallRoots = @(
+        'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKLM:\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall',
+        'HKCU:\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall'
+      )
+      foreach ($root in $uninstallRoots) {
+        if (-not (Test-Path $root)) { continue }
+        $keys = Get-ChildItem $root -ErrorAction SilentlyContinue
+        foreach ($k in $keys) {
+          $props = Get-ItemProperty $k.PSPath -ErrorAction SilentlyContinue
+          if ($props -and $props.DisplayName -and
+              ($props.DisplayName -match '(?i)(msys|git for windows|cygwin|mingw)')) {
+            $fail += ("registry: {0} -> DisplayName='{1}'" -f $k.PSPath, $props.DisplayName)
+          }
+        }
+      }
+
+      # --- Layer 5: the toolchain these jobs do need ---
+      # Missing ssh.exe fails the job with an opaque `exec: "ssh": executable
+      # file not found`; missing scp.exe or ssh-keygen.exe makes Lima fall
+      # back to a bare ssh lookup and fail later elsewhere; missing
+      # sftp-server.exe drops reverse-sshfs to the builtin driver, so the job
+      # stops covering what it was added to cover.
+      $opensshDir = Join-Path $env:SystemRoot 'System32\OpenSSH'
+      foreach ($exe in 'ssh.exe', 'scp.exe', 'ssh-keygen.exe', 'sftp-server.exe') {
+        $exePath = Join-Path $opensshDir $exe
+        if (-not (Test-Path $exePath)) { $fail += "missing: $exePath" }
+      }
+
+      if ($fail.Count -gt 0) {
+        Write-Host "Plain-Windows verification FAILED:" -ForegroundColor Red
+        $fail | ForEach-Object { Write-Host "  $_" }
+        Write-Error "Runner is not in the expected plain-Windows state; see the list above."
+        exit 1
+      }
+      Write-Host "Plain-Windows verification PASSED."
