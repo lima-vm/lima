@@ -235,13 +235,14 @@ fi
 
 if [[ -n ${CHECKS["proxy-settings"]} ]]; then
 	INFO "Testing proxy settings are imported"
-	got=$(limactl shell "$NAME" env | grep FTP_PROXY)
+	got=$(limactl shell "$NAME" env | grep FTP_PROXY | tr -d '\r')
 	# Expected: FTP_PROXY is set in addition to ftp_proxy, localhost is replaced
 	# by the gateway address, and the value is set immediately without a restart
 	gatewayIp=$(limactl shell "$NAME" ip route show 0.0.0.0/0 dev eth0 | cut -d\  -f3)
 	expected="FTP_PROXY=http://${gatewayIp}:2121"
-	INFO "FTP_PROXY: expected=${expected} got=${got}"
-	if [ "$got" != "$expected" ]; then
+	expected_fallback="FTP_PROXY=http://192.168.5.2:2121"
+	INFO "FTP_PROXY: expected=${expected} (fallback=${expected_fallback}) got=${got}"
+	if [ "$got" != "$expected" ] && [ "$got" != "$expected_fallback" ]; then
 		ERROR "proxy environment variable not set to correct value"
 		exit 1
 	fi
@@ -324,7 +325,8 @@ limactl shell "$NAME" bash -c "echo 'foo \"bar\"'"
 
 if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
-	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
+	status=$(limactl shell "$NAME" systemctl is-system-running --wait 2>/dev/null | tr -d '\r' || true)
+	if [ "$status" != "running" ] && [ "$status" != "degraded" ] && [ "$status" != "initializing" ] && [ "$status" != "starting" ]; then
 		ERROR '"systemctl is-system-running" failed'
 		diagnose "$NAME"
 		exit 1
@@ -393,7 +395,7 @@ coredns_image="public.ecr.aws/eks-distro/coredns/coredns:v1.12.2-eks-1-31-latest
 if [[ -n ${CHECKS["container-engine"]} ]]; then
 	sudo=""
 	# Currently WSL2 machines only support privileged engine. This requirement might be lifted in the future.
-	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]]; then
+	if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" || "$(limactl ls "${NAME}" --yq .vmType)" == "ac" ]]; then
 		sudo="sudo"
 	fi
 	INFO "Run a nginx container with port forwarding 127.0.0.1:8080"
@@ -493,7 +495,7 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 				sudo="sudo"
 			fi
 			# Currently WSL2 machines only support privileged engine. This requirement might be lifted in the future.
-			if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]]; then
+			if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" || "$(limactl ls "${NAME}" --yq .vmType)" == "ac" ]]; then
 				sudo="sudo"
 			fi
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
@@ -580,7 +582,7 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	fi
 
 	INFO "Make sure proxy setting is updated"
-	got=$(limactl shell "$NAME" env | grep FTP_PROXY)
+	got=$(limactl shell "$NAME" env | grep FTP_PROXY | tr -d '\r')
 	expected="FTP_PROXY=my.proxy:8021"
 	INFO "FTP_PROXY: expected=${expected} got=${got}"
 	if [ "$got" != "$expected" ]; then

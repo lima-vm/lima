@@ -1,0 +1,18 @@
+vmType: dc
+
+images:
+- location: "https://partner-images.canonical.com/oci/noble/current/ubuntu-ubuntu-noble-oci-amd64-root.tar.gz"
+  arch: "x86_64"
+  digest: "sha256:c7eda63e0f9d1be1ca5d34405e23b665fb749e1eccbe5f24a149d2e54197eb3c"
+- location: "https://partner-images.canonical.com/oci/noble/current/ubuntu-ubuntu-noble-oci-arm64-root.tar.gz"
+  arch: "aarch64"
+  digest: "sha256:fdc0d7e862272a3f341dc9b045b572ccb6ed9f78c2f2f1c19f4fdd0315e60ff2"
+
+# no native mounts yet
+mountType: reverse-sshfs
+
+mounts:
+- location: "~"
+- location: "/tmp/lima"
+  writable: true
+
