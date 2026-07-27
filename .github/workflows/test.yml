@@ -308,6 +308,7 @@ jobs:
         - fedora.yaml
         - archlinux.yaml
         - opensuse.yaml
+        - almalinux-9.yaml
         - docker.yaml
         - ../hack/test-templates/alpine-iso-9p-writable.yaml  # Covers alpine-iso.yaml
         - ../hack/test-templates/net-user-v2.yaml
