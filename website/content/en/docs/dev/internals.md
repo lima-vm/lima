@@ -236,7 +236,8 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 
 Boot scripts create the following marker files inside the guest at `/run/`:
 
-- `/run/lima-boot-done`: Written by `boot.sh` when provisioning is complete. Contains `LIMA_CIDATA_IID`.
+- `/run/lima-boot-done`: Written by `boot.sh` when provisioning is complete. Contains `LIMA_CIDATA_IID`. Not created when `/run/lima-reboot-required` exists.
+- `/run/lima-reboot-required`: Created by any boot script that is about to reboot the guest, with `touch "$LIMA_REBOOT_REQUIRED"` (`boot.sh` exports the variable). Empty. `boot.sh` then skips `/run/lima-boot-done`, so the host agent keeps waiting instead of calling the guest ready while sshd shuts down.
 - `/run/lima-ssh-ready`: Written by `boot.Linux/07-etc-environment.sh` when SSH is ready. Contains `LIMA_CIDATA_IID`.
 - `/run/lima-fuse-ready`: Written by `boot.Linux/35-setup-packages.sh` after fuse.conf is configured for `allow_other`. Contains `LIMA_CIDATA_IID`. Only created when `LIMA_CIDATA_MOUNTTYPE=reverse-sshfs`.
 
