@@ -52,7 +52,12 @@ func genschemaAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	schema := jsonschema.Reflect(&limatype.LimaYAML{})
+	reflector := new(jsonschema.Reflector)
+	err = reflector.AddGoComments("github.com/lima-vm/lima/v2", "./")
+	if err != nil {
+		return err
+	}
+	schema := reflector.Reflect(&limatype.LimaYAML{})
 	// allow Disk to be either string (name) or object (struct)
 	schema.Definitions["Disk"].Type = "" // was: "object"
 	schema.Definitions["Disk"].OneOf = []*jsonschema.Schema{
