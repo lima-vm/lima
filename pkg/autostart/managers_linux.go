@@ -15,7 +15,7 @@ func Manager() autoStartManager {
 	if systemd.IsRunningSystemd() {
 		return &TemplateFileBasedManager{
 			filePath:              systemd.GetUnitPath,
-			template:              systemd.Template,
+			template:              systemd.GetTemplate(),
 			enabler:               systemd.EnableDisableUnit,
 			autoStartedIdentifier: systemd.AutoStartedUnitName,
 			requestStart:          systemd.RequestStart,

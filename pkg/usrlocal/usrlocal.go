@@ -215,3 +215,39 @@ func LibexecLima() ([]string, error) {
 	}
 	return candidates, nil
 }
+
+// ReadFile reads a resource file from <PREFIX>/share/lima/<relPath>.
+// Returns fs.ErrNotExist if the file is not found in any share directory.
+func ReadFile(name string) ([]byte, error) {
+	dirs, err := ShareLima()
+	if err != nil {
+		return nil, err
+	}
+	for _, dir := range dirs {
+		filePath := filepath.Join(dir, filepath.FromSlash(name))
+		b, err := os.ReadFile(filePath)
+		if err == nil {
+			return b, nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("failed to read %q: %w", filePath, err)
+		}
+	}
+	return nil, fmt.Errorf("%w: resource %q not found in share directories", fs.ErrNotExist, name)
+}
+
+// DirFS returns an fs.FS for <PREFIX>/share/lima/<relPath>.
+// Returns fs.ErrNotExist if the directory is not found in any share directory.
+func DirFS(name string) (fs.FS, error) {
+	dirs, err := ShareLima()
+	if err != nil {
+		return nil, err
+	}
+	for _, dir := range dirs {
+		dirPath := filepath.Join(dir, filepath.FromSlash(name))
+		if st, err := os.Stat(dirPath); err == nil && st.IsDir() {
+			return os.DirFS(dirPath), nil
+		}
+	}
+	return nil, fmt.Errorf("%w: resource directory %q not found in share directories", fs.ErrNotExist, name)
+}

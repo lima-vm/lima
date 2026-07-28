@@ -9,7 +9,7 @@ import "github.com/lima-vm/lima/v2/pkg/autostart/launchd"
 func Manager() autoStartManager {
 	return &TemplateFileBasedManager{
 		filePath:              launchd.GetPlistPath,
-		template:              launchd.Template,
+		template:              launchd.GetTemplate(),
 		enabler:               launchd.EnableDisableService,
 		autoStartedIdentifier: launchd.AutoStartedServiceName,
 		requestStart:          launchd.RequestStart,

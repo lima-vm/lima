@@ -16,7 +16,7 @@ import (
 var (
 	Launchd = &TemplateFileBasedManager{
 		filePath:              launchd.GetPlistPath,
-		template:              launchd.Template,
+		template:              launchd.GetTemplate(),
 		enabler:               launchd.EnableDisableService,
 		autoStartedIdentifier: launchd.AutoStartedServiceName,
 		requestStart:          launchd.RequestStart,
@@ -29,7 +29,7 @@ var (
 	}
 	Systemd = &TemplateFileBasedManager{
 		filePath:              systemd.GetUnitPath,
-		template:              systemd.Template,
+		template:              systemd.GetTemplate(),
 		enabler:               systemd.EnableDisableUnit,
 		autoStartedIdentifier: systemd.AutoStartedUnitName,
 		requestStart:          systemd.RequestStart,

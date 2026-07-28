@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 //go:embed networks.TEMPLATE.yaml
@@ -52,7 +53,11 @@ func defaultConfigBytes() ([]byte, error) {
 	if args.SocketVMNet == "" {
 		args.SocketVMNet = candidates[0] // the hard-coded path before v0.14
 	}
-	return textutil.ExecuteTemplate(defaultConfigTemplate, args)
+	tplStr := defaultConfigTemplate
+	if b, err := usrlocal.ReadFile("defaults/networks.TEMPLATE.yaml"); err == nil {
+		tplStr = string(b)
+	}
+	return textutil.ExecuteTemplate(tplStr, args)
 }
 
 func fillDefaults(cfg Config) (Config, error) {

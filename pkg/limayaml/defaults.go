@@ -36,6 +36,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -66,8 +67,12 @@ type ContainerdYAML struct {
 }
 
 func defaultContainerdArchives() []limatype.File {
+	yamlBytes, err := usrlocal.ReadFile("defaults/containerd.yaml")
+	if err != nil {
+		yamlBytes = defaultContainerdYAML
+	}
 	var containerd ContainerdYAML
-	err := yaml.UnmarshalWithOptions(defaultContainerdYAML, &containerd, yaml.Strict())
+	err = yaml.UnmarshalWithOptions(yamlBytes, &containerd, yaml.Strict())
 	if err != nil {
 		panic(fmt.Errorf("failed to unmarshal as YAML: %w", err))
 	}

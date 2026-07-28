@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 //go:embed cidata.TEMPLATE.d
@@ -35,6 +36,13 @@ const windowsTemplateFSRoot = "wincidata.TEMPLATE.d"
 // This is for checking whether Windows OS is 11 or server 2025.
 // For example, Windows 11 x86-64's label is CCCOMA_X64FRE_EN-US_DV9.
 const windowsClientISOLabelPrefix = "CCCOMA_"
+
+func getTemplateFS() (fs.FS, error) {
+	if subFS, err := usrlocal.DirFS("cidata.TEMPLATE.d"); err == nil {
+		return subFS, nil
+	}
+	return fs.Sub(templateFS, templateFSRoot)
+}
 
 type CACerts struct {
 	RemoveDefaults *bool
@@ -199,7 +207,12 @@ func ExecuteTemplateCloudConfig(args *TemplateArgs) ([]byte, error) {
 		return nil, err
 	}
 
-	userData, err := templateFS.ReadFile(path.Join(templateFSRoot, "user-data"))
+	fsys, err := getTemplateFS()
+	if err != nil {
+		return nil, err
+	}
+
+	userData, err := fs.ReadFile(fsys, "user-data")
 	if err != nil {
 		return nil, err
 	}
@@ -213,7 +226,7 @@ func ExecuteTemplateCIDataISO(args *TemplateArgs) ([]iso9660util.Entry, error) {
 		return nil, err
 	}
 
-	fsys, err := fs.Sub(templateFS, templateFSRoot)
+	fsys, err := getTemplateFS()
 	if err != nil {
 		return nil, err
 	}

@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 //go:embed io.lima-vm.autostart.INSTANCE.plist
@@ -21,6 +22,14 @@ var Template string
 
 //go:embed io.lima-vm.daemon.INSTANCE.plist
 var DaemonTemplate string
+
+// GetTemplate returns the launchd plist template from disk if available, or the embedded template.
+func GetTemplate() string {
+	if b, err := usrlocal.ReadFile("autostart/io.lima-vm.autostart.INSTANCE.plist"); err == nil {
+		return string(b)
+	}
+	return Template
+}
 
 // GetPlistPath returns the path to the launchd plist file for the given instance name.
 func GetPlistPath(instName string) string {

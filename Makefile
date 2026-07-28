@@ -186,8 +186,8 @@ help-artifact:
 exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
-minimal: clean limactl native-guestagent default_template
-native: clean limactl limactl-plugins helpers native-guestagent templates template_experimentals additional-drivers
+minimal: clean limactl share-lima native-guestagent default_template
+native: clean limactl limactl-plugins helpers native-guestagent share-lima templates template_experimentals additional-drivers
 
 ################################################################################
 # These configs were once customizable but should no longer be changed.
@@ -437,6 +437,25 @@ $(DARWIN_GUESTAGENT_PATH_COMMON)%.gz: $(DARWIN_GUESTAGENT_PATH_COMMON)% $$(call 
 	@set -x; gzip -n $<
 
 MKDIR_TARGETS += _output/share/lima
+
+LIMA_DEFAULTS = $(addprefix _output/share/lima/defaults/,$(notdir $(wildcard share/lima/defaults/*)))
+LIMA_AUTOSTART = $(addprefix _output/share/lima/autostart/,$(notdir $(wildcard share/lima/autostart/*)))
+
+.PHONY: share-lima
+share-lima: $(LIMA_DEFAULTS) $(LIMA_AUTOSTART) _output/share/lima/cidata.TEMPLATE.d
+
+$(LIMA_DEFAULTS): | _output/share/lima/defaults
+$(LIMA_AUTOSTART): | _output/share/lima/autostart
+_output/share/lima/cidata.TEMPLATE.d: | _output/share/lima
+	cp -aL share/lima/cidata.TEMPLATE.d $@
+
+MKDIR_TARGETS += _output/share/lima/defaults _output/share/lima/autostart
+
+_output/share/lima/defaults/%: share/lima/defaults/%
+	cp -aL $< $@
+
+_output/share/lima/autostart/%: share/lima/autostart/%
+	cp -aL $< $@
 
 ################################################################################
 # _output/share/lima/templates
@@ -722,6 +741,7 @@ artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS_DEPS) \
 	$(NATIVE_GUESTAGENT) \
+	$(LIMA_DEFAULTS) $(LIMA_AUTOSTART) _output/share/lima/cidata.TEMPLATE.d \
 	$(TEMPLATES) $(TEMPLATE_IMAGES) $(TEMPLATE_DEFAULTS) $(TEMPLATE_EXPERIMENTALS) \
 	additional-drivers \
 	$(DOCUMENTATION) _output/share/doc/lima/templates \
