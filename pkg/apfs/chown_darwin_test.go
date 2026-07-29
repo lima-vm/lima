@@ -42,7 +42,9 @@ func TestChownIntegration(t *testing.T) {
 
 	assert.NilError(t, os.WriteFile(filepath.Join(mntDir, "testfile.txt"), []byte("hello"), 0o644))
 
-	cmd = exec.CommandContext(ctx, "hdiutil", "detach", mntDir)
+	// -force, because Spotlight starts indexing the volume as soon as the file
+	// above is written, and an unforced eject fails with "Resource busy".
+	cmd = exec.CommandContext(ctx, "hdiutil", "detach", mntDir, "-force")
 	out, err = cmd.CombinedOutput()
 	assert.NilError(t, err, "hdiutil detach failed: %s", out)
 
@@ -58,7 +60,8 @@ func TestChownIntegration(t *testing.T) {
 	cmd = exec.CommandContext(ctx, "fsck_apfs", "-n", dev)
 	out, err = cmd.CombinedOutput()
 	assert.NilError(t, err, "fsck_apfs failed: %s", out)
-	cmd = exec.CommandContext(ctx, "hdiutil", "detach", dev)
+	// -force, because the device can still be busy right after fsck_apfs.
+	cmd = exec.CommandContext(ctx, "hdiutil", "detach", dev, "-force")
 	out, err = cmd.CombinedOutput()
 	assert.NilError(t, err, "hdiutil detach failed: %s", out)
 
