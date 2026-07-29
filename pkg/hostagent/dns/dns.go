@@ -73,6 +73,10 @@ func newStaticClientConfig(ips []string) (*dns.ClientConfig, error) {
 }
 
 func (h *Handler) lookupCnameToHost(cname string) string {
+	// Domain names are case-insensitive (RFC 4343), and the static host maps are
+	// keyed by dns.CanonicalName, so the query name has to be folded the same way
+	// before it is matched against them.
+	cname = dns.CanonicalName(cname)
 	seen := make(map[string]bool)
 	for !seen[cname] { // break cyclic definition
 		if _, ok := h.cnameToHost[cname]; ok {
