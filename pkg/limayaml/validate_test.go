@@ -147,6 +147,73 @@ func TestValidateProvisionMode(t *testing.T) {
 		"field `provision[0].script` must not be empty")
 }
 
+func TestValidateProvisionModeOnWindows(t *testing.T) {
+	windowsBase := `
+os: Windows
+arch: x86_64
+vmType: qemu
+images:
+  - location: /
+osOpts:
+  Windows:
+    virtioWin:
+    - location: /
+      arch: "x86_64"
+`
+
+	tests := []struct {
+		name       string
+		provision  string
+		wantErrMsg string
+	}{
+		{
+			name:       "ansible not supported on windows",
+			provision:  `provision: [{mode: ansible}]`,
+			wantErrMsg: "provision mode `ansible` is not supported on Windows VM",
+		},
+		{
+			name:       "boot not supported on windows",
+			provision:  `provision: [{mode: boot, script: "echo hi"}]`,
+			wantErrMsg: "provision mode `boot` is not supported on Windows VM",
+		},
+		{
+			name:       "yq not supported on windows",
+			provision:  `provision: [{mode: yq, expression: ".x=1", path: /tmp}]`,
+			wantErrMsg: "provision mode `yq` is not supported on Windows VM",
+		},
+		{
+			name:      "system is supported on windows",
+			provision: `provision: [{mode: system, script: "echo hi"}]`,
+		},
+		{
+			name:      "user is supported on windows",
+			provision: `provision: [{mode: user, script: "echo hi"}]`,
+		},
+		{
+			name:      "dependency is supported on windows",
+			provision: `provision: [{mode: dependency, script: "echo hi"}]`,
+		},
+		{
+			name:      "data is supported on windows",
+			provision: `provision: [{mode: data, path: /tmp, content: hello}]`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte(windowsBase+"\n"+tt.provision), "template.yaml")
+			assert.NilError(t, err)
+
+			err = Validate(y, false)
+			if tt.wantErrMsg == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErrMsg)
+			}
+		})
+	}
+}
+
 func TestValidateProvisionData(t *testing.T) {
 	images := `images: [{location: /}]`
 	validData := `provision: [{mode: data, path: /tmp, content: hello}]`

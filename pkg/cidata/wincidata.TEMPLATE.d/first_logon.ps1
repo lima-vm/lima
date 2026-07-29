@@ -78,6 +78,20 @@ icacls $pubkeyLocation /grant "Administrators:F"
 $elapsed = (Get-Date) - $sectionStart
 Write-Output "SSH setting completed in $($elapsed.TotalSeconds) seconds"
 
+# Install provision runner and set task scheduler.
+$root = Split-Path -Path $PSScriptRoot -Qualifier
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$root\install_provision.ps1" -Root "$root\"
+
+# Execute provision scripts here for the current boot.
+$runnerPath = "C:\ProgramData\Lima\provision\startup_runner.ps1"
+
+# Dependency scripts are only run here, not scheduled.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$runnerPath" -Mode "dependency"
+# Startup System scripts are run here, and run in startup of a next boot.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$runnerPath" -Mode "system"
+# Startup User scripts are run here, and run in startup of a next boot.
+powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$runnerPath" -Mode "user"
+
 # Finally, it creates a marker file. Host agent will check the file.
 $bootDoneDir = 'C:\ProgramData\Lima'
 New-Item -ItemType Directory -Path $bootDoneDir -Force | Out-Null
