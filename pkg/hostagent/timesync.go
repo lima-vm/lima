@@ -60,7 +60,7 @@ func (a *HostAgent) syncTimeOnce(ctx context.Context) {
 	}
 
 	if resp.Error != "" {
-		logrus.Warnf("Time sync: guest failed to set time: %s (drift was %dms)", resp.Error, resp.DriftMs)
+		logrus.Warnf("Time sync: guest failed to set time: %#q (drift was %dms)", resp.Error, resp.DriftMs)
 		return
 	}
 
