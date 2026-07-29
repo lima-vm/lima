@@ -4,6 +4,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/instance"
@@ -13,9 +15,9 @@ import (
 
 func newStopCommand() *cobra.Command {
 	stopCmd := &cobra.Command{
-		Use:               "stop INSTANCE",
+		Use:               "stop INSTANCE [INSTANCE, ...]",
 		Short:             "Stop an instance",
-		Args:              WrapArgsError(cobra.MaximumNArgs(1)),
+		Args:              WrapArgsError(cobra.ArbitraryArgs),
 		RunE:              stopAction,
 		ValidArgsFunction: stopBashComplete,
 		GroupID:           basicCommand,
@@ -27,30 +29,37 @@ func newStopCommand() *cobra.Command {
 
 func stopAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	instName := DefaultInstanceName
-	if len(args) > 0 {
-		instName = args[0]
-	}
 
-	inst, err := store.Inspect(ctx, instName)
-	if err != nil {
-		return err
+	instNames := args
+	if len(instNames) == 0 {
+		instNames = []string{DefaultInstanceName}
 	}
 
 	force, err := cmd.Flags().GetBool("force")
 	if err != nil {
 		return err
 	}
-	if force {
-		instance.StopForcibly(inst)
-	} else {
-		err = instance.StopGracefully(ctx, inst, false)
+
+	var errs []error
+	for _, instName := range instNames {
+		inst, err := store.Inspect(ctx, instName)
+		if err != nil {
+			errs = append(errs, err)
+			continue
+		}
+
+		if force {
+			instance.StopForcibly(inst)
+		} else if err := instance.StopGracefully(ctx, inst, false); err != nil {
+			errs = append(errs, err)
+		}
 	}
+
 	// TODO: should we also reconcile networks if graceful stop returned an error?
-	if err == nil {
-		err = reconcile.Reconcile(ctx, "")
+	if err := reconcile.Reconcile(ctx, ""); err != nil {
+		errs = append(errs, err)
 	}
-	return err
+	return errors.Join(errs...)
 }
 
 func stopBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {
