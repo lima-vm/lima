@@ -22,6 +22,10 @@ use JSON::PP;
 use Socket qw(inet_ntoa);
 use Sys::Hostname qw(hostname);
 
+# The socat we pipe a probe payload into can exit first when an `ignore:` rule
+# refuses the connection, and SIGPIPE would then kill the test mid-run.
+$SIG{PIPE} = 'IGNORE';
+
 my $connectionTimeout = 1; # seconds
 
 my $instance = shift;
