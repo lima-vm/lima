@@ -415,7 +415,9 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 		INFO "Run a coredns container with port forwarding 127.0.0.1:10053/udp"
 		limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${coredns_image}
 		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name coredns -p 127.0.0.1:10053:53/udp ${coredns_image}
-		dig @127.0.0.1 -p 10053 lima-vm.io
+		# Lima opens the host listener only after the guest agent has reported the
+		# published port, so the first query can arrive before it exists.
+		timeout 3m bash -euxc "until dig @127.0.0.1 -p 10053 lima-vm.io; do sleep 3; done"
 		limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f coredns
 	fi
 
