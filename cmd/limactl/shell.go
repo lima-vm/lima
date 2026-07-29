@@ -213,23 +213,37 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if syncHostWorkdir && len(inst.Config.Mounts) > 0 {
 		return errors.New("cannot use `--sync` when the instance has host mounts configured, start the instance with `--mount-none` to disable mounts")
 	}
+	// A wsl2 guest already reaches the host directory through the /mnt automount,
+	// so `--sync` cannot isolate it from host files the way it does elsewhere.
+	if syncHostWorkdir && inst.VMType == limatype.WSL2 {
+		return errors.New("cannot use `--sync` with a wsl2 instance, the host directory is already visible in the guest")
+	}
 
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
 	//
 	// changeDirCmd := "cd workDir || exit 1"                  if workDir != ""
 	//              := "cd hostCurrentDir || cd hostHomeDir"   if workDir == ""
 	var changeDirCmd string
-	var hostCurrentDir string
+	// hostCurrentDirNative is the path as the host sees it. hostCurrentDir is the
+	// form the guest and the copy tool receive, which on Windows differs.
+	var hostCurrentDir, hostCurrentDirNative string
 	if syncDirVal != "" {
-		hostCurrentDir, err = filepath.Abs(syncDirVal)
-		if err == nil && runtime.GOOS == "windows" {
-			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
-		}
+		hostCurrentDirNative, err = filepath.Abs(syncDirVal)
 	} else {
-		hostCurrentDir, err = hostCurrentDirectory(ctx, inst)
+		hostCurrentDirNative, err = os.Getwd()
+	}
+	if err == nil {
+		hostCurrentDir = hostCurrentDirNative
+		if runtime.GOOS == "windows" {
+			hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDirNative)
+		}
 	}
 
 	if err != nil {
+		// An empty hostCurrentDir would reach rsync as the toolchain root.
+		if syncHostWorkdir {
+			return fmt.Errorf("failed to determine the host directory to sync: %w", err)
+		}
 		changeDirCmd = "false"
 		logrus.WithError(err).Warn("failed to get the current directory")
 	}
@@ -238,10 +252,19 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			return fmt.Errorf("rsync is required for `--sync` but not found: %w", err)
 		}
 
-		srcWdDepth := len(strings.Split(hostCurrentDir, string(os.PathSeparator)))
+		// Measure the host's own path. The form hostCurrentDir carries on Windows
+		// adds one component (/c/...) or two (/cygdrive/c/...).
+		srcWdDepth := pathDepth(hostCurrentDirNative, runtime.GOOS == "windows")
 		if srcWdDepth < rsyncMinimumSrcDirDepth {
-			return fmt.Errorf("expected the depth of the host working directory (%#q) to be more than %d, only got %d (Hint: %s)",
-				hostCurrentDir, rsyncMinimumSrcDirDepth, srcWdDepth, "cd to a deeper directory")
+			return fmt.Errorf("expected the depth of the host working directory (%#q) to be at least %d, only got %d (Hint: %s)",
+				hostCurrentDirNative, rsyncMinimumSrcDirDepth, srcWdDepth, "cd to a deeper directory")
+		}
+		// rsync acts on hostCurrentDir, so measure that too: cygpath can report
+		// success without writing a path, and an fstab can map a deep directory
+		// onto a shallow one. It is always POSIX form, even on Windows.
+		if dstWdDepth := pathDepth(hostCurrentDir, false); dstWdDepth < rsyncMinimumSrcDirDepth {
+			return fmt.Errorf("expected the depth of the converted host working directory (%#q) to be at least %d, only got %d",
+				hostCurrentDir, rsyncMinimumSrcDirDepth, dstWdDepth)
 		}
 	}
 
@@ -745,12 +768,35 @@ func executeSSHForRsync(ctx context.Context, sshCmd exec.Cmd, sshLocalPort int, 
 	return nil
 }
 
-func hostCurrentDirectory(ctx context.Context, inst *limatype.Instance) (string, error) {
-	hostCurrentDir, err := os.Getwd()
-	if err == nil && runtime.GOOS == "windows" {
-		hostCurrentDir, err = mountDirFromWindowsDir(ctx, inst, hostCurrentDir)
+// pathDepth counts the separator-delimited fields of an absolute path,
+// collapsing repeated separators. A trailing separator adds no field unless the
+// path is a bare root. Pass windows for a path in Windows form: elsewhere a
+// backslash is an ordinary filename character, and counting it as a separator
+// would score a directory just below the root deep enough to pass the guard.
+func pathDepth(path string, windows bool) int {
+	slashed := path
+	if windows {
+		slashed = strings.ReplaceAll(path, `\`, "/")
+		// An extended-length or device prefix spells a path the plain form also
+		// spells, so drop it before counting. The `UNC` token this leaves behind
+		// occupies the field the plain form's leading separator would.
+		if strings.HasPrefix(slashed, "//?/") || strings.HasPrefix(slashed, "//./") {
+			slashed = slashed[len("//?/"):]
+		}
 	}
-	return hostCurrentDir, err
+	// A separator run delimits one field. The two leading separators of a UNC
+	// path enclose one root, so counting both would clear the minimum depth for
+	// a share root.
+	for strings.Contains(slashed, "//") {
+		slashed = strings.ReplaceAll(slashed, "//", "/")
+	}
+	// filepath.Clean keeps the trailing separator of a root, so `\\server\share`
+	// and `\\server\share\` both reach here. Trim one that leaves a separator
+	// behind, which spares the bare roots "/" and `C:\`.
+	if trimmed := strings.TrimSuffix(slashed, "/"); strings.Contains(trimmed, "/") {
+		slashed = trimmed
+	}
+	return strings.Count(slashed, "/") + 1
 }
 
 func rsyncVersion(ctx context.Context) (*semver.Version, error) {

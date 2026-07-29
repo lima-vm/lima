@@ -9,6 +9,64 @@ import (
 	"gotest.tools/v3/assert"
 )
 
+// TestPathDepth covers both host path forms, because `limactl shell --sync`
+// compares the depth against rsyncMinimumSrcDirDepth to refuse a directory too
+// close to the root. A Windows path must count the same as its Unix equivalent,
+// or the same threshold means two different things. The windows column is what
+// the call site passes for runtime.GOOS, so both platforms are covered wherever
+// this runs.
+func TestPathDepth(t *testing.T) {
+	tests := []struct {
+		path     string
+		windows  bool
+		expected int
+	}{
+		// A home directory sits at 3 on either platform, below the minimum of 4.
+		{"/Users/jan", false, 3},
+		{`C:\Users\jan`, true, 3},
+		{"/Users/jan/proj", false, 4},
+		{`C:\Users\jan\proj`, true, 4},
+		{"/", false, 2},
+		{`C:\`, true, 2},
+		// filepath.Abs normalises this form away before Lima ever sees it.
+		// Counting it anyway keeps the helper independent of the host separator.
+		{"C:/Users/jan/proj", true, 4},
+		// On Unix a backslash is an ordinary filename character. Counting it as
+		// a separator would score this single directory just below the root at
+		// 4 and pass the guard.
+		{`/x\y\z`, false, 2},
+		{`/foo\..\..\..\bar`, false, 2},
+		// The guard must refuse a share root and allow a directory inside it;
+		// counting both leading separators would pass the root.
+		{`\\server\share`, true, 3},
+		{`\\server\share\proj`, true, 4},
+		// Go's Clean keeps a separator run inside a UNC volume, and whether
+		// Windows collapses it earlier is unverified, so the guard collapses
+		// the run itself.
+		{`\\server\\share`, true, 3},
+		{`\\\server\share`, true, 3},
+		// An extended-length or device prefix spells a path the plain form
+		// also spells.
+		{`\\?\C:\`, true, 2},
+		{`\\?\C:\Users\jan\proj`, true, 4},
+		{`\\.\C:\`, true, 2},
+		{`\\?\UNC\server\share`, true, 3},
+		// filepath.Clean keeps a root's trailing separator and strips one below
+		// a root, so only the first form reaches Lima. Counting both alike
+		// keeps the trim from changing an ordinary path's depth.
+		{`\\server\share\`, true, 3},
+		{`C:\Users\jan\proj\`, true, 4},
+		// An empty path returns 1, so the guard refuses one if it ever reaches
+		// here.
+		{"", false, 1},
+	}
+	for _, tt := range tests {
+		t.Run(tt.path, func(t *testing.T) {
+			assert.Equal(t, pathDepth(tt.path, tt.windows), tt.expected)
+		})
+	}
+}
+
 func TestParseRsyncStats(t *testing.T) {
 	tests := []struct {
 		name     string

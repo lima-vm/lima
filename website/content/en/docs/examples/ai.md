@@ -190,6 +190,7 @@ limactl shell --sync . default
 - **rsync** must be installed on both host and guest
 - The host working directory must be at least 4 levels deep (e.g., `/Users/username/projects/myproject`)
 - The instance must not have any host mounts configured (use `--mount-none` when creating)
+- The instance must not use the `wsl2` VM type
 
 ## See also
 
