@@ -5,12 +5,22 @@ package usernet
 
 import (
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
+
+func TestMain(m *testing.M) {
+	usrlocal.ExecutableViaArgs0 = func() (string, error) {
+		return filepath.Abs("../../../bin/limactl")
+	}
+	os.Exit(m.Run())
+}
 
 func TestUsernetConfig(t *testing.T) {
 	t.Run("verify dns ip", func(t *testing.T) {
