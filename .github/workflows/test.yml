@@ -63,7 +63,7 @@ jobs:
     - name: Check protobuf files
       run: make protolint
     - name: Run zizmor
-      uses: zizmorcore/zizmor-action@6599ee8b7a49aef6a770f63d261d214911a7ce02  # v0.6.0
+      uses: zizmorcore/zizmor-action@6fc4b006235f201fdab3722e17240ab420d580e5  # v0.6.1
       with:
         # No need to hide the result in https://github.com/lima-vm/lima/security (private),
         # as anybody can already run zizmor locally to find vulnerabilities.
