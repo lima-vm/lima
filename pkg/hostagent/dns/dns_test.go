@@ -232,6 +232,25 @@ func TestDNSRecords(t *testing.T) {
 		}
 	})
 
+	t.Run("test static hosts are matched case-insensitively", func(t *testing.T) {
+		tests := []struct {
+			testDomain     string
+			expectedRecord string
+			qtype          uint16
+		}{
+			{testDomain: "My.Domain.Com", expectedRecord: `My.Domain.Com.\s+5\s+IN\s+A\s+192.168.0.23`, qtype: dns.TypeA},
+			{testDomain: "HOST.LIMA.INTERNAL", expectedRecord: `HOST.LIMA.INTERNAL.\s+5\s+IN\s+A\s+10.10.0.34`, qtype: dns.TypeA},
+			{testDomain: "MY.HOST", expectedRecord: `MY.HOST.\s+5\s+IN\s+CNAME\s+host.lima.internal.`, qtype: dns.TypeCNAME},
+		}
+
+		for _, tc := range tests {
+			req := new(dns.Msg)
+			req.SetQuestion(dns.Fqdn(tc.testDomain), tc.qtype)
+			h.ServeDNS(w, req)
+			assert.Assert(t, regexMatch(dnsResult.String(), tc.expectedRecord))
+		}
+	})
+
 	t.Run("test cyclic CNAME records", func(t *testing.T) {
 		tests := []struct {
 			testDomain    string
