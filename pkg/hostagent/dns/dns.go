@@ -212,7 +212,7 @@ func (h *Handler) handleQuery(ctx context.Context, w dns.ResponseWriter, req *dn
 					continue
 				}
 			}
-			if cname != "" && cname != q.Name {
+			if cname != "" && cname != dns.CanonicalName(q.Name) {
 				hdr.Rrtype = dns.TypeCNAME
 				a := &dns.CNAME{
 					Hdr:    hdr,
