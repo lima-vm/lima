@@ -286,6 +286,12 @@ func getCached(ctx context.Context, localPath, remote string, o options) (*Resul
 		if err := copyLocal(ctx, localPath, shadData, ext, o.decompress, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
+		// The verification succeeded; record the digest (best effort) so that
+		// later cache hits compare against the digest file instead of
+		// re-hashing the data.
+		if err := os.WriteFile(shadDigest, []byte(o.expectedDigest.String()), 0o644); err != nil {
+			logrus.WithError(err).Warnf("Failed to write digest file %#q", shadDigest)
+		}
 	} else {
 		if match, lmCached, lmRemote, err := matchLastModified(ctx, shadTime, remote); err != nil {
 			logrus.WithError(err).Info("Failed to retrieve last-modified for cached digest-less image; using cached image.")
