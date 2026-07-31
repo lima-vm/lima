@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/lima/v2/cmd/yq"
 	"github.com/lima-vm/lima/v2/pkg/debugutil"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
+	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -45,6 +46,14 @@ func main() {
 			err := os.Setenv("PATH", strings.TrimSpace(extras)+string(filepath.ListSeparator)+p)
 			if err != nil {
 				logrus.Warning("Can't add extras to PATH, relying entirely on system PATH")
+			}
+		}
+		p := os.Getenv("PATH")
+		newPath := envutil.AppendDirsToPath(p, envutil.PlatformCommonToolDirs)
+		if newPath != p {
+			logrus.Info("Temporarily add the common tool (QEMU etc.) directories to PATH")
+			if err := os.Setenv("PATH", newPath); err != nil {
+				logrus.WithError(err).Warning("Can't add common tool directories to PATH, relying entirely on system PATH")
 			}
 		}
 	}
