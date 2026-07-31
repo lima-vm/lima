@@ -69,9 +69,9 @@ Instead, use 'ssh -F %s/default/ssh.config lima-default' .
 		GroupID:           advancedCommand,
 	}
 
-	shellCmd.Flags().StringP("format", "f", sshutil.FormatCmd, "Format: "+strings.Join(sshutil.Formats, ", "))
+	shellCmd.Flags().StringP("format", "f", string(sshutil.FormatCmd), "Format: "+strings.Join(sshutil.FormatsToStrings(), ", "))
 	_ = shellCmd.RegisterFlagCompletionFunc("format", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
-		return sshutil.Formats, cobra.ShellCompDirectiveNoFileComp
+		return sshutil.FormatsToStrings(), cobra.ShellCompDirectiveNoFileComp
 	})
 	return shellCmd
 }
@@ -111,7 +111,7 @@ func showSSHAction(cmd *cobra.Command, args []string) error {
 	}
 	opts = append(opts, "Hostname=127.0.0.1")
 	opts = append(opts, fmt.Sprintf("Port=%d", inst.SSHLocalPort))
-	return sshutil.Format(w, "ssh", instName, format, opts)
+	return sshutil.Format(w, "ssh", instName, sshutil.FormatT(format), opts)
 }
 
 func showSSHBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

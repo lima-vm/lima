@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-type Kind = string
+type Kind string
 
 const (
 	TCP  Kind = "tcp"
@@ -17,7 +17,7 @@ const (
 	// TODO: "udplite", "udplite6".
 )
 
-type State = byte
+type State byte
 
 const (
 	TCPEstablished State = 0x1

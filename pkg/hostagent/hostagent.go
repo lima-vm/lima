@@ -851,7 +851,7 @@ func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPor
 			guest := &guestagentapi.IPPort{
 				Ip:       rule.GuestIP.String(),
 				Port:     int32(rule.GuestPort),
-				Protocol: rule.Proto,
+				Protocol: string(rule.Proto),
 			}
 			local, remote := a.portForwarder.forwardingAddresses(guest)
 			if local != "" {

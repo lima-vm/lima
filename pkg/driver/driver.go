@@ -56,7 +56,7 @@ type Lifecycle interface {
 
 	Delete(_ context.Context) error
 
-	InspectStatus(_ context.Context, inst *limatype.Instance) string
+	InspectStatus(_ context.Context, inst *limatype.Instance) limatype.Status
 
 	// BootScripts returns the content of boot scripts to be injected into the vm.
 	// The key must be "boot.<OS>/<SCRIPT>" or "<SCRIPT>" (deprecated alias for "boot.Linux/<SCRIPT>").

@@ -12,7 +12,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
-type Status = string
+type Status string
 
 const (
 	StatusUnknown       Status = ""
