@@ -382,6 +382,13 @@ func TestCachedWithoutDigestSidecar(t *testing.T) {
 			WithExpectedDigest(correctDigest), WithCacheDir(cacheDir))
 		assert.NilError(t, err)
 		assert.Equal(t, StatusUsedCache, r.Status)
+
+		// The digest file is recorded after verification, so subsequent cache
+		// hits do not have to re-hash the data.
+		shadDigest := filepath.Join(cacheDirectoryPath(cacheDir, remote), "sha256.digest")
+		b, err := os.ReadFile(shadDigest)
+		assert.NilError(t, err)
+		assert.Equal(t, correctDigest.String(), string(b))
 	})
 }
 
