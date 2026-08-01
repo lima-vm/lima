@@ -109,6 +109,15 @@ function ubuntu_image_url_try_replace_release_with_version() {
 	set -e
 }
 
+# ubuntu_limayaml_arch converts an Ubuntu image arch (e.g. amd64, amd64v3) to the lima.yaml arch.
+# The x86-64 micro-architecture level suffix (e.g. the "v3" in amd64v3) is stripped here because it is
+# carried separately in the template's archVariant field; the base arch (x86_64) is what lima matches.
+function ubuntu_limayaml_arch() {
+	local arch=$1
+	arch=${arch/#amd64v[0-9]/amd64}
+	limayaml_arch "${arch}"
+}
+
 # ubuntu_image_url_latest prints the latest image URL and its digest for the given flavor, version, arch, and path suffix.
 function ubuntu_image_url_latest() {
 	local flavor=$1 version=$2 arch=$3 path_suffix=$4 base_url ubuntu_downloaded_json jq_filter location_digest_release
@@ -129,7 +138,7 @@ function ubuntu_image_url_latest() {
 	read -r location digest release <<<"${location_digest_release}"
 	location=$(validate_url "${location}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
-	arch=$(limayaml_arch "${arch}")
+	arch=$(ubuntu_limayaml_arch "${arch}")
 	json_vars location arch digest
 }
 
@@ -151,7 +160,7 @@ function ubuntu_image_url_release() {
 		error_exit "The URL for ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
 	location=$(validate_url "${base_url}${release}/release/ubuntu-${version}-${flavor}-cloudimg-${arch}${path_suffix}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${release}" "${version}")
-	arch=$(limayaml_arch "${arch}")
+	arch=$(ubuntu_limayaml_arch "${arch}")
 	json_vars location arch
 }
 
@@ -180,7 +189,7 @@ function ubuntu_image_url_daily() {
 	read -r location digest version <<<"${location_digest_version}"
 	location=$(validate_url "${location}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${codename}" "${version}")
-	arch=$(limayaml_arch "${arch}")
+	arch=$(ubuntu_limayaml_arch "${arch}")
 	json_vars location arch digest
 }
 
@@ -212,7 +221,7 @@ function ubuntu_image_url_current() {
 		error_exit "The URL for ubuntu-${version}-${products_flavor}-cloudimg-${arch}${path_suffix} is not provided at ${ubuntu_base_urls[${flavor}]}."
 	location=$(validate_url "${base_url}${path_prefix}${codename}/current/${codename}-${products_flavor}-cloudimg-${arch}${path_suffix}")
 	location=$(ubuntu_image_url_try_replace_release_with_version "${location}" "${codename}" "${version}")
-	arch=$(limayaml_arch "${arch}")
+	arch=$(ubuntu_limayaml_arch "${arch}")
 	json_vars location arch
 }
 

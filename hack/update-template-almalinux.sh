@@ -69,6 +69,14 @@ function almalinux_url_spec_from_location() {
 	echo "${url_spec}"
 }
 
+# almalinux_limayaml_arch strips the x86-64 micro-architecture level suffix (e.g. the "_v2" in
+# x86_64_v2) so the emitted lima arch is the base x86_64; the level is carried separately in the
+# template's archVariant field. The URL/path and CHECKSUM lookups keep the original x86_64_v2.
+function almalinux_limayaml_arch() {
+	local arch=$1
+	echo "${arch%_v[0-9]}"
+}
+
 readonly almalinux_jq_filter_directory='"https://repo.almalinux.org/almalinux/\(.path_version)/cloud/\(.path_arch)/images/"'
 readonly almalinux_jq_filter_filename='"AlmaLinux-\(.major_version)-\(.target_vendor)-\(if .date then .major_minor_version + "-" + .date else "latest" end).\(.arch).\(.file_extension)"'
 
@@ -129,6 +137,7 @@ function almalinux_latest_image_entry_for_url_spec() {
 	filename=$(almalinux_image_filename_from_url_spec "${newer_url_spec}")
 	digest=$(awk "/${filename}/{print \"sha256:\"\$1}" "${downloaded_sha256sum}")
 	[[ -n ${digest} ]] || error_exit "Failed to get the SHA256 digest for ${filename}"
+	arch=$(almalinux_limayaml_arch "${arch}")
 	json_vars location arch digest
 }
 
@@ -151,7 +160,7 @@ function almalinux_image_entry_for_image_kernel() {
 			# shellcheck disable=SC2030
 			location=$(almalinux_location_from_url_spec "${url_spec}")
 			location=$(validate_url_without_redirect "${location}")
-			arch=$(jq -r '.path_arch' <<<"${url_spec}")
+			arch=$(almalinux_limayaml_arch "$(jq -r '.path_arch' <<<"${url_spec}")")
 			json_vars location arch
 		)
 	fi

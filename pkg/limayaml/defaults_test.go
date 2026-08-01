@@ -1001,6 +1001,25 @@ images:
 	assert.Equal(t, y.Images[1].Variant, "minimal")
 }
 
+func TestUnmarshalImageArchVariant(t *testing.T) {
+	yamlBytes := []byte(`
+images:
+- location: "amd64-img.img"
+  arch: "x86_64"
+  variant: "server"
+- location: "amd64v3-img.img"
+  arch: "x86_64"
+  variant: "server"
+  archVariant: "v3"
+`)
+	var y limatype.LimaYAML
+	err := Unmarshal(yamlBytes, &y, "test")
+	assert.NilError(t, err)
+	assert.Equal(t, len(y.Images), 2)
+	assert.Equal(t, y.Images[0].ArchVariant, "")
+	assert.Equal(t, y.Images[1].ArchVariant, "v3")
+}
+
 func TestDefaultSelectedImageIsStandard(t *testing.T) {
 	// Verify that the default order of the images in the standard template
 	// places standard/server before minimal so standard users don't regress.

@@ -151,10 +151,11 @@ type Kernel struct {
 }
 
 type Image struct {
-	File    `yaml:",inline"`
-	Kernel  *Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
-	Initrd  *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
-	Variant string  `yaml:"variant,omitempty" json:"variant,omitempty"`
+	File        `yaml:",inline"`
+	Kernel      *Kernel `yaml:"kernel,omitempty" json:"kernel,omitempty"`
+	Initrd      *File   `yaml:"initrd,omitempty" json:"initrd,omitempty"`
+	Variant     string  `yaml:"variant,omitempty" json:"variant,omitempty"`
+	ArchVariant string  `yaml:"archVariant,omitempty" json:"archVariant,omitempty"`
 }
 
 type Disk struct {
