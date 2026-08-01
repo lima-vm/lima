@@ -53,14 +53,22 @@ provision:
     # Installing kubeadm, kubelet and kubectl
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
+    {{- if .Param.proxy }}
+    apt-get install -y --no-upgrade ca-certificates curl
+    {{- else}}
     apt-get install -y apt-transport-https ca-certificates curl
+    {{- end}}
     STABILITY="{{.Param.stability}}"
     {{if eq .Param.release "stable" }}
     RELEASE=$(curl -L -s https://dl.k8s.io/release/stable.txt | cut -d'.' -f1-2)
     {{else}}
     RELEASE="{{.Param.release}}"
     {{end}}
+    {{- if .Param.proxy }}
+    echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] {{.Param.proxy}}/HTTPS///pkgs.k8s.io/core:/${STABILITY}:/${RELEASE}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    {{- else}}
     echo "deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/${STABILITY}:/${RELEASE}/deb/ /" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+    {{- end}}
     curl -fsSL https://pkgs.k8s.io/core:/${STABILITY}:/${RELEASE}/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     apt-get update
     apt-get install -y kubelet kubeadm kubectl && apt-mark hold kubelet kubeadm kubectl
@@ -243,6 +251,9 @@ message: |
   ------
   {{end -}}
 param:
+  # The proxy to use when pulling packages from k8s.io
+  # For a local proxy use for instance "http://host.lima.internal:3142"
+  proxy: ""
   # The mirror to use when pulling images from registry
   # For a local mirror use for instance "http://host.lima.internal:8080"
   mirror: ""
