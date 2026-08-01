@@ -21,6 +21,12 @@ if [ "${UNAME}" != "Linux" ]; then
 fi
 rm -f "${RUN}/lima-boot-done"
 
+# A boot script that reboots the guest creates this file first, so that the rest
+# of this script knows the guest is on its way down.
+LIMA_REBOOT_REQUIRED="${RUN}/lima-reboot-required"
+export LIMA_REBOOT_REQUIRED
+rm -f "${LIMA_REBOOT_REQUIRED}"
+
 # shellcheck disable=SC2163
 while read -r line; do [ -n "$line" ] && export "$line"; done <"${LIMA_CIDATA_MNT}"/lima.env
 # shellcheck disable=SC2163
@@ -240,7 +246,14 @@ if [ "${UNAME}" != "Darwin" ] && [ "${LIMA_CIDATA_PASSWORDLESS_SUDO}" != "1" ]; 
 fi
 # Signal that provisioning is done. The instance ID changes on every boot,
 # so any value from a previous boot cycle will be different.
-echo "${LIMA_CIDATA_IID}" >"${RUN}/lima-boot-done"
+# A pending reboot suppresses the signal, because the reboot is asynchronous
+# and the host agent would otherwise call the guest ready while sshd is
+# already going down.
+if [ -e "${LIMA_REBOOT_REQUIRED}" ]; then
+	INFO "Not signaling boot completion because a boot script requested a reboot"
+else
+	echo "${LIMA_CIDATA_IID}" >"${RUN}/lima-boot-done"
+fi
 
 INFO "Exiting with code $CODE"
 exit "$CODE"

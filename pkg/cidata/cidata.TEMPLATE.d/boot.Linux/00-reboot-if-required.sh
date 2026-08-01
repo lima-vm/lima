@@ -25,6 +25,7 @@ if command -v dnf >/dev/null 2>&1; then
 			dnf needs-restarting -r | tee "$logfile"
 			if [ "$?" = "1" ]; then
 				if grep -q "Reboot is required" "$logfile"; then
+					touch "$LIMA_REBOOT_REQUIRED"
 					systemctl reboot
 				fi
 			fi

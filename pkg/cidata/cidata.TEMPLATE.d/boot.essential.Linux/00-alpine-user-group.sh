@@ -20,6 +20,7 @@ if [ "$LIMA_CIDATA_USER" != "alpine" ]; then
 		userdel alpine
 		rmdir /home/alpine
 		cloud-init clean --logs
+		touch "$LIMA_REBOOT_REQUIRED"
 		reboot
 	fi
 fi
