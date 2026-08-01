@@ -17,13 +17,16 @@ provision:
     #!/bin/bash
     set -eux -o pipefail
     command -v apptainer >/dev/null 2>&1 && exit 0
-    # Workaround for https://github.com/apptainer/apptainer/issues/2027
-    echo "kernel.apparmor_restrict_unprivileged_userns = 0" >/etc/sysctl.d/99-userns.conf
-    sysctl --system
     # add the "Official PPA for Apptainer"
     add-apt-repository -y ppa:apptainer/ppa
     apt-get update
     apt-get install -y apptainer
+    # Ubuntu 24.10 moved /tmp over to tmpfs
+    # Apptainer wants a regular filesystem TMPDIR:
+    # - Building images has a problem with "nodev"
+    # - The image might be too big to fit in memory
+    echo "APPTAINER_TMPDIR=/var/tmp" > /etc/profile.d/apptainer.sh
+    echo "export APPTAINER_TMPDIR" > /etc/profile.d/apptainer.sh
 probes:
 - script: |
     #!/bin/bash
