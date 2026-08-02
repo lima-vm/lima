@@ -147,20 +147,6 @@ This page documents the environment variables used in Lima.
   export LIMA_USERNET_RESOLVE_IP_ADDRESS_TIMEOUT=5
   ```
 
-### `_LIMA_WINDOWS_EXTRA_PATH`
-
-- **Description**: Additional directories which will be added to PATH by `limactl.exe` process to search for tools.
-  It is useful, when there is a need to prevent collisions between binaries available in active shell and ones
-  used by `limactl.exe` - injecting them only for the running process w/o altering PATH observed by user shell.
-  Is is Windows specific and does nothing for other platforms.
-- **Default**: unset
-- **Usage**:
-  ```bat
-  set _LIMA_WINDOWS_EXTRA_PATH=C:\Program Files\Git\usr\bin
-  ```
-- **Note**: It is an experimental setting and has no guarantees being ever promoted to stable. It may be removed
-  or changed at any stage of project development.
-
 ### `QEMU_SYSTEM_AARCH64`
 
 - **Description**: Path to the `qemu-system-aarch64` binary.
@@ -214,3 +200,29 @@ This page documents the environment variables used in Lima.
   ```sh
   export QEMU_SYSTEM_X86_64=/usr/local/bin/qemu-system-x86_64
   ```
+
+### `SSH`
+
+- **Description**: Command to run in place of the `ssh` executable. The value is
+  split into shell tokens, so it can carry arguments as well as a path. Lima
+  sets its own `-F` on most invocations, and `limactl copy` drops the arguments
+  on its scp backend, so a path with no arguments is the reliable form.
+  Tokenization also reads `\` as an escape and splits on spaces. A Windows
+  path therefore needs quotes, and its backslashes survive only inside single
+  quotes; unquoted, `C:\Program Files\Git\usr\bin\ssh.exe` arrives as
+  `C:Program`.
+- **Default**: unset. Lima then searches `$PATH`, and on Windows falls back to
+  `%SystemRoot%\System32\OpenSSH`.
+- **Usage**:
+  ```sh
+  export SSH=/opt/homebrew/bin/ssh
+  ```
+  ```powershell
+  $env:SSH = "'C:\Program Files\Git\usr\bin\ssh.exe'"
+  ```
+- **Note**: On Windows this overrides the toolchain detection described under
+  [Windows toolchain]({{< ref "/docs/config/vmtype/wsl2#windows-toolchain" >}}).
+  Some paths still follow `PATH`, among them the guest mount point and
+  `limactl shell`'s working directory, so point `SSH` at the install that
+  comes first on `PATH`. `limactl guest-install` ignores this variable
+  altogether.

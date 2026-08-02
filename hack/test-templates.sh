@@ -64,9 +64,6 @@ declare -A CHECKS=(
 
 case "$NAME" in
 "default")
-	# CI failure:
-	# "[hostagent] failed to confirm whether /c/Users/runneradmin [remote] is successfully mounted"
-	[ "${OS_HOST}" = "Msys" ] && CHECKS["mount-home"]=
 	[ "${OS_HOST}" = "Darwin" ] && CHECKS["ssh-over-vsock"]="1"
 	;;
 "alpine"*)
@@ -302,7 +299,11 @@ if command -v rsync >/dev/null && limactl shell "$NAME" command -v rsync >/dev/n
 	testdir="$tmpdir/test-rsync-dir"
 	mkdir -p "$testdir"
 	echo "test content" >"$testdir/testfile.txt"
-	limactl cp --backend=rsync -r -v "$testdir" "$NAME":/tmp/
+	testdir_host=$testdir
+	if [ "${OS_HOST}" = "Msys" ]; then
+		testdir_host="$(cygpath -w "$testdir")"
+	fi
+	limactl cp --backend=rsync -r -v "$testdir_host" "$NAME":/tmp/
 	if ! limactl shell "$NAME" test -f /tmp/test-rsync-dir/testfile.txt; then
 		ERROR "rsync recursive copy failed"
 		exit 1

@@ -7,11 +7,14 @@ import (
 	"context"
 	"fmt"
 	"os/exec"
+	"path/filepath"
+	"runtime"
 	"strings"
 
 	"al.essio.dev/pkg/shellescape"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
@@ -36,6 +39,7 @@ func (t *rsyncTool) Name() string {
 func (t *rsyncTool) IsAvailableOnGuest(ctx context.Context, paths []string) bool {
 	copyPaths, err := parseCopyPaths(ctx, paths)
 	if err != nil {
+		// New() has already reported this to the user.
 		logrus.Debugf("failed to parse copy paths for rsync availability check: %v", err)
 		return false
 	}
@@ -63,7 +67,7 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 		logrus.Debugf("failed to create SSH executable: %v", err)
 		return false
 	}
-	sshOpts, err := sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+	sshOpts, err := sshOptsForInstance(ctx, sshExe, sshExe.Exe, inst)
 	if err != nil {
 		logrus.Debugf("failed to get SSH options for rsync check: %v", err)
 		return false
@@ -82,10 +86,41 @@ func checkRsyncOnGuest(ctx context.Context, inst *limatype.Instance) bool {
 	return err == nil
 }
 
+// pathForRsync formats a host path for the rsync binary t will run. Windows
+// has no native rsync build, so any rsync is Cygwin- or MSYS-based and reads a
+// colon before the first slash as host:path; the sibling cygpath applies that
+// install's own fstab. Without that sibling the conversion falls back to the
+// MSYS form, which a stock Cygwin rsync resolves under its own install root
+// rather than the drive.
+func (t *rsyncTool) pathForRsync(ctx context.Context, orig string) (string, error) {
+	if runtime.GOOS != "windows" || !filepath.IsAbs(orig) {
+		return orig, nil
+	}
+	// Resolve here rather than in newRsyncTool, which would also change the
+	// binary exec runs and the argv[0] it sees.
+	toolPath := t.toolPath
+	if resolved, err := filepath.EvalSymlinks(toolPath); err == nil {
+		toolPath = resolved
+	}
+	cygpathExe := filepath.Join(filepath.Dir(toolPath), "cygpath.exe")
+	return fsutil.WindowsSubsystemPathWithCygpath(ctx, cygpathExe, orig)
+}
+
 func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) (*exec.Cmd, error) {
 	copyPaths, err := parseCopyPaths(ctx, paths)
 	if err != nil {
 		return nil, err
+	}
+
+	// Format before the trailing-slash handling below, which decides whether
+	// rsync copies a directory or its contents.
+	for _, cp := range copyPaths {
+		if cp.IsRemote {
+			continue
+		}
+		if cp.Path, err = t.pathForRsync(ctx, cp.Path); err != nil {
+			return nil, err
+		}
 	}
 
 	effectiveOpts := t.Options
@@ -123,7 +158,7 @@ func (t *rsyncTool) Command(ctx context.Context, paths []string, opts *Options) 
 				if err != nil {
 					return nil, err
 				}
-				sshOpts, err := sshutil.SSHOpts(ctx, sshExe, cp.Instance.Dir, *cp.Instance.Config.User.Name, false, false, false, false)
+				sshOpts, err := sshOptsForInstance(ctx, sshExe, sshExe.Exe, cp.Instance)
 				if err != nil {
 					return nil, err
 				}

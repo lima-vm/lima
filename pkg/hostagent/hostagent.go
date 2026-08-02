@@ -59,6 +59,7 @@ type HostAgent struct {
 	instDir           string
 	instName          string
 	instSSHAddress    string
+	sshExe            sshutil.SSHExe
 	sshConfig         *ssh.SSHConfig
 	portForwarder     *portForwarder // legacy SSH port forwarder
 	grpcPortForwarder *portfwd.Forwarder
@@ -256,6 +257,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		instDir:           inst.Dir,
 		instName:          instName,
 		instSSHAddress:    inst.SSHAddress,
+		sshExe:            sshExe,
 		sshConfig:         sshConfig,
 		driver:            limaDriver,
 		signalCh:          signalCh,
@@ -302,7 +304,7 @@ func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLo
 		//   - Prevents error messages such as:
 		//     > mux_client_request_session: read from master failed: Connection reset by peer
 		//     > ControlSocket ....sock already exists, disabling multiplexing
-		// Only remove these options when writing the SSH config file and executing `limactl shell`, since multiplexing seems to work with port forwarding.
+		// The sshConfig the hostagent builds from the same options keeps them.
 		sshOpts = sshutil.SSHOptsRemovingControlPath(sshOpts)
 	}
 	if err := sshutil.Format(b, sshPath, instName, sshutil.FormatConfig,
@@ -571,7 +573,6 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 	}
 	a.cleanUp(func() error {
 		// Skip ExitMaster when the control socket does not exist.
-		// On Windows, the ControlMaster is used only for SSH port forwarding.
 		if !sshutil.IsControlMasterExisting(a.instDir) {
 			return nil
 		}

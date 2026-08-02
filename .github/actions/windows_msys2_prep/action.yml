@@ -1,0 +1,24 @@
+name: 'windows msys2 prep'
+description: >
+  Adds C:\msys64\usr\bin to PATH and installs the MSYS2 packages the Windows
+  integration jobs need. The PATH prepend persists into subsequent job steps
+  via $GITHUB_PATH, so the test step can call cygpath / bash / pacman tools
+  directly without re-prepending. The Make step inherits the prepend too, so
+  make's $(shell find ...) finds GNU find instead of System32\FIND.EXE.
+runs:
+  using: composite
+  steps:
+  - name: Prepend MSYS2 to PATH and install test dependencies
+    shell: pwsh
+    # The value written to $GITHUB_PATH is the static literal C:\msys64\usr\bin,
+    # which is the canonical pattern for adding a directory to subsequent
+    # steps' PATH. No PR-controlled data reaches the env file.
+    run: | # zizmor: ignore[github-env]
+      $ErrorActionPreference = 'Stop'
+      Add-Content -Path $env:GITHUB_PATH -Value 'C:\msys64\usr\bin'
+      # rsync: without it the copy test skips its rsync backend, so the Windows
+      # path conversion that backend performs goes unexercised.
+      # openssh: keeps a Cygwin ssh ahead of %SystemRoot%\System32\OpenSSH, so
+      # these jobs cover the Cygwin toolchain and the plain jobs the native one.
+      & 'C:\msys64\usr\bin\pacman.exe' -Sy --noconfirm openbsd-netcat diffutils openssh rsync socat w3m
+      if ($LASTEXITCODE -ne 0) { throw "pacman failed: $LASTEXITCODE" }

@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -62,23 +62,28 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 		if err != nil {
 			return nil, err
 		}
-
+		// Report a bad path as itself; IsAvailableOnGuest would reduce it to
+		// "rsync not available on guest(s)".
+		if _, err := parseCopyPaths(ctx, paths); err != nil {
+			return nil, err
+		}
 		if !rsync.IsAvailableOnGuest(ctx, paths) {
 			return nil, errors.New("rsync not available on guest(s)")
 		}
 		return rsync, nil
 	case BackendAuto:
-		var (
-			tool CopyTool
-			err  error
-		)
-
 		// For rsync, the source and destination cannot both be remote
-		if !hasRemoteSourceAndDestination(ctx, paths) {
-			tool, err = newRsyncTool(opts)
+		bothRemote, err := hasRemoteSourceAndDestination(ctx, paths)
+		if err != nil {
+			// A bad path is fatal for every backend, so report it here. Falling
+			// through to scp would replace it with "scp not found on host".
+			return nil, err
+		}
+		if !bothRemote {
+			rsync, err := newRsyncTool(opts)
 			if err == nil {
-				if tool.IsAvailableOnGuest(ctx, paths) {
-					return tool, nil
+				if rsync.IsAvailableOnGuest(ctx, paths) {
+					return rsync, nil
 				}
 				logrus.Debugf("rsync not available on guest(s), falling back to scp")
 			} else {
@@ -86,9 +91,11 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 			}
 		}
 
-		tool, err = newSCPTool(opts)
+		tool, err := newSCPTool(opts)
 		if err != nil {
-			return nil, fmt.Errorf("neither rsync nor scp found on host: %w", err)
+			// rsync may well have been found and rejected above, so name the
+			// outcome rather than guessing which tool is missing.
+			return nil, fmt.Errorf("no usable copy tool on host: %w", err)
 		}
 		return tool, nil
 	default:
@@ -96,10 +103,10 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 	}
 }
 
-func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
+func hasRemoteSourceAndDestination(ctx context.Context, paths []string) (bool, error) {
 	copyPaths, err := parseCopyPaths(ctx, paths)
 	if err != nil {
-		return true
+		return false, err
 	}
 
 	var hasRemoteSource, hasRemoteDestination bool
@@ -113,7 +120,21 @@ func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
 		}
 	}
 
-	return hasRemoteSource && hasRemoteDestination
+	return hasRemoteSource && hasRemoteDestination, nil
+}
+
+// sshOptsForInstance returns the ssh options for copying to or from inst. The
+// rsync availability probe and the rsync command must both use it, or the probe
+// rejects a working install. On Windows it drops connection multiplexing, since
+// native OpenSSH has none and Cygwin ssh's is unreliable for scp and rsync.
+//
+// toolPath names the binary whose path form the options take. scp hands them to
+// the ssh beside itself, while rsync hands them to the ssh it names with -e.
+func sshOptsForInstance(ctx context.Context, sshExe sshutil.SSHExe, toolPath string, inst *limatype.Instance) ([]string, error) {
+	if runtime.GOOS == "windows" {
+		return sshutil.SSHOptsWithoutMultiplexing(ctx, sshExe, toolPath, *inst.Config.User.Name, false)
+	}
+	return sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
 }
 
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
@@ -122,15 +143,20 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 	for _, path := range paths {
 		cp := &Path{}
 		if runtime.GOOS == "windows" {
+			// Classify absolute paths before the ":" split, so a drive letter
+			// is not read as an instance name. Drive-relative "C:foo" is not
+			// absolute, so single-letter instance names still work.
+			//
+			// The path stays in native form here. scp and rsync can come from
+			// different toolchains, so each backend formats it for the binary
+			// that consumes it.
 			if filepath.IsAbs(path) {
-				var err error
-				path, err = fsutil.WindowsSubsystemPath(ctx, path)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				path = filepath.ToSlash(path)
+				cp.Path = path
+				cp.IsRemote = false
+				copyPaths = append(copyPaths, cp)
+				continue
 			}
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)

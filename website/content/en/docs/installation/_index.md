@@ -11,6 +11,9 @@ Supported host OS:
 
 Prerequisite:
 - QEMU (Required, only if [QEMU]({{< ref "/docs/config/vmtype#qemu" >}}) driver is used)
+- An OpenSSH client on Windows hosts (Windows 10 and 11 ship one); see
+  [Windows toolchain]({{< ref "/docs/config/vmtype/wsl2#windows-toolchain" >}})
+  for when Lima needs more than the default install
 
 {{< tabpane text=true >}}
 
