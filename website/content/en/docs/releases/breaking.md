@@ -3,6 +3,11 @@ title: Breaking changes
 weight: 20
 ---
 
+## v2.3.0
+- The experimental `_LIMA_WINDOWS_EXTRA_PATH` environment variable was removed. It prepended directories to
+  `limactl.exe`'s own PATH on Windows hosts, leaving the calling shell's PATH untouched. Put them on `PATH`
+  instead, or set `PATH` for the single call if you need to keep them out of your shell.
+
 ## v2.2.0
 - The default [`socket_vmnet` group](../config/network/vmnet.md) in `networks.yaml` was changed from `everyone` to
   `admin`. A non-admin user must set `group` to a group they belong to (e.g. `staff`).
