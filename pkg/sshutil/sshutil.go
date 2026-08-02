@@ -230,8 +230,8 @@ func PathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error)
 }
 
 // SftpServerForSSH returns the path of sftp-server binary from sshExe's toolchain,
-// so a locally-spawned sftp-server (reverse-sshfs) uses the same path form
-// PathForSSH produces. For Cygwin-based ssh the sibling cygpath resolves
+// so the server behind a reverse-sshfs mount comes from the same install as the
+// ssh driving it. For Cygwin-based ssh the sibling cygpath resolves
 // /usr/lib/ssh/sftp-server; for native OpenSSH it is sftp-server.exe beside
 // ssh.exe. Returns "" on non-Windows, empty input, or no match, leaving the
 // caller to fall back to its library's auto-detection.
@@ -244,20 +244,24 @@ func SftpServerForSSH(ctx context.Context, sshExe SSHExe) string {
 		if err != nil {
 			return ""
 		}
+		// Validate with LookPath, which appends the ".exe" that cygpath omits.
+		// Under the default driver sshocker resolves this path with LookPath as
+		// well and fails the mount when it does not resolve, so returning
+		// nothing beats returning a path it will reject.
 		candidate := strings.TrimSpace(string(out))
-		for _, p := range []string{candidate, candidate + ".exe"} {
-			if _, err := os.Stat(p); err == nil {
-				return p
-			}
+		sftpServer, err := exec.LookPath(candidate)
+		if err != nil {
+			logrus.WithError(err).Debugf("cannot use the sftp-server at %#q that cygpath resolved", candidate)
+			return ""
 		}
-		return ""
+		return sftpServer
 	}
 	path, ok := resolvedSSHPath(sshExe)
 	if !ok {
 		return ""
 	}
-	sftpServer := filepath.Join(filepath.Dir(path), "sftp-server.exe")
-	if _, err := os.Stat(sftpServer); err != nil {
+	sftpServer, err := exec.LookPath(filepath.Join(filepath.Dir(path), "sftp-server.exe"))
+	if err != nil {
 		return ""
 	}
 	return sftpServer

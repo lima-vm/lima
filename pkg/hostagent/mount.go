@@ -8,18 +8,38 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/lima-vm/sshocker/pkg/reversesshfs"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
 type mount struct {
 	close func() error
+}
+
+// mountPathAndSftpServer returns location in the native path form, and the
+// sftp-server from sshExe's toolchain. Every driver gets the native form
+// because sshocker rewrites a Cygwin path to backslashes, which a Cygwin
+// ssh.exe then eats, leaving the server a path it cannot resolve. Both server
+// flavors accept the native form. The server is empty for the builtin driver,
+// which sshocker serves in-process, and when the toolchain ships none.
+func mountPathAndSftpServer(ctx context.Context, sshExe sshutil.SSHExe, driver, location string) (resolvedLocation, sftpServerBinary string) {
+	resolvedLocation = filepath.ToSlash(location)
+	if driver == limatype.SFTPDriverBuiltin {
+		return resolvedLocation, ""
+	}
+	sftpServerBinary = sshutil.SftpServerForSSH(ctx, sshExe)
+	if sftpServerBinary == "" {
+		logrus.Infof("reverse-sshfs: no sftp-server in the toolchain of %#q; falling back to a generic search, which may pick one that cannot resolve %#q", sshExe.Exe, resolvedLocation)
+	} else {
+		logrus.Debugf("reverse-sshfs: host path %#q resolved to %#q for sftp-server %#q", location, resolvedLocation, sftpServerBinary)
+	}
+	return resolvedLocation, sftpServerBinary
 }
 
 func (a *HostAgent) setupMounts(ctx context.Context) ([]*mount, error) {
@@ -53,12 +73,9 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	logrus.Infof("Mounting %#q on %#q", m.Location, *m.MountPoint)
 
 	resolvedLocation := m.Location
+	var sftpServerBinary string
 	if runtime.GOOS == "windows" {
-		var err error
-		resolvedLocation, err = fsutil.WindowsSubsystemPath(ctx, m.Location)
-		if err != nil {
-			return nil, err
-		}
+		resolvedLocation, sftpServerBinary = mountPathAndSftpServer(ctx, a.sshExe, *m.SSHFS.SFTPDriver, m.Location)
 	}
 
 	sshAddress, sshPort := a.sshAddressPort()
@@ -66,14 +83,15 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	// modifying HostAgent's sshConfig in case of Windows
 	sshConfig := *a.sshConfig
 	rsf := &reversesshfs.ReverseSSHFS{
-		Driver:              *m.SSHFS.SFTPDriver,
-		SSHConfig:           &sshConfig,
-		LocalPath:           resolvedLocation,
-		Host:                sshAddress,
-		Port:                sshPort,
-		RemotePath:          *m.MountPoint,
-		Readonly:            !(*m.Writable),
-		SSHFSAdditionalArgs: []string{"-o", sshfsOptions},
+		Driver:                  *m.SSHFS.SFTPDriver,
+		OpensshSftpServerBinary: sftpServerBinary,
+		SSHConfig:               &sshConfig,
+		LocalPath:               resolvedLocation,
+		Host:                    sshAddress,
+		Port:                    sshPort,
+		RemotePath:              *m.MountPoint,
+		Readonly:                !(*m.Writable),
+		SSHFSAdditionalArgs:     []string{"-o", sshfsOptions},
 	}
 	if runtime.GOOS == "windows" {
 		// cygwin/msys2 doesn't support full feature set over mux socket, this has at least 2 side effects:
