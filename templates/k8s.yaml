@@ -53,11 +53,7 @@ provision:
     # Installing kubeadm, kubelet and kubectl
     export DEBIAN_FRONTEND=noninteractive
     apt-get update
-    {{- if .Param.proxy }}
-    apt-get install -y --no-upgrade ca-certificates curl
-    {{- else}}
-    apt-get install -y apt-transport-https ca-certificates curl
-    {{- end}}
+    apt-get install -y --no-upgrade ca-certificates curl gnupg
     STABILITY="{{.Param.stability}}"
     {{if eq .Param.release "stable" }}
     RELEASE=$(curl -L -s https://dl.k8s.io/release/stable.txt | cut -d'.' -f1-2)
