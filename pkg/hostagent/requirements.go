@@ -25,6 +25,10 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 	const (
 		retries       = 200
 		sleepDuration = 3 * time.Second
+		// attemptTimeout limits a single probe attempt; the connection is
+		// local, so a probe that outlives the retry interval is wedged
+		// (e.g. security software interfering with the socket), not slow.
+		attemptTimeout = 3 * time.Second
 	)
 	var errs []error
 
@@ -37,7 +41,9 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 		logrus.Infof("Waiting for the %s requirement %d of %d: %#q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
-			err := fn(req)
+			ctx, cancel := context.WithTimeout(context.Background(), attemptTimeout)
+			err := fn(ctx, req)
+			cancel()
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
@@ -118,7 +124,7 @@ func (a *HostAgent) bashAvailable() bool {
 	return *a.instConfig.OS != limatype.FREEBSD && *a.instConfig.OS != limatype.WINDOWS
 }
 
-func (a *HostAgent) waitForRequirement(r requirement) error {
+func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
 	logrus.Debugf("executing script %#q", r.description)
 	script := r.script
 	if a.bashAvailable() {
@@ -148,7 +154,7 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
+	stdout, stderr, err := executeScript(ctx, a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
 	logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err)
@@ -156,10 +162,42 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	return nil
 }
 
+// executeScript is sshocker's ssh.ExecuteScript with a context added, so a
+// wedged ssh process is killed when the attempt times out.
+// TODO: Support contexts on sshocker, and replace this function.
+func executeScript(ctx context.Context, host string, port int, c *ssh.SSHConfig, script, scriptName string) (stdout, stderr string, err error) {
+	if c == nil {
+		return "", "", errors.New("got nil SSHConfig")
+	}
+	interpreter, err := ssh.ParseScriptInterpreter(script)
+	if err != nil {
+		return "", "", err
+	}
+	sshBinary := c.Binary()
+	sshArgs := c.Args()
+	if port != 0 {
+		sshArgs = append(sshArgs, "-p", strconv.Itoa(port))
+	}
+	sshArgs = append(sshArgs, host, "--", interpreter)
+	sshCmd := exec.CommandContext(ctx, sshBinary, sshArgs...)
+	sshCmd.Stdin = strings.NewReader(script)
+	var stderrBuf bytes.Buffer
+	sshCmd.Stderr = &stderrBuf
+	logrus.Debugf("executing ssh for script %q: %s %v", scriptName, sshCmd.Path, sshCmd.Args)
+	out, err := sshCmd.Output()
+	if err != nil {
+		if ctxErr := context.Cause(ctx); ctxErr != nil {
+			err = fmt.Errorf("%w: %w", ctxErr, err)
+		}
+		return string(out), stderrBuf.String(), fmt.Errorf("failed to execute script %q: stdout=%q, stderr=%q: %w", scriptName, string(out), stderrBuf.String(), err)
+	}
+	return string(out), stderrBuf.String(), nil
+}
+
 // This function is copied from sshocker's ExecuteScript, because
 // the function doesn't support Windows commands.
 // TODO: Support Windows on sshocker, and replace this function.
-func (a *HostAgent) waitForWinRequirement(r requirement) error {
+func (a *HostAgent) waitForWinRequirement(ctx context.Context, r requirement) error {
 	logrus.Debugf("executing script for windows %q", r.description)
 	script := r.script
 	sshConfig := a.sshConfig
@@ -190,13 +228,16 @@ func (a *HostAgent) waitForWinRequirement(r requirement) error {
 		sshArgs = append(sshArgs, "-p", strconv.Itoa(a.sshLocalPort))
 	}
 	sshArgs = append(sshArgs, a.instSSHAddress, "--", script)
-	sshCmd := exec.CommandContext(context.Background(), sshBinary, sshArgs...)
+	sshCmd := exec.CommandContext(ctx, sshBinary, sshArgs...)
 	sshCmd.Stdin = strings.NewReader(script)
 	var stderr bytes.Buffer
 	sshCmd.Stderr = &stderr
 	logrus.Debugf("executing ssh for script :%s %v", sshCmd.Path, sshCmd.Args)
 	out, err := sshCmd.Output()
 	if err != nil {
+		if ctxErr := context.Cause(ctx); ctxErr != nil {
+			err = fmt.Errorf("%w: %w", ctxErr, err)
+		}
 		return fmt.Errorf("failed to execute script: stdout=%q, stderr=%q: %w", string(out), stderr.String(), err)
 	}
 	return nil
