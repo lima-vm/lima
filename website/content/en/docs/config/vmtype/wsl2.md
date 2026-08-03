@@ -42,7 +42,7 @@ containerd:
 - "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image. Standard VM disk images (like `.qcow2`, `.raw`, etc.) or `.squashfs` images cannot be natively imported by WSL2.
-- Windows doesn't ship with ssh.exe, gzip.exe, etc. which are used by Lima at various points. The easiest way around this is to run `winget install -e --id Git.MinGit` (winget is now built in to Windows as well), and add the resulting `C:\Program Files\Git\usr\bin\` directory to your path.
+- Lima unpacks a `.tar.gz` rootfs on its own, but a `.tar.xz`, `.tar.bz2`, or `.tar.zst` one needs the matching `xz`, `bzip2`, or `zstd` binary on your `PATH`, and Windows ships none of them.
 
 ### Rootfs Image Requirements & Building Custom Images
 
@@ -76,3 +76,39 @@ If you want to build and use your own custom rootfs, you can build it from a sta
    docker build -o type=tar,dest=custom-rootfs.tar .
    ```
 
+### Windows toolchain
+
+Windows 10 and 11 ship an OpenSSH client in `C:\Windows\System32\OpenSSH\`, and
+that's all the WSL2 driver needs.
+
+The QEMU driver's reverse-sshfs mounts also want `sftp-server.exe`, which
+belongs to OpenSSH Server, an [optional Feature on Demand](https://learn.microsoft.com/en-us/windows-server/administration/openssh/openssh_install_firstuse).
+Install it from an elevated PowerShell with
+`Add-WindowsCapability -Online -Name OpenSSH.Server~~~~0.0.1.0`. Without it
+`sshocker` serves the mount in-process, so the mount still works. But pinning
+`sftpDriver: openssh-sftp-server` under a mount's [`sshfs`]({{< ref "/docs/config/mount#reverse-sshfs" >}})
+drops that fallback, and then the mount fails.
+
+[Git for Windows](https://gitforwindows.org/) (`winget install -e --id Git.Git`)
+is an alternative. Use the full installer; MinGit omits `scp.exe`,
+`ssh-keygen.exe`, and `cygpath.exe`. Add `C:\Program Files\Git\usr\bin\` to your
+`PATH` ahead of any other directory holding an `ssh.exe`; the installer's
+default adds only `cmd\`, which holds none of these binaries. `usr\bin` also
+carries `find.exe` and `sort.exe`, which shadow the Windows commands of those
+names.
+
+Order matters because Lima takes the first directory on `PATH` that holds
+`ssh.exe`, `scp.exe`, and `ssh-keygen.exe` together, and falls back to
+`System32\OpenSSH`. Lima then takes the `sftp-server` from that toolchain, and
+writes the key and socket paths it hands `ssh` in the form that toolchain
+expects. MSYS2 and Git for Windows get `cygpath`'s `/c/Users/USER`, stock
+Cygwin `/cygdrive/c/Users/USER`, and the native client `C:/Users/USER`.
+
+The [`SSH`]({{< ref "/docs/config/environment-variables#ssh" >}}) environment
+variable overrides that choice, but parts of Lima still follow `PATH`, so point
+both at the same install. A Cygwin toolchain in `SSH` with native OpenSSH
+leading `PATH` fails `limactl start`.
+
+A mount without an explicit `mountPoint` derives its guest path from `cygpath`
+on every load, so adding stock Cygwin to `PATH` can move an existing instance's
+mount inside the guest. Set `mountPoint` to pin it.
