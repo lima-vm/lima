@@ -43,7 +43,7 @@ require (
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.53.3
-	github.com/modelcontextprotocol/go-sdk v1.6.1
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pb33f/ordered-map/v2 v2.3.1
@@ -67,7 +67,7 @@ require (
 	golang.org/x/mod v0.37.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
-	golang.org/x/time v0.9.0 // indirect
+	golang.org/x/time v0.15.0 // indirect
 	golang.org/x/tools v0.47.0 // indirect
 )
 
