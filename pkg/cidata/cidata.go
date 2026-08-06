@@ -124,6 +124,16 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		return nil, err
 	}
 	archive := "nerdctl-full.tgz"
+	var darwinOpts limatype.DarwinOpts
+	if *instConfig.OS == limatype.DARWIN {
+		if err := limayaml.Convert(instConfig.OsOpts[limatype.DARWIN], &darwinOpts, "osOpts.Darwin"); err != nil {
+			return nil, err
+		}
+	}
+	var suppressFirstLoginSetupPlist string
+	if darwinOpts.SuppressFirstLoginSetupPlist != nil {
+		suppressFirstLoginSetupPlist = *darwinOpts.SuppressFirstLoginSetupPlist
+	}
 	args := TemplateArgs{
 		Debug:              debugutil.Debug,
 		OS:                 *instConfig.OS,
@@ -153,6 +163,9 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Param:          instConfig.Param,
 		LegacyBIOS:     *instConfig.Firmware.LegacyBIOS,
 		TPM:            *instConfig.TPM,
+
+		SuppressFirstLoginSetup:      darwinOpts.SuppressFirstLoginSetup != nil && *darwinOpts.SuppressFirstLoginSetup,
+		SuppressFirstLoginSetupPlist: suppressFirstLoginSetupPlist,
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
@@ -408,6 +421,16 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 	layout, err := ExecuteTemplateCIDataISO(args)
 	if err != nil {
 		return "", err
+	}
+
+	if args.SuppressFirstLoginSetup {
+		// Presence of this file (not any cloud-config key) is what tells the guest-side
+		// fakecloudinit to suppress first-login setup; an empty file means "use the
+		// guest's built-in plist template" rather than the content of this file.
+		layout = append(layout, iso9660util.Entry{
+			Path:   "setup-assistant.plist",
+			Reader: strings.NewReader(args.SuppressFirstLoginSetupPlist),
+		})
 	}
 
 	driverScripts, err := drv.BootScripts(ctx)
