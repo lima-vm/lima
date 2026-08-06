@@ -160,19 +160,31 @@ dnf versionlock add "mesa-vulkan-drivers-${MESA_VERSION}"
 dnf clean all
 
 echo "Installing llama.cpp with Vulkan support..."
-# Build and install llama.cpp with Vulkan support
-dnf install -y git cmake clang curl-devel glslc vulkan-devel virglrenderer
-(
-  cd ~
-  git clone https://github.com/ggml-org/llama.cpp
-  (
-    cd llama.cpp
-    cmake -B build -DGGML_VULKAN=ON -DGGML_CCACHE=OFF -DGGML_NATIVE=OFF -DCMAKE_INSTALL_PREFIX=/usr
-    cmake --build build --config Release -j8
-    cmake --install build
-  )
-  rm -fr llama.cpp
-)
+# Build and install llama.cpp with Vulkan support.
+dnf install -y \
+  git \
+  cmake \
+  clang \
+  curl-devel \
+  spirv-headers-devel \
+  spirv-tools-devel \
+  vulkan-devel \
+  virglrenderer
+
+# Build out of tree so a failed or interrupted run never leaves a stale
+# checkout behind that would break the next attempt.
+SRC_DIR=$(mktemp -d)
+trap 'rm -rf "$SRC_DIR"' EXIT
+
+git clone --depth 1 https://github.com/ggml-org/llama.cpp "$SRC_DIR"
+cmake -S "$SRC_DIR" -B "$SRC_DIR/build" \
+  -DCMAKE_BUILD_TYPE=Release \
+  -DCMAKE_INSTALL_PREFIX=/usr \
+  -DGGML_VULKAN=ON \
+  -DGGML_CCACHE=OFF \
+  -DGGML_NATIVE=OFF
+cmake --build "$SRC_DIR/build" --config Release -j"$(nproc)"
+cmake --install "$SRC_DIR/build"
 
 echo "Successfully installed llama.cpp with Vulkan support. Use 'llama-cli' app with .gguf models."
 ```
