@@ -18,6 +18,7 @@ command -v resolvectl >/dev/null 2>&1 || exit 0
 enable_mdns_conf_path=/etc/systemd/resolved.conf.d/00-lima-enable-mdns.conf
 enable_mdns_conf_content="[Resolve]
 MulticastDNS=yes
+LLMNR=no
 "
 # Create /etc/systemd/resolved.conf.d/00-lima-enable-mdns.conf if its content is different
 if [ "$(echo "${enable_mdns_conf_content}" | sha256sum)" != "$(sha256sum <"${enable_mdns_conf_path}" 2>/dev/null)" ]; then
