@@ -38,3 +38,50 @@ func TestValidateRejectsInjectableNetworkDefinitions(t *testing.T) {
 	}}).Validate()
 	assert.ErrorContains(t, err, "invalid network name")
 }
+
+func TestValidateRejectsInjectableVarRun(t *testing.T) {
+	// findBaseDirectory() trims the components that don't exist yet, so the
+	// injected sudoers directive never reached the path check.
+	err := (&Config{Paths: Paths{
+		VarRun: "/private/var/run/lima\n%staff ALL=(root:wheel) NOPASSWD:NOSETENV: ALL",
+	}}).Validate()
+	assert.ErrorContains(t, err, "invalid component")
+
+	// A space in the same position injects an extra argument into the sudo command.
+	err = (&Config{Paths: Paths{
+		VarRun: "/private/var/run/lima --extra-root-flag",
+	}}).Validate()
+	assert.ErrorContains(t, err, "invalid component")
+
+	// A comma ends the command list entry, so "ALL" becomes a command of its own.
+	err = (&Config{Paths: Paths{
+		VarRun: "/private/var/run/lima,ALL",
+	}}).Validate()
+	assert.ErrorContains(t, err, "invalid component")
+}
+
+func TestValidatePathString(t *testing.T) {
+	for _, path := range []string{
+		"",
+		"/",
+		"/private/var/run/lima",
+		"/private/var/run/lima/",
+		"/private/etc/sudoers.d/lima",
+		"/opt/socket_vmnet/bin/socket_vmnet",
+		"/opt/homebrew/opt/socket_vmnet/bin/socket_vmnet",
+	} {
+		assert.NilError(t, validatePathString(path), path)
+	}
+	for _, path := range []string{
+		"private/var/run/lima",
+		"/private/var/run/lima ALL",
+		"/private/var/run/lima\tALL",
+		"/private/var/run/lima\nALL",
+		"/private/var/run/lima,ALL",
+		"/private/var/run/lima:ALL",
+		"/private/var/run/lima\\ ALL",
+		"/private/var/run/../../etc",
+	} {
+		assert.Assert(t, validatePathString(path) != nil, path)
+	}
+}
