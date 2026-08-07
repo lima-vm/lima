@@ -590,7 +590,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		essentialRequirements = a.essentialWinRequirements()
 	}
 
-	if err := a.waitForRequirements("essential", essentialRequirements); err != nil {
+	if err := a.waitForRequirements(ctx, "essential", essentialRequirements); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -679,7 +679,7 @@ ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 		optionalRequirements = a.optionalWinRequirements()
 	}
 
-	if err := a.waitForRequirements("optional", optionalRequirements); err != nil {
+	if err := a.waitForRequirements(ctx, "optional", optionalRequirements); err != nil {
 		errs = append(errs, err)
 	}
 	if hasGuestAgentDaemon {
@@ -697,7 +697,7 @@ ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 		finalRequirements = a.finalWinRequirements()
 	}
 
-	if err := a.waitForRequirements("final", finalRequirements); err != nil {
+	if err := a.waitForRequirements(ctx, "final", finalRequirements); err != nil {
 		errs = append(errs, err)
 	}
 	// Copy all config files _after_ the requirements are done
