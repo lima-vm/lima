@@ -61,6 +61,13 @@ func (c *Config) Validate() error {
 		pathsMap[name] = path
 		// varPath will be created securely, but any existing parent directories must already be secure
 		if name == "varRun" {
+			// findBaseDirectory drops the trailing components that don't exist yet,
+			// so the whole value has to be checked before it is trimmed: it is
+			// interpolated into the sudoers file and into the sudo command line
+			// long before the directory is created.
+			if err := validatePathString(path); err != nil {
+				return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
+			}
 			path = findBaseDirectory(path)
 		}
 		err := validatePath(path, name == "varRun")
@@ -94,15 +101,39 @@ func findBaseDirectory(path string) string {
 	return path
 }
 
-func validatePath(path string, allowDaemonGroupWritable bool) error {
+// validatePathString validates the properties of a path that don't depend on the
+// filesystem, so that it can also be applied to a directory that doesn't exist yet.
+func validatePathString(path string) error {
 	if path == "" {
 		return nil
 	}
 	if path[0] != '/' {
 		return fmt.Errorf("path %#q is not an absolute path", path)
 	}
-	if strings.ContainsRune(path, ' ') {
-		return fmt.Errorf("path %#q contains whitespace", path)
+	// The path is interpolated verbatim into the sudoers file, which has no
+	// quoting: whitespace ends the command token, a newline starts a directive
+	// of its own, and a comma ends the command list entry. reconcile.go also
+	// splits the command line on " " before handing it to sudo. Rather than
+	// enumerating those metacharacters, require every component to be an
+	// identifier, the same way the network name, mode, interface and group are.
+	for component := range strings.SplitSeq(path, "/") {
+		if component == "" {
+			// leading, trailing and repeated separators
+			continue
+		}
+		if err := identifiers.Validate(component); err != nil {
+			return fmt.Errorf("path %#q has an invalid component: %w", path, err)
+		}
+	}
+	return nil
+}
+
+func validatePath(path string, allowDaemonGroupWritable bool) error {
+	if path == "" {
+		return nil
+	}
+	if err := validatePathString(path); err != nil {
+		return err
 	}
 	fi, err := os.Lstat(path)
 	if err != nil {
