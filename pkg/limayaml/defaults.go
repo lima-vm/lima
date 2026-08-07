@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha256"
-	_ "embed"
 	"errors"
 	"fmt"
 	"maps"
@@ -36,6 +35,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -58,16 +58,19 @@ var (
 	currentUser = Must(user.Current())
 )
 
-//go:embed containerd.yaml
-var defaultContainerdYAML []byte
+const defaultContainerdYAMLPath = "defaults/containerd.yaml"
 
 type ContainerdYAML struct {
 	Archives []limatype.File
 }
 
 func defaultContainerdArchives() []limatype.File {
+	defaultContainerdYAML, err := usrlocal.ReadFile(defaultContainerdYAMLPath)
+	if err != nil {
+		panic(fmt.Errorf("failed to read default containerd configuration: %w", err))
+	}
 	var containerd ContainerdYAML
-	err := yaml.UnmarshalWithOptions(defaultContainerdYAML, &containerd, yaml.Strict())
+	err = yaml.UnmarshalWithOptions(defaultContainerdYAML, &containerd, yaml.Strict())
 	if err != nil {
 		panic(fmt.Errorf("failed to unmarshal as YAML: %w", err))
 	}

@@ -57,6 +57,8 @@ validate_artifact() {
 	elif [[ $FILE == *"lima-"*".tar.gz" || $FILE == *"lima-"*".zip" ]]; then
 		must_not_contain "$FILE" "lima-guestagent.Linux-$OTHERARCH"
 		must_contain "$FILE" "lima-guestagent.Linux-$MYARCH"
+		must_contain "$FILE" "share/lima/defaults/containerd.yaml"
+		must_contain "$FILE" "share/lima/defaults/networks.TEMPLATE.yaml"
 	else
 		echo >&2 "ERROR: Unexpected file: $FILE"
 		exit 1
