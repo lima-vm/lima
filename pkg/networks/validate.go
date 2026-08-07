@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"reflect"
 	"runtime"
@@ -61,6 +62,13 @@ func (c *Config) Validate() error {
 		pathsMap[name] = path
 		// varPath will be created securely, but any existing parent directories must already be secure
 		if name == "varRun" {
+			// findBaseDirectory drops the trailing components that don't exist yet,
+			// so the whole value has to be checked before it is trimmed: it is
+			// interpolated into the sudoers file and into the sudo command line
+			// long before the directory is created.
+			if err := validateVarRunString(path); err != nil {
+				return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
+			}
 			path = findBaseDirectory(path)
 		}
 		err := validatePath(path, name == "varRun")
@@ -92,6 +100,41 @@ func findBaseDirectory(path string) string {
 		}
 	}
 	return path
+}
+
+// validateVarRunString validates the parts of paths.varRun that don't depend on
+// the filesystem, so it can be applied to the whole value before findBaseDirectory
+// trims the components that don't exist yet. varRun is interpolated verbatim into
+// the sudoers file, which has no quoting: whitespace ends the command token, a
+// newline starts a directive of its own, and a comma ends the command list entry.
+// reconcile.go also splits the command line on " " before handing it to sudo.
+// Rather than enumerating those metacharacters, require every component to be an
+// identifier, the same way the network name, mode, interface and group are.
+//
+// This is deliberately stricter than validatePath: it only applies to varRun,
+// so existing socketVMNet/sudoers layouts with dotted components keep validating.
+//
+// varRun is a slash-separated Unix path, so the check uses the path package
+// rather than filepath: filepath's absolute-path rules differ on Windows, and
+// filepath.Abs would Clean the value, collapsing ".." and hiding an injected
+// component while the raw string is what reaches the sudoers file.
+func validateVarRunString(varRun string) error {
+	if varRun == "" {
+		return nil
+	}
+	if !path.IsAbs(varRun) {
+		return fmt.Errorf("path %#q is not an absolute path", varRun)
+	}
+	for component := range strings.SplitSeq(varRun, "/") {
+		if component == "" {
+			// leading, trailing and repeated separators
+			continue
+		}
+		if err := identifiers.Validate(component); err != nil {
+			return fmt.Errorf("path %#q has an invalid component: %w", varRun, err)
+		}
+	}
+	return nil
 }
 
 func validatePath(path string, allowDaemonGroupWritable bool) error {
