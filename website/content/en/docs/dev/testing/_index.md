@@ -62,3 +62,13 @@ The tests about macOS-specific features (e.g., vz and vmnet) are still executed 
 
 Currently, the Intel version of macOS is used, as the ARM version of macOS on GitHub Actions still
 do not support nested virtualization.
+
+### Flaky runs
+
+CI is occasionally flaky, especially the integration tests on the slower macOS runners.
+A job can fail for reasons unrelated to the change under test, such as a timeout or a
+transient VM or network error.
+
+When this happens, the failed jobs can simply be re-run. Maintainers can re-run them from
+the GitHub Actions UI; contributors without write access can ask a maintainer to re-run the
+job, or push another commit to re-trigger the workflow.
