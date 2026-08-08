@@ -751,7 +751,7 @@ func detectSupportedCiphers(ctx context.Context, sshExe SSHExe) map[string]bool 
 
 func parseSupportedCiphers(output string) map[string]bool {
 	ciphers := make(map[string]bool)
-	for _, line := range strings.Split(output, "\n") {
+	for line := range strings.SplitSeq(output, "\n") {
 		line = strings.TrimSpace(line)
 		if line != "" {
 			ciphers[line] = true
