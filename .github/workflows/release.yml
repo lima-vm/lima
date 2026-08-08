@@ -120,6 +120,9 @@ jobs:
         The binaries were built automatically on GitHub Actions.
         The build log is available for 90 days: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
+        The Software Bill of Materials (SBOM) for the binaries is in the *.sbom.tar.gz artifact.
+        It does not cover software that is downloaded during Lima operation, such as nerdctl-full*.tar.gz or the cloud images.
+
         The sha256sum of the SHA256SUMS file itself is \`${shasha}\` .
         - - -
         Release manager: [ADD YOUR NAME HERE] (@[ADD YOUR GITHUB ID HERE])
