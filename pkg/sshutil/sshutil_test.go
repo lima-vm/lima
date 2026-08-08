@@ -68,6 +68,46 @@ func TestParseOpenSSHGSSAPISupported(t *testing.T) {
 OpenSSH_10.0p2, OpenSSL 3.4.1 11 Feb 2025`))
 }
 
+func TestParseSupportedCiphers(t *testing.T) {
+	// Typical `ssh -Q cipher` output from an OpenSSL-linked build.
+	ciphers := parseSupportedCiphers("aes128-ctr\naes192-ctr\naes256-ctr\naes128-gcm@openssh.com\naes256-gcm@openssh.com\nchacha20-poly1305@openssh.com\n")
+	assert.Check(t, ciphers["aes128-gcm@openssh.com"])
+	assert.Check(t, ciphers["chacha20-poly1305@openssh.com"])
+	assert.Check(t, !ciphers["not-a-cipher"])
+
+	// A build without OpenSSL support (see https://github.com/lima-vm/lima/issues/2913)
+	// omits the GCM and chacha20-poly1305 ciphers.
+	ciphers = parseSupportedCiphers("aes128-ctr\naes192-ctr\naes256-ctr\n")
+	assert.Check(t, !ciphers["aes128-gcm@openssh.com"])
+	assert.Check(t, !ciphers["chacha20-poly1305@openssh.com"])
+	assert.Check(t, ciphers["aes256-ctr"])
+
+	// Empty output (e.g. an ssh too old to support "-Q") yields a nil map, so
+	// callers treat it as "unknown" rather than "nothing supported".
+	assert.Check(t, parseSupportedCiphers("") == nil)
+	assert.Check(t, parseSupportedCiphers("\n\n") == nil)
+}
+
+func TestFilterSupportedCiphers(t *testing.T) {
+	preferred := []string{"aes128-gcm@openssh.com", "aes256-gcm@openssh.com"}
+
+	// https://github.com/lima-vm/lima/issues/2913: an ssh built --without-openssl
+	// reports only ctr/cbc ciphers, so none of the preferred GCM ciphers survive.
+	openSSLLess := map[string]bool{"aes128-ctr": true, "aes192-ctr": true, "aes256-ctr": true}
+	assert.Check(t, len(filterSupportedCiphers(preferred, openSSLLess)) == 0)
+
+	// A normal OpenSSL-linked build supports both preferred ciphers, and order is preserved.
+	openSSLLinked := map[string]bool{"aes128-gcm@openssh.com": true, "aes256-gcm@openssh.com": true, "aes128-ctr": true}
+	assert.DeepEqual(t, filterSupportedCiphers(preferred, openSSLLinked), preferred)
+
+	// A build supporting only one of the two preferred ciphers keeps just that one.
+	partial := map[string]bool{"aes128-gcm@openssh.com": true}
+	assert.DeepEqual(t, filterSupportedCiphers(preferred, partial), []string{"aes128-gcm@openssh.com"})
+
+	// nil (query could not be run) means "unknown", so nothing is filtered out.
+	assert.DeepEqual(t, filterSupportedCiphers(preferred, nil), preferred)
+}
+
 func Test_detectValidPublicKey(t *testing.T) {
 	assert.Check(t, detectValidPublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAACQDf2IooTVPDBw== 64bit"))
 	assert.Check(t, detectValidPublicKey("ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAACQDf2IooTVPDBw=="))
