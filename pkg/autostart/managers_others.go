@@ -14,3 +14,8 @@ func Manager() autoStartManager {
 func DaemonManager(_ string) autoStartManager {
 	return &notSupportedManager{}
 }
+
+// ManagerWith is not supported on this OS.
+func ManagerWith(_ bool) autoStartManager {
+	return &notSupportedManager{}
+}
