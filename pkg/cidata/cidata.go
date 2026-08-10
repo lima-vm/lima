@@ -294,7 +294,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		}
 	case firstUsernetIndex != -1 || *instConfig.VMType == limatype.VZ:
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)
-	case *instConfig.HostResolver.Enabled:
+	case limayaml.HostResolverEnabled(instConfig):
 		args.UDPDNSLocalPort = udpDNSLocalPort
 		args.TCPDNSLocalPort = tcpDNSLocalPort
 		args.DNSAddresses = append(args.DNSAddresses, args.SlirpDNS)

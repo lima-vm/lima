@@ -17,6 +17,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
@@ -536,6 +537,11 @@ func prepareDisk(ctx context.Context, inst *limatype.Instance) error {
 	}
 
 	diskSize := img.Size()
+
+	if img.Type() == vhdx.Type {
+		logrus.Warn("Skip resizing the instance because go-qcow2reader cannot read vhdx type image")
+		return nil
+	}
 
 	if inst.Disk == diskSize {
 		return nil

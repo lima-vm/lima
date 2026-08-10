@@ -614,7 +614,7 @@ propagateProxyEnv: null
 # can only work when using a vmnet network interface and the host has working
 # IPv6 configured as well.
 hostResolver:
-  # 🟢 Builtin default: true
+  # 🟢 Builtin default: true (except for hcs driver; it should be always false with hcs driver)
   enabled: null
   # 🟢 Builtin default: false
   ipv6: null
