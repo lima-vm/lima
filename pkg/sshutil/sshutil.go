@@ -373,6 +373,12 @@ type openSSHInfo struct {
 
 	// Some distributions omit this feature by default, for example, Alpine, NixOS.
 	GSSAPISupported bool
+
+	// SupportedCiphers is the set of cipher names reported by `ssh -Q cipher`.
+	// It is empty when the query could not be run or produced no output
+	// (e.g. very old ssh clients that do not support "-Q"), in which case
+	// callers should not filter ciphers based on it.
+	SupportedCiphers map[string]bool
 }
 
 var sshInfo struct {
@@ -380,9 +386,6 @@ var sshInfo struct {
 	// aesAccelerated is set to true when AES acceleration is available.
 	// Available on almost all modern Intel/AMD processors.
 	aesAccelerated bool
-
-	// OpenSSH executable information for the version and supported options.
-	openSSH openSSHInfo
 }
 
 // CommonOpts returns ssh option key-value pairs like {"IdentityFile=/path/to/id_foo"}.
@@ -456,36 +459,65 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 
 	sshInfo.Do(func() {
 		sshInfo.aesAccelerated = detectAESAcceleration()
-		sshInfo.openSSH = detectOpenSSHInfo(ctx, sshExe)
 	})
+	// detectOpenSSHInfo has its own cache keyed by the resolved executable, so
+	// calling it per sshExe (rather than caching openSSHInfo process-wide)
+	// keeps callers from picking up a different ssh binary's capabilities.
+	openSSH := detectOpenSSHInfo(ctx, sshExe)
 
-	if sshInfo.openSSH.GSSAPISupported {
+	if openSSH.GSSAPISupported {
 		opts = append(opts, "GSSAPIAuthentication=no")
 	}
 
 	// Only OpenSSH version 8.1 and later support adding ciphers to the front of the default set
-	if !sshInfo.openSSH.Version.LessThan(*semver.New("8.1.0")) {
+	if !openSSH.Version.LessThan(*semver.New("8.1.0")) {
 		// By default, `ssh` choose chacha20-poly1305@openssh.com, even when AES accelerator is available.
 		// (OpenSSH_8.1p1, macOS 11.6, MacBookPro 2020, Core i7-1068NG7)
 		//
 		// We prioritize AES algorithms when AES accelerator is available.
+		var preferred []string
 		if sshInfo.aesAccelerated {
-			logrus.Debugf("AES accelerator seems available, prioritizing aes128-gcm@openssh.com and aes256-gcm@openssh.com")
-			if runtime.GOOS == "windows" {
-				opts = append(opts, "Ciphers=^aes128-gcm@openssh.com,aes256-gcm@openssh.com")
-			} else {
-				opts = append(opts, "Ciphers=\"^aes128-gcm@openssh.com,aes256-gcm@openssh.com\"")
-			}
+			preferred = []string{"aes128-gcm@openssh.com", "aes256-gcm@openssh.com"}
 		} else {
-			logrus.Debugf("AES accelerator does not seem available, prioritizing chacha20-poly1305@openssh.com")
+			preferred = []string{"chacha20-poly1305@openssh.com"}
+		}
+		// Some ssh builds (e.g. compiled `--without-openssl`) do not support
+		// every preferred cipher, so only prioritize ciphers that `ssh -Q
+		// cipher` actually reports as supported. A nil SupportedCiphers means
+		// the query could not be run, so fall back to the historical
+		// unconditional behavior instead of dropping the option.
+		supported := filterSupportedCiphers(preferred, openSSH.SupportedCiphers)
+		if len(supported) == 0 {
+			logrus.Debugf("none of %v are supported by %#q, leaving the default cipher order unchanged", preferred, sshExe.Exe)
+		} else {
+			logrus.Debugf("prioritizing %v", supported)
+			ciphers := "^" + strings.Join(supported, ",")
 			if runtime.GOOS == "windows" {
-				opts = append(opts, "Ciphers=^chacha20-poly1305@openssh.com")
+				opts = append(opts, "Ciphers="+ciphers)
 			} else {
-				opts = append(opts, "Ciphers=\"^chacha20-poly1305@openssh.com\"")
+				opts = append(opts, fmt.Sprintf("Ciphers=%q", ciphers))
 			}
 		}
 	}
 	return opts, nil
+}
+
+// filterSupportedCiphers returns the entries of preferred that are present
+// in supported, preserving preferred's order. A nil supported means the
+// caller could not determine which ciphers are available (e.g. an old ssh
+// client that does not support `-Q cipher`), so every preferred cipher is
+// kept rather than assuming none are supported.
+func filterSupportedCiphers(preferred []string, supported map[string]bool) []string {
+	if supported == nil {
+		return preferred
+	}
+	var result []string
+	for _, cipher := range preferred {
+		if supported[cipher] {
+			result = append(result, cipher)
+		}
+	}
+	return result
 }
 
 func identityFileEntry(ctx context.Context, sshExe SSHExe, privateKeyPath string) (string, error) {
@@ -689,15 +721,45 @@ func detectOpenSSHInfo(ctx context.Context, sshExe SSHExe) openSSHInfo {
 		logrus.Warnf("failed to run %v: stderr=%#q", cmd.Args, stderr.String())
 	} else {
 		info = openSSHInfo{
-			Version:         *ParseOpenSSHVersion(stderr.Bytes()),
-			GSSAPISupported: parseOpenSSHGSSAPISupported(stderr.String()),
+			Version:          *ParseOpenSSHVersion(stderr.Bytes()),
+			GSSAPISupported:  parseOpenSSHGSSAPISupported(stderr.String()),
+			SupportedCiphers: detectSupportedCiphers(ctx, sshExe),
 		}
-		logrus.Debugf("OpenSSH version %s detected, is GSSAPI supported: %t", info.Version, info.GSSAPISupported)
+		logrus.Debugf("OpenSSH version %s detected, is GSSAPI supported: %t, supported ciphers: %v", info.Version, info.GSSAPISupported, info.SupportedCiphers)
 		openSSHInfosRW.Lock()
 		openSSHInfos[exe] = &info
 		openSSHInfosRW.Unlock()
 	}
 	return info
+}
+
+// detectSupportedCiphers returns the set of cipher names reported by
+// `ssh -Q cipher`, or nil if the query could not be run (e.g. an ssh client
+// too old to support "-Q"). Some builds (e.g. compiled `--without-openssl`)
+// omit ciphers that a default build would support, such as the GCM variants.
+func detectSupportedCiphers(ctx context.Context, sshExe SSHExe) map[string]bool {
+	sshArgs := append([]string{}, sshExe.Args...)
+	sshArgs = append(sshArgs, "-Q", "cipher")
+	out, err := exec.CommandContext(ctx, sshExe.Exe, sshArgs...).Output()
+	if err != nil {
+		logrus.WithError(err).Debugf("failed to query %#q -Q cipher", sshExe.Exe)
+		return nil
+	}
+	return parseSupportedCiphers(string(out))
+}
+
+func parseSupportedCiphers(output string) map[string]bool {
+	ciphers := make(map[string]bool)
+	for line := range strings.SplitSeq(output, "\n") {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			ciphers[line] = true
+		}
+	}
+	if len(ciphers) == 0 {
+		return nil
+	}
+	return ciphers
 }
 
 func DetectOpenSSHVersion(ctx context.Context, sshExe SSHExe) semver.Version {
