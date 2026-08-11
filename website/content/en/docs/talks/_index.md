@@ -92,3 +92,13 @@ Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/
 They also presented Lima in the CNCF project pavilion.
 
 Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20260325%20%5BKubeCon%20EU%20Pavilion%5D%20Lima.pdf).
+
+### KubeCon + CloudNativeCon Japan 2026
+
+[Ansuman Sahoo](https://github.com/unsuman) presented "Project Lightning Talk: Lima in 5 Minutes: From Containers to AI Sandboxing".
+
+Read the [slides](https://github.com/unsuman/unsuman/blob/main/slides/20260729%20%5BKubeCon%20Japan%20Talk%5D%20Project%20Lightning%20Talk%20-%20Lima%20in%205%20Minutes-%20From%20Containers%20to%20AI%20Sandboxing.pdf) or watch the [video](https://youtu.be/3--dwy9q5rA?si=1NflWSt2WWZdrDq3).
+
+[Akihiro Suda](https://github.com/AkihiroSuda) and [Ansuman Sahoo](https://github.com/unsuman) also presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20260730%20%5BKubeCon%20JP%20Pavilion%5D%20Lima.pdf).
