@@ -174,6 +174,12 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 		defer "limactl disk delete swap"
 		limactl disk create swap --size 2G
 	fi
+	# The name is deliberately longer than an ext4 label can hold
+	# ("lima-" + 16 bytes): such a disk used to be reformatted on every boot.
+	if [[ -z "$(limactl disk ls data-with-a-long-name --json 2>/dev/null)" ]]; then
+		defer "limactl disk delete data-with-a-long-name"
+		limactl disk create data-with-a-long-name --size 1G
+	fi
 fi
 
 set -x
@@ -567,6 +573,10 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 		ERROR "Disk is not mounted"
 		exit 1
 	fi
+	if ! limactl shell "$NAME" lsblk --output NAME,MOUNTPOINT | grep -q "/mnt/lima-data-with-a-long-name"; then
+		ERROR "Disk with a long name is not mounted"
+		exit 1
+	fi
 	set +x
 fi
 
@@ -577,6 +587,11 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	if [[ -n ${CHECKS["disk"]} ]]; then
 		INFO "Create file in disk and verify that it still exists when it is reattached"
 		limactl shell "$NAME" sudo sh -c 'touch /mnt/lima-data/sweet-disk'
+		limactl shell "$NAME" sudo sh -c 'touch /mnt/lima-data-with-a-long-name/sweet-disk'
+		# Record the filesystem UUID: if the disk is reformatted on the next
+		# boot the file above disappears and this UUID changes.
+		longdisk_uuid="$(limactl shell "$NAME" sudo blkid -s UUID -o value /dev/disk/by-partlabel/lima-data-with-a-long-name)"
+		INFO "Long-named disk filesystem UUID before restart: ${longdisk_uuid}"
 	fi
 
 	INFO "Stopping \"$NAME\""
@@ -618,6 +633,17 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 		fi
 		if ! limactl shell "$NAME" sh -c 'df -h /mnt/lima-data/ --output=size | grep -q 11G'; then
 			ERROR "Disk FS does not resized after restart"
+			exit 1
+		fi
+		# A disk whose name is too long for the filesystem label used to be
+		# reformatted on every boot, silently destroying its contents.
+		if ! limactl shell "$NAME" sh -c 'test -f /mnt/lima-data-with-a-long-name/sweet-disk'; then
+			ERROR "Disk with a long name does not persist across restarts (reformatted?)"
+			exit 1
+		fi
+		got_uuid="$(limactl shell "$NAME" sudo blkid -s UUID -o value /dev/disk/by-partlabel/lima-data-with-a-long-name)"
+		if [ "$got_uuid" != "$longdisk_uuid" ]; then
+			ERROR "Disk with a long name was reformatted across restart: UUID ${longdisk_uuid} -> ${got_uuid}"
 			exit 1
 		fi
 	fi

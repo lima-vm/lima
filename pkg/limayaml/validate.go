@@ -119,6 +119,17 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		if err := identifiers.Validate(disk.Name); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `additionalDisks[%d].name is invalid`: %w", i, err))
 		}
+		if warn {
+			fsType := DefaultDiskFSType
+			if disk.FSType != nil && *disk.FSType != "" {
+				fsType = *disk.FSType
+			}
+			if label, maxLen := DiskFSLabel(disk.Name), FSLabelMaxLen(fsType); len(label) > maxLen {
+				logrus.Warnf("field `additionalDisks[%d].name`: %#q is too long for a %s filesystem label; "+
+					"the label will be truncated to %#q. The disk itself is unaffected: Lima does not identify it by label.",
+					i, disk.Name, fsType, label[:maxLen])
+			}
+		}
 	}
 
 	for i, f := range y.Mounts {
