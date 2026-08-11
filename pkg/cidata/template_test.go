@@ -125,16 +125,33 @@ func TestTemplate(t *testing.T) {
 	}
 	layout, err := ExecuteTemplateCIDataISO(args)
 	assert.NilError(t, err)
+	var resolverBootScript string
 	for _, f := range layout {
 		t.Logf("=== %#q ===", f.Path)
 		b, err := io.ReadAll(f.Reader)
 		assert.NilError(t, err)
 		t.Log(string(b))
+		if f.Path == "boot.Linux/06-enable-mdns-on-systemd.sh" {
+			resolverBootScript = string(b)
+		}
 		if f.Path == "user-data" {
 			// mounted later
 			assert.Assert(t, !strings.Contains(string(b), "mounts:"))
 			// ca_certs:
 			assert.Assert(t, !strings.Contains(string(b), "trusted:"))
+		}
+	}
+	assert.Assert(t, strings.Contains(resolverBootScript, "MulticastDNS=yes"))
+	assert.Assert(t, !strings.Contains(resolverBootScript, "LLMNR=no"))
+
+	args.Param = map[string]string{"internal_disableLLMNR": "true"}
+	layout, err = ExecuteTemplateCIDataISO(args)
+	assert.NilError(t, err)
+	for _, f := range layout {
+		if f.Path == "boot.Linux/06-enable-mdns-on-systemd.sh" {
+			b, err := io.ReadAll(f.Reader)
+			assert.NilError(t, err)
+			assert.Assert(t, strings.Contains(string(b), "LLMNR=no"))
 		}
 	}
 }

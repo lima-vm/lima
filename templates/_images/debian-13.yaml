@@ -64,3 +64,6 @@ images:
   variant: "nocloud"
 
 mountTypesUnsupported: [9p]
+
+param:
+  internal_disableLLMNR: "true"
