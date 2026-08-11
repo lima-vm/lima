@@ -156,7 +156,7 @@ func key(protocol, hostAddress, guestAddress string) string {
 }
 
 func prepareUnixSocket(hostSocket string) error {
-	if err := os.RemoveAll(hostSocket); err != nil {
+	if err := osutil.RemoveStaleSocket(hostSocket); err != nil {
 		return fmt.Errorf("can't clean up %#q: %w", hostSocket, err)
 	}
 	if err := os.MkdirAll(filepath.Dir(hostSocket), 0o755); err != nil {

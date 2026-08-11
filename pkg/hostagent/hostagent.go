@@ -1079,7 +1079,7 @@ var forwardSSH = func(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress 
 				}
 			} else {
 				logrus.Infof("Forwarding %#q (guest) to %#q (host)", remote, local)
-				if err := os.RemoveAll(local); err != nil {
+				if err := osutil.RemoveStaleSocket(local); err != nil {
 					logrus.WithError(err).Warnf("Failed to clean up %#q (host) before setting up forwarding", local)
 				}
 			}
@@ -1095,7 +1095,7 @@ var forwardSSH = func(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress 
 			} else {
 				logrus.Infof("Stopping forwarding %#q (guest) to %#q (host)", remote, local)
 				defer func() {
-					if err := os.RemoveAll(local); err != nil {
+					if err := osutil.RemoveStaleSocket(local); err != nil {
 						logrus.WithError(err).Warnf("Failed to clean up %#q (host) after stopping forwarding", local)
 					}
 				}()
@@ -1115,7 +1115,7 @@ var forwardSSH = func(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress 
 				}
 			} else {
 				logrus.WithError(err).Warnf("Failed to set up forward from %#q (guest) to %#q (host)", remote, local)
-				if removeErr := os.RemoveAll(local); removeErr != nil {
+				if removeErr := osutil.RemoveStaleSocket(local); removeErr != nil {
 					logrus.WithError(removeErr).Warnf("Failed to clean up %#q (host) after forwarding failed", local)
 				}
 			}

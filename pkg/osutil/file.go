@@ -5,6 +5,7 @@ package osutil
 
 import (
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 )
@@ -23,6 +24,27 @@ func Touch(path string) error {
 		return err
 	}
 	return f.Close()
+}
+
+// RemoveStaleSocket removes path so a fresh listener can bind to it, but only
+// when path is a Unix domain socket. A hostSocket comes from the instance
+// config (which may originate from an untrusted template) and is validated only
+// as an absolute path, so it can point at an existing directory or regular
+// file. os.RemoveAll on such a path would delete it recursively; here anything
+// that is not a socket is left in place and an error is returned instead. A
+// non-existent path is not an error.
+func RemoveStaleSocket(path string) error {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		return err
+	}
+	if fi.Mode()&os.ModeSocket == 0 {
+		return fmt.Errorf("refusing to remove %#q: not a socket (%s)", path, fi.Mode().Type())
+	}
+	return os.Remove(path)
 }
 
 // WriteFileBeneathDir writes data to name without following a symlink at the
