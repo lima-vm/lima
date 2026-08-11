@@ -7,6 +7,7 @@ DEST := $(shell echo "$(DESTDIR)/$(PREFIX)" | sed 's:///*:/:g; s://*$$::')
 GITHUB_ACTIONS ?= false
 
 GO ?= go
+CP ?= cp
 TAR ?= tar
 ZIP ?= zip
 PLANTUML ?= plantuml # may also be "java -jar plantuml.jar" if installed elsewhere
@@ -179,6 +180,7 @@ help-artifact:
 	@echo  '#   make GOOS=linux GOARCH=arm64 artifact'
 	@echo
 	@echo  'Targets for miscellaneous artifacts:'
+	@echo  '- artifacts-jsonschema      : Build artifacts for schema-limayaml.json'
 	@echo  '- artifacts-misc            : Build artifacts for go.mod, go.sum, and vendor'
 
 ################################################################################
@@ -545,7 +547,9 @@ ifeq ($(native_compiling),true)
 endif
 
 ################################################################################
-default-template.yaml: _output/bin/limactl$(exe)
+default-template.yaml: _output/bin/limactl$(exe) templates/default.yaml \
+                       _output/share/lima/templates/_images/ubuntu.yaml \
+                       _output/share/lima/templates/_default/mounts.yaml
 ifeq ($(native_compiling),true)
 	$< tmpl copy --embed-all templates/default.yaml $@
 endif
@@ -776,6 +780,10 @@ artifact-%-arm64 artifact-%-aarch64 artifact-arm64 artifact-aarch64: GOARCH = ar
 # build cross arch binaries.
 artifact-%: $$(call generate_manpages_if_needed)
 	make clean artifact GOOS=$(GOOS) GOARCH=$(GOARCH)
+
+.PHONY: artifacts-jsonschema
+artifacts-jsonschema: schema-limayaml.json | _artifacts
+	$(CP) $^ _artifacts/
 
 .PHONY: artifacts-misc
 artifacts-misc: | _artifacts

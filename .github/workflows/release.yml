@@ -87,6 +87,8 @@ jobs:
         sudo apt-get install -y gcc-x86-64-linux-gnu gcc-aarch64-linux-gnu
     - name: "Compile binaries (Linux)"
       run: make artifacts-linux
+    - name: "Make json schema"
+      run: make artifacts-jsonschema
     - name: "Compile binaries (Windows)"
       run: make artifacts-windows
     - name: "Make misc artifacts"
