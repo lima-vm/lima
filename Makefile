@@ -656,7 +656,7 @@ gosocialcheck:
 
 .PHONY: ltag
 ltag:
-	$(GO) run -modfile=./hack/tools/go.mod github.com/containerd/ltag -t ./hack/ltag --check -v
+	$(GO) run -modfile=./hack/tools/go.mod github.com/containerd/ltag -t ./hack/ltag --check --excludes "vendor _output" -v
 
 .PHONY: protolint
 protolint:
