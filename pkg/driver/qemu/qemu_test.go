@@ -260,3 +260,49 @@ func TestValidateConfigVNCDisplay(t *testing.T) {
 		assert.NilError(t, validateConfig(display(ok)))
 	}
 }
+
+func TestValidate9pMountOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		nineP   limatype.NineP
+		wantErr string
+	}{
+		{
+			name: "valid non-default values",
+			nineP: limatype.NineP{
+				SecurityModel:   new("mapped-xattr"),
+				ProtocolVersion: new("9p2000.u"),
+				Cache:           new("loose"),
+			},
+		},
+		{
+			// A comma in securityModel would inject extra options into the QEMU -virtfs argument.
+			name:    "securityModel with injected option",
+			nineP:   limatype.NineP{SecurityModel: new("none,readonly=off")},
+			wantErr: "mounts[0].9p.securityModel",
+		},
+		{
+			name:    "unknown protocolVersion",
+			nineP:   limatype.NineP{ProtocolVersion: new("9p2000.L,foo=bar")},
+			wantErr: "mounts[0].9p.protocolVersion",
+		},
+		{
+			name:    "unknown cache",
+			nineP:   limatype.NineP{Cache: new("fscache,foo")},
+			wantErr: "mounts[0].9p.cache",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &limatype.LimaYAML{
+				Mounts: []limatype.Mount{{Location: "/", NineP: tt.nineP}},
+			}
+			err := validate9pMountOptions(cfg)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
+}
