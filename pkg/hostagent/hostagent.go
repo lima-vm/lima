@@ -21,6 +21,7 @@ import (
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sethvargo/go-password/password"
@@ -353,6 +354,12 @@ func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
 }
 
 func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *events.CloudInitProgress) {
+	// LogLine is read verbatim from the guest's cloud-init output over SSH, so an
+	// untrusted guest controls its bytes. limactl start/watch print it to the
+	// operator's terminal, so strip control characters here to keep the guest
+	// from injecting ANSI/OSC escape sequences.
+	progress.LogLine = removeControlChars(progress.LogLine)
+
 	a.statusMu.RLock()
 	currentStatus := a.currentStatus
 	a.statusMu.RUnlock()
@@ -361,6 +368,18 @@ func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *ev
 
 	ev := events.Event{Status: currentStatus}
 	a.emitEvent(ctx, ev)
+}
+
+// removeControlChars drops non-printable runes so guest-controlled text is safe
+// to print to the operator's terminal.
+func removeControlChars(s string) string {
+	out := make([]rune, 0, len(s))
+	for _, r := range s {
+		if unicode.IsPrint(r) {
+			out = append(out, r)
+		}
+	}
+	return string(out)
 }
 
 func (a *HostAgent) emitPortForwardEvent(ctx context.Context, pfEvent *events.PortForwardEvent) {
