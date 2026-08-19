@@ -58,11 +58,11 @@ You can run AI models either:
 - With containers (fast to get started; any distro works), or
 - Without containers (choose Fedora; build `llama.cpp` from source).
 
-Before running, install a small model on the host so examples can run quickly. We’ll use `Qwen3‑1.7B GGUF`:
+Before running, install a small model on the host so examples can run quickly. We’ll use `Qwen3.5-2B-Q8_0`:
 
 ```bash
 mkdir -p models
-curl -LO --output-dir models 'https://huggingface.co/Qwen/Qwen3-1.7B-GGUF/resolve/main/Qwen3-1.7B-Q8_0.gguf'
+curl -LO --output-dir models 'https://huggingface.co/unsloth/Qwen3.5-2B-GGUF/resolve/main/Qwen3.5-2B-Q8_0.gguf'
 ```
 
 ### 1) Run models using containers (easiest)
@@ -84,14 +84,16 @@ Then inside the VM:
 nerdctl run --rm -ti \
   --device /dev/dri \
   -v $(pwd)/models:/models \
-  quay.io/slopezpa/fedora-vgpu-llama
+  ghcr.io/unsuman/fedora-vgpu-llama
 ```
+
+Image source: https://github.com/unsuman/fedora-vgpu-llama
 For reference: https://sinrega.org/2024-03-06-enabling-containers-gpu-macos/
 
 Once inside the container:
 
 ```bash
-llama-cli -m /models/Qwen3-1.7B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
+llama-cli -m /models/Qwen3.5-2B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
 ```
 
 You can now chat with the model.
@@ -197,7 +199,7 @@ The script will prompt to build and install `llama.cpp` with Venus support from 
 After installation, run:
 
 ```bash
-llama-cli -m models/Qwen3-1.7B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
+llama-cli -m models/Qwen3.5-2B-Q8_0.gguf -b 512 -ngl 99 -p "Introduce yourself"
 ```
 
 and enjoy chatting with the AI model.
