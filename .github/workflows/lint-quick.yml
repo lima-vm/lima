@@ -40,5 +40,6 @@ jobs:
           --exclude https://github.com/lima-vm/lima/releases/download
           --exclude https://xbarapp.com
           --exclude https://api.github.com
+          --exclude https://cloud-native.slack.com
           README.md
         token: ${{ secrets.GITHUB_TOKEN }}
