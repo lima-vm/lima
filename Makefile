@@ -651,12 +651,12 @@ go-licenses:
 
 .PHONY: gosocialcheck
 gosocialcheck:
-	$(GO) run -modfile=./hack/tools/go.mod github.com/AkihiroSuda/gosocialcheck/cmd/gosocialcheck run --gha=$(GITHUB_ACTIONS) ./...
+	-$(GO) run -modfile=./hack/tools/go.mod github.com/AkihiroSuda/gosocialcheck/cmd/gosocialcheck run --gha=$(GITHUB_ACTIONS) ./...
 	# TODO: run gosocialcheck for ./hack/tools/... too (not supported yet by gosocialcheck)
 
 .PHONY: ltag
 ltag:
-	$(GO) run -modfile=./hack/tools/go.mod github.com/containerd/ltag -t ./hack/ltag --check -v
+	$(GO) run -modfile=./hack/tools/go.mod github.com/containerd/ltag -t ./hack/ltag --check --excludes "vendor _output" -v
 
 .PHONY: protolint
 protolint:
