@@ -44,6 +44,7 @@ func (m *mockDriver) Register(_ context.Context) error                          
 func (m *mockDriver) Unregister(_ context.Context) error                         { return nil }
 func (m *mockDriver) ForwardGuestAgent(_ context.Context) bool                   { return false }
 func (m *mockDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) { return nil, "", nil }
+
 func (m *mockDriver) Info(_ context.Context) driver.Info {
 	return driver.Info{Name: m.Name}
 }
@@ -53,8 +54,9 @@ func (m *mockDriver) Configure(_ context.Context, _ *limatype.Instance) (*driver
 }
 func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string { return "" }
 func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                 { return "", nil }
-func (m *mockDriver) BootScripts(_ context.Context) (map[string][]byte, error)     { return nil, nil }
-func (m *mockDriver) AdditionalSetupForSSH(_ context.Context) error                { return nil }
+
+func (m *mockDriver) BootScripts(_ context.Context) (map[string][]byte, error) { return nil, nil }
+func (m *mockDriver) AdditionalSetupForSSH(_ context.Context) error            { return nil }
 
 func TestRegister(t *testing.T) {
 	BackupRegistry(t)
