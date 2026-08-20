@@ -8,15 +8,12 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
-	"os"
 	"os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
-
-	"github.com/opencontainers/go-digest"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -84,30 +81,6 @@ func (c *Config) DaemonPath(daemon string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown daemon type %#q", daemon)
 	}
-}
-
-// DigestSpec returns the sudoers `Digest_Spec` pinning the contents of the daemon
-// binary. sudo (>= 1.8.7) hashes the file immediately before executing it and
-// refuses to run it when the digest no longer matches, so an attacker who manages
-// to replace the helper cannot get the replacement executed as root. The helper's
-// own verifySelf() rejects a binary that is not on a root-owned path, but that
-// check only runs once the replaced binary is already executing as root; the
-// digest is checked inside sudo, so it cannot be raced by limactl either.
-func (c *Config) DigestSpec(daemon string) (string, error) {
-	path, err := c.DaemonPath(daemon)
-	if err != nil {
-		return "", err
-	}
-	f, err := os.Open(path)
-	if err != nil {
-		return "", err
-	}
-	defer f.Close()
-	d, err := digest.FromReader(f)
-	if err != nil {
-		return "", err
-	}
-	return d.String(), nil
 }
 
 // IsDaemonInstalled checks whether the daemon is installed.
