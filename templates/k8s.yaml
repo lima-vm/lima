@@ -260,7 +260,7 @@ param:
   # The k8s version can be either "stable" or "v1.xx.y"
   version: "stable"
   # The flannel version is either "latest" or "v0.xx.y"
-  flannelVersion: "v0.28.5"
+  flannelVersion: "v0.28.9"
   url: ""
   token: ""
   discoveryTokenCaCertHash: ""
