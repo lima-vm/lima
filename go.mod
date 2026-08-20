@@ -129,4 +129,14 @@ require (
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
 
-require github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
+require (
+	github.com/gdamore/tcell/v2 v2.13.10
+	github.com/rivo/tview v0.42.0
+)
+
+require (
+	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
+	github.com/gdamore/encoding v1.0.1 // indirect
+	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
+)
