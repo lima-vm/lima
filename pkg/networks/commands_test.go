@@ -98,3 +98,15 @@ func TestStopCmd(t *testing.T) {
 	cmd := config.StopCmd("name", "daemon")
 	assert.Equal(t, cmd, "/usr/bin/pkill -F "+filepath.Join(varRunDir, "name_daemon.pid"))
 }
+
+func TestIsManagedBridge(t *testing.T) {
+	assert.Assert(t, IsManagedBridge("lima-shared"))
+	assert.Assert(t, !IsManagedBridge("br0"))
+}
+
+func TestIsTapName(t *testing.T) {
+	assert.Assert(t, len(tapPrefix)+tapDigits <= maxIfNameLen)
+	assert.Assert(t, IsTapName("limatap01234567"))
+	assert.Assert(t, !IsTapName("eth0"))
+	assert.Assert(t, !IsTapName("limatapzzzzzzzz"))
+}
