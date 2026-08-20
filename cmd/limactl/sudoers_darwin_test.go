@@ -15,6 +15,7 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/networks"
+	"github.com/lima-vm/lima/v2/pkg/sudoers"
 )
 
 func TestRenderSudoersOmitsBlockDeviceByDefault(t *testing.T) {
@@ -66,7 +67,7 @@ func TestVerifySudoersFileRejectsCommentedNetworkFragment(t *testing.T) {
 }
 
 func TestSudoersCheckHintHasBalancedParentheses(t *testing.T) {
-	hint := sudoersCheckHint("/opt/lima/bin/limactl", "/etc/sudoers.d/lima", []string{"/dev/rdisk2"})
+	hint := sudoers.RegenerateHint("/opt/lima/bin/limactl", "/etc/sudoers.d/lima", []string{"/dev/rdisk2"})
 
 	assert.Equal(t, hint, "run `/opt/lima/bin/limactl sudoers --block-device=/dev/rdisk2 >etc_sudoers.d_lima && sudo install -o root -g wheel -m 0444 etc_sudoers.d_lima \"/etc/sudoers.d/lima\"`; regeneration emits only the current user's --block-device entries; include every entry you still need and preserve other users' entries manually; regenerating the file revokes omitted grants")
 	assert.Assert(t, !strings.HasSuffix(hint, ")"))

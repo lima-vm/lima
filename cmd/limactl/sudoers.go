@@ -13,8 +13,8 @@ import (
 
 const socketVMNetURL = "https://lima-vm.io/docs/config/network/vmnet/#socket_vmnet"
 
-// newSudoersCommand is specific to macOS, but the help message is
-// compiled on Linux too, as depended by `make docsy`.
+// newSudoersCommand is compiled on every host, as `make docsy` depends on the
+// help message; the action is only implemented on macOS and Linux.
 // https://github.com/lima-vm/lima/issues/3436
 func newSudoersCommand() *cobra.Command {
 	sudoersCommand := &cobra.Command{
@@ -33,15 +33,16 @@ $ visudo -cf etc_sudoers.d_lima
 $ sudo install -o root -g wheel -m 0444 etc_sudoers.d_lima /etc/sudoers.d/lima
 `,
 		Short: "Generate the content of the /etc/sudoers.d/lima file",
-		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for macOS host helpers that require privilege escalation.
-This includes vmnet.framework support (socket_vmnet). Use --block-device=/dev/rdiskN to also emit opt-in
+		Long: fmt.Sprintf(`Generate the content of the /etc/sudoers.d/lima file for the host helpers that require privilege escalation:
+vmnet.framework support (socket_vmnet) on macOS, or the shared/host/bridged networks (Linux bridges with dnsmasq) on Linux.
+On macOS, use --block-device=/dev/rdiskN to also emit opt-in
 host block-device helper entries for the listed devices and current user.
 Block devices require a root-owned helper and ancestor directories; user-writable
 installations need additional setup: https://lima-vm.io/docs/config/disk/#sudoers-setup
 --block-device on start/edit selects devices; it does not install sudoers grants.
 The content is written to stdout, NOT to the file.
 This command must not run as the root user.
-See %s for the usage.`, socketVMNetURL),
+On macOS, see %s for the usage.`, socketVMNetURL),
 		Args:    WrapArgsError(cobra.MaximumNArgs(1)),
 		RunE:    sudoersAction,
 		GroupID: advancedCommand,
