@@ -8,6 +8,7 @@ package networks
 import (
 	"errors"
 	"os"
+	"slices"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -32,6 +33,19 @@ func TestValidateRejectsInjectableVarRun(t *testing.T) {
 		VarRun: "/private/var/run/lima,ALL",
 	}}).Validate()
 	assert.ErrorContains(t, err, "invalid component")
+}
+
+func TestValidateRejectsStaleSocketVMNet(t *testing.T) {
+	if slices.Contains(RequiredDaemons(), SocketVMNet) {
+		t.Skip("socket_vmnet is used on this host")
+	}
+	// The networks.yaml that Lima wrote on Linux before the per-OS defaults.
+	err := (&Config{Paths: Paths{
+		SocketVMNet: "/opt/socket_vmnet/bin/socket_vmnet",
+		VarRun:      "/private/var/run/lima",
+		Sudoers:     "/private/etc/sudoers.d/lima",
+	}}).Validate()
+	assert.ErrorContains(t, err, "`paths.socketVMNet` is only used on macOS")
 }
 
 func TestValidateVarRunString(t *testing.T) {

@@ -4,80 +4,85 @@
 package networks
 
 import (
+	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
-func TestVerifySudoAccessAllowsAdditionalFragments(t *testing.T) {
+// The daemons are passed in, so the grants are asserted on every host,
+// including the ones where they are not installed.
+func TestSudoersRendering(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the rendered paths are POSIX paths")
+	}
 	cfg := Config{
-		Group:    "everyone",
-		Networks: map[string]Network{},
-		Paths: Paths{
-			VarRun: "/private/var/run/lima",
+		Paths: Paths{VarRun: "/run/lima"},
+		Group: "staff",
+		Networks: map[string]Network{
+			"user-v2": {Mode: ModeUserV2, Gateway: net.ParseIP("192.168.104.1"), NetMask: net.ParseIP("255.255.255.0")},
+			"shared": {
+				Mode:    ModeShared,
+				Gateway: net.ParseIP("192.168.105.1"),
+				DHCPEnd: net.ParseIP("192.168.105.254"),
+				NetMask: net.ParseIP("255.255.255.0"),
+			},
+			"bridged": {Mode: ModeBridged, Interface: "br0"},
 		},
 	}
 
-	networkSudoers, err := cfg.Sudoers()
-	assert.NilError(t, err)
+	t.Run("lima-privileged-net", func(t *testing.T) {
+		helper := filepath.Join(t.TempDir(), LimaPrivilegedNet)
+		assert.NilError(t, os.WriteFile(helper, nil, 0o755))
+		root := osutil.User{User: "root", Group: "root"}
 
-	composed := networkSudoers
-	if composed != "" && !strings.HasSuffix(composed, "\n") {
-		composed += "\n"
-	}
-	composed += "alice ALL=(root:wheel) NOPASSWD:NOSETENV: /opt/lima/libexec/lima/privileged/lima-privileged-block-device /dev/rdisk2\n"
+		got, err := cfg.sudoers(false, []sudoersDaemon{{name: LimaPrivilegedNet, path: helper, user: root}})
+		assert.NilError(t, err)
+		// sha256 of the empty helper written above
+		const digest = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+		want := strings.ReplaceAll(`# Manage "bridged" network daemons
 
-	sudoersFile := filepath.Join(t.TempDir(), "lima.sudoers")
-	assert.NilError(t, os.WriteFile(sudoersFile, []byte(composed), 0o600))
+%staff ALL=(root:root) NOPASSWD:NOSETENV: \
+    DIGEST HELPER start --pidfile=/run/lima/bridged_lima-privileged-net.pid --mode=bridged --bridge=br0, \
+    DIGEST HELPER tap --bridge=br0 --network=bridged -- *, \
+    /usr/bin/pkill -F /run/lima/bridged_lima-privileged-net.pid
 
-	assert.NilError(t, cfg.VerifySudoAccess(t.Context(), sudoersFile))
-	cfg.Group = "admin"
-	err = cfg.VerifySudoAccess(t.Context(), sudoersFile)
-	assert.ErrorContains(t, err, "out of sync")
-	assert.ErrorContains(t, err, "--block-device")
-	assert.ErrorContains(t, err, "revokes")
-}
+# Manage "shared" network daemons
 
-func TestVerifySudoAccessRejectsOutOfSyncNetworkFragment(t *testing.T) {
-	cfg := Config{
-		Group:    "everyone",
-		Networks: map[string]Network{},
-		Paths: Paths{
-			VarRun: "/private/var/run/lima",
-		},
-	}
+%staff ALL=(root:root) NOPASSWD:NOSETENV: \
+    DIGEST HELPER start --pidfile=/run/lima/shared_lima-privileged-net.pid --mode=shared --bridge=lima-shared --gateway=192.168.105.1 --dhcp-end=192.168.105.254 --netmask=255.255.255.0, \
+    DIGEST HELPER tap --bridge=lima-shared --network=shared -- *, \
+    /usr/bin/pkill -F /run/lima/shared_lima-privileged-net.pid
+`, "DIGEST HELPER", digest+" "+helper)
+		assert.Equal(t, got, want)
+	})
 
-	networkSudoers, err := cfg.Sudoers()
-	assert.NilError(t, err)
-	assert.Assert(t, strings.Contains(networkSudoers, "NOPASSWD:NOSETENV"))
+	t.Run("socket_vmnet", func(t *testing.T) {
+		const helper = "/opt/socket_vmnet/bin/socket_vmnet"
+		root := osutil.User{User: "root", Group: "wheel"}
 
-	modified := strings.Replace(networkSudoers, "NOPASSWD:NOSETENV", "NOPASSWD", 1)
-	sudoersFile := filepath.Join(t.TempDir(), "lima.sudoers")
-	assert.NilError(t, os.WriteFile(sudoersFile, []byte(modified), 0o600))
+		got, err := cfg.sudoers(true, []sudoersDaemon{{name: SocketVMNet, path: helper, user: root}})
+		assert.NilError(t, err)
+		want := `%staff ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/mkdir -m 775 -p /run/lima
 
-	err = cfg.VerifySudoAccess(t.Context(), sudoersFile)
-	assert.ErrorContains(t, err, "out of sync")
-}
+# Manage "bridged" network daemons
 
-func TestVerifySudoAccessRejectsCommentedNetworkFragment(t *testing.T) {
-	cfg := Config{
-		Group:    "everyone",
-		Networks: map[string]Network{},
-		Paths: Paths{
-			VarRun: "/private/var/run/lima",
-		},
-	}
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: \
+    /opt/socket_vmnet/bin/socket_vmnet --pidfile=/run/lima/bridged_socket_vmnet.pid --socket-group=staff --vmnet-mode=bridged --vmnet-interface=br0 /run/lima/socket_vmnet.bridged, \
+    /usr/bin/pkill -F /run/lima/bridged_socket_vmnet.pid
 
-	networkSudoers, err := cfg.Sudoers()
-	assert.NilError(t, err)
-	commented := "# " + strings.ReplaceAll(networkSudoers, "\n", "\n# ")
+# Manage "shared" network daemons
 
-	sudoersFile := filepath.Join(t.TempDir(), "lima.sudoers")
-	assert.NilError(t, os.WriteFile(sudoersFile, []byte(commented), 0o600))
-
-	err = cfg.VerifySudoAccess(t.Context(), sudoersFile)
-	assert.ErrorContains(t, err, "out of sync")
+%staff ALL=(root:wheel) NOPASSWD:NOSETENV: \
+    /opt/socket_vmnet/bin/socket_vmnet --pidfile=/run/lima/shared_socket_vmnet.pid --socket-group=staff --vmnet-mode=shared --vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 /run/lima/socket_vmnet.shared, \
+    /usr/bin/pkill -F /run/lima/shared_socket_vmnet.pid
+`
+		assert.Equal(t, got, want)
+	})
 }
