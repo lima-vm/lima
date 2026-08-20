@@ -269,23 +269,40 @@ func getSSHAddress(ctx context.Context, instName string) (string, error) {
 	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
-		return strings.TrimSpace(string(out)), nil
+		if addr, ok := guestReportedIP(out); ok {
+			return addr, nil
+		}
 	}
 	// Alpine
 	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "sh", "-c", `ip route get 1 | awk '{gsub("^.*src ",""); print $1; exit}'`)
 	out, err = cmd.CombinedOutput()
 	if err == nil {
-		return strings.TrimSpace(string(out)), nil
+		if addr, ok := guestReportedIP(out); ok {
+			return addr, nil
+		}
 	}
 	// fallback
 	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "hostname", "-i")
 	out, err = cmd.CombinedOutput()
 	if err == nil {
-		ip := net.ParseIP(strings.TrimSpace(string(out)))
-		// some distributions use "127.0.1.1" as the host IP, but we want something that we can route to here
-		if ip != nil && !ip.IsLoopback() {
-			return strings.TrimSpace(string(out)), nil
+		if addr, ok := guestReportedIP(out); ok {
+			return addr, nil
 		}
 	}
-	return "", fmt.Errorf("failed to get hostname for instance %#q, err: %w (out=%#q)", instName, err, string(out))
+	return "", fmt.Errorf("failed to get a routable IP for instance %#q, err: %w (out=%#q)", instName, err, string(out))
+}
+
+// guestReportedIP validates the address a distro reports for itself before the
+// host uses it as the SSH/dial target. The address is produced by a command run
+// inside the guest, so a compromised guest could otherwise return an arbitrary
+// string and point the host at a host of its choosing. Empty, malformed, and
+// loopback values (e.g. the "127.0.1.1" some distros use for their own hostname)
+// are rejected; only a routable IP is accepted.
+func guestReportedIP(out []byte) (string, bool) {
+	addr := strings.TrimSpace(string(out))
+	ip := net.ParseIP(addr)
+	if ip == nil || ip.IsLoopback() {
+		return "", false
+	}
+	return addr, true
 }
