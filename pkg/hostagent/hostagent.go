@@ -21,7 +21,6 @@ import (
 	"strings"
 	"sync"
 	"time"
-	"unicode"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sethvargo/go-password/password"
@@ -49,6 +48,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/portfwd"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
+	"github.com/lima-vm/lima/v2/pkg/strutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
@@ -358,7 +358,7 @@ func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *ev
 	// untrusted guest controls its bytes. limactl start/watch print it to the
 	// operator's terminal, so strip control characters here to keep the guest
 	// from injecting ANSI/OSC escape sequences.
-	progress.LogLine = removeControlChars(progress.LogLine)
+	progress.LogLine = strutil.RemoveControlChars(progress.LogLine)
 
 	a.statusMu.RLock()
 	currentStatus := a.currentStatus
@@ -368,18 +368,6 @@ func (a *HostAgent) emitCloudInitProgressEvent(ctx context.Context, progress *ev
 
 	ev := events.Event{Status: currentStatus}
 	a.emitEvent(ctx, ev)
-}
-
-// removeControlChars drops non-printable runes so guest-controlled text is safe
-// to print to the operator's terminal.
-func removeControlChars(s string) string {
-	out := make([]rune, 0, len(s))
-	for _, r := range s {
-		if unicode.IsPrint(r) {
-			out = append(out, r)
-		}
-	}
-	return string(out)
 }
 
 func (a *HostAgent) emitPortForwardEvent(ctx context.Context, pfEvent *events.PortForwardEvent) {
