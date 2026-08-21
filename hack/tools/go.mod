@@ -20,7 +20,7 @@ require (
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.13.0
 	github.com/jandubois/nobin v0.12.0
-	github.com/yoheimuta/protolint v0.56.4
+	github.com/yoheimuta/protolint v0.57.0
 	google.golang.org/grpc v1.83.0
 	google.golang.org/protobuf v1.36.11
 	mvdan.cc/sh/v3 v3.13.1
@@ -132,7 +132,7 @@ require (
 	github.com/gostaticanalysis/nilerr v0.1.2 // indirect
 	github.com/hashicorp/go-hclog v1.6.3 // indirect
 	github.com/hashicorp/go-immutable-radix/v2 v2.1.0 // indirect
-	github.com/hashicorp/go-plugin v1.6.3 // indirect
+	github.com/hashicorp/go-plugin v1.7.0 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/hashicorp/golang-lru/v2 v2.0.7 // indirect
 	github.com/hashicorp/hcl v1.0.0 // indirect
