@@ -527,8 +527,8 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if err != nil {
 				return err
 			}
-			if !usernet && runtime.GOOS != "darwin" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` is only supported on macOS right now", field))
+			if !usernet && runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` is only supported on macOS and Linux right now", field))
 			}
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field))

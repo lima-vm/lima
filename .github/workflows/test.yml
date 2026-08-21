@@ -505,6 +505,59 @@ jobs:
     - if: always()
       uses: ./.github/actions/upload_failure_logs_if_exists
 
+  lima-net:
+    name: "Managed network tests (lima-net, QEMU, Linux host)"
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        # "bridged" is not tested: it needs a pre-existing bridge on the host
+        network:
+        - shared
+        - host
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+      with:
+        go-version: stable
+        cache: false
+    - name: Make
+      run: make
+    - name: Install
+      run: sudo make install
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:${{ matrix.network }}" >>$GITHUB_ENV
+    - name: Cache image used by default.yaml
+      uses: ./.github/actions/setup_cache_for_template
+      with:
+        template: templates/default.yaml
+    - name: Install test dependencies
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo apt-get update
+        sudo ./hack/install-qemu.sh
+        sudo apt-get install -y --no-install-recommends socat w3m iperf3 dnsmasq-base
+    - name: Install sudoers file
+      run: limactl sudoers | sudo tee /etc/sudoers.d/lima
+    - name: Unit test (pkg/networks) with lima-net
+      # Set -count=1 to disable cache
+      run: go test -v -count=1 ./pkg/networks/...
+    - name: Test lima:${{ matrix.network }}
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-templates.sh templates/default.yaml
+    - if: always()
+      uses: ./.github/actions/upload_failure_logs_if_exists
+      with:
+        suffix: ${{ matrix.network }}
+
   upgrade:
     name: "Upgrade tests (QEMU, macOS host)"
     runs-on: macos-15-large  # Intel
