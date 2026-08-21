@@ -80,8 +80,8 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, os.Interrupt, syscall.SIGTERM)
 
-	stdout := &syncWriter{w: cmd.OutOrStdout()}
-	stderr := &syncWriter{w: cmd.ErrOrStderr()}
+	stdout := cmd.OutOrStdout()
+	stderr := cmd.ErrOrStderr()
 
 	initLogrus(stderr)
 	var opts []hostagent.Opt
@@ -134,25 +134,6 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 	}()
 	defer srv.Close()
 	return ha.Run(ctx)
-}
-
-// syncer is implemented by *os.File.
-type syncer interface {
-	Sync() error
-}
-
-type syncWriter struct {
-	w io.Writer
-}
-
-func (w *syncWriter) Write(p []byte) (int, error) {
-	written, err := w.w.Write(p)
-	if err == nil {
-		if s, ok := w.w.(syncer); ok {
-			_ = s.Sync()
-		}
-	}
-	return written, err
 }
 
 func initLogrus(stderr io.Writer) {
