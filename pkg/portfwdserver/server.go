@@ -57,7 +57,8 @@ func (s *TunnelServer) Start(stream api.GuestService_TunnelServer) error {
 	go proxy.HandleConn(rw)
 
 	// The stream will be closed when this function returns.
-	// Wait here until rw.Close(), rw.CloseRead(), or rw.CloseWrite() is called.
+	// Wait here until rw.Close() or rw.CloseWrite() is called. A half-close
+	// from the host does not end the tunnel; see CloseRead below.
 	<-rw.closeCh
 	logrus.Debugf("closed GRPCServerRW for id: %s", in.Id)
 
@@ -68,12 +69,11 @@ type GRPCServerRW struct {
 	id      string
 	stream  api.GuestService_TunnelServer
 	closeCh chan any
-	// closeOnce guards closeCh. Close, CloseRead, and CloseWrite may be
-	// called in any order and multiple times (e.g., tcpproxy calls
-	// CloseRead/CloseWrite from each copy direction and then Close), so
-	// they must be idempotent and must never block; otherwise the proxy
-	// goroutine gets stuck and never closes the dialed guest connection,
-	// leaking one FD per forwarded connection.
+	// closeOnce guards closeCh. Close and CloseWrite may be called in any
+	// order and multiple times (e.g., tcpproxy calls CloseWrite from a copy
+	// direction and then Close), so they must be idempotent and must never
+	// block; otherwise the proxy goroutine gets stuck and never closes the
+	// dialed guest connection, leaking one FD per forwarded connection.
 	closeOnce sync.Once
 
 	// rxBuf holds bytes received from the stream that did not fit in the
@@ -110,12 +110,23 @@ func (g *GRPCServerRW) Close() error {
 // By adding CloseRead and CloseWrite methods, GRPCServerRW can work with
 // other than containers/gvisor-tap-vsock/pkg/tcpproxy, e.g., inetaf/tcpproxy, bicopy.Bicopy.
 
+// CloseRead is called once the host stops sending, which happens both when it
+// shuts down its write side and when it closes the connection outright. Both
+// reach us as io.EOF from stream.Recv, and only the latter also cancels the
+// stream context. Ending the tunnel here would therefore turn every half-close
+// into a full close and discard the response the host is still waiting for.
+// The proxy shuts down the write side of the guest connection by itself, so
+// there is nothing left to do: the tunnel lives on until the guest service
+// closes (CloseWrite) or the host cancels the stream (Close).
 func (g *GRPCServerRW) CloseRead() error {
 	logrus.Debugf("closing read GRPCServerRW for id: %s", g.id)
-	g.closeOnce.Do(func() { close(g.closeCh) })
 	return nil
 }
 
+// CloseWrite is called once the guest service closes its side. The tunnel
+// protocol cannot signal a half-close towards the host, so this ends the whole
+// tunnel; the host then sees the stream end and shuts down the write side of
+// its own connection.
 func (g *GRPCServerRW) CloseWrite() error {
 	logrus.Debugf("closing write GRPCServerRW for id: %s", g.id)
 	g.closeOnce.Do(func() { close(g.closeCh) })
