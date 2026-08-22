@@ -352,6 +352,14 @@ type WindowsOpts struct {
 	VirtioWin []File `yaml:"virtioWin,omitempty" json:"virtioWin,omitempty"`
 }
 
+type DarwinOpts struct {
+	// SuppressFirstLoginSetup suppresses macOS first-login wizard screens (Darwin guests only).
+	SuppressFirstLoginSetup *bool `yaml:"suppressFirstLoginSetup,omitempty" json:"suppressFirstLoginSetup,omitempty" jsonschema:"nullable"`
+	// SuppressFirstLoginSetupPlist overrides the built-in com.apple.SetupAssistant.plist content
+	// used by SuppressFirstLoginSetup. Ignored unless SuppressFirstLoginSetup is true.
+	SuppressFirstLoginSetupPlist *string `yaml:"suppressFirstLoginSetupPlist,omitempty" json:"suppressFirstLoginSetupPlist,omitempty" jsonschema:"nullable"`
+}
+
 func NewOS(osname string) OS {
 	switch osname {
 	case "linux":

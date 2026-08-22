@@ -137,6 +137,8 @@ type TemplateArgs struct {
 	LegacyBIOS                      bool
 	IsWindowsServer                 bool
 	TPM                             bool
+	SuppressFirstLoginSetup         bool
+	SuppressFirstLoginSetupPlist    string // empty = use built-in plist
 }
 
 func (t *TemplateArgs) generateWindowsInitialPassword() error {
