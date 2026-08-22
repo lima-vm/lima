@@ -93,6 +93,9 @@ vmOpts:
   qemu:
     minimumVersion: null
     cpuType:
+    extraArgs:
+    - "-device"
+    - "virtio-balloon"
 `
 	var y limatype.LimaYAML
 	err := Unmarshal([]byte(text), &y, "lima.yaml")
@@ -100,6 +103,7 @@ vmOpts:
 	var o limatype.QEMUOpts
 	err = Convert(y.VMOpts[limatype.QEMU], &o, "vmOpts.qemu")
 	assert.NilError(t, err)
+	assert.DeepEqual(t, o.ExtraArgs, []string{"-device", "virtio-balloon"})
 	t.Log(dumpYAML(t, o))
 }
 
