@@ -98,7 +98,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 						logrus.Errorf("pidfile %#q already exists", pidFile)
 						sendErrCh <- err
 					}
-					if err := os.WriteFile(pidFile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
+					if err := store.WritePIDFile(pidFile, os.Getpid()); err != nil {
 						logrus.Errorf("error writing to pid fil %#q", pidFile)
 						sendErrCh <- err
 					}
