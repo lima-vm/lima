@@ -197,9 +197,22 @@ func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limat
 	}
 }
 
-// ReadPIDFile returns 0 if the PID file does not exist or the process has already terminated
-// (in which case the PID file will be removed).
+// ReadPIDFile returns 0 if the PID file does not exist, was written during a previous boot
+// of the host, or the process has already terminated (in which case the PID file will be
+// removed).
 func ReadPIDFile(path string) (int, error) {
+	// The boot is checked before the PID is read, so that a PID file of a previous boot is
+	// never trusted, not even when another process refreshes the marker in between.
+	if previousBoot, err := pidFileFromPreviousBoot(path); err != nil {
+		return 0, err
+	} else if previousBoot {
+		// The PID was recorded before the last reboot, so it is meaningless now: it may
+		// have been reused by an unrelated process, which must not be signaled. Removing
+		// the file is left to WritePIDFile, which knows that no other process is writing
+		// a PID file of the current boot into the same directory.
+		logrus.Debugf("Ignoring PID file %#q left behind by a previous boot", path)
+		return 0, nil
+	}
 	b, err := os.ReadFile(path)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {

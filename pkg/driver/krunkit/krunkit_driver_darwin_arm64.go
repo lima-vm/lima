@@ -29,6 +29,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 const (
@@ -107,7 +108,7 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	pidPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Instance.Config.VMType))
-	if err := os.WriteFile(pidPath, fmt.Appendf(nil, "%d\n", krunkitCmd.Process.Pid), 0o644); err != nil {
+	if err := store.WritePIDFile(pidPath, krunkitCmd.Process.Pid); err != nil {
 		logrus.WithError(err).Warn("Failed to write PID file")
 	}
 
