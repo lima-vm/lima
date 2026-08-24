@@ -30,17 +30,16 @@ import (
 func fieldNames() []string {
 	names := []string{}
 	t := reflect.TypeFor[store.FormatData]()
-	for i := range t.NumField() {
-		f := t.Field(i)
+	for f := range t.Fields() {
 		if f.Anonymous {
-			for j := range f.Type.NumField() {
+			for embedded := range f.Type.Fields() {
 				if tag := f.Tag.Get("lima"); tag != "deprecated" {
-					names = append(names, f.Type.Field(j).Name)
+					names = append(names, embedded.Name)
 				}
 			}
 		} else {
 			if tag := f.Tag.Get("lima"); tag != "deprecated" {
-				names = append(names, t.Field(i).Name)
+				names = append(names, f.Name)
 			}
 		}
 	}
