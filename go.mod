@@ -1,7 +1,7 @@
 // gomodjail:confined
 module github.com/lima-vm/lima/v2
 
-go 1.25.7
+go 1.26
 
 // Our own packages and golang.org/x packages are trusted
 //gosocialcheck:trusted
