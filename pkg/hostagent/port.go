@@ -14,7 +14,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 type portForwarder struct {
@@ -39,7 +38,7 @@ func portForwardRules(instDir string, user limatype.User, param map[string]strin
 		// GuestIPMustBeZero must be set explicitly. FillPortForwardDefaults would otherwise
 		// derive it from GuestIP and turn the rule into an exact 0.0.0.0 match, which leaves
 		// a guest listening on 127.0.0.1 or ::1 unblocked.
-		rule := limatype.PortForward{GuestIP: net.IPv4zero, GuestIPMustBeZero: ptr.Of(false), GuestPort: port, Ignore: true}
+		rule := limatype.PortForward{GuestIP: net.IPv4zero, GuestIPMustBeZero: new(false), GuestPort: port, Ignore: true}
 		limayaml.FillPortForwardDefaults(&rule, instDir, user, param)
 		rules = append(rules, rule)
 	}

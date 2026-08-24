@@ -12,7 +12,6 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func dumpYAML(t *testing.T, d any) string {
@@ -29,8 +28,8 @@ func TestMarshalEmpty(t *testing.T) {
 func TestMarshalTilde(t *testing.T) {
 	y := limatype.LimaYAML{
 		Mounts: []limatype.Mount{
-			{Location: "~", Writable: ptr.Of(false)},
-			{Location: "/tmp/lima", Writable: ptr.Of(true)},
+			{Location: "~", Writable: new(false)},
+			{Location: "/tmp/lima", Writable: new(true)},
 			{Location: "null"},
 		},
 	}
