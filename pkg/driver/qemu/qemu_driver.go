@@ -40,7 +40,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
@@ -191,11 +190,11 @@ func validateMountType(cfg *limatype.LimaYAML) error {
 
 func fillConfig(cfg *limatype.LimaYAML, instDir string) error {
 	if cfg.VMType == nil {
-		cfg.VMType = ptr.Of(limatype.QEMU)
+		cfg.VMType = new(limatype.QEMU)
 	}
 
 	if cfg.Video.VNC.Display == nil || *cfg.Video.VNC.Display == "" {
-		cfg.Video.VNC.Display = ptr.Of("127.0.0.1:0,to=9")
+		cfg.Video.VNC.Display = new("127.0.0.1:0,to=9")
 	}
 
 	var qemuOpts limatype.QEMUOpts
@@ -242,20 +241,20 @@ func fillConfig(cfg *limatype.LimaYAML, instDir string) error {
 	}
 
 	if cfg.MountType == nil || *cfg.MountType == "" || *cfg.MountType == "default" {
-		cfg.MountType = ptr.Of(limatype.NINEP)
+		cfg.MountType = new(limatype.NINEP)
 		if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
 			// Use REVSSHFS if the instance does not support 9p
-			cfg.MountType = ptr.Of(limatype.REVSSHFS)
+			cfg.MountType = new(limatype.REVSSHFS)
 		} else if limayaml.IsExistingInstanceDir(instDir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(instDir), "1.0.0") {
 			// Use REVSSHFS if the instance was created with Lima prior to v1.0
-			cfg.MountType = ptr.Of(limatype.REVSSHFS)
+			cfg.MountType = new(limatype.REVSSHFS)
 		}
 	}
 
 	for i := range cfg.Mounts {
 		mount := &cfg.Mounts[i]
 		if mount.Virtiofs.QueueSize == nil && *cfg.MountType == limatype.VIRTIOFS {
-			cfg.Mounts[i].Virtiofs.QueueSize = ptr.Of(limayaml.DefaultVirtiofsQueueSize)
+			cfg.Mounts[i].Virtiofs.QueueSize = new(limayaml.DefaultVirtiofsQueueSize)
 		}
 	}
 

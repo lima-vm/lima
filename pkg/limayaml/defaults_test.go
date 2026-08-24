@@ -24,7 +24,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -110,60 +109,60 @@ func TestFillDefault(t *testing.T) {
 
 	// Builtin default values
 	builtin := limatype.LimaYAML{
-		OS:                 ptr.Of(limatype.LINUX),
-		Arch:               ptr.Of(arch),
-		CPUs:               ptr.Of(defaultCPUs()),
-		Memory:             ptr.Of(defaultMemoryAsString()),
-		Disk:               ptr.Of(defaultDiskSizeAsString()),
-		GuestInstallPrefix: ptr.Of(defaultGuestInstallPrefix()),
-		UpgradePackages:    ptr.Of(false),
+		OS:                 new(limatype.LINUX),
+		Arch:               new(arch),
+		CPUs:               new(defaultCPUs()),
+		Memory:             new(defaultMemoryAsString()),
+		Disk:               new(defaultDiskSizeAsString()),
+		GuestInstallPrefix: new(defaultGuestInstallPrefix()),
+		UpgradePackages:    new(false),
 		Containerd: limatype.Containerd{
-			System:   ptr.Of(false),
-			User:     ptr.Of(true),
+			System:   new(false),
+			User:     new(true),
 			Archives: defaultContainerdArchives(),
 		},
 		SSH: limatype.SSH{
-			LocalPort:         ptr.Of(0),
-			LoadDotSSHPubKeys: ptr.Of(false),
-			ForwardAgent:      ptr.Of(false),
-			ForwardX11:        ptr.Of(false),
-			ForwardX11Trusted: ptr.Of(false),
+			LocalPort:         new(0),
+			LoadDotSSHPubKeys: new(false),
+			ForwardAgent:      new(false),
+			ForwardX11:        new(false),
+			ForwardX11Trusted: new(false),
 		},
-		TimeZone: ptr.Of(hostTimeZone()),
+		TimeZone: new(hostTimeZone()),
 		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(false),
+			LegacyBIOS: new(false),
 		},
 		Audio: limatype.Audio{
-			Device:    ptr.Of(""),
-			Interface: ptr.Of(""),
+			Device:    new(""),
+			Interface: new(""),
 		},
 		Video: limatype.Video{
-			Display: ptr.Of("none"),
+			Display: new("none"),
 		},
 		HostResolver: limatype.HostResolver{
-			Enabled: ptr.Of(true),
-			IPv6:    ptr.Of(false),
+			Enabled: new(true),
+			IPv6:    new(false),
 		},
-		PropagateProxyEnv: ptr.Of(true),
+		PropagateProxyEnv: new(true),
 		CACertificates: limatype.CACertificates{
-			RemoveDefaults: ptr.Of(false),
+			RemoveDefaults: new(false),
 		},
-		NestedVirtualization: ptr.Of(false),
-		Plain:                ptr.Of(false),
+		NestedVirtualization: new(false),
+		Plain:                new(false),
 		User: limatype.User{
-			Name:             ptr.Of(user.Username),
-			Comment:          ptr.Of(user.Name),
-			Home:             ptr.Of(user.HomeDir),
-			Shell:            ptr.Of("/bin/bash"),
-			UID:              ptr.Of(uint32(uid)),
-			PasswordlessSudo: ptr.Of(true),
+			Name:             new(user.Username),
+			Comment:          new(user.Name),
+			Home:             new(user.HomeDir),
+			Shell:            new("/bin/bash"),
+			UID:              new(uint32(uid)),
+			PasswordlessSudo: new(true),
 		},
-		TPM: ptr.Of(false),
+		TPM: new(false),
 	}
 
 	defaultPortForward := limatype.PortForward{
 		GuestIP:           IPv4loopback1,
-		GuestIPMustBeZero: ptr.Of(false),
+		GuestIPMustBeZero: new(false),
 		GuestPortRange:    [2]int{1, 65535},
 		HostIP:            IPv4loopback1,
 		HostPortRange:     [2]int{1, 65535},
@@ -185,14 +184,14 @@ func TestFillDefault(t *testing.T) {
 		Mounts: []limatype.Mount{
 			//nolint:usetesting // We need the OS temp directory name here; it is not used to create temp files for testing
 			{Location: filepath.Clean(os.TempDir())},
-			{Location: filepath.Clean("{{.Dir}}/{{.Param.ONE}}"), MountPoint: ptr.Of("/mnt/{{.Param.ONE}}")},
+			{Location: filepath.Clean("{{.Dir}}/{{.Param.ONE}}"), MountPoint: new("/mnt/{{.Param.ONE}}")},
 		},
-		MountType: ptr.Of(limatype.NINEP),
+		MountType: new(limatype.NINEP),
 		Provision: []limatype.Provision{
-			{Script: ptr.Of("#!/bin/true # {{.Param.ONE}}")},
+			{Script: new("#!/bin/true # {{.Param.ONE}}")},
 		},
 		Probes: []limatype.Probe{
-			{Script: ptr.Of("#!/bin/false # {{.Param.ONE}}")},
+			{Script: new("#!/bin/false # {{.Param.ONE}}")},
 		},
 		Networks: []limatype.Network{
 			{Lima: "shared"},
@@ -227,7 +226,7 @@ func TestFillDefault(t *testing.T) {
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
-		TimeZone: ptr.Of("Antarctica/Troll"),
+		TimeZone: new("Antarctica/Troll"),
 	}
 
 	expect := builtin
@@ -238,52 +237,52 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.Mounts = slices.Clone(y.Mounts)
-	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
+	expect.Mounts[0].MountPoint = new(expect.Mounts[0].Location)
 	if runtime.GOOS == "windows" {
 		mountLocation, err := fsutil.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
-			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
+			expect.Mounts[0].MountPoint = new(mountLocation)
 		}
 	}
-	expect.Mounts[0].Writable = ptr.Of(false)
-	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
-	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
-	expect.Mounts[0].SSHFS.SFTPDriver = ptr.Of("")
-	expect.Mounts[0].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
-	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
-	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[0].Writable = new(false)
+	expect.Mounts[0].SSHFS.Cache = new(true)
+	expect.Mounts[0].SSHFS.FollowSymlinks = new(false)
+	expect.Mounts[0].SSHFS.SFTPDriver = new("")
+	expect.Mounts[0].NineP.SecurityModel = new(Default9pSecurityModel)
+	expect.Mounts[0].NineP.ProtocolVersion = new(Default9pProtocolVersion)
+	expect.Mounts[0].NineP.Msize = new(Default9pMsize)
+	expect.Mounts[0].NineP.Cache = new(Default9pCacheForRO)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	// Only missing Mounts field is Writable, and the default value is also the null value: false
 	expect.Mounts[1].Location = filepath.Join(instDir, y.Param["ONE"])
-	expect.Mounts[1].MountPoint = ptr.Of(path.Join("/mnt", y.Param["ONE"]))
-	expect.Mounts[1].Writable = ptr.Of(false)
-	expect.Mounts[1].SSHFS.Cache = ptr.Of(true)
-	expect.Mounts[1].SSHFS.FollowSymlinks = ptr.Of(false)
-	expect.Mounts[1].SSHFS.SFTPDriver = ptr.Of("")
-	expect.Mounts[1].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
-	expect.Mounts[1].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
-	expect.Mounts[1].NineP.Msize = ptr.Of(Default9pMsize)
-	expect.Mounts[1].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[1].MountPoint = new(path.Join("/mnt", y.Param["ONE"]))
+	expect.Mounts[1].Writable = new(false)
+	expect.Mounts[1].SSHFS.Cache = new(true)
+	expect.Mounts[1].SSHFS.FollowSymlinks = new(false)
+	expect.Mounts[1].SSHFS.SFTPDriver = new("")
+	expect.Mounts[1].NineP.SecurityModel = new(Default9pSecurityModel)
+	expect.Mounts[1].NineP.ProtocolVersion = new(Default9pProtocolVersion)
+	expect.Mounts[1].NineP.Msize = new(Default9pMsize)
+	expect.Mounts[1].NineP.Cache = new(Default9pCacheForRO)
 	expect.Mounts[1].Virtiofs.QueueSize = nil
 
-	expect.MountType = ptr.Of(limatype.NINEP)
+	expect.MountType = new(limatype.NINEP)
 
-	expect.MountInotify = ptr.Of(false)
+	expect.MountInotify = new(false)
 
 	expect.Provision = slices.Clone(y.Provision)
 	expect.Provision[0].Mode = limatype.ProvisionModeSystem
-	expect.Provision[0].Script = ptr.Of("#!/bin/true # Eins")
+	expect.Provision[0].Script = new("#!/bin/true # Eins")
 
 	expect.Probes = slices.Clone(y.Probes)
 	expect.Probes[0].Mode = limatype.ProbeModeReadiness
 	expect.Probes[0].Description = "user probe 1/1"
-	expect.Probes[0].Script = ptr.Of("#!/bin/false # Eins")
+	expect.Probes[0].Script = new("#!/bin/false # Eins")
 
 	expect.Networks = slices.Clone(y.Networks)
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
 	expect.Networks[0].Interface = "lima0"
-	expect.Networks[0].Metric = ptr.Of(uint32(100))
+	expect.Networks[0].Metric = new(uint32(100))
 
 	expect.DNS = slices.Clone(y.DNS)
 	expect.PortForwards = []limatype.PortForward{
@@ -319,7 +318,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Param = y.Param
 
 	expect.CACertificates = limatype.CACertificates{
-		RemoveDefaults: ptr.Of(false),
+		RemoveDefaults: new(false),
 		Files:          []string{"ca.crt"},
 		Certs: []string{
 			"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
@@ -328,14 +327,14 @@ func TestFillDefault(t *testing.T) {
 
 	expect.TimeZone = y.TimeZone
 	// Set firmware expectations to match what FillDefault actually does
-	// FillDefault uses the builtin default values, which include LegacyBIOS: ptr.Of(false)
+	// FillDefault uses the builtin default values, which include LegacyBIOS: new(false)
 	expect.Firmware = limatype.Firmware{
-		LegacyBIOS: ptr.Of(false), // This matches what FillDefault actually sets
+		LegacyBIOS: new(false), // This matches what FillDefault actually sets
 		Images:     nil,
 	}
 
-	expect.NestedVirtualization = ptr.Of(false)
-	expect.TPM = ptr.Of(false)
+	expect.NestedVirtualization = new(false)
+	expect.TPM = new(false)
 
 	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -351,67 +350,67 @@ func TestFillDefault(t *testing.T) {
 	varLog, _ := filepath.Abs("/var/log")
 	d = limatype.LimaYAML{
 		// Remove driver-specific VMType from defaults test
-		OS:     ptr.Of("unknown"),
-		Arch:   ptr.Of("unknown"),
-		CPUs:   ptr.Of(7),
-		Memory: ptr.Of("5GiB"),
-		Disk:   ptr.Of("105GiB"),
+		OS:     new("unknown"),
+		Arch:   new("unknown"),
+		CPUs:   new(7),
+		Memory: new("5GiB"),
+		Disk:   new("105GiB"),
 		AdditionalDisks: []limatype.Disk{
 			{Name: "data"},
 		},
-		GuestInstallPrefix: ptr.Of("/opt"),
-		UpgradePackages:    ptr.Of(true),
+		GuestInstallPrefix: new("/opt"),
+		UpgradePackages:    new(true),
 		Containerd: limatype.Containerd{
-			System: ptr.Of(true),
-			User:   ptr.Of(false),
+			System: new(true),
+			User:   new(false),
 			Archives: []limatype.File{
 				{Location: "/tmp/nerdctl.tgz"},
 			},
 		},
 		SSH: limatype.SSH{
-			LocalPort:         ptr.Of(888),
-			LoadDotSSHPubKeys: ptr.Of(false),
-			ForwardAgent:      ptr.Of(true),
-			ForwardX11:        ptr.Of(false),
-			ForwardX11Trusted: ptr.Of(false),
+			LocalPort:         new(888),
+			LoadDotSSHPubKeys: new(false),
+			ForwardAgent:      new(true),
+			ForwardX11:        new(false),
+			ForwardX11Trusted: new(false),
 		},
-		TimeZone: ptr.Of("Zulu"),
+		TimeZone: new("Zulu"),
 		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(true),
+			LegacyBIOS: new(true),
 			// Remove driver-specific firmware images from defaults
 		},
 		Audio: limatype.Audio{
-			Device:    ptr.Of("coreaudio"),
-			Interface: ptr.Of("virtio"),
+			Device:    new("coreaudio"),
+			Interface: new("virtio"),
 		},
 		Video: limatype.Video{
-			Display: ptr.Of("cocoa"),
+			Display: new("cocoa"),
 			// Remove driver-specific VNC configuration
 		},
 		HostResolver: limatype.HostResolver{
-			Enabled: ptr.Of(false),
-			IPv6:    ptr.Of(true),
+			Enabled: new(false),
+			IPv6:    new(true),
 			Hosts: map[string]string{
 				"default": "localhost",
 			},
 		},
-		PropagateProxyEnv: ptr.Of(false),
+		PropagateProxyEnv: new(false),
 
 		Mounts: []limatype.Mount{
 			{
 				Location: varLog,
-				Writable: ptr.Of(false),
+				Writable: new(false),
 			},
 		},
 		Provision: []limatype.Provision{
 			{
-				Script: ptr.Of("#!/bin/true"),
+				Script: new("#!/bin/true"),
 				Mode:   limatype.ProvisionModeUser,
 			},
 		},
 		Probes: []limatype.Probe{
 			{
-				Script:      ptr.Of("#!/bin/false"),
+				Script:      new("#!/bin/false"),
 				Mode:        limatype.ProbeModeReadiness,
 				Description: "User Probe",
 			},
@@ -420,7 +419,7 @@ func TestFillDefault(t *testing.T) {
 			{
 				MACAddress: "11:22:33:44:55:66",
 				Interface:  "def0",
-				Metric:     ptr.Of(uint32(50)),
+				Metric:     new(uint32(50)),
 			},
 		},
 		DNS: []net.IP{
@@ -428,7 +427,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		PortForwards: []limatype.PortForward{{
 			GuestIP:           IPv4loopback1,
-			GuestIPMustBeZero: ptr.Of(false),
+			GuestIPMustBeZero: new(false),
 			GuestPort:         80,
 			GuestPortRange:    [2]int{80, 80},
 			HostIP:            IPv4loopback1,
@@ -446,26 +445,26 @@ func TestFillDefault(t *testing.T) {
 			"TWO": "two",
 		},
 		CACertificates: limatype.CACertificates{
-			RemoveDefaults: ptr.Of(true),
+			RemoveDefaults: new(true),
 			Certs: []string{
 				"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 			},
 		},
-		NestedVirtualization: ptr.Of(true),
+		NestedVirtualization: new(true),
 		User: limatype.User{
-			Name:             ptr.Of("xxx"),
-			Comment:          ptr.Of("Foo Bar"),
-			Home:             ptr.Of("/tmp"),
-			Shell:            ptr.Of("/bin/tcsh"),
-			UID:              ptr.Of(uint32(8080)),
-			PasswordlessSudo: ptr.Of(false),
+			Name:             new("xxx"),
+			Comment:          new("Foo Bar"),
+			Home:             new("/tmp"),
+			Shell:            new("/bin/tcsh"),
+			UID:              new(uint32(8080)),
+			PasswordlessSudo: new(false),
 		},
 		VMOpts: limatype.VMOpts{
 			"qemu": map[string]any{
 				"minimumVersion": "9.1.0",
 			},
 		},
-		TPM: ptr.Of(true),
+		TPM: new(true),
 	}
 
 	expect = d
@@ -475,34 +474,34 @@ func TestFillDefault(t *testing.T) {
 	expect.Containerd.Archives = slices.Clone(d.Containerd.Archives)
 	expect.Containerd.Archives[0].Arch = *d.Arch
 	expect.Mounts = slices.Clone(d.Mounts)
-	expect.Mounts[0].MountPoint = ptr.Of(expect.Mounts[0].Location)
+	expect.Mounts[0].MountPoint = new(expect.Mounts[0].Location)
 	if runtime.GOOS == "windows" {
 		mountLocation, err := fsutil.WindowsSubsystemPath(t.Context(), expect.Mounts[0].Location)
 		if err == nil {
-			expect.Mounts[0].MountPoint = ptr.Of(mountLocation)
+			expect.Mounts[0].MountPoint = new(mountLocation)
 		}
 	}
-	expect.Mounts[0].SSHFS.Cache = ptr.Of(true)
-	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(false)
-	expect.Mounts[0].SSHFS.SFTPDriver = ptr.Of("")
-	expect.Mounts[0].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
-	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
-	expect.Mounts[0].NineP.Msize = ptr.Of(Default9pMsize)
-	expect.Mounts[0].NineP.Cache = ptr.Of(Default9pCacheForRO)
+	expect.Mounts[0].SSHFS.Cache = new(true)
+	expect.Mounts[0].SSHFS.FollowSymlinks = new(false)
+	expect.Mounts[0].SSHFS.SFTPDriver = new("")
+	expect.Mounts[0].NineP.SecurityModel = new(Default9pSecurityModel)
+	expect.Mounts[0].NineP.ProtocolVersion = new(Default9pProtocolVersion)
+	expect.Mounts[0].NineP.Msize = new(Default9pMsize)
+	expect.Mounts[0].NineP.Cache = new(Default9pCacheForRO)
 	expect.Mounts[0].Virtiofs.QueueSize = nil
 	expect.HostResolver.Hosts = map[string]string{
 		"default": d.HostResolver.Hosts["default"],
 	}
 	// Remove driver-specific mount type from defaults test
 	expect.MountType = nil
-	expect.MountInotify = ptr.Of(false)
-	expect.CACertificates.RemoveDefaults = ptr.Of(true)
+	expect.MountInotify = new(false)
+	expect.CACertificates.RemoveDefaults = new(true)
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	expect.Plain = ptr.Of(false)
-	expect.TPM = ptr.Of(true)
+	expect.Plain = new(false)
+	expect.TPM = new(true)
 
 	y = limatype.LimaYAML{}
 	FillDefault(t.Context(), &y, &d, &limatype.LimaYAML{}, filePath, false)
@@ -516,7 +515,7 @@ func TestFillDefault(t *testing.T) {
 	y = filledDefaults
 	y.DNS = []net.IP{net.ParseIP("8.8.8.8")}
 	y.AdditionalDisks = []limatype.Disk{{Name: "overridden"}}
-	y.User.Home = ptr.Of("/root")
+	y.User.Home = new("/root")
 	y.VMOpts = limatype.VMOpts{
 		"vz": map[string]any{
 			"diskImageFormat": "raw",
@@ -562,19 +561,19 @@ func TestFillDefault(t *testing.T) {
 
 	o = limatype.LimaYAML{
 		// Remove driver-specific VMType from override test
-		OS:     ptr.Of(limatype.LINUX),
-		Arch:   ptr.Of(arch),
-		CPUs:   ptr.Of(12),
-		Memory: ptr.Of("7GiB"),
-		Disk:   ptr.Of("117GiB"),
+		OS:     new(limatype.LINUX),
+		Arch:   new(arch),
+		CPUs:   new(12),
+		Memory: new("7GiB"),
+		Disk:   new("117GiB"),
 		AdditionalDisks: []limatype.Disk{
 			{Name: "test"},
 		},
-		GuestInstallPrefix: ptr.Of("/usr"),
-		UpgradePackages:    ptr.Of(true),
+		GuestInstallPrefix: new("/usr"),
+		UpgradePackages:    new(true),
 		Containerd: limatype.Containerd{
-			System: ptr.Of(true),
-			User:   ptr.Of(false),
+			System: new(true),
+			User:   new(false),
 			Archives: []limatype.File{
 				{
 					Arch:     arch,
@@ -584,62 +583,62 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		SSH: limatype.SSH{
-			LocalPort:         ptr.Of(4433),
-			LoadDotSSHPubKeys: ptr.Of(true),
-			ForwardAgent:      ptr.Of(true),
-			ForwardX11:        ptr.Of(false),
-			ForwardX11Trusted: ptr.Of(false),
+			LocalPort:         new(4433),
+			LoadDotSSHPubKeys: new(true),
+			ForwardAgent:      new(true),
+			ForwardX11:        new(false),
+			ForwardX11Trusted: new(false),
 		},
-		TimeZone: ptr.Of("Universal"),
+		TimeZone: new("Universal"),
 		Firmware: limatype.Firmware{
-			LegacyBIOS: ptr.Of(true),
+			LegacyBIOS: new(true),
 		},
 		Audio: limatype.Audio{
-			Device:    ptr.Of("coreaudio"),
-			Interface: ptr.Of("hda"),
+			Device:    new("coreaudio"),
+			Interface: new("hda"),
 		},
 		Video: limatype.Video{
-			Display: ptr.Of("cocoa"),
+			Display: new("cocoa"),
 			// Remove driver-specific VNC configuration
 		},
 		HostResolver: limatype.HostResolver{
-			Enabled: ptr.Of(false),
-			IPv6:    ptr.Of(false),
+			Enabled: new(false),
+			IPv6:    new(false),
 			Hosts: map[string]string{
 				"override.": "underflow",
 			},
 		},
-		PropagateProxyEnv: ptr.Of(false),
+		PropagateProxyEnv: new(false),
 
 		Mounts: []limatype.Mount{
 			{
 				Location: varLog,
-				Writable: ptr.Of(true),
+				Writable: new(true),
 				SSHFS: limatype.SSHFS{
-					Cache:          ptr.Of(false),
-					FollowSymlinks: ptr.Of(true),
+					Cache:          new(false),
+					FollowSymlinks: new(true),
 				},
 				NineP: limatype.NineP{
-					SecurityModel:   ptr.Of("mapped-file"),
-					ProtocolVersion: ptr.Of("9p2000"),
-					Msize:           ptr.Of("8KiB"),
-					Cache:           ptr.Of("none"),
+					SecurityModel:   new("mapped-file"),
+					ProtocolVersion: new("9p2000"),
+					Msize:           new("8KiB"),
+					Cache:           new("none"),
 				},
 				Virtiofs: limatype.Virtiofs{
-					QueueSize: ptr.Of(2048),
+					QueueSize: new(2048),
 				},
 			},
 		},
-		MountInotify: ptr.Of(true),
+		MountInotify: new(true),
 		Provision: []limatype.Provision{
 			{
-				Script: ptr.Of("#!/bin/true"),
+				Script: new("#!/bin/true"),
 				Mode:   limatype.ProvisionModeSystem,
 			},
 		},
 		Probes: []limatype.Probe{
 			{
-				Script:      ptr.Of("#!/bin/false"),
+				Script:      new("#!/bin/false"),
 				Mode:        limatype.ProbeModeReadiness,
 				Description: "Another Probe",
 			},
@@ -649,7 +648,7 @@ func TestFillDefault(t *testing.T) {
 				Lima:       "shared",
 				MACAddress: "10:20:30:40:50:60",
 				Interface:  "def1",
-				Metric:     ptr.Of(uint32(25)),
+				Metric:     new(uint32(25)),
 			},
 			{
 				Lima:      "bridged",
@@ -661,7 +660,7 @@ func TestFillDefault(t *testing.T) {
 		},
 		PortForwards: []limatype.PortForward{{
 			GuestIP:           IPv4loopback1,
-			GuestIPMustBeZero: ptr.Of(false),
+			GuestIPMustBeZero: new(false),
 			GuestPort:         88,
 			GuestPortRange:    [2]int{88, 88},
 			HostIP:            IPv4loopback1,
@@ -679,16 +678,16 @@ func TestFillDefault(t *testing.T) {
 			"THREE": "trois",
 		},
 		CACertificates: limatype.CACertificates{
-			RemoveDefaults: ptr.Of(true),
+			RemoveDefaults: new(true),
 		},
-		NestedVirtualization: ptr.Of(false),
+		NestedVirtualization: new(false),
 		User: limatype.User{
-			Name:             ptr.Of("foo"),
-			Comment:          ptr.Of("foo bar baz"),
-			Home:             ptr.Of("/override"),
-			Shell:            ptr.Of("/bin/sh"),
-			UID:              ptr.Of(uint32(1122)),
-			PasswordlessSudo: ptr.Of(true),
+			Name:             new("foo"),
+			Comment:          new("foo bar baz"),
+			Home:             new("/override"),
+			Shell:            new("/bin/sh"),
+			UID:              new(uint32(1122)),
+			PasswordlessSudo: new(true),
 		},
 		VMOpts: limatype.VMOpts{
 			"vz": map[string]any{
@@ -718,17 +717,17 @@ func TestFillDefault(t *testing.T) {
 
 	// o.Mounts just makes dExpected.Mounts[0] writable because the Location matches
 	expect.Mounts = slices.Concat(dExpected.Mounts, y.Mounts)
-	expect.Mounts[0].Writable = ptr.Of(true)
-	expect.Mounts[0].SSHFS.Cache = ptr.Of(false)
-	expect.Mounts[0].SSHFS.FollowSymlinks = ptr.Of(true)
-	expect.Mounts[0].NineP.SecurityModel = ptr.Of("mapped-file")
-	expect.Mounts[0].NineP.ProtocolVersion = ptr.Of("9p2000")
-	expect.Mounts[0].NineP.Msize = ptr.Of("8KiB")
-	expect.Mounts[0].NineP.Cache = ptr.Of("none")
-	expect.Mounts[0].Virtiofs.QueueSize = ptr.Of(2048)
+	expect.Mounts[0].Writable = new(true)
+	expect.Mounts[0].SSHFS.Cache = new(false)
+	expect.Mounts[0].SSHFS.FollowSymlinks = new(true)
+	expect.Mounts[0].NineP.SecurityModel = new("mapped-file")
+	expect.Mounts[0].NineP.ProtocolVersion = new("9p2000")
+	expect.Mounts[0].NineP.Msize = new("8KiB")
+	expect.Mounts[0].NineP.Cache = new("none")
+	expect.Mounts[0].Virtiofs.QueueSize = new(2048)
 
-	expect.MountType = ptr.Of(limatype.NINEP)
-	expect.MountInotify = ptr.Of(true)
+	expect.MountType = new(limatype.NINEP)
+	expect.MountInotify = new(true)
 
 	// o.Networks[1] is overriding the dExpected.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = slices.Concat(dExpected.Networks, y.Networks, []limatype.Network{o.Networks[0]})
@@ -742,15 +741,15 @@ func TestFillDefault(t *testing.T) {
 
 	expect.Param["ONE"] = y.Param["ONE"]
 
-	expect.CACertificates.RemoveDefaults = ptr.Of(true)
+	expect.CACertificates.RemoveDefaults = new(true)
 	expect.CACertificates.Files = []string{"ca.crt"}
 	expect.CACertificates.Certs = []string{
 		"-----BEGIN CERTIFICATE-----\nYOUR-ORGS-TRUSTED-CA-CERT\n-----END CERTIFICATE-----\n",
 	}
 
-	expect.Plain = ptr.Of(false)
+	expect.Plain = new(false)
 
-	expect.NestedVirtualization = ptr.Of(false)
+	expect.NestedVirtualization = new(false)
 
 	expect.VMOpts = limatype.VMOpts{
 		"qemu": dExpected.VMOpts["qemu"],
@@ -761,7 +760,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 	}
-	expect.TPM = ptr.Of(false)
+	expect.TPM = new(false)
 
 	FillDefault(t.Context(), &y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
@@ -781,7 +780,7 @@ func TestStaticPortForwarding(t *testing.T) {
 		{
 			name: "plain mode with static port forwards",
 			config: limatype.LimaYAML{
-				Plain: ptr.Of(true),
+				Plain: new(true),
 				PortForwards: []limatype.PortForward{
 					{
 						GuestPort: 8080,
@@ -810,7 +809,7 @@ func TestStaticPortForwarding(t *testing.T) {
 		{
 			name: "non-plain mode with static port forwards",
 			config: limatype.LimaYAML{
-				Plain: ptr.Of(false),
+				Plain: new(false),
 				PortForwards: []limatype.PortForward{
 					{
 						GuestPort: 8080,
@@ -840,7 +839,7 @@ func TestStaticPortForwarding(t *testing.T) {
 		{
 			name: "plain mode with no static port forwards",
 			config: limatype.LimaYAML{
-				Plain: ptr.Of(true),
+				Plain: new(true),
 				PortForwards: []limatype.PortForward{
 					{
 						GuestPort: 8080,
@@ -956,8 +955,8 @@ func TestContainerdUserDefaultPerOS(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(fmt.Sprintf("%s/%s", tc.os, tc.arch), func(t *testing.T) {
 			y := limatype.LimaYAML{
-				OS:   ptr.Of(tc.os),
-				Arch: ptr.Of(tc.arch),
+				OS:   new(tc.os),
+				Arch: new(tc.arch),
 			}
 			var d, o limatype.LimaYAML
 			FillDefault(t.Context(), &y, &d, &o, "", false)
@@ -972,10 +971,10 @@ func TestContainerdUserDefaultPerOS(t *testing.T) {
 // explicit containerd.user=true value even on non-Linux guests.
 func TestContainerdUserExplicitOverride(t *testing.T) {
 	y := limatype.LimaYAML{
-		OS:   ptr.Of(limatype.DARWIN),
-		Arch: ptr.Of(limatype.AARCH64),
+		OS:   new(limatype.DARWIN),
+		Arch: new(limatype.AARCH64),
 		Containerd: limatype.Containerd{
-			User: ptr.Of(true),
+			User: new(true),
 		},
 	}
 	var d, o limatype.LimaYAML
@@ -1045,8 +1044,8 @@ func TestDefaultSelectedImageIsStandard(t *testing.T) {
 func TestFillDefaultUserPasswordlessSudo(t *testing.T) {
 	baseY := func() *limatype.LimaYAML {
 		return &limatype.LimaYAML{
-			OS:   ptr.Of(limatype.LINUX),
-			Arch: ptr.Of(limatype.X8664),
+			OS:   new(limatype.LINUX),
+			Arch: new(limatype.X8664),
 		}
 	}
 	t.Run("fallback to true", func(t *testing.T) {
@@ -1056,19 +1055,19 @@ func TestFillDefaultUserPasswordlessSudo(t *testing.T) {
 		assert.Equal(t, *y.User.PasswordlessSudo, true)
 	})
 	t.Run("default propagates", func(t *testing.T) {
-		y, d, o := baseY(), &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: ptr.Of(false)}}, &limatype.LimaYAML{}
+		y, d, o := baseY(), &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: new(false)}}, &limatype.LimaYAML{}
 		FillDefault(t.Context(), y, d, o, "test.yaml", false)
 		assert.Equal(t, *y.User.PasswordlessSudo, false)
 	})
 	t.Run("yaml wins over default", func(t *testing.T) {
-		y, d, o := baseY(), &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: ptr.Of(true)}}, &limatype.LimaYAML{}
-		y.User.PasswordlessSudo = ptr.Of(false)
+		y, d, o := baseY(), &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: new(true)}}, &limatype.LimaYAML{}
+		y.User.PasswordlessSudo = new(false)
 		FillDefault(t.Context(), y, d, o, "test.yaml", false)
 		assert.Equal(t, *y.User.PasswordlessSudo, false)
 	})
 	t.Run("override wins", func(t *testing.T) {
-		y, d, o := baseY(), &limatype.LimaYAML{}, &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: ptr.Of(false)}}
-		y.User.PasswordlessSudo = ptr.Of(true)
+		y, d, o := baseY(), &limatype.LimaYAML{}, &limatype.LimaYAML{User: limatype.User{PasswordlessSudo: new(false)}}
+		y.User.PasswordlessSudo = new(true)
 		FillDefault(t.Context(), y, d, o, "test.yaml", false)
 		assert.Equal(t, *y.User.PasswordlessSudo, false)
 	})
@@ -1085,18 +1084,18 @@ func TestValidatePasswordlessSudoRequiresPlain(t *testing.T) {
 			},
 		},
 	}
-	y.User.PasswordlessSudo = ptr.Of(false)
-	y.Plain = ptr.Of(false) // plain is false, which violates the GHSA constraint
+	y.User.PasswordlessSudo = new(false)
+	y.Plain = new(false) // plain is false, which violates the GHSA constraint
 	err := Validate(y, false)
 	assert.ErrorContains(t, err, "`user.passwordlessSudo: false` requires `plain: true`")
-	y.Plain = ptr.Of(true)
+	y.Plain = new(true)
 	errValid := Validate(y, false)
 	assert.NilError(t, errValid)
 }
 
 func TestValidatePasswordlessSudoFalseNoPlainRequiredOnMacOS(t *testing.T) {
 	y, d, o := &limatype.LimaYAML{}, &limatype.LimaYAML{}, &limatype.LimaYAML{}
-	y.OS = ptr.Of(limatype.DARWIN)
+	y.OS = new(limatype.DARWIN)
 	FillDefault(t.Context(), y, d, o, "test.yaml", false)
 	y.Images = []limatype.Image{
 		{File: limatype.File{Location: "https://example.com/dummy.img", Arch: limatype.AARCH64}},

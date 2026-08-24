@@ -12,7 +12,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/lima-vm/lima/v2/pkg/mcp/msi"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func (ts *ToolSet) RunShellCommand(ctx context.Context,
@@ -37,11 +36,11 @@ func (ts *ToolSet) RunShellCommand(ctx context.Context,
 		Stderr: stderr.String(),
 	}
 	if cmdErr == nil {
-		res.ExitCode = ptr.Of(0)
+		res.ExitCode = new(0)
 	} else {
 		res.Error = cmdErr.Error()
 		if st := cmd.ProcessState; st != nil {
-			res.ExitCode = ptr.Of(st.ExitCode())
+			res.ExitCode = new(st.ExitCode())
 		}
 	}
 	return &mcp.CallToolResult{
