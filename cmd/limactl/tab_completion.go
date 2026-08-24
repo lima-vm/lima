@@ -43,8 +43,7 @@ func extractYAMLPaths(t reflect.Type, prefix string, depth int) []string {
 		return paths
 	}
 
-	for i := range t.NumField() {
-		field := t.Field(i)
+	for field := range t.Fields() {
 		if !field.IsExported() {
 			continue
 		}
