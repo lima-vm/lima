@@ -82,8 +82,7 @@ func (c *client) Screenshot(ctx context.Context, format string) ([]byte, error) 
 	u := fmt.Sprintf("http://%s/%s/screenshot?%s", c.dummyHost, c.version, params.Encode())
 	resp, err := httpclientutil.Get(ctx, c.HTTPClient(), u)
 	if err != nil {
-		var httpErr *httpclientutil.HTTPStatusError
-		if errors.As(err, &httpErr) {
+		if httpErr, ok := errors.AsType[*httpclientutil.HTTPStatusError](err); ok {
 			switch httpErr.StatusCode {
 			case http.StatusNotFound:
 				return nil, errors.New("hostagent does not support screenshot — restart the instance to pick up the latest hostagent binary")
