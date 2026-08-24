@@ -84,6 +84,7 @@ func (sp *InfoFormatSpecific) Vmdk() *InfoFormatSpecificDataVmdk {
 
 type InfoFormatSpecificDataQcow2 struct {
 	Compat          string `json:"compat,omitempty"`           // since QEMU 1.7
+	DataFile        string `json:"data-file,omitempty"`        // since QEMU 3.0
 	LazyRefcounts   bool   `json:"lazy-refcounts,omitempty"`   // since QEMU 1.7
 	Corrupt         bool   `json:"corrupt,omitempty"`          // since QEMU 2.2
 	RefcountBits    int    `json:"refcount-bits,omitempty"`    // since QEMU 2.3
@@ -212,8 +213,8 @@ func (q *QemuImageUtil) Convert(ctx context.Context, imageType image.Type, sourc
 		if err != nil {
 			return fmt.Errorf("failed to get info for source disk %#q: %w", source, err)
 		}
-		if info.BackingFilename != "" || info.FullBackingFilename != "" {
-			return fmt.Errorf("qcow2 image %#q has an unexpected backing file: %#q", source, info.BackingFilename)
+		if err := rejectExternalFileReferences(info); err != nil {
+			return err
 		}
 	}
 
@@ -235,6 +236,35 @@ func (q *QemuImageUtil) Convert(ctx context.Context, imageType image.Type, sourc
 	return nil
 }
 
+// rejectExternalFileReferences returns an error if info references any file
+// other than itself: a backing file, a qcow2 external data-file, or a VMDK
+// extent. qemu-img reads those files from the host when it opens the image, so
+// an untrusted image that points them at an arbitrary host path (e.g.
+// /etc/passwd) would have that path's contents copied into the guest disk. The
+// native converter already refuses such images via go-qcow2reader's Readable();
+// this keeps the qemu path and the base-disk gate consistent with it.
+func rejectExternalFileReferences(info *Info) error {
+	if info.BackingFilename != "" {
+		return fmt.Errorf("image (%#q) must not have a backing file (%#q)", info.Filename, info.BackingFilename)
+	}
+	if info.FullBackingFilename != "" {
+		return fmt.Errorf("image (%#q) must not have a backing file (%#q)", info.Filename, info.FullBackingFilename)
+	}
+	if info.FormatSpecific != nil {
+		if qcow2 := info.FormatSpecific.Qcow2(); qcow2 != nil && qcow2.DataFile != "" {
+			return fmt.Errorf("image (%#q) must not have an external data file (%#q)", info.Filename, qcow2.DataFile)
+		}
+		if vmdk := info.FormatSpecific.Vmdk(); vmdk != nil {
+			for _, e := range vmdk.Extents {
+				if e.Filename != info.Filename {
+					return fmt.Errorf("image (%#q) must not have an extent file (%#q)", info.Filename, e.Filename)
+				}
+			}
+		}
+	}
+	return nil
+}
+
 // AcceptableAsBaseDisk checks if a disk image is acceptable as a base disk.
 func AcceptableAsBaseDisk(info *Info) error {
 	switch info.Format {
@@ -244,20 +274,8 @@ func AcceptableAsBaseDisk(info *Info) error {
 		logrus.WithField("filename", info.Filename).
 			Warnf("Unsupported image format %#q. The image may not boot, or may have an extra privilege to access the host filesystem. Use with caution.", info.Format)
 	}
-	if info.BackingFilename != "" {
-		return fmt.Errorf("base disk (%#q) must not have a backing file (%#q)", info.Filename, info.BackingFilename)
-	}
-	if info.FullBackingFilename != "" {
-		return fmt.Errorf("base disk (%#q) must not have a backing file (%#q)", info.Filename, info.FullBackingFilename)
-	}
-	if info.FormatSpecific != nil {
-		if vmdk := info.FormatSpecific.Vmdk(); vmdk != nil {
-			for _, e := range vmdk.Extents {
-				if e.Filename != info.Filename {
-					return fmt.Errorf("base disk (%#q) must not have an extent file (%#q)", info.Filename, e.Filename)
-				}
-			}
-		}
+	if err := rejectExternalFileReferences(info); err != nil {
+		return err
 	}
 	// info.Children is set since QEMU 8.0
 	switch len(info.Children) {
