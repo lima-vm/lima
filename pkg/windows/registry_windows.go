@@ -33,7 +33,7 @@ func AddVSockRegistryKey(port int) error {
 	}
 
 	if slices.Contains(used, port) {
-		return fmt.Errorf("port %#q in use", port)
+		return fmt.Errorf("port %d in use", port)
 	}
 
 	vsockKeyPath := fmt.Sprintf(`%x%s`, port, magicVSOCKSuffix)

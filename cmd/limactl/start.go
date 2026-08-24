@@ -516,7 +516,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 		case 3: // "Exit"
 			return nil, exitSuccessError{Msg: "Choosing to exit"}
 		default:
-			return tmpl, fmt.Errorf("unexpected answer %#q", ans)
+			return tmpl, fmt.Errorf("unexpected answer %d", ans)
 		}
 	}
 }
