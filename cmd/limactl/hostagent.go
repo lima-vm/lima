@@ -12,7 +12,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -140,18 +142,44 @@ type syncer interface {
 	Sync() error
 }
 
+// syncInterval bounds how long the log can go unflushed.
+//
+// Flushing on every write serialised the whole hostagent behind one fsync per
+// record: logrus holds its output mutex across Out.Write, and the port
+// forwarder logs once per tunnel teardown, so a burst of closing connections
+// throttled all logging in the process.
+//
+// The flush cannot be dropped entirely. limactl start follows these files with
+// fsnotify, and on Windows the tailer stops seeing new lines without it.
+const syncInterval = 100 * time.Millisecond
+
 type syncWriter struct {
 	w io.Writer
+
+	mu       sync.Mutex
+	lastSync time.Time
 }
 
 func (w *syncWriter) Write(p []byte) (int, error) {
 	written, err := w.w.Write(p)
-	if err == nil {
+	if err == nil && w.syncDue() {
 		if s, ok := w.w.(syncer); ok {
 			_ = s.Sync()
 		}
 	}
 	return written, err
+}
+
+// syncDue reports whether syncInterval has passed since the last flush, and
+// records the new flush time when it has.
+func (w *syncWriter) syncDue() bool {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if time.Since(w.lastSync) < syncInterval {
+		return false
+	}
+	w.lastSync = time.Now()
+	return true
 }
 
 func initLogrus(stderr io.Writer) {
