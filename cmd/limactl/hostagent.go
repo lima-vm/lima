@@ -12,7 +12,6 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
 	"syscall"
 
 	"github.com/sirupsen/logrus"
@@ -52,7 +51,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		} else if err != nil {
 			return fmt.Errorf("failed to determine if another hostagent is running: %w", err)
 		}
-		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
+		if err := store.WritePIDFile(pidfile, os.Getpid()); err != nil {
 			return err
 		}
 		defer os.RemoveAll(pidfile)

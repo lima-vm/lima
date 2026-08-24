@@ -222,7 +222,11 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 // StartWithPaths calls Prepare by itself, so you do not need to call Prepare manually before calling Start.
 func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgentForeground, showProgress bool, limactl, guestAgent string) error {
 	haPIDPath := filepath.Join(inst.Dir, filenames.HostAgentPID)
-	if _, err := os.Stat(haPIDPath); !errors.Is(err, os.ErrNotExist) {
+	// ReadPIDFile removes the PID file when it was left behind by a process that is not
+	// running anymore, or by a previous boot of the host.
+	if haPID, err := store.ReadPIDFile(haPIDPath); err != nil {
+		return err
+	} else if haPID != 0 {
 		return fmt.Errorf("instance %#q seems running (hint: remove %#q if the instance is not actually running)", inst.Name, haPIDPath)
 	}
 	logrus.Infof("Starting the instance %#q with %s VM driver %#q", inst.Name, registry.CheckInternalOrExternal(inst.VMType), inst.VMType)
