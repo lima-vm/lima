@@ -19,7 +19,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	"unicode"
 
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
@@ -36,6 +35,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
+	"github.com/lima-vm/lima/v2/pkg/strutil"
 )
 
 var netLookupIP = func(host string) []net.IP {
@@ -132,7 +132,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Name:               name,
 		Hostname:           hostname.FromInstName(name), // TODO: support customization
 		User:               *instConfig.User.Name,
-		Comment:            removeControlChars(*instConfig.User.Comment),
+		Comment:            strutil.RemoveControlChars(*instConfig.User.Comment),
 		Home:               *instConfig.User.Home,
 		Shell:              *instConfig.User.Shell,
 		UID:                *instConfig.User.UID,
@@ -494,16 +494,6 @@ func GenerateISO9660(ctx context.Context, drv driver.Driver, instDir, name strin
 		iso9660Options = append(iso9660Options, iso9660util.WithJoliet())
 	}
 	return args.IID, iso9660util.Write(filepath.Join(instDir, filenames.CIDataISO), "cidata", layout, iso9660Options...)
-}
-
-func removeControlChars(s string) string {
-	out := make([]rune, 0, len(s))
-	for _, r := range s {
-		if unicode.IsPrint(r) {
-			out = append(out, r)
-		}
-	}
-	return string(out)
 }
 
 func getCert(content string) Cert {
