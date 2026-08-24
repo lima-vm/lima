@@ -376,8 +376,7 @@ func transformCustomURL(ctx context.Context, locator string) (string, error) {
 
 	stdout, err := cmd.Output()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			stderrMsg := string(exitErr.Stderr)
 			if stderrMsg != "" {
 				return "", fmt.Errorf("command %#q failed: %s", cmd.String(), strings.TrimSpace(stderrMsg))
