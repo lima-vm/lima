@@ -98,6 +98,14 @@ func (fw *Forwarder) OnEvent(ctx context.Context, dialContext func(ctx context.C
 }
 
 func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr string) {
+	// rule.Proto is limited to tcp, udp and any by limayaml validation, and the guest
+	// agent only ever reports tcp or udp. Without this check any other value would
+	// match none of the rules that name a protocol, so it would skip an `ignore` rule
+	// and then be forwarded by the catch-all rule the caller appends last.
+	if guest.Protocol != limatype.ProtoTCP && guest.Protocol != limatype.ProtoUDP {
+		logrus.Debugf("Not forwarding %s: unsupported protocol %#q", guest.HostString(), guest.Protocol)
+		return "", guest.HostString()
+	}
 	guestIP := net.ParseIP(guest.Ip)
 	for _, rule := range fw.rules {
 		if rule.GuestSocket != "" {
