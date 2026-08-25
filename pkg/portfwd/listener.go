@@ -130,7 +130,6 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, dialContext func(ctx
 
 func (p *ClosableListeners) forwardUDP(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), hostAddress, guestAddress string) {
 	key := key("udp", hostAddress, guestAddress)
-	defer p.Remove(ctx, "udp", hostAddress, guestAddress)
 
 	p.udpListenersRW.Lock()
 	_, ok := p.udpListeners[key]
@@ -145,6 +144,7 @@ func (p *ClosableListeners) forwardUDP(ctx context.Context, dialContext func(ctx
 		p.udpListenersRW.Unlock()
 		return
 	}
+	defer p.Remove(ctx, "udp", hostAddress, guestAddress)
 	p.udpListeners[key] = udpConn
 	p.udpListenersRW.Unlock()
 
