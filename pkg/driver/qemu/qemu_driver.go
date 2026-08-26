@@ -125,6 +125,18 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	}
 
+	if cfg.NestedVirtualization != nil && *cfg.NestedVirtualization {
+		if runtime.GOOS == "darwin" {
+			macOSProductVersion, err := osutil.ProductVersion()
+			if err != nil {
+				return err
+			}
+			if macOSProductVersion.LessThan(*semver.New("15.0.0")) {
+				return errors.New("nested virtualization requires macOS 15 or newer")
+			}
+		}
+	}
+
 	return nil
 }
 
