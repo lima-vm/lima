@@ -249,3 +249,10 @@ func TapName(uid int, instName, netName string) string {
 	digits := strconv.FormatUint(packed, 36)
 	return tapPrefix + strings.Repeat("0", tapDigits-len(digits)) + digits
 }
+
+// InstanceID returns the identity passed to TapName and TapCmd for an instance,
+// derived from its directory so that same-named instances in different LIMA_HOMEs don't share a tap.
+func InstanceID(instDir string) string {
+	sum := sha256.Sum256([]byte(instDir))
+	return fmt.Sprintf("%x", sum[:8])
+}

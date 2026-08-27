@@ -121,7 +121,9 @@ func (c *netConfig) run(ctx context.Context) error {
 
 	<-sig
 	logrus.Infof("Shutting down the network on bridge %#q", c.bridge)
-	return errors.Join(os.Remove(c.pidFile), stopDnsmasq(dnsmasq), c.down(downCtx))
+	// limactl treats a missing PID file as a finished teardown, so remove it last.
+	err = errors.Join(stopDnsmasq(dnsmasq), c.down(downCtx))
+	return errors.Join(err, os.Remove(c.pidFile))
 }
 
 // up creates the bridge and, for "shared" networks, the NAT rules. Every step is
@@ -242,15 +244,16 @@ func (c *netConfig) restoreForwarding(ctx context.Context) {
 
 // firewallZones are the firewalld zones the Lima bridge is bound to, in order of
 // preference. They all have target=ACCEPT, so the guests' forwarded traffic
-// passes, while a low priority reject rule leaves only DHCP, DNS and ICMP
-// reachable on the host itself. "lima" is not shipped by firewalld and only
-// exists when an administrator (or ensureFirewallZone) created it; the other two
-// are built in. The "trusted" zone is deliberately not used: it would expose
+// passes, while a low priority reject rule blocks the host's other services.
+// The "lima" zone that ensureFirewallZone creates opens only DHCP, DNS and ICMP;
+// "nm-shared" (installed by NetworkManager) also opens SSH, and "libvirt"
+// (installed by libvirt) also opens SSH, TFTP and DHCPv6. None of them ships with
+// firewalld itself. The "trusted" zone is deliberately not used: it would expose
 // every service listening on the host to the guests.
 var firewallZones = []string{"lima", "nm-shared", "libvirt"}
 
 // firewalldZone returns the zone to bind the bridge to, creating "lima" when the
-// host has none of the built-in ones.
+// host has none of the others.
 func firewalldZone(ctx context.Context) (string, error) {
 	out, err := output(ctx, "firewall-cmd", "--get-zones")
 	if err != nil {
