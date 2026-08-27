@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"gotest.tools/v3/assert"
-
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func TestUnmarshalPlist(t *testing.T) {
@@ -67,17 +65,17 @@ func TestUnmarshalPlist(t *testing.T) {
 					Array: Array{
 						{
 							Dict: map[string]Value{
-								"strKey":                     {String: ptr.Of("strVal")},
-								" strKey with\n\t\t\tspaces": {String: ptr.Of(" strVal\n\t\t\twith space")},
-								"intKey":                     {Integer: ptr.Of(int64(42))},
-								" intKey with\n\t\t\tspaces": {Integer: ptr.Of(int64(43))},
-								"intKeyZero":                 {Integer: ptr.Of(int64(0))},
+								"strKey":                     {String: new("strVal")},
+								" strKey with\n\t\t\tspaces": {String: new(" strVal\n\t\t\twith space")},
+								"intKey":                     {Integer: new(int64(42))},
+								" intKey with\n\t\t\tspaces": {Integer: new(int64(43))},
+								"intKeyZero":                 {Integer: new(int64(0))},
 								"dataKey":                    {Data: []byte("hello")},
-								"dateKey":                    {Date: ptr.Of(time.Date(2020, time.January, 2, 3, 4, 5, 0, time.UTC))},
-								"trueKey":                    {Boolean: ptr.Of(true)},
-								"falseKey":                   {Boolean: ptr.Of(false)},
-								"realKey":                    {Real: ptr.Of(3.14)},
-								"realExpKey":                 {Real: ptr.Of(1e-6)},
+								"dateKey":                    {Date: new(time.Date(2020, time.January, 2, 3, 4, 5, 0, time.UTC))},
+								"trueKey":                    {Boolean: new(true)},
+								"falseKey":                   {Boolean: new(false)},
+								"realKey":                    {Real: new(3.14)},
+								"realExpKey":                 {Real: new(1e-6)},
 							},
 						},
 					},

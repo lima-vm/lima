@@ -786,8 +786,7 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 	cmd.Stderr = buf
 	err = cmd.Run()
 	if err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
+		if exitErr, ok := errors.AsType[*exec.ExitError](err); ok {
 			exitErr.Stderr = buf.Bytes()
 		}
 	}

@@ -18,7 +18,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/freeport"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/windows"
 )
@@ -74,10 +73,10 @@ func New() *LimaWslDriver {
 func (l *LimaWslDriver) Configure(ctx context.Context, inst *limatype.Instance) (*driver.ConfiguredDriver, error) {
 	cfg := inst.Config
 	if cfg.VMType == nil {
-		cfg.VMType = ptr.Of(limatype.WSL2)
+		cfg.VMType = new(limatype.WSL2)
 	}
 	if cfg.MountType == nil {
-		cfg.MountType = ptr.Of(limatype.WSLMount)
+		cfg.MountType = new(limatype.WSLMount)
 	}
 	if err := validateConfig(ctx, cfg); err != nil {
 		return nil, err
