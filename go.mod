@@ -41,7 +41,7 @@ require (
 	github.com/mattn/go-shellwords v1.0.14
 	github.com/mdlayher/netlink v1.11.2
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
-	github.com/miekg/dns v1.1.72 // gomodjail:unconfined
+	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.53.3
 	github.com/modelcontextprotocol/go-sdk v1.7.0
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
