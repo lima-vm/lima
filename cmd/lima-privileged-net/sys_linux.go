@@ -202,7 +202,7 @@ func ipForwardEnabled() bool {
 }
 
 // verifySelf refuses to run when this executable, or any directory leading to
-// it, is writable by anyone but root. This helper runs as root, so a writable path
+// it, is writable by anyone but root (or the root group). This helper runs as root, so a writable path
 // hands root to whoever can write there. The sudoers file additionally pins the
 // SHA-256 of the binary, but that only covers hosts that use it: a host with
 // blanket password-less sudo has no sudoers entry to pin.
@@ -225,8 +225,8 @@ func verifySelf() error {
 		if st.Uid != 0 {
 			return fmt.Errorf("%#q is owned by uid %d, not by root", path, st.Uid)
 		}
-		if fi.Mode()&0o022 != 0 {
-			return fmt.Errorf("%#q is writable by non-root users (mode %#o)", path, fi.Mode().Perm())
+		if fi.Mode()&0o002 != 0 || (fi.Mode()&0o020 != 0 && st.Gid != 0) {
+			return fmt.Errorf("%#q is writable by non-root users (mode %#o, gid %d)", path, fi.Mode().Perm(), st.Gid)
 		}
 	}
 	return nil

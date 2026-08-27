@@ -508,12 +508,21 @@ jobs:
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/colima.bats
 
   vmnet:
-    name: "VMNet tests (QEMU)"
-    runs-on: macos-15-large  # Intel
+    name: "VMNet tests (QEMU, ${{ matrix.runs-on }})"
+    runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on:
+        - macos-15-large  # Intel; socket_vmnet
+        - ubuntu-24.04  # lima-privileged-net
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
+        # Without tags, limactl warns about its version on stderr.
+        fetch-depth: 0
+        submodules: true
         persist-credentials: false
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
       with:
@@ -522,6 +531,7 @@ jobs:
     - name: Make
       run: make
     - name: "Inject `no_timer_check` to kernel cmdline"
+      if: runner.os == 'macOS'
       # workaround to https://github.com/lima-vm/lima/issues/84
       run: |
         export PATH="$PWD/_output/bin:$PATH"
@@ -534,25 +544,35 @@ jobs:
       uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
-    - name: Install test dependencies
+    - name: Install test dependencies (macOS)
+      if: runner.os == 'macOS'
       run: brew install qemu bash coreutils w3m
     - name: Install socket_vmnet
+      if: runner.os == 'macOS'
       env:
         SOCKET_VMNET_VERSION: v1.2.2
       run: |
-        (
-          cd ~
-          git clone https://github.com/lima-vm/socket_vmnet
-          cd socket_vmnet
-          git checkout $SOCKET_VMNET_VERSION
-          sudo git config --global --add safe.directory /Users/runner/socket_vmnet
-          sudo make PREFIX=/opt/socket_vmnet install
-        )
-        limactl sudoers | sudo tee /etc/sudoers.d/lima
-    - name: Unit test (pkg/networks) with socket_vmnet
+        cd ~
+        git clone https://github.com/lima-vm/socket_vmnet
+        cd socket_vmnet
+        git checkout $SOCKET_VMNET_VERSION
+        sudo git config --global --add safe.directory /Users/runner/socket_vmnet
+        sudo make PREFIX=/opt/socket_vmnet install
+    - name: Install test dependencies (Linux)
+      if: runner.os == 'Linux'
+      env:
+        DEBIAN_FRONTEND: noninteractive
+      run: |
+        sudo apt-get update
+        sudo ./hack/install-qemu.sh
+        sudo apt-get install -y --no-install-recommends dnsmasq-base iperf3 w3m
+    - name: Install sudoers file
+      # The BATS tests use their own LIMA_HOME, so generate the file from its networks.yaml.
+      run: LIMA_HOME="$HOME/.lima-bats" limactl sudoers | sudo tee /etc/sudoers.d/lima
+    - name: Unit test (pkg/networks)
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
-    - name: Test socket_vmnet
+    - name: Test shared network with templates/default.yaml
       uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
       with:
         timeout_minutes: 30
@@ -561,6 +581,9 @@ jobs:
         command: ./hack/test-templates.sh templates/default.yaml
     - if: always()
       uses: $/.github/actions/upload_failure_logs_if_exists
+    # "bridged" is not tested: it needs a pre-existing bridge on the host.
+    - name: "Run BATS shared/host network tests"
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/network-shared-host.bats
 
   upgrade:
     name: "Upgrade tests (QEMU, macOS host)"

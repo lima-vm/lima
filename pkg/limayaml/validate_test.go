@@ -783,3 +783,24 @@ osOpts:
 		})
 	}
 }
+
+func TestWarnExperimentalNetworks(t *testing.T) {
+	if runtime.GOOS != "linux" {
+		t.Skip("the lima networks are experimental on Linux hosts only")
+	}
+	t.Setenv("LIMA_HOME", t.TempDir())
+	for name, experimental := range map[string]bool{"user-v2": false, "shared": true} {
+		t.Run(name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte("mountType: reverse-sshfs\nimages: [{location: /}]\nnetworks: [{lima: "+name+"}]"), "lima.yaml")
+			assert.NilError(t, err)
+			hook := logrustest.NewGlobal()
+			defer hook.Reset()
+			warnExperimental(y)
+			var warned bool
+			for _, e := range hook.AllEntries() {
+				warned = warned || strings.Contains(e.Message, "on Linux is experimental")
+			}
+			assert.Equal(t, warned, experimental)
+		})
+	}
+}

@@ -63,7 +63,7 @@ func newStartCommand() *cobra.Command {
 func newTapCommand() *cobra.Command {
 	var bridge, network string
 	cmd := &cobra.Command{
-		Use:   "tap INSTANCE",
+		Use:   "tap INSTANCE_ID",
 		Short: "Create a tap device owned by the calling user and attach it to a bridge",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
