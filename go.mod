@@ -21,7 +21,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2 // gomodjail:unconfined
 	github.com/apparentlymart/go-cidr v1.1.1
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e
-	github.com/cheggaaa/pb/v3 v3.2.0 // gomodjail:unconfined
+	github.com/cheggaaa/pb/v3 v3.2.1 // gomodjail:unconfined
 	github.com/cilium/ebpf v0.22.0 // gomodjail:unconfined
 	github.com/containerd/continuity v0.5.0
 	github.com/containers/gvisor-tap-vsock v0.8.9 // gomodjail:unconfined
@@ -104,7 +104,7 @@ require (
 	github.com/linuxkit/virtsock v0.0.0-20220523201153-1a23e78aa7a2 // indirect
 	github.com/magiconair/properties v1.8.10 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
-	github.com/mattn/go-runewidth v0.0.24 // indirect
+	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/mdlayher/socket v0.6.0 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
