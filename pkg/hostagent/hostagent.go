@@ -951,10 +951,17 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 
 	logrus.Debugf("guest agent info: %+v", info)
 
-	onEvent := func(ev *guestagentapi.Event) {
+	onEvent := func(ev *guestagentapi.Event) error {
 		logrus.Debugf("guest agent event: %+v", ev)
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %#q", f)
+		}
+		// IPPort.Ip is under the guest's control and ends up in PortForwardEvent.GuestAddr,
+		// which limactl start/watch print to the terminal, so reject anything that is not an IP.
+		for _, f := range slices.Concat(ev.AddedLocalPorts, ev.RemovedLocalPorts) {
+			if net.ParseIP(f.Ip) == nil {
+				return fmt.Errorf("guest agent reported invalid IP %#q", f.Ip)
+			}
 		}
 		// History of the default value of useSSHFwd:
 		// - v0.1.0:        true  (effectively)
@@ -976,6 +983,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 			dialContext := portfwd.DialContextToGRPCTunnel(client)
 			a.grpcPortForwarder.OnEvent(ctx, dialContext, ev)
 		}
+		return nil
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {

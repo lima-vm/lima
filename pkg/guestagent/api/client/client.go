@@ -63,7 +63,7 @@ func (c *GuestAgentClient) Info(ctx context.Context) (*api.Info, error) {
 	return c.cli.GetInfo(ctx, &emptypb.Empty{})
 }
 
-func (c *GuestAgentClient) Events(ctx context.Context, eventCb func(response *api.Event)) error {
+func (c *GuestAgentClient) Events(ctx context.Context, eventCb func(response *api.Event) error) error {
 	events, err := c.cli.GetEvents(ctx, &emptypb.Empty{})
 	if err != nil {
 		return err
@@ -74,7 +74,9 @@ func (c *GuestAgentClient) Events(ctx context.Context, eventCb func(response *ap
 		if err != nil {
 			return err
 		}
-		eventCb(recv)
+		if err := eventCb(recv); err != nil {
+			return err
+		}
 	}
 }
 
