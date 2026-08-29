@@ -225,6 +225,10 @@ type Audio struct {
 	Device *string `yaml:"device,omitempty" json:"device,omitempty" jsonschema:"nullable"`
 	// Interface is the virtual hardware presentation
 	Interface *string `yaml:"interface,omitempty" json:"interface,omitempty" jsonschema:"nullable"`
+	// Microphone attaches an audio *input* stream in addition to playback.
+	// Opt-in, because it makes the host ask for microphone permission.
+	// VZ driver only for now; the QEMU driver warns and ignores it.
+	Microphone *bool `yaml:"microphone,omitempty" json:"microphone,omitempty" jsonschema:"nullable"` // default: false
 }
 
 type VNCOptions struct {

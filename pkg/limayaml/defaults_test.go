@@ -133,8 +133,9 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS: new(false),
 		},
 		Audio: limatype.Audio{
-			Device:    new(""),
-			Interface: new(""),
+			Device:     new(""),
+			Interface:  new(""),
+			Microphone: new(false),
 		},
 		Video: limatype.Video{
 			Display: new("none"),
@@ -380,8 +381,9 @@ func TestFillDefault(t *testing.T) {
 			// Remove driver-specific firmware images from defaults
 		},
 		Audio: limatype.Audio{
-			Device:    new("coreaudio"),
-			Interface: new("virtio"),
+			Device:     new("coreaudio"),
+			Interface:  new("virtio"),
+			Microphone: new(true),
 		},
 		Video: limatype.Video{
 			Display: new("cocoa"),
@@ -594,8 +596,9 @@ func TestFillDefault(t *testing.T) {
 			LegacyBIOS: new(true),
 		},
 		Audio: limatype.Audio{
-			Device:    new("coreaudio"),
-			Interface: new("hda"),
+			Device:     new("coreaudio"),
+			Interface:  new("hda"),
+			Microphone: new(true),
 		},
 		Video: limatype.Video{
 			Display: new("cocoa"),

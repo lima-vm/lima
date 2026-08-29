@@ -24,6 +24,7 @@ import (
 
 var knownYamlProperties = []string{
 	"Arch",
+	"Audio",
 	"Containerd",
 	"CopyToHost",
 	"CPUType",
@@ -161,11 +162,18 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 			}
 		}
 
-		if cfg.Audio.Device != nil {
-			audioDevice := *cfg.Audio.Device
-			if audioDevice != "" {
-				logrus.Warnf("Ignoring: vmType %s: `audio.device`: %+v", *cfg.VMType, audioDevice)
-			}
+		audio := cfg.Audio
+		if audio.Device != nil && *audio.Device == "" {
+			audio.Device = nil
+		}
+		if audio.Interface != nil && *audio.Interface == "" {
+			audio.Interface = nil
+		}
+		if audio.Microphone != nil && !*audio.Microphone {
+			audio.Microphone = nil
+		}
+		if unknown := reflectutil.UnknownNonEmptyFields(audio); len(unknown) > 0 {
+			logrus.Warnf("Ignoring: vmType %s: audio: %+v", *cfg.VMType, unknown)
 		}
 	}
 
@@ -242,9 +250,6 @@ func (l *LimaWslDriver) Start(ctx context.Context) (chan error, error) {
 	if l.Instance.Config.SSH.OverVsock != nil && *l.Instance.Config.SSH.OverVsock {
 		// Probably never supportable for WSL2
 		logrus.Warn(".ssh.overVsock is not supported for WSL2 driver")
-	}
-	if l.Instance.Config.Audio.Interface != nil {
-		logrus.Warn("`audio.interface` is ignored when using the WSL2 driver")
 	}
 	logrus.Infof("Starting WSL VM")
 	status, err := getWslStatus(ctx, l.Instance.Name)

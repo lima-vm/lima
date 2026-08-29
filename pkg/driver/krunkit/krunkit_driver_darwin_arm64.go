@@ -28,6 +28,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -247,6 +248,20 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 
 	if cfg.OS != nil && *cfg.OS == limatype.WINDOWS {
 		return errors.New("currently Windows guest OS is only supported on QEMU")
+	}
+
+	audio := cfg.Audio
+	if audio.Device != nil && *audio.Device == "" {
+		audio.Device = nil
+	}
+	if audio.Interface != nil && *audio.Interface == "" {
+		audio.Interface = nil
+	}
+	if audio.Microphone != nil && !*audio.Microphone {
+		audio.Microphone = nil
+	}
+	if unknown := reflectutil.UnknownNonEmptyFields(audio); len(unknown) > 0 {
+		logrus.Warnf("vmType %s: ignoring audio: %+v", *cfg.VMType, unknown)
 	}
 
 	return nil

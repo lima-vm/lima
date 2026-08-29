@@ -128,6 +128,7 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 
 	flags.String("audio-device", "", commentPrefix+"Audio device backend (e.g., 'pa', 'coreaudio', 'none')")
 	flags.String("audio-interface", "", commentPrefix+"Audio virtual hardware interface ('hda' or 'virtio')")
+	flags.Bool("audio-microphone", false, commentPrefix+"Attach an audio input stream as well as playback (vz only)")
 }
 
 func defaultExprFunc(expr string) func(v *flag.Flag) ([]string, error) {
@@ -387,6 +388,7 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 		},
 		{"audio-device", d(".audio.device = %q"), false, true},
 		{"audio-interface", d(".audio.interface = %q"), false, true},
+		{"audio-microphone", d(".audio.microphone = %s"), false, true},
 		{"ssh-port", d(".ssh.localPort = %s"), false, false},
 		{
 			"image-variant",
