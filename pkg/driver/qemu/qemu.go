@@ -412,7 +412,7 @@ func audioDevice() string {
 	return "oss"
 }
 
-func defaultCPUType() limatype.CPUType {
+func defaultCPUType(qemuVersion *semver.Version) limatype.CPUType {
 	// x86_64 + TCG + max was previously unstable until 2021.
 	// https://bugzilla.redhat.com/show_bug.cgi?id=1999700
 	// https://bugs.launchpad.net/qemu/+bug/1748296
@@ -435,7 +435,7 @@ func defaultCPUType() limatype.CPUType {
 	}
 	for arch := range cpuType {
 		if limatype.IsNativeArch(arch) && Accel(arch) != "tcg" {
-			if hasHostCPU() {
+			if hasHostCPU(qemuVersion) {
 				cpuType[arch] = "host"
 			}
 		}
@@ -453,8 +453,8 @@ func defaultCPUType() limatype.CPUType {
 	return cpuType
 }
 
-func resolveCPUType(y *limatype.LimaYAML) string {
-	cpuType := defaultCPUType()
+func resolveCPUType(y *limatype.LimaYAML, qemuVersion *semver.Version) string {
+	cpuType := defaultCPUType(qemuVersion)
 	var overrideCPUType bool
 	var qemuOpts limatype.QEMUOpts
 	if err := limayaml.Convert(y.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
@@ -535,7 +535,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// CPU
-	cpu := resolveCPUType(y)
+	cpu := resolveCPUType(y, version)
 	if runtime.GOOS == "darwin" && runtime.GOARCH == "amd64" {
 		switch {
 		case strings.HasPrefix(cpu, "host"), strings.HasPrefix(cpu, "max"):
@@ -1347,7 +1347,7 @@ var hasSMEDarwin = sync.OnceValue(func() bool {
 	return s == "1"
 })
 
-func hasHostCPU() bool {
+func hasHostCPU(qemuVersion *semver.Version) bool {
 	switch runtime.GOOS {
 	case "darwin":
 		if hasSMEDarwin() {
@@ -1368,7 +1368,13 @@ func hasHostCPU() bool {
 		return true
 	case "linux":
 		return true
-	case "netbsd", "windows":
+	case "windows":
+		// Should have been 11.1.0, but it contained a regression when running in nested virt
+		if qemuVersion.LessThan(*semver.New("11.1.1")) {
+			return false
+		}
+		return true
+	case "netbsd":
 		return false
 	}
 	// Not reached
