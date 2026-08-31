@@ -41,6 +41,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
@@ -883,7 +884,27 @@ func (l *LimaQemuDriver) SSHAddress(_ context.Context) (string, error) {
 	return "127.0.0.1", nil
 }
 
-func (l *LimaQemuDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string {
+func (l *LimaQemuDriver) InspectStatus(_ context.Context, instance *limatype.Instance) string {
+	if instance == nil || instance.Dir == "" {
+		return limatype.StatusBroken
+	}
+
+	qemuPIDPath := filepath.Join(instance.Dir, filenames.PIDFile(limatype.QEMU))
+	if _, statErr := os.Stat(qemuPIDPath); statErr != nil {
+		if errors.Is(statErr, os.ErrNotExist) {
+			return ""
+		}
+		return limatype.StatusBroken
+	}
+	pid, err := store.ReadPIDFile(qemuPIDPath)
+	if err != nil {
+		return limatype.StatusBroken
+	}
+
+	if pid == 0 {
+		return limatype.StatusBroken
+	}
+
 	return ""
 }
 
