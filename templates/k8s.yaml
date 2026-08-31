@@ -256,7 +256,7 @@ param:
   stability: "stable"
   # The release can be either "stable" or "v1.xx" (branch)
   # (stable version is found at: <https://dl.k8s.io/release/stable.txt>)
-  release: "v1.36"
+  release: "v1.37"
   # The k8s version can be either "stable" or "v1.xx.y"
   version: "stable"
   # The flannel version is either "latest" or "v0.xx.y"
