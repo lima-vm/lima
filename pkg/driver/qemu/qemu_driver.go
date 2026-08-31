@@ -103,6 +103,10 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return err
 	}
 
+	if err := validate9pMountOptions(cfg); err != nil {
+		return err
+	}
+
 	for i, nw := range cfg.Networks {
 		if unknown := reflectutil.UnknownNonEmptyFields(nw,
 			"Lima",
@@ -137,6 +141,35 @@ func validateArch(ctx context.Context, cfg *limatype.LimaYAML) error {
 		}
 		if err := checkBinarySignature(ctx, vmArch); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+// The 9p option values below are interpolated verbatim into the QEMU `-virtfs`
+// argument (securityModel) and the guest mount options (protocolVersion, cache),
+// so a value outside these sets, e.g. one containing a comma, would inject extra
+// options. Keep them in sync with the documented values in docs/config/mount.md.
+var (
+	supported9pSecurityModels   = []string{"passthrough", "mapped-xattr", "mapped-file", "none"}
+	supported9pProtocolVersions = []string{"9p2000", "9p2000.u", "9p2000.L"}
+	supported9pCaches           = []string{"none", "loose", "fscache", "mmap"}
+)
+
+// validate9pMountOptions rejects 9p mount options that are not among the
+// documented values, since they are interpolated verbatim into the QEMU
+// `-virtfs` argument and the guest mount options string.
+func validate9pMountOptions(cfg *limatype.LimaYAML) error {
+	for i := range cfg.Mounts {
+		nineP := cfg.Mounts[i].NineP
+		if sm := nineP.SecurityModel; sm != nil && !slices.Contains(supported9pSecurityModels, *sm) {
+			return fmt.Errorf("field `mounts[%d].9p.securityModel` must be one of %v, got %#q", i, supported9pSecurityModels, *sm)
+		}
+		if pv := nineP.ProtocolVersion; pv != nil && !slices.Contains(supported9pProtocolVersions, *pv) {
+			return fmt.Errorf("field `mounts[%d].9p.protocolVersion` must be one of %v, got %#q", i, supported9pProtocolVersions, *pv)
+		}
+		if c := nineP.Cache; c != nil && !slices.Contains(supported9pCaches, *c) {
+			return fmt.Errorf("field `mounts[%d].9p.cache` must be one of %v, got %#q", i, supported9pCaches, *c)
 		}
 	}
 	return nil
