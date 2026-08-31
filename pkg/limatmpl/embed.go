@@ -403,6 +403,16 @@ func (tmpl *Template) combineAdditionalDisks() {
 				tmpl.copyListEntryField(additionalDisks, dst, src, "fsArgs")
 				dest.FSArgs = disk.FSArgs
 			}
+			if dest.Mount == nil && disk.Mount != nil {
+				upgradeDiskToMap()
+				tmpl.copyListEntryField(additionalDisks, dst, src, "mount")
+				dest.Mount = disk.Mount
+			}
+			if dest.MountPoint == nil && disk.MountPoint != nil {
+				upgradeDiskToMap()
+				tmpl.copyListEntryField(additionalDisks, dst, src, "mountPoint")
+				dest.MountPoint = disk.MountPoint
+			}
 			// TODO: Is there a good reason not to copy comments from wildcard entries?
 			if disk.Name != "*" {
 				tmpl.copyListEntryComments(additionalDisks, dst, src, "")
