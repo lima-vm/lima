@@ -13,6 +13,13 @@
 	</array>
 	<key>RunAtLoad</key>
 	<true/>
+{{- if .KeepAlive }}
+	<key>KeepAlive</key>
+	<dict>
+		<key>SuccessfulExit</key>
+		<false/>
+	</dict>
+{{- end }}
 	<key>StandardErrorPath</key>
 	<string>launchd.stderr.log</string>
 	<key>StandardOutPath</key>
