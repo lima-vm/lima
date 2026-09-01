@@ -64,10 +64,10 @@ Lima-specific conventions. See [SSH](../usage/ssh.md) for details.
 
 ## See also
 
-Plain mode applies to all guest operating systems. For OS-specific differences, see
-the [Guest OS](../usage/guests/_index.md) pages:
+This page assumes Linux as the guest OS.
 
-- [Linux](../usage/guests/linux.md#plain-mode)
+For OS-specific differences, see the [Guest OS](../usage/guests/_index.md) pages:
+
 - [FreeBSD](../usage/guests/freebsd.md#plain-mode)
 - [macOS](../usage/guests/macos.md#plain-mode)
 
