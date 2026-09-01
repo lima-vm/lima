@@ -122,6 +122,7 @@ See <https://lima-vm.io/docs/examples/ai/>.
 
 - [`experimental/vnc`](./experimental/vnc.yaml): use vnc display and xorg server
 - [`experimental/alsa`](./experimental/alsa.yaml): use alsa and default audio device
+- [`experimental/hcs`](./experimental/hcs.yaml): use [HCS driver](https://lima-vm.io/docs/config/vmtype/hcs/) on Windows hosts
 
 ### Lost+found
 

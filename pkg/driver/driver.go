@@ -119,7 +119,7 @@ type ConfiguredDriver struct {
 // the instance directory and the driver's capability flags. It is returned by
 // Driver.Info and, for external drivers, carried as JSON in InfoResponse.
 type Info struct {
-	// Name is the driver name, e.g. "qemu", "vz", "wsl2" or "krunkit".
+	// Name is the driver name, e.g. "qemu", "vz", "wsl2", "hcs" or "krunkit".
 	Name string `json:"name"`
 	// VsockPort is the vsock port used by the guest agent, or 0 when vsock is
 	// not used.

@@ -155,7 +155,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 	}
 
 	var udpDNSLocalPort, tcpDNSLocalPort int
-	if *inst.Config.HostResolver.Enabled {
+	if limayaml.HostResolverEnabled(inst.Config) {
 		udpDNSLocalPort, err = freeport.UDP()
 		if err != nil {
 			return nil, err
@@ -408,7 +408,7 @@ func (a *HostAgent) Run(ctx context.Context) error {
 	}()
 	adjustNofileRlimit()
 
-	if limayaml.FirstUsernetIndex(a.instConfig) == -1 && *a.instConfig.HostResolver.Enabled {
+	if limayaml.FirstUsernetIndex(a.instConfig) == -1 && limayaml.HostResolverEnabled(a.instConfig) {
 		hosts := a.instConfig.HostResolver.Hosts
 		if hosts == nil {
 			hosts = make(map[string]string)

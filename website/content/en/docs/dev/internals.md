@@ -47,6 +47,7 @@ disk:
 - `image`: the downloaded VM image; renamed to `disk` or `iso` during setup
 - `image.ipsw`: hardlink to `image`, created for running `VZMacOSInstaller` that requires the image file to have the `.ipsw` suffix
 - `disk`: the VM disk (can be a symlink to legacy `diffdisk`)
+- `disk.vhdx`: hardlink to `disk` to pass a `.vhdx` path to HCS driver
 - `iso`: optional CDROM image for ISO-based installations (can be a symlink to legacy `basedisk`)
 - `basedisk`: legacy name for the downloaded image (pre-v2.1 instances; may remain as a qcow2 backing file)
 - `diffdisk`: legacy name for `disk` (pre-v2.1 instances)
@@ -72,7 +73,7 @@ VZ:
 - `vz-efi`: EFIVariable store file for a VM
 
 Serial:
-- `serial.log`: default serial log (QEMU only), for debugging
+- `serial.log`: default serial log (QEMU and HCS), for debugging
 - `serial.sock`: default serial socket (QEMU only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serial.sock`)
 - `serialp.log`: PCI serial log (QEMU (ARM) only), for debugging
 - `serialp.sock`: PCI serial socket (QEMU (ARM) only), for debugging (Usage: `socat -,echo=0,icanon=0 unix-connect:serialp.sock`)

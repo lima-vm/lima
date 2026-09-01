@@ -401,8 +401,14 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 	}
 
-	if y.HostResolver.Enabled != nil && *y.HostResolver.Enabled && len(y.DNS) > 0 {
-		errs = errors.Join(errs, errors.New("field `dns` must be empty when field `HostResolver.Enabled` is true"))
+	if y.VMType != nil && *y.VMType == limatype.HCS {
+		if y.HostResolver.Enabled != nil && *y.HostResolver.Enabled && len(y.DNS) > 0 {
+			errs = errors.Join(errs, errors.New("field `dns` must be empty when field `HostResolver.Enabled` is true"))
+		}
+	} else {
+		if HostResolverEnabled(y) && len(y.DNS) > 0 {
+			errs = errors.Join(errs, errors.New("field `dns` must be empty when field `HostResolver.Enabled` is true"))
+		}
 	}
 
 	err := validateNetwork(y)

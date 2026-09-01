@@ -78,6 +78,14 @@ func FirstUsernetIndex(l *limatype.LimaYAML) int {
 	return slices.IndexFunc(l.Networks, func(network limatype.Network) bool { return networks.IsUsernet(network.Lima) })
 }
 
+// HostResolverEnabled returns whether the host resolver is enabled.
+// The default value depends on the driver and is filled in the driver-specific FillDefault().
+// A nil value is treated as true to keep HostResolver.Enabled true for drivers which do not fill the field.
+
+func HostResolverEnabled(l *limatype.LimaYAML) bool {
+	return l.HostResolver.Enabled == nil || *l.HostResolver.Enabled
+}
+
 func MACAddress(uniqueID string) string {
 	sha := sha256.Sum256([]byte(osutil.MachineID() + uniqueID))
 	// "5" is the magic number in the Lima ecosystem.
@@ -616,9 +624,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if o.HostResolver.Enabled != nil {
 		y.HostResolver.Enabled = o.HostResolver.Enabled
 	}
-	if y.HostResolver.Enabled == nil {
-		y.HostResolver.Enabled = new(true)
-	}
+	// y.HostResolver.Enabled default value depends on the driver; filled in driver-specific FillDefault()
 
 	if y.HostResolver.IPv6 == nil {
 		y.HostResolver.IPv6 = d.HostResolver.IPv6

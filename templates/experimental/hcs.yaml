@@ -1,0 +1,13 @@
+# This template only works on Windows versions with Hyper-V platform enabled.
+vmType: hcs
+
+images:
+# The following image is qcow2; the hcs driver converts it into VHDX on the first start using `qemu-img`.
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260720/ubuntu-26.04-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:117816726abbdefc5ef3e38902e81a76f1c76c3610e709999d0885f9d5d9b477"
+
+plain: true
+
+dns:
+- 8.8.8.8

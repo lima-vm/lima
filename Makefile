@@ -644,10 +644,12 @@ shfmt:
 
 .PHONY: go-licenses
 go-licenses:
-	# the allow list corresponds to https://github.com/cncf/foundation/blob/e5db022a0009f4db52b89d9875640cf3137153fe/allowed-third-party-license-policy.md
+	# the allow list corresponds to https://github.com/cncf/foundation/blob/87e70a07d5a0cf06cd6f8208b8d52c16f035724a/policies-guidance/allowed-third-party-license-policy.md
 	# hashicorp/hcl/v2 is MPL-2.0; covered by the CNCF license exception for hashicorp/hcl
 	# see also https://github.com/cncf/foundation/issues/1242
-	go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
+	# segmentio/asm is MIT-0; approved by CNCF, but go-licenses has not support it yet.
+	# see also https://github.com/google/licenseclassifier/issues/75
+	go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 --ignore github.com/segmentio/asm ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 
 .PHONY: gosocialcheck
 gosocialcheck:

@@ -140,7 +140,7 @@ func TestFillDefault(t *testing.T) {
 			Display: new("none"),
 		},
 		HostResolver: limatype.HostResolver{
-			Enabled: new(true),
+			Enabled: nil,
 			IPv6:    new(false),
 		},
 		PropagateProxyEnv: new(true),
@@ -539,7 +539,8 @@ func TestFillDefault(t *testing.T) {
 
 	expect.HostResolver.Hosts["default"] = dExpected.HostResolver.Hosts["default"]
 
-	// dExpected.DNS will be ignored, and not appended to y.DNS
+	// The user-provided default is applied when the config doesn't specify it.
+	expect.HostResolver.Enabled = dExpected.HostResolver.Enabled
 
 	// "TWO" does not exist in filledDefaults.Env, so is set from dExpected.Env
 	expect.Env["TWO"] = dExpected.Env["TWO"]
