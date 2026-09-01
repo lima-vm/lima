@@ -33,15 +33,25 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	# Clamp the filesystem label to what the filesystem accepts: mkfs.ext4
 	# truncates an over-long label silently, but mkfs.xfs treats it as an error
 	# and would abort the boot. Like PARTLABEL this is now only a convenience
-	# for the user, so truncation costs nothing.
+	# for the user, so truncation costs nothing. For an fsType not listed here,
+	# the limit (and even whether mkfs.$FORMAT_FSTYPE accepts a label at all)
+	# is unknown, so no label is set rather than guess and risk aborting boot.
 	case "$FORMAT_FSTYPE" in
+	ext2 | ext3 | ext4) FSLABEL_MAX=16 ;;
 	xfs) FSLABEL_MAX=12 ;;
 	btrfs) FSLABEL_MAX=255 ;;
 	swap) FSLABEL_MAX=15 ;;
-	*) FSLABEL_MAX=16 ;;
+	*) FSLABEL_MAX=0 ;;
 	esac
-	FSLABEL="lima-${DISK_NAME}"
-	FSLABEL="${FSLABEL:0:FSLABEL_MAX}"
+	FSLABEL=""
+	if [ "$FSLABEL_MAX" -gt 0 ]; then
+		FSLABEL="lima-${DISK_NAME}"
+		FSLABEL="${FSLABEL:0:FSLABEL_MAX}"
+	fi
+	LABEL_ARGS=()
+	if [ -n "$FSLABEL" ]; then
+		LABEL_ARGS=(-L "$FSLABEL")
+	fi
 
 	# Do not identify the disk by its filesystem label. mkfs silently truncates
 	# labels to a filesystem-dependent length (16 bytes on ext4, 12 on xfs), so
@@ -55,13 +65,14 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 	# by older Lima versions, which must never be reformatted on upgrade.
 	#
 	# blkid is probed rather than tested through /dev/disk/by-*: those symlinks
-	# depend on udev having probed the device, and can be absent or stale. The
-	# output is matched with a bash substring test instead of a pipe to grep:
-	# `grep -q` exits at the first match, blkid then takes SIGPIPE, and under
-	# `set -o pipefail` the pipeline reports failure even though the partition
-	# does have a filesystem -- which would reformat the disk.
-	BLKID_OUTPUT="$(blkid || true)"
-	if [[ $'\n'"$BLKID_OUTPUT" != *$'\n'"${PARTITION}:"* ]]; then
+	# depend on udev having probed the device, and can be absent or stale.
+	#
+	# The TYPE tag is queried specifically, not just whether blkid recognizes
+	# the partition at all: on GPT, blkid reports PARTUUID/PARTLABEL for a bare
+	# partition-table entry before it ever has a filesystem, so testing for any
+	# blkid output would treat a boot interrupted between sfdisk and mkfs as
+	# already formatted -- and then fail at mount/swapon on every later boot.
+	if ! blkid -o value -s TYPE "$PARTITION" >/dev/null 2>&1; then
 		# first time setup
 		if $FORMAT_DISK; then
 			if [ "$FORMAT_FSTYPE" == "swap" ]; then
@@ -71,13 +82,13 @@ for i in $(seq 0 $((LIMA_CIDATA_DISKS - 1))); do
 				# failure: a missing udevadm must not kill boot under set -e.
 				udevadm settle || true
 				# shellcheck disable=SC2086
-				mkswap $FORMAT_FSARGS -L "$FSLABEL" "$PARTITION"
+				mkswap $FORMAT_FSARGS "${LABEL_ARGS[@]}" "$PARTITION"
 			else
 				echo "type=linux,name=${PARTLABEL}" | sfdisk --label gpt "/dev/${DEVICE_NAME}"
 				# As above: let the partition node appear before mkfs opens it.
 				udevadm settle || true
 				# shellcheck disable=SC2086
-				mkfs.$FORMAT_FSTYPE $FORMAT_FSARGS -L "$FSLABEL" "$PARTITION"
+				mkfs.$FORMAT_FSTYPE $FORMAT_FSARGS "${LABEL_ARGS[@]}" "$PARTITION"
 			fi
 		fi
 	fi

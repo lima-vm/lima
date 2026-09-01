@@ -565,7 +565,10 @@ fi
 if [[ -n ${CHECKS["disk"]} ]]; then
 	INFO "Testing disk is attached"
 	set -x
-	if ! limactl shell "$NAME" lsblk --output NAME,MOUNTPOINT | grep -q "/mnt/lima-data"; then
+	# Anchored to the end of the line: "/mnt/lima-data" is otherwise also a
+	# substring of the long-named disk's mount point below, so this would
+	# still pass with only that other disk mounted.
+	if ! limactl shell "$NAME" lsblk --output NAME,MOUNTPOINT | grep -q "/mnt/lima-data$"; then
 		ERROR "Disk is not mounted"
 		exit 1
 	fi

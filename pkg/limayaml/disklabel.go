@@ -19,17 +19,21 @@ func DiskFSLabel(name string) string {
 }
 
 // FSLabelMaxLen returns the maximum filesystem label length, in bytes, accepted
-// by fsType.
+// by fsType, or 0 if Lima does not know that limit.
 //
-// mkfs enforces this limit differently depending on the filesystem: mkfs.ext4
-// truncates an over-long label silently, while mkfs.xfs rejects it. Lima
-// therefore clamps the label in boot.Linux/05-lima-disks.sh, and the limits here
-// must stay in sync with the ones in that script.
+// mkfs enforces the limit differently depending on the filesystem: mkfs.ext4
+// truncates an over-long label silently, while mkfs.xfs rejects it outright.
+// Lima therefore clamps the label in boot.Linux/05-lima-disks.sh, and the
+// limits here must stay in sync with the ones in that script. For an fsType not
+// listed here, the limit (and even whether mkfs.$fsType accepts a label at all)
+// is unknown, so the boot script omits the label rather than guess.
 //
 // This affects the label only. Lima does not identify a disk by its label, so a
 // name too long to fit is not an error.
 func FSLabelMaxLen(fsType string) int {
 	switch fsType {
+	case "ext2", "ext3", "ext4":
+		return 16
 	case "xfs":
 		return 12
 	case "btrfs":
@@ -39,8 +43,6 @@ func FSLabelMaxLen(fsType string) int {
 		// terminating NUL.
 		return 15
 	default:
-		// ext2, ext3, ext4, and anything else handled by a mkfs.* helper that
-		// Lima does not know about.
-		return 16
+		return 0
 	}
 }

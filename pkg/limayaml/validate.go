@@ -124,10 +124,15 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			if disk.FSType != nil && *disk.FSType != "" {
 				fsType = *disk.FSType
 			}
-			if label, maxLen := DiskFSLabel(disk.Name), FSLabelMaxLen(fsType); len(label) > maxLen {
-				logrus.Warnf("field `additionalDisks[%d].name`: %#q is too long for a %s filesystem label; "+
-					"the label will be truncated to %#q. The disk itself is unaffected: Lima does not identify it by label.",
-					i, disk.Name, fsType, label[:maxLen])
+			// A maxLen of 0 means Lima does not know the label limit for fsType;
+			// the boot script omits the label rather than guess, so there is
+			// nothing to warn about.
+			if maxLen := FSLabelMaxLen(fsType); maxLen > 0 {
+				if label := DiskFSLabel(disk.Name); len(label) > maxLen {
+					logrus.Warnf("field `additionalDisks[%d].name`: %#q is too long for a %s filesystem label; "+
+						"the label will be truncated to %#q. The disk itself is unaffected: Lima does not identify it by label.",
+						i, disk.Name, fsType, label[:maxLen])
+				}
 			}
 		}
 	}

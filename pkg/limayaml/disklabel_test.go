@@ -29,8 +29,9 @@ func TestFSLabelMaxLen(t *testing.T) {
 		{"xfs", 12},
 		{"btrfs", 255},
 		{"swap", 15},
-		{"unknown-fs", 16},
-		{"", 16},
+		{"vfat", 0},
+		{"unknown-fs", 0},
+		{"", 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.fsType, func(t *testing.T) {
