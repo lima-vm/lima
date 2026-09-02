@@ -7,6 +7,7 @@ import (
 	"crypto/sha256"
 	"errors"
 	"fmt"
+	"io"
 	"io/fs"
 	"os"
 	"os/exec"
@@ -74,6 +75,29 @@ func (c *Config) DaemonPath(daemon string) (string, error) {
 	default:
 		return "", fmt.Errorf("unknown daemon type %#q", daemon)
 	}
+}
+
+// DigestSpec returns the sudoers `Digest_Spec` pinning the contents of the daemon
+// binary. sudo (>= 1.8.7) hashes the file immediately before executing it and
+// refuses to run it when the digest no longer matches, so an attacker who manages
+// to replace the helper cannot get the replacement executed as root. Unlike the
+// ownership checks in validate.go, this is enforced inside sudo itself and is
+// therefore not subject to a time-of-check/time-of-use race with limactl.
+func (c *Config) DigestSpec(daemon string) (string, error) {
+	path, err := c.DaemonPath(daemon)
+	if err != nil {
+		return "", err
+	}
+	f, err := os.Open(path)
+	if err != nil {
+		return "", err
+	}
+	defer f.Close()
+	h := sha256.New()
+	if _, err := io.Copy(h, f); err != nil {
+		return "", err
+	}
+	return fmt.Sprintf("sha256:%x", h.Sum(nil)), nil
 }
 
 // IsDaemonInstalled checks whether the daemon is installed.
