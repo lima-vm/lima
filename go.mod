@@ -53,7 +53,7 @@ require (
 	github.com/rjeczalik/notify v0.9.3
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3
 	github.com/sethvargo/go-password v0.4.0
-	github.com/sirupsen/logrus v1.10.1
+	github.com/sirupsen/logrus v1.10.2
 	github.com/spf13/cobra v1.10.2 // gomodjail:unconfined
 	github.com/spf13/pflag v1.0.10
 	google.golang.org/grpc v1.83.1
@@ -128,7 +128,7 @@ require (
 	github.com/yuin/gopher-lua v1.1.2 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	go.opencensus.io v0.24.0 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
