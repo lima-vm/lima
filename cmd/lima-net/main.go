@@ -34,6 +34,9 @@ func newApp() *cobra.Command {
 		Version:       strings.TrimPrefix(version.Version, "v"),
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		PersistentPreRunE: func(_ *cobra.Command, _ []string) error {
+			return verifySelf()
+		},
 	}
 	rootCmd.AddCommand(newStartCommand(), newTapCommand())
 	return rootCmd

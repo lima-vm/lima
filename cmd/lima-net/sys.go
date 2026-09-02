@@ -161,6 +161,39 @@ func ipForwardEnabled() bool {
 	return err == nil && strings.TrimSpace(string(b)) == "1"
 }
 
+// verifySelf refuses to run when this executable, or any directory leading to
+// it, is writable by anyone but root. lima-net runs as root, so a writable path
+// hands root to whoever can write there. The sudoers file additionally pins the
+// SHA-256 of the binary, but that only covers hosts that use it: a host with
+// blanket password-less sudo has no sudoers entry to pin.
+func verifySelf() error {
+	// On Linux this reads /proc/self/exe, which is the path of the running inode
+	// (already fully resolved), not something the caller can influence.
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	for path := exe; ; path = filepath.Dir(path) {
+		fi, err := os.Lstat(path)
+		if err != nil {
+			return err
+		}
+		st, ok := osutil.SysStat(fi)
+		if !ok {
+			return fmt.Errorf("could not retrieve stat buffer for %#q", path)
+		}
+		if st.Uid != 0 {
+			return fmt.Errorf("%#q is owned by uid %d, not by root", path, st.Uid)
+		}
+		if fi.Mode()&0o022 != 0 {
+			return fmt.Errorf("%#q is writable by non-root users (mode %#o)", path, fi.Mode().Perm())
+		}
+		if path == "/" {
+			return nil
+		}
+	}
+}
+
 // ensureRunDir creates the directory holding the PID file and verifies that only
 // root can write to it: a user-writable PID file would let `pkill -F` kill any
 // process as root.
