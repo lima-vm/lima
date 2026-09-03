@@ -51,6 +51,18 @@ lima vi "/home/${USER}.linux/.bash_profile"
 
 See also <https://github.com/Aider-AI/aider>.
 {{% /tab %}}
+{{% tab header="Antigravity" %}}
+```bash
+lima curl -fsSL https://antigravity.google/cli/install.sh | bash
+lima agy
+```
+
+Follow the guide shown in the first session for authentication.
+
+Authentication uses your browser (or an authorization URL when running over SSH), so no additional environment variable configuration is typically required.
+
+See also <https://github.com/google-antigravity/antigravity-cli>.
+{{% /tab %}}
 {{% tab header="Claude Code" %}}
 ```
 lima sudo snap install node --classic
@@ -82,22 +94,6 @@ lima vi "/home/${USER}.linux/.bash_profile"
 ```
 
 See also <https://github.com/openai/codex>.
-{{% /tab %}}
-{{% tab header="Gemini" %}}
-```
-lima sudo snap install node --classic
-lima sudo npm install -g @google/gemini-cli
-lima gemini
-```
-
-Follow the guide shown in the first session for authentication.
-
-Alternatively, you can set `export GEMINI_API_KEY...` via:
-```
-lima vi "/home/${USER}.linux/.bash_profile"
-```
-
-See also <https://github.com/google-gemini/gemini-cli>.
 {{% /tab %}}
 {{% tab header="GitHub Copilot" %}}
 ```
@@ -136,7 +132,7 @@ See also <https://github.com/anomalyco/opencode>.
  | ⚡ Requirement | Lima >= 2.1 |
  |----------------|-------------|
 
-The `--sync` flag for [`limactl shell`](../reference/limactl_shell) enables bidirectional synchronization of your host working directory with the guest VM. This is particularly useful when running AI agents (like Claude, Copilot, or Gemini) inside VMs to prevent them from accidentally modifying or breaking files on your host system.
+The `--sync` flag for [`limactl shell`](../reference/limactl_shell) enables bidirectional synchronization of your host working directory with the guest VM. This is particularly useful when running AI agents (like Claude, Copilot, or Antigravity) inside VMs to prevent them from accidentally modifying or breaking files on your host system.
 
 ### Comparison with `mount`
 
