@@ -499,43 +499,65 @@ func (l *LimaVzDriver) requestStopViaSSH(ctx context.Context) error {
 	return nil
 }
 
+// gracefulStopTimeout is how long to wait for the guest to shut down by itself.
+// Most Linux machines shutdown within 5 seconds, but macOS machines can take longer.
+const gracefulStopTimeout = 30 * time.Second
+
 func (l *LimaVzDriver) Stop(ctx context.Context) error {
 	logrus.Info("Shutting down VZ")
-	canStop := l.machine.CanRequestStop()
+	defer l.removePIDFile()
 
-	if canStop {
-		_, err := l.machine.RequestStop()
-		if err != nil {
-			return err
+	requested := false
+	if l.machine.CanRequestStop() {
+		if _, err := l.machine.RequestStop(); err != nil {
+			logrus.WithError(err).Warn("vz: failed to request the guest to stop")
+		} else {
+			requested = true
 		}
+	} else {
+		logrus.Warn("vz: CanRequestStop is not supported, requesting the shutdown via SSH instead")
+	}
 
-		if *l.Instance.Config.OS == limatype.DARWIN {
-			// macOS VM does not respond to l.machine.RequestStop(),
-			// so we need to run `shutdown -h now` in the VM via SSH for graceful shutdown.
-			if err := l.requestStopViaSSH(ctx); err != nil {
-				logrus.WithError(err).Warn("Failed to request shutdown via SSH")
-			}
-		}
-
-		// Most Linux machines shutdown within 5 seconds, but macOS machines can take longer.
-		timeout := time.After(30 * time.Second)
-		ticker := time.NewTicker(500 * time.Millisecond)
-		for {
-			select {
-			case <-timeout:
-				return errors.New("vz timeout while waiting for stop status")
-			case <-ticker.C:
-				l.machine.mu.Lock()
-				stopped := l.machine.stopped
-				l.machine.mu.Unlock()
-				if stopped {
-					return nil
-				}
-			}
+	// macOS VM does not respond to l.machine.RequestStop(), and neither does a guest that
+	// could not be asked at all, so we need to run `shutdown -h now` in the VM via SSH for
+	// graceful shutdown.
+	if !requested || *l.Instance.Config.OS == limatype.DARWIN {
+		if err := l.requestStopViaSSH(ctx); err != nil {
+			logrus.WithError(err).Warn("Failed to request shutdown via SSH")
 		}
 	}
 
-	return errors.New("vz: CanRequestStop is not supported")
+	// The VM is never stopped forcibly with l.machine.Stop(): that does not give the guest
+	// a chance to stop cleanly, and may corrupt the disk.
+	return l.waitForStopped(gracefulStopTimeout)
+}
+
+func (l *LimaVzDriver) waitForStopped(timeout time.Duration) error {
+	timeoutCh := time.After(timeout)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-timeoutCh:
+			return errors.New("vz timeout while waiting for stop status")
+		case <-ticker.C:
+			l.machine.mu.Lock()
+			stopped := l.machine.stopped
+			l.machine.mu.Unlock()
+			if stopped {
+				return nil
+			}
+		}
+	}
+}
+
+// removePIDFile removes the PID file of the driver, so that a PID file is never left
+// behind for a VM that is not running anymore.
+func (l *LimaVzDriver) removePIDFile() {
+	pidFile := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Instance.Config.VMType))
+	if err := os.RemoveAll(pidFile); err != nil {
+		logrus.WithError(err).Warnf("Failed to remove %#q", pidFile)
+	}
 }
 
 func (l *LimaVzDriver) GuestAgentConn(_ context.Context) (net.Conn, string, error) {
