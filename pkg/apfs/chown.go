@@ -97,7 +97,7 @@ func openContainer(path string) (*container, error) {
 		c.blockSize = le.Uint32(hdr[nxBlockSizeOff:])
 	}
 
-	if c.blockSize < 4096 {
+	if c.blockSize < 4096 || c.blockSize > nxMaxBlockSize {
 		f.Close()
 		return nil, fmt.Errorf("invalid block size %d", c.blockSize)
 	}
@@ -108,6 +108,14 @@ func openContainer(path string) (*container, error) {
 const (
 	gptHeaderSignature = "EFI PART"
 	gptLBASectorSize   = 512
+	// gptMinEntrySize, gptMaxEntrySize and gptMaxTableSize bound the
+	// partition-array header fields before they are used to size allocations
+	// and index the entry buffer. UEFI defines the entry size as 128*2^n and
+	// sets no maximum on the entry count (128 is only the default), so the
+	// count is bounded through the total table size instead.
+	gptMinEntrySize = 128
+	gptMaxEntrySize = 4096
+	gptMaxTableSize = 4 << 20 // numEntries * entrySize
 )
 
 // apfsPartTypeGUID is the APFS Container partition type GUID as stored
@@ -136,6 +144,13 @@ func findAPFSPartitionGPT(f *os.File) (int64, error) {
 	partEntryLBA := le.Uint64(gptHdr[72:])
 	numEntries := le.Uint32(gptHdr[80:])
 	entrySize := le.Uint32(gptHdr[84:])
+
+	if entrySize < gptMinEntrySize || entrySize > gptMaxEntrySize {
+		return 0, fmt.Errorf("GPT partition entry size %d out of range", entrySize)
+	}
+	if numEntries == 0 || uint64(numEntries)*uint64(entrySize) > gptMaxTableSize {
+		return 0, fmt.Errorf("GPT partition table of %d entries of %d bytes out of range", numEntries, entrySize)
+	}
 
 	entryBuf := make([]byte, entrySize)
 	for i := range numEntries {
