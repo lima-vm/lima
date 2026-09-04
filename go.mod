@@ -1,7 +1,7 @@
 // gomodjail:confined
 module github.com/lima-vm/lima/v2
 
-go 1.26
+go 1.26.0
 
 // Our own packages and golang.org/x packages are trusted
 //gosocialcheck:trusted
@@ -64,7 +64,7 @@ require (
 
 //gosocialcheck:trusted
 require (
-	golang.org/x/crypto v0.55.0 // indirect
+	golang.org/x/crypto v0.56.0 // indirect
 	golang.org/x/mod v0.40.0 // indirect
 	golang.org/x/oauth2 v0.36.0 // indirect
 	golang.org/x/term v0.45.0 // indirect
