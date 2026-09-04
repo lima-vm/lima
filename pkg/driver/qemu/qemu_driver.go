@@ -9,6 +9,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"image/png"
 	"io"
 	"io/fs"
 	"net"
@@ -31,6 +32,8 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"github.com/lima-vm/go-qcow2reader/image/vmdk"
 	"github.com/sirupsen/logrus"
+	"github.com/spakin/netpbm"
+	"golang.org/x/image/bmp"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driver/qemu/entitlementutil"
@@ -914,4 +917,69 @@ func (l *LimaQemuDriver) ForwardGuestAgent(_ context.Context) bool {
 
 func (l *LimaQemuDriver) AdditionalSetupForSSH(_ context.Context) error {
 	return nil
+}
+
+func (l *LimaQemuDriver) CaptureScreenshot(format string) ([]byte, error) {
+	if format == "" {
+		format = "png"
+	}
+	if format != "png" && format != "bmp" {
+		return nil, fmt.Errorf("unsupported format %q: must be png or bmp", format)
+	}
+
+	if l.Instance.Config.Video.Display != nil && *l.Instance.Config.Video.Display == "none" {
+		return nil, fmt.Errorf("%w (set video.display to \"default\" or a VNC display to enable screenshots)", driver.ErrNoDisplay)
+	}
+
+	qmpSockPath := filepath.Join(l.Instance.Dir, filenames.QMPSock)
+	err := waitFileExists(qmpSockPath, 30*time.Second)
+	if err != nil {
+		return nil, err
+	}
+
+	qmpClient, err := qmp.NewSocketMonitor("unix", qmpSockPath, 5*time.Second)
+	if err != nil {
+		return nil, err
+	}
+	if err := qmpClient.Connect(); err != nil {
+		return nil, err
+	}
+	defer func() { _ = qmpClient.Disconnect() }()
+
+	rawClient := raw.NewMonitor(qmpClient)
+
+	tmpFile, err := os.CreateTemp("", "screendump-*.ppm")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create temporary file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	defer os.Remove(tmpPath)
+	tmpFile.Close()
+
+	if err := rawClient.Screendump(tmpPath); err != nil {
+		return nil, fmt.Errorf("screendump failed: %w", err)
+	}
+
+	data, err := os.ReadFile(tmpPath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read screendump: %w", err)
+	}
+
+	img, err := netpbm.Decode(bytes.NewReader(data), nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to decode PPM screendump: %w", err)
+	}
+
+	var buf bytes.Buffer
+	if format == "bmp" {
+		if err := bmp.Encode(&buf, img); err != nil {
+			return nil, fmt.Errorf("failed to encode BMP: %w", err)
+		}
+	} else {
+		if err := png.Encode(&buf, img); err != nil {
+			return nil, fmt.Errorf("failed to encode PNG: %w", err)
+		}
+	}
+
+	return buf.Bytes(), nil
 }
