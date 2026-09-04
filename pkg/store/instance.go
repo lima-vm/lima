@@ -31,6 +31,17 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
 
+// Sentinel errors for recoverable broken states, appended to Instance.Errors and
+// matched by callers with errors.Is.
+var (
+	// ErrDriverRunningHostAgentStopped indicates the VM driver process is running but the
+	// host agent is not — e.g. after launchd SIGTERMs the host agent on an unclean shutdown.
+	ErrDriverRunningHostAgentStopped = errors.New("driver is running but host agent is not")
+	// ErrHostAgentUnreachable indicates the host agent PID file exists but its socket cannot
+	// be reached — e.g. when the PID was reused by another process after a reboot.
+	ErrHostAgentUnreachable = errors.New("host agent is unreachable")
+)
+
 // Inspect returns err only when the instance does not exist (os.ErrNotExist).
 // Other errors are returned as *Instance.Errors.
 func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
@@ -73,14 +84,14 @@ func Inspect(ctx context.Context, instName string) (*limatype.Instance, error) {
 		haClient, err := hostagentclient.NewHostAgentClient(haSock)
 		if err != nil {
 			inst.Status = limatype.StatusBroken
-			inst.Errors = append(inst.Errors, fmt.Errorf("failed to connect to %#q: %w", haSock, err))
+			inst.Errors = append(inst.Errors, fmt.Errorf("%w: failed to connect to %#q: %w", ErrHostAgentUnreachable, haSock, err))
 		} else {
 			ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
 			defer cancel()
 			info, err := haClient.Info(ctx)
 			if err != nil {
 				inst.Status = limatype.StatusBroken
-				inst.Errors = append(inst.Errors, fmt.Errorf("failed to get Info from %#q: %w", haSock, err))
+				inst.Errors = append(inst.Errors, fmt.Errorf("%w: failed to get Info from %#q: %w", ErrHostAgentUnreachable, haSock, err))
 			} else {
 				inst.SSHLocalPort = info.SSHLocalPort
 				inst.AutoStartedIdentifier = info.AutoStartedIdentifier
@@ -191,7 +202,7 @@ func inspectStatusWithPIDFiles(instDir string, inst *limatype.Instance, y *limat
 			inst.Errors = append(inst.Errors, errors.New("host agent is running but driver is not"))
 			inst.Status = limatype.StatusBroken
 		default:
-			inst.Errors = append(inst.Errors, fmt.Errorf("%s driver is running but host agent is not", inst.VMType))
+			inst.Errors = append(inst.Errors, fmt.Errorf("%s %w", inst.VMType, ErrDriverRunningHostAgentStopped))
 			inst.Status = limatype.StatusBroken
 		}
 	}
