@@ -65,6 +65,7 @@ var knownYamlProperties = []string{
 	"NestedVirtualization",
 	"Networks",
 	"OS",
+	"OsOpts",
 	"Param",
 	"Plain",
 	"PortForwards",
