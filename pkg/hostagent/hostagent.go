@@ -931,6 +931,22 @@ func (a *HostAgent) getOrCreateClient(ctx context.Context) (*guestagentclient.Gu
 	return a.client, err
 }
 
+// validateLocalPorts drops guest-reported entries whose IP does not parse.
+// IPPort.Ip is an arbitrary string under the guest's control; it ends up in
+// PortForwardEvent.GuestAddr, which limactl start/watch print to the operator
+// terminal, so anything that is not an IP address must not get that far.
+func validateLocalPorts(ipPorts []*guestagentapi.IPPort) []*guestagentapi.IPPort {
+	validated := make([]*guestagentapi.IPPort, 0, len(ipPorts))
+	for _, f := range ipPorts {
+		if net.ParseIP(f.Ip) == nil {
+			logrus.Warnf("ignoring guest-reported port with invalid IP %#q", f.Ip)
+			continue
+		}
+		validated = append(validated, f)
+	}
+	return validated
+}
+
 func (a *HostAgent) createConnection(ctx context.Context) (net.Conn, error) {
 	conn, _, err := a.driver.GuestAgentConn(ctx)
 	// default to forwarded sock
@@ -958,6 +974,10 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 		for _, f := range ev.Errors {
 			logrus.Warnf("received error from the guest: %#q", f)
 		}
+		// Validate the guest-reported addresses before the forwarders derive
+		// GuestAddr (and log lines) from them.
+		ev.AddedLocalPorts = validateLocalPorts(ev.AddedLocalPorts)
+		ev.RemovedLocalPorts = validateLocalPorts(ev.RemovedLocalPorts)
 		// History of the default value of useSSHFwd:
 		// - v0.1.0:        true  (effectively)
 		// - v1.0.0:        false
