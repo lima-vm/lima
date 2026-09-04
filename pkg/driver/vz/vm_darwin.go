@@ -785,17 +785,31 @@ func attachAudio(inst *limatype.Instance, config *vz.VirtualMachineConfiguration
 		if err != nil {
 			return fmt.Errorf("failed to create host audio output stream: %w", err)
 		}
+		streams := []vz.VirtioSoundDeviceStreamConfiguration{outputStream}
+
+		// Opt-in: an input stream makes macOS ask for microphone permission
+		// on behalf of the process running the VM.
+		if y.Audio.Microphone != nil && *y.Audio.Microphone {
+			inputStream, err := vz.NewVirtioSoundDeviceHostInputStreamConfiguration()
+			if err != nil {
+				return fmt.Errorf("failed to create host audio input stream: %w", err)
+			}
+			streams = append(streams, inputStream)
+		}
 
 		soundDeviceConfiguration, err := vz.NewVirtioSoundDeviceConfiguration()
 		if err != nil {
 			return fmt.Errorf("failed to create virtio sound device configuration: %w", err)
 		}
-		soundDeviceConfiguration.SetStreams(outputStream)
+		soundDeviceConfiguration.SetStreams(streams...)
 		config.SetAudioDevicesVirtualMachineConfiguration([]vz.AudioDeviceConfiguration{
 			soundDeviceConfiguration,
 		})
 		return nil
 	case "", "none":
+		if y.Audio.Microphone != nil && *y.Audio.Microphone {
+			logrus.Warn("`audio.microphone` requires `audio.device` to be set. Ignoring it.")
+		}
 		return nil
 	default:
 		return fmt.Errorf("unexpected audio device %#q", *inst.Config.Audio.Device)

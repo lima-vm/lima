@@ -466,6 +466,14 @@ audio:
   # VZ driver always uses virtio-sound regardless of this setting.
   # 🟢 Builtin default: "" (resolves to "hda" when audio.device is set)
   interface: null
+  # EXPERIMENTAL
+  # Attach a microphone as well as speakers, so the guest gets a capture device
+  # (ALSA "pcmC0D1c") and not only playback. Needs audio.device to be set.
+  # Off by default: an input stream makes macOS ask for microphone permission on
+  # behalf of Lima.
+  # VZ driver only. The QEMU driver warns and ignores it.
+  # 🟢 Builtin default: false
+  microphone: null
 
 video:
   # QEMU display, e.g., "none", "cocoa", "sdl", "gtk", "vnc", "default".

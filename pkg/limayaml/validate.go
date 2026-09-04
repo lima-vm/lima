@@ -688,6 +688,9 @@ func warnExperimental(y *limatype.LimaYAML) {
 			logrus.Warn("`audio.interface` is experimental")
 		}
 	}
+	if y.Audio.Microphone != nil && *y.Audio.Microphone {
+		logrus.Warn("`audio.microphone` is experimental")
+	}
 	if y.MountInotify != nil && *y.MountInotify {
 		logrus.Warn("`mountInotify` is experimental")
 	}

@@ -118,6 +118,17 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	}
 
+	audio := cfg.Audio
+	if audio.Microphone != nil && !*audio.Microphone {
+		audio.Microphone = nil
+	}
+	if unknown := reflectutil.UnknownNonEmptyFields(audio,
+		"Device",
+		"Interface",
+	); len(unknown) > 0 {
+		logrus.Warnf("vmType %s: ignoring audio: %+v", *cfg.VMType, unknown)
+	}
+
 	var qemuOpts limatype.QEMUOpts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
 		return err
