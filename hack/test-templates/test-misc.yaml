@@ -101,11 +101,16 @@ probes:
 # in order to use this example, you must first create the disks. run:
 # $ limactl disk create data --size 10G
 # $ limactl disk create swap --size 2G
+# $ limactl disk create data-with-a-long-name --size 1G
 additionalDisks:
 - "data"
 - name: "swap"
   format: true
   fsType: swap
+# The name does not fit in an ext4 filesystem label ("lima-" + 16 bytes), so the
+# label is truncated. The disk must still be recognised as already formatted on
+# the next boot, rather than reformatted.
+- name: "data-with-a-long-name"
 
 user:
   name: john
