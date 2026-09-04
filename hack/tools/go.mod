@@ -21,7 +21,7 @@ require (
 	github.com/golangci/golangci-lint/v2 v2.13.1
 	github.com/jandubois/nobin v0.12.0
 	github.com/yoheimuta/protolint v0.57.0
-	google.golang.org/grpc v1.83.1
+	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
 	mvdan.cc/sh/v3 v3.13.1
 )
