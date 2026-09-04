@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 //go:embed networks.TEMPLATE.yaml
@@ -187,4 +188,15 @@ func IsUsernet(name string) bool {
 		return false
 	}
 	return isUsernet
+}
+
+func limaPrivilegedNetPath() (string, error) {
+	dirs, err := usrlocal.LibexecLima()
+	if err != nil {
+		return "", err
+	}
+	if len(dirs) == 0 {
+		return "", errors.New("could not find the libexec/lima directory")
+	}
+	return filepath.Join(dirs[0], privilegedSubdir, LimaPrivilegedNet), nil
 }
