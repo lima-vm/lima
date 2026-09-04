@@ -83,6 +83,8 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 
 	stdout := &syncWriter{w: cmd.OutOrStdout()}
 	stderr := &syncWriter{w: cmd.ErrOrStderr()}
+	defer stdout.flush()
+	defer stderr.flush()
 
 	initLogrus(stderr)
 	var opts []hostagent.Opt
@@ -142,7 +144,7 @@ type syncer interface {
 	Sync() error
 }
 
-// syncInterval bounds how long the log can go unflushed.
+// syncInterval is how long syncWriter batches writes before flushing them.
 //
 // Flushing on every write serialised the whole hostagent behind one fsync per
 // record: logrus holds its output mutex across Out.Write, and the port
@@ -156,30 +158,41 @@ const syncInterval = 100 * time.Millisecond
 type syncWriter struct {
 	w io.Writer
 
-	mu       sync.Mutex
-	lastSync time.Time
+	mu    sync.Mutex
+	dirty bool
+	timer *time.Timer
 }
 
 func (w *syncWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	written, err := w.w.Write(p)
-	if err == nil && w.syncDue() {
-		if s, ok := w.w.(syncer); ok {
-			_ = s.Sync()
+	if err == nil {
+		w.dirty = true
+		if w.timer == nil {
+			w.timer = time.AfterFunc(syncInterval, w.flush)
 		}
 	}
 	return written, err
 }
 
-// syncDue reports whether syncInterval has passed since the last flush, and
-// records the new flush time when it has.
-func (w *syncWriter) syncDue() bool {
+// flush stops the pending timer and syncs any writes in the current batch.
+func (w *syncWriter) flush() {
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if time.Since(w.lastSync) < syncInterval {
-		return false
+
+	if w.timer != nil {
+		w.timer.Stop()
+		w.timer = nil
 	}
-	w.lastSync = time.Now()
-	return true
+	if !w.dirty {
+		return
+	}
+	if s, ok := w.w.(syncer); ok {
+		_ = s.Sync()
+	}
+	w.dirty = false
 }
 
 func initLogrus(stderr io.Writer) {
