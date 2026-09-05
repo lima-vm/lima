@@ -204,7 +204,7 @@ func TestCompanionForSSH(t *testing.T) {
 		assert.NilError(t, os.WriteFile(sshExe, nil, 0o644))
 		assert.NilError(t, os.WriteFile(keygenExe, nil, 0o644))
 
-		assert.Equal(t, companionForSSH(SSHExe{Exe: sshExe}, "ssh-keygen"), keygenExe)
+		assert.Equal(t, CompanionForSSH(SSHExe{Exe: sshExe}, "ssh-keygen"), keygenExe)
 	})
 
 	t.Run("no sibling falls back to the bare name", func(t *testing.T) {
@@ -212,11 +212,11 @@ func TestCompanionForSSH(t *testing.T) {
 		sshExe := filepath.Join(dir, "ssh.exe")
 		assert.NilError(t, os.WriteFile(sshExe, nil, 0o644))
 
-		assert.Equal(t, companionForSSH(SSHExe{Exe: sshExe}, "ssh-keygen"), "ssh-keygen")
+		assert.Equal(t, CompanionForSSH(SSHExe{Exe: sshExe}, "ssh-keygen"), "ssh-keygen")
 	})
 
 	t.Run("empty input falls back to the bare name", func(t *testing.T) {
-		assert.Equal(t, companionForSSH(SSHExe{}, "ssh-keygen"), "ssh-keygen")
+		assert.Equal(t, CompanionForSSH(SSHExe{}, "ssh-keygen"), "ssh-keygen")
 	})
 }
 
