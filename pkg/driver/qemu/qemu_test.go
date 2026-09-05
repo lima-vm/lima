@@ -9,10 +9,13 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/coreos/go-semver/semver"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func TestArgValue(t *testing.T) {
@@ -150,4 +153,47 @@ func TestSwtpmCmdline(t *testing.T) {
 	assert.NilError(t, err)
 	_, err = os.Stat(swtpmSock)
 	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestParseKVMNestedParam(t *testing.T) {
+	type testCase struct {
+		value         string
+		expected      bool
+		expectedError string
+	}
+	testCases := []testCase{
+		{value: "Y\n", expected: true},  // kvm_intel (bool)
+		{value: "N\n", expected: false}, // kvm_intel (bool)
+		{value: "1\n", expected: true},  // kvm_amd (int)
+		{value: "0\n", expected: false}, // kvm_amd (int)
+		{value: "", expectedError: "unexpected value"},
+		{value: "foo", expectedError: "unexpected value"},
+	}
+	for _, tc := range testCases {
+		enabled, err := parseKVMNestedParam(tc.value)
+		if tc.expectedError == "" {
+			assert.NilError(t, err)
+		} else {
+			assert.ErrorContains(t, err, tc.expectedError)
+		}
+		assert.Equal(t, tc.expected, enabled)
+	}
+}
+
+func TestValidateConfigNestedVirtualization(t *testing.T) {
+	cfg := &limatype.LimaYAML{
+		NestedVirtualization: ptr.Of(true),
+	}
+	err := validateConfig(cfg)
+	if runtime.GOOS == "darwin" {
+		productVer, verErr := osutil.ProductVersion()
+		assert.NilError(t, verErr)
+		if productVer.LessThan(*semver.New("15.0.0")) {
+			assert.ErrorContains(t, err, "nested virtualization requires macOS 15 or newer")
+		} else {
+			assert.NilError(t, err)
+		}
+	} else {
+		assert.NilError(t, err)
+	}
 }

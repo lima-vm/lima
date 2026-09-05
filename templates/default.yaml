@@ -657,7 +657,12 @@ plain: null
 #   qemu-system-aarch64 -accel kvm -cpu host -M virt
 # - Without specifying `-cpu host`, nested virtualization may fail with the error:
 #   qemu-system-aarch64: kvm_init_vcpu: kvm_arch_init_vcpu failed (0): Invalid argument
-# - Only supported on Apple M3 or later with `vmType: vz` or `vmType: krunkit`.
+# - Supported with `vmType: vz` or `vmType: krunkit` on Apple M3 or later (macOS 15 or later).
+# - Supported with `vmType: qemu` for aarch64 guests (`-machine virt,virtualization=on`):
+#   - macOS (HVF): QEMU 11.1 or later, on Apple M3 or later (macOS 15 or later).
+#   - Linux (KVM): QEMU 10.1 or later, and a host kernel (6.16 or later) booted with `kvm-arm.mode=nested`.
+# - For x86_64 guests with `vmType: qemu` on Linux (KVM), nested virtualization is controlled by the host
+#   (the `nested` parameter of the kvm_intel / kvm_amd module) and is exposed to the guest via `-cpu host`.
 # 🟢 Builtin default: false
 nestedVirtualization: null
 

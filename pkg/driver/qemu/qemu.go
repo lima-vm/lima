@@ -88,6 +88,44 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 	return hardMin, softMin
 }
 
+// minimumQemuVersionForNestedVirtualization is the oldest version of QEMU whose accelerator supports
+// providing the Virtualization Extensions (EL2) to an aarch64 guest (`-machine virt,virtualization=on`).
+// TCG has no such requirement.
+var minimumQemuVersionForNestedVirtualization = map[string]*semver.Version{
+	// KVM_CAP_ARM_EL2 support; also needs a host kernel (6.16 or later) booted with `kvm-arm.mode=nested`.
+	"kvm": semver.New("10.1.0"),
+	// https://wiki.qemu.org/ChangeLog/11.1
+	"hvf": semver.New("11.1.0"),
+}
+
+// kvmNestedVirtualizationEnabled reports whether nested virtualization is enabled in the host KVM module
+// on x86_64 Linux, by reading the `nested` parameter of kvm_intel (Intel) or kvm_amd (AMD).
+func kvmNestedVirtualizationEnabled() (bool, error) {
+	for _, module := range []string{"kvm_intel", "kvm_amd"} {
+		b, err := os.ReadFile(filepath.Join("/sys/module", module, "parameters", "nested"))
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				continue
+			}
+			return false, err
+		}
+		return parseKVMNestedParam(string(b))
+	}
+	return false, errors.New("neither kvm_intel nor kvm_amd is loaded")
+}
+
+// parseKVMNestedParam parses the `nested` module parameter of kvm_intel (bool: "Y"/"N") or kvm_amd (int: "1"/"0").
+func parseKVMNestedParam(s string) (bool, error) {
+	switch v := strings.TrimSpace(s); v {
+	case "Y", "y", "1":
+		return true, nil
+	case "N", "n", "0":
+		return false, nil
+	default:
+		return false, fmt.Errorf("unexpected value %#q of the `nested` parameter", v)
+	}
+}
+
 // EnsureDisk creates the VM disk from the downloaded image.
 // For ISO images, it renames the image to "iso" and creates an empty qcow2 disk.
 // For non-ISO images, it validates and renames the image to "disk".
@@ -550,6 +588,34 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 	args = appendArgsIfNoConflict(args, "-cpu", cpu)
 
+	// Nested virtualization
+	if y.NestedVirtualization != nil && *y.NestedVirtualization {
+		switch *y.Arch {
+		case limatype.AARCH64:
+			// `virtualization=on` is appended to the `virt` machine below.
+			if minVer, ok := minimumQemuVersionForNestedVirtualization[accel]; ok && version != nil && version.LessThan(*minVer) {
+				logrus.Fatalf("QEMU %v is too old, %v or later is required for nested virtualization with %s", version, minVer, strings.ToUpper(accel))
+			}
+		case limatype.X8664:
+			// On x86_64, nested virtualization is controlled by the host KVM module
+			// (the `nested` parameter of kvm_intel / kvm_amd) and is exposed to the guest via `-cpu host`.
+			if accel != "kvm" {
+				logrus.Warnf("field `nestedVirtualization` is not supported with accelerator %#q for architecture %#q, ignoring", accel, *y.Arch)
+				break
+			}
+			if enabled, err := kvmNestedVirtualizationEnabled(); err != nil {
+				logrus.WithError(err).Warn("Failed to check whether nested virtualization is enabled in the host KVM module")
+			} else if !enabled {
+				return "", nil, errors.New("nested virtualization is disabled in the host KVM module (`nested` parameter of kvm_intel / kvm_amd)")
+			}
+			if !strings.HasPrefix(cpu, "host") {
+				logrus.Warnf("nested virtualization on x86_64 requires CPU type `host`, got %#q", cpu)
+			}
+		default:
+			logrus.Warnf("field `nestedVirtualization` is not supported for architecture %#q, ignoring", *y.Arch)
+		}
+	}
+
 	// Machine
 	switch *y.Arch {
 	case limatype.X8664:
@@ -570,6 +636,9 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		}
 	case limatype.AARCH64:
 		machine := "virt,accel=" + accel
+		if y.NestedVirtualization != nil && *y.NestedVirtualization {
+			machine += ",virtualization=on"
+		}
 		args = appendArgsIfNoConflict(args, "-machine", machine)
 	case limatype.RISCV64:
 		// https://github.com/tianocore/edk2/blob/edk2-stable202408/OvmfPkg/RiscVVirt/README.md#test
