@@ -8,8 +8,10 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -34,7 +36,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 	if err != nil {
 		return err
 	}
-	activeNetwork := make(map[string]bool, 3)
+	activeNetwork := make(map[string][]string, 3)
 	skippedInstance := false
 	for _, instName := range instances {
 		instance, err := store.Inspect(ctx, instName)
@@ -58,14 +60,14 @@ func Reconcile(ctx context.Context, newInst string) error {
 				logrus.Errorf("network %#q (used by instance %#q) is missing from networks.yaml", nw.Lima, instName)
 				continue
 			}
-			activeNetwork[nw.Lima] = true
+			activeNetwork[nw.Lima] = append(activeNetwork[nw.Lima], instName)
 		}
 	}
 	for name := range cfg.Networks {
 		var err error
 		switch {
-		case activeNetwork[name]:
-			err = startNetwork(ctx, &cfg, name)
+		case len(activeNetwork[name]) > 0:
+			err = startNetwork(ctx, &cfg, name, activeNetwork[name])
 		case skippedInstance:
 			logrus.Debugf("Not stopping network %#q: an instance could not be inspected", name)
 		default:
@@ -94,6 +96,10 @@ func sudo(ctx context.Context, user, group, command string) error {
 }
 
 func makeVarRun(ctx context.Context, cfg *networks.Config) error {
+	if runtime.GOOS != "darwin" {
+		// lima-net runs as root and creates the varRun directory itself.
+		return nil
+	}
 	err := sudo(ctx, "root", "wheel", cfg.MkdirCmd())
 	if err != nil {
 		return err
@@ -145,7 +151,7 @@ func startDaemon(ctx context.Context, cfg *networks.Config, name, daemon string)
 	cmd := exec.CommandContext(ctx, "sudo", args...)
 	// set directory to a path the daemon user has read access to because vde_switch calls getcwd() which
 	// can fail when called from directories like ~/Downloads, which has 700 permissions
-	cmd.Dir = cfg.Paths.VarRun
+	cmd.Dir = "/"
 
 	stdoutPath := cfg.LogFile(name, daemon, "stdout")
 	stderrPath := cfg.LogFile(name, daemon, "stderr")
@@ -194,7 +200,7 @@ func validateConfig(ctx context.Context, cfg *networks.Config) error {
 	return validation.err
 }
 
-func startNetwork(ctx context.Context, cfg *networks.Config, name string) error {
+func startNetwork(ctx context.Context, cfg *networks.Config, name string, instances []string) error {
 	logrus.Debugf("Make sure %#q network is running", name)
 
 	// Handle usernet first without sudo requirements
@@ -209,24 +215,22 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 		return nil
 	}
 
-	if runtime.GOOS != "darwin" {
+	daemons := networks.RequiredDaemons()
+	if len(daemons) == 0 {
 		return nil
 	}
 
 	if err := validateConfig(ctx, cfg); err != nil {
 		return err
 	}
-	var daemons []string
-	ok, err := cfg.IsDaemonInstalled(networks.SocketVMNet)
-	if err != nil {
-		return err
-	}
-	if ok {
-		daemons = append(daemons, networks.SocketVMNet)
-	} else {
-		return fmt.Errorf("daemon %#q needs to be installed", networks.SocketVMNet)
-	}
 	for _, daemon := range daemons {
+		ok, err := cfg.IsDaemonInstalled(daemon)
+		if err != nil {
+			return err
+		}
+		if !ok {
+			return fmt.Errorf("daemon %#q needs to be installed", daemon)
+		}
 		pid, _ := store.ReadPIDFile(cfg.PIDFile(name, daemon))
 		if pid == 0 {
 			logrus.Infof("Starting %s daemon for %#q network", daemon, name)
@@ -234,8 +238,49 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string) error 
 				return err
 			}
 		}
+		if daemon == networks.LimaNet {
+			if err := ensureTaps(ctx, cfg, name, instances); err != nil {
+				return err
+			}
+		}
 	}
 	return nil
+}
+
+// ensureTaps creates the tap device that connects each instance to the bridge of
+// the network. socket_vmnet hands out a socket instead, so this is only needed
+// for lima-net. The tap devices are deleted by lima-net when it tears the
+// network down, after the last instance using it has stopped.
+func ensureTaps(ctx context.Context, cfg *networks.Config, name string, instances []string) error {
+	user, err := cfg.User(networks.LimaNet)
+	if err != nil {
+		return err
+	}
+	bridge := cfg.BridgeName(name)
+	for _, instName := range instances {
+		tap := networks.TapName(instName, name)
+		if tapIsAttached(tap, bridge) {
+			continue
+		}
+		if err := sudo(ctx, user.User, user.Group, cfg.TapCmd(name, tap)); err != nil {
+			return fmt.Errorf("failed to create tap device %#q for instance %#q: %w", tap, instName, err)
+		}
+	}
+	return nil
+}
+
+// tapIsAttached reports whether the tap device is already enslaved to the bridge
+// and up. Reconcile runs for every instance of a network on every lifecycle
+// event, so without this the already-connected instances would each trigger a
+// redundant sudo call. lima-net revalidates everything, so this is only a
+// shortcut, never a security decision.
+func tapIsAttached(tap, bridge string) bool {
+	link, err := os.Readlink(filepath.Join("/sys/class/net", tap, "master"))
+	if err != nil || filepath.Base(link) != bridge {
+		return false
+	}
+	iface, err := net.InterfaceByName(tap)
+	return err == nil && iface.Flags&net.FlagUp != 0
 }
 
 // daemonStuckError reports that the daemon process is still running but never wrote
@@ -274,13 +319,14 @@ func (e *daemonExitedError) Unwrap() error { return e.err }
 // failure from startDaemon itself, an unreadable PID file, or context cancellation —
 // is not transient and is returned immediately.
 func startDaemonWithRetry(ctx context.Context, cfg *networks.Config, name, daemon string) error {
-	const (
+	// startTimeout is deliberately generous: the daemon writes its PID file
+	// promptly on success, so reaching this while the process is still alive
+	// indicates a problem other than the transient startup race.
+	const startTimeout = 30 * time.Second
+	maxAttempts := 1
+	if daemon == networks.SocketVMNet {
 		maxAttempts = 5
-		// startTimeout is deliberately generous: socket_vmnet writes its PID file
-		// promptly on success, so reaching this while the process is still alive
-		// indicates a problem other than the transient startup race.
-		startTimeout = 30 * time.Second
-	)
+	}
 	pidFile := cfg.PIDFile(name, daemon)
 	stderrLog := cfg.LogFile(name, daemon, "stderr")
 	var lastErr error
@@ -404,13 +450,13 @@ func stopNetwork(ctx context.Context, cfg *networks.Config, name string) error {
 		return nil
 	}
 
-	if runtime.GOOS != "darwin" {
+	if len(networks.RequiredDaemons()) == 0 {
 		return nil
 	}
 
 	// Don't call validateConfig() until we actually need to stop a daemon because
 	// stopNetwork() may be called even when the daemons are not installed.
-	for _, daemon := range []string{networks.SocketVMNet} {
+	for _, daemon := range networks.RequiredDaemons() {
 		if ok, _ := cfg.IsDaemonInstalled(daemon); !ok {
 			continue
 		}

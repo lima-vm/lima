@@ -12,7 +12,8 @@ type Config struct {
 }
 
 type Paths struct {
-	SocketVMNet string `yaml:"socketVMNet" json:"socketVMNet"`
+	SocketVMNet string `yaml:"socketVMNet" json:"socketVMNet"`             // macOS only
+	LimaNet     string `yaml:"limaNet,omitempty" json:"limaNet,omitempty"` // Linux only
 	VarRun      string `yaml:"varRun" json:"varRun"`
 	Sudoers     string `yaml:"sudoers,omitempty" json:"sudoers,omitempty"`
 }

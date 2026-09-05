@@ -1,24 +1,29 @@
-# Path to socket_vmnet executable. Because socket_vmnet is invoked via sudo it should be
-# installed where only root can modify/replace it. This means also none of the
-# parent directories can be writable by the user.
+# Path to the privileged helper that manages the "shared", "bridged" and "host"
+# networks: socket_vmnet on macOS, lima-net (shipped with Lima) on Linux.
+# Only the helper of the current host OS is set; the other one is left empty.
+#
+# Because the helper is invoked via sudo it should be installed where only root
+# can modify/replace it. This means also none of the parent directories can be
+# writable by the user.
 #
 # The varRun directory also must not be writable by the user because it will
-# include the socket_vmnet pid file. Those will be terminated via sudo, so replacing
-# the pid file would allow killing of arbitrary privileged processes. varRun
-# however MUST be writable by the daemon user.
+# include the pid files of the helpers. Those will be terminated via sudo, so
+# replacing the pid file would allow killing of arbitrary privileged processes.
+# On macOS varRun however MUST be writable by the daemon user.
 #
-# None of the paths segments may be symlinks, why it has to be /private/var
-# instead of /var etc.
+# None of the paths segments may be symlinks, why on macOS it has to be
+# /private/var instead of /var etc.
 paths:
 # socketVMNet requires Lima >= 0.12 .
   socketVMNet: "{{.SocketVMNet}}"
-  varRun: /private/var/run/lima
-  sudoers: /private/etc/sudoers.d/lima
+  limaNet: "{{.LimaNet}}"
+  varRun: {{.VarRun}}
+  sudoers: {{.Sudoers}}
 
-# The group that is allowed to run socket_vmnet via sudo and to access the
-# socket_vmnet socket (macOS only; ignored on other platforms). Non-admin users
-# must set this to a group they belong to (e.g. "staff").
-group: admin
+# The group that is allowed to run the network helper via sudo, and (on macOS)
+# to access the socket_vmnet socket. Users must set this to a group they belong
+# to (e.g. "staff" on macOS).
+group: {{.Group}}
 
 networks:
   user-v2:
@@ -31,8 +36,12 @@ networks:
     dhcpEnd: 192.168.105.254
     netmask: 255.255.255.0
   bridged:
+    # On macOS this is a physical interface, e.g. "en0".
+    # On Linux it must be an *existing* bridge, e.g. "br0", created by the host
+    # administrator with NetworkManager, systemd-networkd, or netplan. Lima
+    # neither creates it nor enslaves physical interfaces.
     mode: bridged
-    interface: en0
+    interface: {{.BridgedInterface}}
     # bridged mode doesn't have a gateway; dhcp is managed by outside network
   host:
     mode: host

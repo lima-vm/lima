@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build darwin || linux
+
 package main
 
 import (
@@ -8,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -23,7 +26,9 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	}
 	// Make sure the current network configuration is secure
 	if err := nwCfg.Validate(); err != nil {
-		logrus.Infof("Please check %s for more information.", socketVMNetURL)
+		if runtime.GOOS == "darwin" {
+			logrus.Infof("Please check %s for more information.", socketVMNetURL)
+		}
 		return err
 	}
 	check, err := cmd.Flags().GetBool("check")
