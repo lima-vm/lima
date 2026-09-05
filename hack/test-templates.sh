@@ -121,7 +121,6 @@ esac
 # enabled checks is missing. Tools that are optional at runtime (guarded by `command -v`,
 # e.g. rsync, w3m) are intentionally not required here.
 required_commands=(limactl curl jq timeout diff)
-[[ -n ${CHECKS["port-forwards"]} ]] && required_commands+=(perl nc socat)
 [[ -n ${CHECKS["container-engine"]} && ${OS_HOST} != "Msys" ]] && required_commands+=(dig)
 [[ -n ${CHECKS["vmnet"]} ]] && required_commands+=("${IPERF3}")
 check_required_commands "${required_commands[@]}"
@@ -131,15 +130,29 @@ if [[ -n ${CHECKS["port-forwards"]} ]]; then
 	mkdir -p "${tmpconfig}"
 	defer "rm -rf \"$tmpconfig\""
 	tmpfile="${tmpconfig}/${NAME}.yaml"
-	cp "$FILE" "${tmpfile}"
+	# The rule is used by the "${CONTAINER_ENGINE} run" test below to check that a
+	# container port bound to 0.0.0.0 is forwarded to the external host IP.
+	# The port forwarding rule matrix itself is tested by hack/bats/tests/port-forwarding.bats.
+	# Existing rules are replaced, not appended to: all instances share the host port
+	# namespace, so rules from the template (e.g. test-misc.yaml) would collide with a
+	# concurrently running instance created from the same template.
+	INFO "Adding a port forwarding rule for guest port 8888 to \"${tmpfile}\""
+	# The intermediate file must keep the .yaml extension, or the "base:" reference
+	# below would be interpreted as a disk image instead of a template.
+	rawfile="${tmpconfig}/${NAME}.raw.yaml"
+	limactl yq '.portForwards = [{"guestIPMustBeZero": true, "guestPort": 8888, "hostIP": "0.0.0.0"}]' <"$FILE" >"$rawfile"
+	rawfile_host="$rawfile"
+	if [ "${OS_HOST}" = "Msys" ]; then
+		rawfile_host="$(cygpath -w "$rawfile_host")"
+	fi
+	# Round-trip through the embed encoder: limactl yq indents sequences differently,
+	# which would fail the "template embedding copies exactly" check below.
+	echo -n "base: $rawfile_host" | limactl tmpl copy --embed - - >"$tmpfile"
 	FILE="${tmpfile}"
 	FILE_HOST=$FILE
 	if [ "${OS_HOST}" = "Msys" ]; then
 		FILE_HOST="$(cygpath -w "$FILE")"
 	fi
-
-	INFO "Setup port forwarding rules for testing in \"${FILE}\""
-	"${scriptdir}/test-port-forwarding.pl" "${FILE}"
 	INFO "Validating \"$FILE_HOST\""
 	limactl validate "$FILE_HOST"
 fi
@@ -460,72 +473,50 @@ if [[ -n ${CHECKS["container-engine"]} ]]; then
 fi
 
 if [[ -n ${CHECKS["port-forwards"]} ]]; then
-	PORT_FORWARDING_CONNECTION_TIMEOUT=1
-	INFO "Testing port forwarding rules using netcat and socat with connection timeout ${PORT_FORWARDING_CONNECTION_TIMEOUT}s"
+	# The port forwarding rule matrix is tested by hack/bats/tests/port-forwarding.bats;
+	# this section only tests the interaction with the container engine.
 	set -x
-	if [[ ${NAME} == "alpine"* ]]; then
-		limactl shell "${NAME}" sudo apk add socat
-	fi
-	if [[ ${NAME} == "archlinux" ]]; then
-		limactl shell "${NAME}" sudo pacman -Syu --noconfirm openbsd-netcat socat
-	fi
-	if [[ ${NAME} == "debian" || ${NAME} == "default" || ${NAME} == "docker" || ${NAME} == "test-misc" ]]; then
-		limactl shell "${NAME}" sudo apt-get install -y netcat-openbsd socat
-	fi
-	if [[ ${NAME} == "fedora" || ${NAME} == "wsl2" ]]; then
-		limactl shell "${NAME}" sudo dnf install -y nc socat
-	fi
-	if [[ ${NAME} == "opensuse" ]]; then
-		limactl shell "${NAME}" sudo zypper in -y netcat-openbsd socat
-	fi
-	if limactl shell "${NAME}" command -v dnf; then
-		limactl shell "${NAME}" sudo dnf install -y nc socat
-	fi
-	if "${scriptdir}/test-port-forwarding.pl" "${NAME}" socat $PORT_FORWARDING_CONNECTION_TIMEOUT; then
-		INFO "Port forwarding rules work"
-	else
-		ERROR "Port forwarding rules do not work with socat"
-		diagnose "$NAME"
-		exit 1
-	fi
-
 	if [[ -n ${CHECKS["container-engine"]} || ${NAME} == "alpine"* ]]; then
-		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via test-port-forwarding.pl)"
+		INFO "Testing that \"${CONTAINER_ENGINE} run\" binds to 0.0.0.0 and is forwarded to the host (non-default behavior, configured via the guest port 8888 rule)"
 		if [ "$(uname)" = "Darwin" ]; then
-			# macOS runners seem to use `localhost` as the hostname, so the perl lookup just returns `127.0.0.1`
+			# macOS runners seem to use `localhost` as the hostname, so ask system_profiler instead
 			hostip=$(system_profiler SPNetworkDataType -json | jq -r 'first(.SPNetworkDataType[] | select(.ip_address) | .ip_address) | first')
+			# jq prints "null" when no interface reports an ip_address
+			[ "${hostip}" = "null" ] && hostip=""
 		else
-			hostip=$(perl -MSocket -MSys::Hostname -E 'say inet_ntoa(scalar gethostbyname(hostname()))')
+			hostip=$(getent ahostsv4 "$(hostname)" | awk '{print $1; exit}' || true)
 		fi
-		if [ -n "${hostip}" ]; then
-			sudo=""
-			if [[ ${NAME} == "alpine"* ]]; then
-				arch=$(limactl info | jq -r .defaultTemplate.arch)
-				nerdctl=$(limactl info | jq -r ".defaultTemplate.containerd.archives[] | select(.arch==\"$arch\").location")
-				curl -Lso nerdctl-full.tgz "${nerdctl}"
-				limactl shell "$NAME" sudo apk add containerd
-				limactl shell "$NAME" sudo rc-service containerd start
-				limactl shell "$NAME" sudo tar xzf "${PWD}/nerdctl-full.tgz" -C /usr/local
-				rm nerdctl-full.tgz
-				sudo="sudo"
-			fi
-			# Currently WSL2 machines only support privileged engine. This requirement might be lifted in the future.
-			if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]]; then
-				sudo="sudo"
-			fi
-			limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
-			limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
+		if [ -z "${hostip}" ]; then
+			WARNING "Could not determine the host LAN IP; falling back to 127.0.0.1, which cannot verify the binding to the external interface"
+			hostip="127.0.0.1"
+		fi
+		sudo=""
+		if [[ ${NAME} == "alpine"* ]]; then
+			arch=$(limactl info | jq -r .defaultTemplate.arch)
+			nerdctl=$(limactl info | jq -r ".defaultTemplate.containerd.archives[] | select(.arch==\"$arch\").location")
+			curl -Lso nerdctl-full.tgz "${nerdctl}"
+			limactl shell "$NAME" sudo apk add containerd
+			limactl shell "$NAME" sudo rc-service containerd start
+			limactl shell "$NAME" sudo tar xzf "${PWD}/nerdctl-full.tgz" -C /usr/local
+			rm nerdctl-full.tgz
+			sudo="sudo"
+		fi
+		# Currently WSL2 machines only support privileged engine. This requirement might be lifted in the future.
+		if [[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]]; then
+			sudo="sudo"
+		fi
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE info
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE pull --quiet ${nginx_image}
 
-			limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 8888:80 ${nginx_image}
-			timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://${hostip}:8888; do sleep 3; done"
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 8888:80 ${nginx_image}
+		timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://${hostip}:8888; do sleep 3; done"
+		limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
+
+		if [ "$(uname)" = "Darwin" ]; then
+			# Only macOS can bind to port 80 without root
+			limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:80:80 ${nginx_image}
+			timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://localhost:80; do sleep 3; done"
 			limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
-
-			if [ "$(uname)" = "Darwin" ]; then
-				# Only macOS can bind to port 80 without root
-				limactl shell "$NAME" $sudo $CONTAINER_ENGINE run -d --name nginx -p 127.0.0.1:80:80 ${nginx_image}
-				timeout 3m bash -euxc "until curl -f --retry 30 --retry-connrefused http://localhost:80; do sleep 3; done"
-				limactl shell "$NAME" $sudo $CONTAINER_ENGINE rm -f nginx
-			fi
 		fi
 		if [[ ${NAME} != "alpine"* ]] && command -v w3m >/dev/null; then
 			INFO "Testing https://github.com/lima-vm/lima/issues/3685 ([gRPC portfwd] client connection is not closed immediately when server closed the connection)"
