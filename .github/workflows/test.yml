@@ -271,7 +271,7 @@ jobs:
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
     - name: Cache image used by default.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: "Show cache"
@@ -287,7 +287,7 @@ jobs:
     # Other yamls are tested on Linux instances.
     #
     - if: always()
-      uses: ./.github/actions/upload_failure_logs_if_exists
+      uses: $/.github/actions/upload_failure_logs_if_exists
     - name: "Show cache"
       if: always()
       run: ./hack/debug-cache.sh
@@ -325,7 +325,7 @@ jobs:
     - name: Install
       run: sudo make install
     - name: Cache image used by templates/${{ matrix.template }}
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/${{ matrix.template }}
     - name: Install test dependencies
@@ -347,7 +347,7 @@ jobs:
         max_attempts: 3
         command: ./hack/test-templates.sh templates/${{ matrix.template }}
     - if: always()
-      uses: ./.github/actions/upload_failure_logs_if_exists
+      uses: $/.github/actions/upload_failure_logs_if_exists
       with:
         suffix: ${{ matrix.template }}
     - name: "Show cache"
@@ -378,7 +378,7 @@ jobs:
         sudo apt-get update
         sudo ./hack/install-qemu.sh
     - name: Cache image used by templates/default.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: "Run BATS integration tests"
@@ -387,7 +387,7 @@ jobs:
         # The url-github.bats tests makes GitHub API requests
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
     - name: Cache image used by templates/k8s.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/k8s.yaml
     - name: "Run BATS k8s tests"
@@ -395,7 +395,7 @@ jobs:
       env:
         LIMA_BATS_ALL_TESTS_RETRIES: 3
     - name: Cache image used by templates/freebsd.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/freebsd.yaml
     - name: "Run BATS freebsd tests"
@@ -474,7 +474,7 @@ jobs:
     - name: "Adjust LIMACTL_CREATE_ARGS"
       run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
     - name: Cache image used by default .yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: Install test dependencies
@@ -503,7 +503,7 @@ jobs:
         max_attempts: 3
         command: ./hack/test-templates.sh templates/default.yaml
     - if: always()
-      uses: ./.github/actions/upload_failure_logs_if_exists
+      uses: $/.github/actions/upload_failure_logs_if_exists
 
   upgrade:
     name: "Upgrade tests (QEMU, macOS host)"
@@ -530,7 +530,7 @@ jobs:
         go-version: stable
         cache: false
     - name: Cache image used by ${{ matrix.oldver }}/examples/ubuntu-lts.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: https://raw.githubusercontent.com/lima-vm/lima/${{ matrix.oldver }}/examples/ubuntu-lts.yaml
     - name: Install test dependencies
@@ -549,7 +549,7 @@ jobs:
         max_attempts: 3
         command: ./hack/test-upgrade.sh ${{ matrix.oldver }} ${{ github.sha }}
     - if: always()
-      uses: ./.github/actions/upload_failure_logs_if_exists
+      uses: $/.github/actions/upload_failure_logs_if_exists
 
   vz:
     name: "Integration tests (vz)"
@@ -576,7 +576,7 @@ jobs:
     - name: Install
       run: sudo make install
     - name: Cache image used by templates/${{ matrix.template }}
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/${{ matrix.template }}
     - name: Install test dependencies
@@ -586,7 +586,7 @@ jobs:
     - name: Test
       run: ./hack/test-templates.sh templates/${{ matrix.template }}
     - if: failure()
-      uses: ./.github/actions/upload_failure_logs_if_exists
+      uses: $/.github/actions/upload_failure_logs_if_exists
       with:
         suffix: ${{ matrix.template }}
 
@@ -619,7 +619,7 @@ jobs:
         make KEEP_SYMBOLS=1 binaries
         sudo make install
     - name: Cache image used by templates/default.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: Smoke test
@@ -657,7 +657,7 @@ jobs:
     - name: Install
       run: sudo make install
     - name: Cache image used by templates/default.yaml
-      uses: ./.github/actions/setup_cache_for_template
+      uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: Install test dependencies
