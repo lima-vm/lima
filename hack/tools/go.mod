@@ -23,7 +23,7 @@ require (
 	github.com/yoheimuta/protolint v0.57.0
 	google.golang.org/grpc v1.83.2
 	google.golang.org/protobuf v1.36.12
-	mvdan.cc/sh/v3 v3.13.1
+	mvdan.cc/sh/v3 v3.14.0
 )
 
 require (
