@@ -10,7 +10,7 @@ The following features are experimental and subject to change:
 - `vmType: wsl2` and relevant configurations (`mountType: wsl2`)
 - `arch`: `riscv64`, `armv7l`, `s390x`, and `ppc64le`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
-- `audio.device` and `audio.interface`
+- `audio.device`, `audio.interface`, and `audio.microphone`
 - `mountInotify: true`
 - `tpm: true`
 - `user.passwordlessSudo` (See [Sudo](../config/sudo))
