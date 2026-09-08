@@ -4,6 +4,7 @@ go 1.26.0
 
 // Should be in sync with pinversion.go
 tool (
+	github.com/AkihiroSuda/gomodjail/v2/cmd/gomodjail
 	github.com/AkihiroSuda/gosocialcheck/cmd/gosocialcheck
 	github.com/containerd/ltag
 	github.com/editorconfig-checker/editorconfig-checker/v3/cmd/editorconfig-checker
@@ -16,6 +17,7 @@ tool (
 )
 
 require (
+	github.com/AkihiroSuda/gomodjail/v2 v2.0.1
 	github.com/AkihiroSuda/gosocialcheck v0.1.3
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.13.2
@@ -89,6 +91,7 @@ require (
 	github.com/dlclark/regexp2/v2 v2.2.1 // indirect
 	github.com/editorconfig-checker/editorconfig-checker/v3 v3.6.1 // indirect
 	github.com/editorconfig/editorconfig-core-go/v2 v2.6.4 // indirect
+	github.com/elastic/go-seccomp-bpf v1.6.0 // indirect
 	github.com/ettle/strcase v0.2.0 // indirect
 	github.com/fatih/color v1.19.0 // indirect
 	github.com/fatih/structtag v1.2.0 // indirect
@@ -124,6 +127,7 @@ require (
 	github.com/golangci/rowserrcheck v0.0.0-20260419091836-c5f79b8a11ba // indirect
 	github.com/golangci/swaggoswag v0.0.0-20250504205917-77f2aca3143e // indirect
 	github.com/golangci/unconvert v0.0.0-20250410112200-a129a6e6413e // indirect
+	github.com/google/capslock v0.3.3 // indirect
 	github.com/google/go-cmp v0.7.0 // indirect
 	github.com/google/renameio/v2 v2.0.2 // indirect
 	github.com/gordonklaus/ineffassign v0.2.0 // indirect
@@ -240,7 +244,7 @@ require (
 	go.uber.org/zap v1.27.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	golang.org/x/exp/typeparams v0.0.0-20260811152304-ee035b5b010f // indirect
-	golang.org/x/mod v0.40.0 // indirect
+	golang.org/x/mod v0.41.0 // indirect
 	golang.org/x/net v0.58.0 // indirect
 	golang.org/x/sync v0.23.0 // indirect
 	golang.org/x/sys v0.48.0 // indirect

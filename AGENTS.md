@@ -45,4 +45,8 @@ Pointers to the authoritative sources - read these rather than a duplicated copy
 
 - New Go, shell, Dockerfile, and Makefile files need an SPDX header (`ltag` enforces this in CI;
   other file types, including markdown, are exempt).
-- Keep the `gomodjail` / `gosocialcheck` annotations in `go.mod`.
+- Keep the `gomodjail` / `gosocialcheck` annotations in `go.mod`. `make gomodjail` statically
+  verifies that the modules annotated `gomodjail:confined` cannot reach a denied capability
+  (filesystem, network, process execution, raw syscalls, ...); when a dependency bump makes one
+  of them reach a capability, `make gomodjail-fix` downgrades that annotation to
+  `gomodjail:unconfined` instead of confining it by hand.

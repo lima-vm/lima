@@ -651,6 +651,44 @@ go-licenses:
 	# see also https://github.com/google/licenseclassifier/issues/75
 	go-licenses check --include_tests --ignore github.com/hashicorp/hcl/v2 --ignore github.com/segmentio/asm ./... --allowed_licenses=$$(cat ./hack/allowed-licenses.txt)
 
+# gomodjail statically verifies that the Go modules annotated `gomodjail:confined` in go.mod
+# cannot reach a denied capability (filesystem, network, process execution, raw syscalls,
+# OS state modification, or cgo).
+# https://github.com/AkihiroSuda/gomodjail
+#
+# The verdicts are platform-dependent, so the gate is pinned to linux/amd64 and linux/arm64.
+# These are the only platforms that can be analyzed from any host: analyzing darwin needs a
+# macOS host, as the "vz" driver requires cgo. The linux verdicts are a superset of the
+# darwin ones anyway.
+#
+# When a dependency bump makes a confined module reach a denied capability, run
+# `make gomodjail-fix` to downgrade its annotation to `gomodjail:unconfined`,
+# so that the decision stays visible and reviewable in go.mod.
+GOMODJAIL = $(GO) run -modfile=./hack/tools/go.mod github.com/AkihiroSuda/gomodjail/v2/cmd/gomodjail
+
+# gomodjail itself does not build on Windows hosts, as its legacy dynamic mode is compiled in
+# unconditionally.
+.PHONY: gomodjail
+gomodjail:
+ifeq ($(GOHOSTOS),windows)
+	@echo "Skipped: gomodjail does not support Windows hosts"
+else
+	$(GOMODJAIL) analyze --goos=linux --goarch=amd64 ./...
+	$(GOMODJAIL) analyze --goos=linux --goarch=arm64 ./...
+endif
+
+# Downgrades the `gomodjail:confined` annotation of the modules that fail `make gomodjail`
+# to `gomodjail:unconfined`. Unconfining is the only safe automated fix: a violation means
+# that the module's own dependency cone reaches the capability.
+.PHONY: gomodjail-fix
+gomodjail-fix:
+ifeq ($(GOHOSTOS),windows)
+	@echo "Skipped: gomodjail does not support Windows hosts"
+else
+	$(GOMODJAIL) fix --goos=linux --goarch=amd64 ./...
+	$(GOMODJAIL) fix --goos=linux --goarch=arm64 ./...
+endif
+
 .PHONY: gosocialcheck
 gosocialcheck:
 	-$(GO) run -modfile=./hack/tools/go.mod github.com/AkihiroSuda/gosocialcheck/cmd/gosocialcheck run --gha=$(GITHUB_ACTIONS) ./...
@@ -666,7 +704,7 @@ protolint:
 
 # Main lint target - runs all linting stages
 .PHONY: lint
-lint: check-generated nobin editorconfig-checker golangci-lint yamllint ls-lint shellcheck shfmt go-licenses gosocialcheck ltag protolint
+lint: check-generated nobin editorconfig-checker golangci-lint yamllint ls-lint shellcheck shfmt go-licenses gomodjail gosocialcheck ltag protolint
 
 .PHONY: clean
 clean:
