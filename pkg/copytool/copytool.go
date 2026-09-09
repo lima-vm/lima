@@ -15,8 +15,8 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -88,7 +88,9 @@ func New(ctx context.Context, backend string, paths []string, opts *Options) (Co
 
 		tool, err = newSCPTool(opts)
 		if err != nil {
-			return nil, fmt.Errorf("neither rsync nor scp found on host: %w", err)
+			// rsync may well have been found and rejected above, so name the
+			// outcome rather than guessing which tool is missing.
+			return nil, fmt.Errorf("no usable copy tool on host: %w", err)
 		}
 		return tool, nil
 	default:
@@ -116,21 +118,40 @@ func hasRemoteSourceAndDestination(ctx context.Context, paths []string) bool {
 	return hasRemoteSource && hasRemoteDestination
 }
 
+// sshOptsForInstance returns the ssh options for copying to or from inst. The
+// rsync availability probe and the rsync command must both use it, or the probe
+// rejects a working install. On Windows it drops connection multiplexing, since
+// native OpenSSH has none and Cygwin ssh's is unreliable for scp and rsync.
+//
+// toolPath names the binary whose path form the options take. scp hands them to
+// the ssh beside itself, while rsync hands them to the ssh it names with -e.
+func sshOptsForInstance(ctx context.Context, sshExe sshutil.SSHExe, toolPath string, inst *limatype.Instance) ([]string, error) {
+	if runtime.GOOS == "windows" {
+		return sshutil.SSHOptsWithoutMultiplexing(ctx, sshExe, toolPath, *inst.Config.User.Name, false)
+	}
+	return sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+}
+
 func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 	var copyPaths []*Path
 
 	for _, path := range paths {
 		cp := &Path{}
 		if runtime.GOOS == "windows" {
+			// Classify absolute paths before the ":" split, so a drive letter
+			// is not read as an instance name. Drive-relative "C:foo" is not
+			// absolute, so single-letter instance names still work.
+			//
+			// The path stays in native form here. scp and rsync can come from
+			// different toolchains, so each backend formats it for the binary
+			// that consumes it.
 			if filepath.IsAbs(path) {
-				var err error
-				path, err = fsutil.WindowsSubsystemPath(ctx, path)
-				if err != nil {
-					return nil, err
-				}
-			} else {
-				path = filepath.ToSlash(path)
+				cp.Path = path
+				cp.IsRemote = false
+				copyPaths = append(copyPaths, cp)
+				continue
 			}
+			path = filepath.ToSlash(path)
 		}
 
 		parts := strings.SplitN(path, ":", 2)

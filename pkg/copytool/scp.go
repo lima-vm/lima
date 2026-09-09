@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os/exec"
+	"path/filepath"
 
 	"github.com/coreos/go-semver/semver"
 
@@ -17,15 +18,22 @@ import (
 
 type scpTool struct {
 	toolPath string
+	sshExe   sshutil.SSHExe
 	Options  *Options
 }
 
 func newSCPTool(opts *Options) (*scpTool, error) {
-	path, err := exec.LookPath("scp")
+	// scp must come from the same toolchain as the ssh whose path form it
+	// receives, and NewSSHExe can select an ssh that PATH would not.
+	sshExe, err := sshutil.NewSSHExe()
+	if err != nil {
+		return nil, fmt.Errorf("ssh not found on host: %w", err)
+	}
+	path, err := exec.LookPath(sshutil.CompanionForSSH(sshExe, "scp"))
 	if err != nil {
 		return nil, fmt.Errorf("scp not found on host: %w", err)
 	}
-	return &scpTool{toolPath: path, Options: opts}, nil
+	return &scpTool{toolPath: path, sshExe: sshExe, Options: opts}, nil
 }
 
 func (t *scpTool) Name() string {
@@ -66,12 +74,22 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 		scpFlags = append(scpFlags, effectiveOpts.AdditionalArgs...)
 	}
 
-	// this assumes that ssh and scp come from the same place, but scp has no -V
-	sshExeForVersion, err := sshutil.NewSSHExe()
-	if err != nil {
-		return nil, err
+	// scp has no -V, so the version comes from t.sshExe, which is scp's own
+	// toolchain unless that install shipped no scp.
+	legacySSH := sshutil.DetectOpenSSHVersion(ctx, t.sshExe).LessThan(*semver.New("8.0.0"))
+
+	// Only absolute paths carry a drive letter to convert; a relative path is
+	// already in a form both toolchains accept. Key the form to scp itself,
+	// which parses these operands: it usually comes from the same toolchain as
+	// t.sshExe, but falls back to PATH when that install ships no scp.
+	for _, cp := range copyPaths {
+		if cp.IsRemote || !filepath.IsAbs(cp.Path) {
+			continue
+		}
+		if cp.Path, err = sshutil.PathForTool(ctx, t.toolPath, cp.Path); err != nil {
+			return nil, err
+		}
 	}
-	legacySSH := sshutil.DetectOpenSSHVersion(ctx, sshExeForVersion).LessThan(*semver.New("8.0.0"))
 
 	for _, cp := range copyPaths {
 		if cp.IsRemote {
@@ -98,24 +116,18 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 	if len(instances) == 1 {
 		// Only one (instance) host is involved; we can use the instance-specific
 		// arguments such as ControlPath.  This is preferred as we can multiplex
-		// sessions without re-authenticating (MaxSessions permitting).
+		// sessions without re-authenticating (MaxSessions permitting), except on
+		// Windows.
 		for _, inst := range instances {
-			sshExe, err := sshutil.NewSSHExe()
-			if err != nil {
-				return nil, err
-			}
-			sshOpts, err = sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
+			sshOpts, err = sshOptsForInstance(ctx, t.sshExe, t.toolPath, inst)
 			if err != nil {
 				return nil, err
 			}
 		}
 	} else {
 		// Copying among multiple hosts; we can't pass in host-specific options.
-		sshExe, err := sshutil.NewSSHExe()
-		if err != nil {
-			return nil, err
-		}
-		sshOpts, err = sshutil.CommonOpts(ctx, sshExe, false)
+		// CommonOpts carries no multiplexing options to begin with.
+		sshOpts, err = sshutil.CommonOpts(ctx, t.sshExe, t.toolPath, false)
 		if err != nil {
 			return nil, err
 		}

@@ -133,24 +133,24 @@ func missingSiblings(dir string, siblings ...string) []string {
 }
 
 var (
-	// cygwinDetectCache maps a resolved ssh path to its sibling cygpath.exe,
-	// or "" when that ssh is not Cygwin-based. Each path is probed once.
+	// cygwinDetectCache maps a resolved tool path to its sibling cygpath.exe,
+	// or "" when that tool is not Cygwin-based. Each path is probed once.
 	cygwinDetectCache   = map[string]string{}
 	cygwinDetectCacheRW sync.RWMutex
 )
 
-// resolvedSSHPath returns the absolute, symlink-resolved path of sshExe's
-// binary — the directory Lima reads its companion tools from. It returns
+// resolvedToolPath returns the absolute, symlink-resolved path of toolExe's
+// binary, whose directory Lima reads its companion tools from. It returns
 // ("", false) when a bare name does not resolve on PATH.
-func resolvedSSHPath(sshExe SSHExe) (string, bool) {
-	if sshExe.Exe == "" {
+func resolvedToolPath(toolExe SSHExe) (string, bool) {
+	if toolExe.Exe == "" {
 		return "", false
 	}
-	path := sshExe.Exe
+	path := toolExe.Exe
 	if !filepath.IsAbs(path) {
 		resolved, err := exec.LookPath(path)
 		if err != nil {
-			logrus.WithError(err).Debugf("cannot resolve ssh at %#q via PATH", path)
+			logrus.WithError(err).Debugf("cannot resolve tool at %#q via PATH", path)
 			return "", false
 		}
 		path = resolved
@@ -161,15 +161,15 @@ func resolvedSSHPath(sshExe SSHExe) (string, bool) {
 	return path, true
 }
 
-// companionForSSH returns tool from the same toolchain as sshExe. NewSSHExe can
+// CompanionForSSH returns tool from the same toolchain as sshExe. NewSSHExe can
 // select an ssh outside PATH, so resolving a companion by bare name can pick a
 // different toolchain than the one PathForSSH formats paths for. It returns tool
 // unchanged on non-Windows, or when no sibling exists, leaving it to PATH.
-func companionForSSH(sshExe SSHExe, tool string) string {
+func CompanionForSSH(sshExe SSHExe, tool string) string {
 	if runtime.GOOS != "windows" {
 		return tool
 	}
-	path, ok := resolvedSSHPath(sshExe)
+	path, ok := resolvedToolPath(sshExe)
 	if !ok {
 		return tool
 	}
@@ -181,16 +181,17 @@ func companionForSSH(sshExe SSHExe, tool string) string {
 	return companion
 }
 
-// cygpathForSSH returns the cygpath.exe beside sshExe (resolved through
-// symlinks) and whether sshExe is Cygwin-based. Callers pass the returned
-// path to exec.Command so conversions run through that toolchain's own
-// cygpath, even when $SSH points outside PATH. It returns
-// ("", false) on non-Windows or empty input; results are cached per resolved path.
-func cygpathForSSH(sshExe SSHExe) (string, bool) {
+// cygpathForSSH returns the cygpath.exe beside toolExe (resolved through
+// symlinks) and whether toolExe is Cygwin-based. PathForTool passes non-ssh
+// binaries here too. Callers pass the returned path to exec.Command so
+// conversions run through that toolchain's own cygpath, even when $SSH points
+// outside PATH. It returns ("", false) on non-Windows or empty input; results
+// are cached per resolved path.
+func cygpathForSSH(toolExe SSHExe) (string, bool) {
 	if runtime.GOOS != "windows" {
 		return "", false
 	}
-	path, ok := resolvedSSHPath(sshExe)
+	path, ok := resolvedToolPath(toolExe)
 	if !ok {
 		return "", false
 	}
@@ -202,10 +203,10 @@ func cygpathForSSH(sshExe SSHExe) (string, bool) {
 	}
 	cygpathExe := filepath.Join(filepath.Dir(path), "cygpath.exe")
 	if _, err := os.Stat(cygpathExe); err != nil {
-		logrus.Debugf("ssh at %#q detected as native Windows OpenSSH (no cygpath.exe alongside)", path)
+		logrus.Debugf("tool at %#q detected as native Windows OpenSSH (no cygpath.exe alongside)", path)
 		cygpathExe = ""
 	} else {
-		logrus.Debugf("ssh at %#q detected as Cygwin-based (found %#q alongside)", path, cygpathExe)
+		logrus.Debugf("tool at %#q detected as Cygwin-based (found %#q alongside)", path, cygpathExe)
 	}
 	cygwinDetectCacheRW.Lock()
 	cygwinDetectCache[path] = cygpathExe
@@ -219,11 +220,23 @@ func cygpathForSSH(sshExe SSHExe) (string, bool) {
 // Windows, MSYS2) gets a /c/Users/... form from the sibling cygpath, which
 // respects the toolchain's fstab; native Windows OpenSSH gets forward
 // slashes (C:/Users/...), which native ssh, ssh-keygen, and scp accept.
+// It is a convenience wrapper for callers holding an SSHExe; PathForTool takes
+// the binary's path directly.
 func PathForSSH(ctx context.Context, sshExe SSHExe, orig string) (string, error) {
+	return PathForTool(ctx, sshExe.Exe, orig)
+}
+
+// PathForTool is PathForSSH keyed to an arbitrary binary, for a tool that Lima
+// resolves separately from ssh. Pass the tool's own path so the form follows
+// the toolchain that reads it, whether the tool parses the path itself or hands
+// it to the ssh beside it. Callers whose tool is Cygwin-based on every
+// Windows host should convert through cygpath directly instead: the native form
+// this returns as a fallback would be wrong for them.
+func PathForTool(ctx context.Context, toolPath, orig string) (string, error) {
 	if runtime.GOOS != "windows" {
 		return orig, nil
 	}
-	if cygpathExe, ok := cygpathForSSH(sshExe); ok {
+	if cygpathExe, ok := cygpathForSSH(SSHExe{Exe: toolPath}); ok {
 		return fsutil.WindowsSubsystemPathWithCygpath(ctx, cygpathExe, orig)
 	}
 	return filepath.ToSlash(orig), nil
@@ -256,7 +269,7 @@ func SftpServerForSSH(ctx context.Context, sshExe SSHExe) string {
 		}
 		return sftpServer
 	}
-	path, ok := resolvedSSHPath(sshExe)
+	path, ok := resolvedToolPath(sshExe)
 	if !ok {
 		return ""
 	}
@@ -313,8 +326,10 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 				if sshErr != nil {
 					return sshErr
 				}
-				keygenExe = companionForSSH(sshExe, "ssh-keygen")
-				privPath, err = PathForSSH(ctx, sshExe, privPath)
+				keygenExe = CompanionForSSH(sshExe, "ssh-keygen")
+				// ssh-keygen parses this path, and it falls back to PATH when
+				// the selected ssh ships none, so key the form to keygenExe.
+				privPath, err = PathForTool(ctx, keygenExe, privPath)
 				if err != nil {
 					return err
 				}
@@ -390,7 +405,11 @@ var sshInfo struct {
 //
 // The result always contains the IdentityFile option.
 // The result never contains the Port option.
-func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, error) {
+//
+// Path options take toolPath's form, for the binary that ends up reading them.
+// scp hands its options to the ssh beside itself, which need not be sshExe.
+// Version detection still runs against sshExe, since only ssh reports a version.
+func CommonOpts(ctx context.Context, sshExe SSHExe, toolPath string, useDotSSH bool) ([]string, error) {
 	configDir, err := dirnames.LimaConfigDir()
 	if err != nil {
 		return nil, err
@@ -401,7 +420,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 		return nil, err
 	}
 	var opts []string
-	idf, err := identityFileEntry(ctx, sshExe, privateKeyPath)
+	idf, err := identityFileEntry(ctx, toolPath, privateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -436,7 +455,7 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 				// Fail on permission-related and other path errors
 				return nil, err
 			}
-			idf, err = identityFileEntry(ctx, sshExe, privateKeyPath)
+			idf, err = identityFileEntry(ctx, toolPath, privateKeyPath)
 			if err != nil {
 				return nil, err
 			}
@@ -488,9 +507,9 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, useDotSSH bool) ([]string, e
 	return opts, nil
 }
 
-func identityFileEntry(ctx context.Context, sshExe SSHExe, privateKeyPath string) (string, error) {
+func identityFileEntry(ctx context.Context, toolPath, privateKeyPath string) (string, error) {
 	if runtime.GOOS == "windows" {
-		privateKeyPath, err := PathForSSH(ctx, sshExe, privateKeyPath)
+		privateKeyPath, err := PathForTool(ctx, toolPath, privateKeyPath)
 		if err != nil {
 			return "", err
 		}
@@ -572,13 +591,15 @@ func RemoveStaleControlMaster(ctx context.Context, instDir string) (bool, error)
 	return existed, nil
 }
 
-// SSHOpts adds the following options to CommonOptions: User, ControlMaster, ControlPath, ControlPersist.
+// SSHOpts adds the following options to CommonOpts: User, ControlMaster,
+// ControlPath, ControlPersist, and whichever of ForwardAgent, ForwardX11, and
+// ForwardX11Trusted the caller asks for.
 func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %#q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	opts, err := CommonOpts(ctx, sshExe, useDotSSH)
+	opts, err := SSHOptsWithoutMultiplexing(ctx, sshExe, sshExe.Exe, username, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
@@ -591,7 +612,6 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 		controlPath = fmt.Sprintf(`ControlPath='%s'`, controlSock)
 	}
 	opts = append(opts,
-		fmt.Sprintf("User=%s", username), // guest and host have the same username, but we should specify the username explicitly (#85)
 		"ControlMaster=auto",
 		controlPath,
 		"ControlPersist=yes",
@@ -606,6 +626,22 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 		opts = append(opts, "ForwardX11Trusted=yes")
 	}
 	return opts, nil
+}
+
+// SSHOptsWithoutMultiplexing returns CommonOpts plus an explicit User, adding
+// neither multiplexing nor forwarding options. Use it for invocations that
+// cannot share a control socket: native Windows OpenSSH has no multiplexing,
+// and Cygwin ssh's is unreliable. It builds no control path, so the caller also
+// escapes the socket length limit SSHOpts enforces.
+// Path options take toolPath's form; pass sshExe.Exe unless another binary
+// receives the options, as described on CommonOpts.
+func SSHOptsWithoutMultiplexing(ctx context.Context, sshExe SSHExe, toolPath, username string, useDotSSH bool) ([]string, error) {
+	opts, err := CommonOpts(ctx, sshExe, toolPath, useDotSSH)
+	if err != nil {
+		return nil, err
+	}
+	// guest and host have the same username, but we should specify the username explicitly (#85)
+	return append(opts, fmt.Sprintf("User=%s", username)), nil
 }
 
 // SSHArgsFromOpts returns ssh args from opts.
