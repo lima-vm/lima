@@ -144,15 +144,22 @@ func TestTemplate(t *testing.T) {
 	assert.Assert(t, strings.Contains(resolverBootScript, "MulticastDNS=yes"))
 	assert.Assert(t, !strings.Contains(resolverBootScript, "LLMNR=no"))
 
-	args.Param = map[string]string{"internal_disableLLMNR": "true"}
-	layout, err = ExecuteTemplateCIDataISO(args)
-	assert.NilError(t, err)
-	for _, f := range layout {
-		if f.Path == "boot.Linux/06-enable-mdns-on-systemd.sh" {
-			b, err := io.ReadAll(f.Reader)
+	for _, disableLLMNR := range []string{"", "false", "true"} {
+		t.Run("disableLLMNR="+disableLLMNR, func(t *testing.T) {
+			args.Param = map[string]string{"internal_disableLLMNR": disableLLMNR}
+			layout, err := ExecuteTemplateCIDataISO(args)
 			assert.NilError(t, err)
-			assert.Assert(t, strings.Contains(string(b), "LLMNR=no"))
-		}
+			var script string
+			for _, f := range layout {
+				if f.Path == "boot.Linux/06-enable-mdns-on-systemd.sh" {
+					b, err := io.ReadAll(f.Reader)
+					assert.NilError(t, err)
+					script = string(b)
+				}
+			}
+			assert.Equal(t, strings.Contains(script, "LLMNR=no\n"), disableLLMNR == "true")
+			assert.Equal(t, strings.Replace(script, "LLMNR=no\n", "", 1), resolverBootScript)
+		})
 	}
 }
 
