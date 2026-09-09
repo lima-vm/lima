@@ -24,8 +24,16 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
+
+func TestMain(m *testing.M) {
+	usrlocal.ExecutableViaArgs0 = func() (string, error) {
+		return filepath.Abs("../../bin/limactl")
+	}
+	os.Exit(m.Run())
+}
 
 func TestExistingLimaVersion(t *testing.T) {
 	t.Run("instance does not exist yet", func(t *testing.T) {

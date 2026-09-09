@@ -5,10 +5,21 @@ package networks
 
 import (
 	"net"
+	"os"
+	"path/filepath"
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
+
+func TestMain(m *testing.M) {
+	usrlocal.ExecutableViaArgs0 = func() (string, error) {
+		return filepath.Abs("../../bin/limactl")
+	}
+	os.Exit(m.Run())
+}
 
 func TestFillDefault(t *testing.T) {
 	cfg, err := fillDefaults(Config{})
