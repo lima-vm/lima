@@ -32,6 +32,9 @@ elif [ "$(limactl ls -f '{{ .Status }}' "$LIMA_INSTANCE" 2>/dev/null)" != "Runni
 fi
 KUBECTL=$(command -v "$KUBECTL" || true)
 if [ -n "$KUBECTL" ]; then
+    [ "$(readlink -f -- "$KUBECTL")" = "$(readlink -f -- "$0")" ] && KUBECTL=""
+fi
+if [ -n "$KUBECTL" ]; then
   KUBECONFIG=$(limactl list "$LIMA_INSTANCE" --format '{{.Dir}}/copied-from-guest/kubeconfig.yaml')
   export KUBECONFIG
   exec "$KUBECTL" "$@"
