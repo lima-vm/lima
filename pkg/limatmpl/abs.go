@@ -102,13 +102,37 @@ func basePath(locator string) (string, error) {
 	return withVolume(base)
 }
 
+// isRemoteLocator reports whether the locator is fetched over the network, and
+// is therefore untrusted.
+func isRemoteLocator(locator string) bool {
+	u, err := url.Parse(locator)
+	if err != nil {
+		return false
+	}
+	switch u.Scheme {
+	case "http", "https", "github":
+		return true
+	}
+	return false
+}
+
 // absPath either returns the locator directly, or combines it with the basePath if the locator is a relative path.
 func absPath(locator, basePath string) (string, error) {
 	if locator == "" {
 		return "", errors.New("locator is empty")
 	}
+	// A template fetched from a remote location must not be able to pull in
+	// references to the local filesystem, otherwise it could inline the contents
+	// of arbitrary host files (e.g. an ssh private key) into a provisioning
+	// script. Relative references under a remote base stay remote (resolved via
+	// url.JoinPath below), so only file: locators and absolute local paths need
+	// to be rejected here.
+	remoteBase := isRemoteLocator(basePath)
 	u, err := url.Parse(locator)
 	if err == nil && len(u.Scheme) > 1 {
+		if remoteBase && u.Scheme == "file" {
+			return "", fmt.Errorf("local file locator %#q is not allowed from remote template %#q", locator, basePath)
+		}
 		return locator, nil
 	}
 	// Don't expand relative path to absolute. Tilde paths however are absolute paths already.
@@ -145,6 +169,9 @@ func absPath(locator, basePath string) (string, error) {
 			return u.JoinPath(locator).String(), nil
 		}
 		locator = filepath.Join(basePath, locator)
+	} else if remoteBase {
+		// Rooted (absolute) local path referenced from a remote template.
+		return "", fmt.Errorf("local file locator %#q is not allowed from remote template %#q", locator, basePath)
 	}
 	return withVolume(locator)
 }

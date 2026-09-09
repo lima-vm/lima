@@ -239,6 +239,21 @@ func TestAbsPath(t *testing.T) {
 		assert.Equal(t, actual, "file:///foo")
 	})
 
+	t.Run("A remote base must not reference a local absolute path", func(t *testing.T) {
+		_, err = absPath(volume+"/etc/passwd", "https://example.com")
+		assert.ErrorContains(t, err, "local")
+	})
+
+	t.Run("A remote base must not reference a file: locator", func(t *testing.T) {
+		_, err = absPath("file:///etc/passwd", "https://example.com")
+		assert.ErrorContains(t, err, "local")
+	})
+
+	t.Run("A remote base must not reference a tilde path", func(t *testing.T) {
+		_, err = absPath("~/.ssh/id_ed25519", "https://example.com")
+		assert.ErrorContains(t, err, "local")
+	})
+
 	t.Run("Can't have relative path when reading from STDIN", func(t *testing.T) {
 		_, err = absPath("foo", "-")
 		assert.ErrorContains(t, err, "STDIN")
