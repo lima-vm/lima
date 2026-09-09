@@ -53,6 +53,21 @@ func TestInstNameFromImageURL(t *testing.T) {
 		name := limatmpl.InstNameFromImageURL(image, arch)
 		assert.Equal(t, name, "linux")
 	})
+	t.Run("removes native arch aliases", func(t *testing.T) {
+		var alias string
+		for keyword, arch := range limatmpl.ArchKeywords {
+			if limatype.IsNativeArch(arch) && arch != keyword {
+				alias = keyword
+				break
+			}
+		}
+		if alias == "" {
+			t.Skip("no alias for native arch")
+		}
+		image := fmt.Sprintf("linux-%s-basic.raw", alias)
+		name := limatmpl.InstNameFromImageURL(image, limatype.NewArch(runtime.GOARCH))
+		assert.Equal(t, name, "linux")
+	})
 	t.Run("removes redundant major version", func(t *testing.T) {
 		name := limatmpl.InstNameFromImageURL("rocky-8-8.10.raw", "unknown")
 		assert.Equal(t, name, "rocky-8.10")
