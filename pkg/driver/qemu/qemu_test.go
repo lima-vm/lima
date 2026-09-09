@@ -13,6 +13,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func TestArgValue(t *testing.T) {
@@ -150,4 +151,50 @@ func TestSwtpmCmdline(t *testing.T) {
 	assert.NilError(t, err)
 	_, err = os.Stat(swtpmSock)
 	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestValidate9pMountOptions(t *testing.T) {
+	tests := []struct {
+		name    string
+		nineP   limatype.NineP
+		wantErr string
+	}{
+		{
+			name: "valid non-default values",
+			nineP: limatype.NineP{
+				SecurityModel:   ptr.Of("mapped-xattr"),
+				ProtocolVersion: ptr.Of("9p2000.u"),
+				Cache:           ptr.Of("loose"),
+			},
+		},
+		{
+			// A comma in securityModel would inject extra options into the QEMU -virtfs argument.
+			name:    "securityModel with injected option",
+			nineP:   limatype.NineP{SecurityModel: ptr.Of("none,readonly=off")},
+			wantErr: "mounts[0].9p.securityModel",
+		},
+		{
+			name:    "unknown protocolVersion",
+			nineP:   limatype.NineP{ProtocolVersion: ptr.Of("9p2000.L,foo=bar")},
+			wantErr: "mounts[0].9p.protocolVersion",
+		},
+		{
+			name:    "unknown cache",
+			nineP:   limatype.NineP{Cache: ptr.Of("fscache,foo")},
+			wantErr: "mounts[0].9p.cache",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := &limatype.LimaYAML{
+				Mounts: []limatype.Mount{{Location: "/", NineP: tt.nineP}},
+			}
+			err := validate9pMountOptions(cfg)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
 }
