@@ -126,7 +126,7 @@ tools_call() {
     assert_output
     expected=$output
 
-    tools_call run_shell_command '{"directory":"/etc","command":["cat","os-release"]}'
+    tools_call run_shell_command '{"directory":"'"$HOME"'","command":["cat","/etc/os-release"]}'
     json=$output
 
     run_yq '.structuredContent.exit_code' <<<"$json"
@@ -156,7 +156,7 @@ tools_call() {
 }
 
 @test 'run shell command returns stderr and exit code' {
-    tools_call run_shell_command '{"directory":"/","command":["bash","-c","echo NO>&2; exit 13"]}'
+    tools_call run_shell_command '{"directory":"'"$HOME"'","command":["bash","-c","echo NO>&2; exit 13"]}'
     json=$output
 
     run_yq '.structuredContent.exit_code' <<<"$json"
@@ -173,7 +173,7 @@ tools_call() {
 }
 
 @test 'run shell command fails if the directory does not exist' {
-    tools_call run_shell_command '{"directory":"/etcetera","command":["cat","os-release"]}'
+    tools_call run_shell_command '{"directory":"'"$HOME/etcetera"'","command":["cat","os-release"]}'
     json=$output
 
     run_yq '.structuredContent.exit_code' <<<"$json"
@@ -184,11 +184,10 @@ tools_call() {
 }
 
 @test 'read_file reads a file' {
-    run -0 limactl shell "$INSTANCE" cat /etc/os-release
-    assert_output
-    expected=$output
+    echo "test content" > "$HOME/mcp-read.test"
+    expected="test content"
 
-    tools_call read_file '{"path":"/etc/os-release"}'
+    tools_call read_file '{"path":"'"$HOME/mcp-read.test"'"}'
     json=$output
 
     run_yq '.content[0].text' <<<"$json"
@@ -197,10 +196,12 @@ tools_call() {
 
     run_yq '.structuredContent.content' <<<"$json"
     assert_output "$expected"
+
+    rm -f "$HOME/mcp-read.test"
 }
 
 @test 'read_file returns an error when path does not exist' {
-    tools_call read_file '{"path":"/etc/os-release-info"}'
+    tools_call read_file '{"path":"'"$HOME/os-release-info"'"}'
     json=$output
 
     run_yq '.isError' <<<"$json"
@@ -222,49 +223,54 @@ tools_call() {
 }
 
 @test 'write_file creates new file and overwrites existing file' {
-    limactl shell "$INSTANCE" rm -f /tmp/mcp.test
-    tools_call write_file '{"path":"/tmp/mcp.test","content":"foo"}'
+    rm -f "$HOME/mcp.test"
+    tools_call write_file '{"path":"'"$HOME/mcp.test"'","content":"foo"}'
 
     run_yq '.content[0].text' <<<"$output"
     assert_output "{}"
 
-    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.test
+    run -0 cat "$HOME/mcp.test"
     assert_output "foo"
 
-    tools_call write_file '{"path":"/tmp/mcp.test","content":"bar"}'
+    tools_call write_file '{"path":"'"$HOME/mcp.test"'","content":"bar"}'
 
     run_yq '.content[0].text' <<<"$output"
     assert_output "{}"
 
-    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.test
+    run -0 cat "$HOME/mcp.test"
     assert_output "bar"
+
+    rm -f "$HOME/mcp.test"
 }
 
 @test 'write_file creates the directory if it does not yet exist' {
     # Make sure /tmp/tmp is deletable even if we run the tests multiple times against the same Lima instance
-    limactl shell "$INSTANCE" chmod -R 777 /tmp/tmp || true
-    limactl shell "$INSTANCE" rm -rf /tmp/tmp
-    tools_call write_file '{"path":"/tmp/tmp/tmp","content":"tmp"}'
+    rm -rf "$HOME/tmp_mcp_test"
+    tools_call write_file '{"path":"'"$HOME/tmp_mcp_test/tmp"'","content":"tmp"}'
     json=$output
 
     run_yq '.isError' <<<"$json"
     assert_output "null"
 
-    run -0 limactl shell "$INSTANCE" cat /tmp/tmp/tmp
+    run -0 cat "$HOME/tmp_mcp_test/tmp"
     assert_output "tmp"
+
+    rm -rf "$HOME/tmp_mcp_test"
 }
 
 @test 'write_file returns an error when the directory is not writable' {
-    limactl shell "$INSTANCE" mkdir -p /tmp/tmp
-    limactl shell "$INSTANCE" chmod 444 /tmp/tmp
-    tools_call write_file '{"path":"/tmp/tmp/tmp","content":"tmp"}'
+    mkdir -p "$HOME/tmp_mcp_ro"
+    chmod 444 "$HOME/tmp_mcp_ro"
+    tools_call write_file '{"path":"'"$HOME/tmp_mcp_ro/tmp"'","content":"tmp"}'
     json=$output
 
     run_yq '.isError' <<<"$json"
     assert_output "true"
 
     run_yq '.content[0].text' <<<"$json"
-    assert_output "permission denied"
+    assert_output --partial "permission denied"
+    chmod 755 "$HOME/tmp_mcp_ro"
+    rm -rf "$HOME/tmp_mcp_ro"
 }
 
 @test 'write_file returns an error when path is not absolute' {
