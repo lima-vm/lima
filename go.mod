@@ -16,7 +16,7 @@ require (
 )
 
 require (
-	al.essio.dev/pkg/shellescape v1.6.0
+	al.essio.dev/pkg/shellescape v1.6.1
 	github.com/AlecAivazis/survey/v2 v2.3.7
 	github.com/Code-Hex/vz/v3 v3.7.1 // gomodjail:unconfined
 	github.com/Microsoft/go-winio v0.6.3-0.20251027160822-ad3df93bed29 // gomodjail:unconfined
