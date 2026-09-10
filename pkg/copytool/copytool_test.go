@@ -44,3 +44,13 @@ func TestRsyncCommandEndsOptionParsing(t *testing.T) {
 	assert.Assert(t, sep != -1, "rsync args must contain the %#q separator: %v", "--", cmd.Args)
 	assert.Assert(t, slices.Index(cmd.Args, dashPath) > sep, "path %#q must come after %#q: %v", dashPath, "--", cmd.Args)
 }
+
+// TestNewAutoSurfacesPathError verifies that the default backend reports a bad
+// path as itself, rather than as a missing copy tool.
+func TestNewAutoSurfacesPathError(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	paths := []string{"nonexistent-instance-for-test:/tmp/x", "/tmp/y"}
+
+	_, err := New(t.Context(), string(BackendAuto), paths, &Options{})
+	assert.ErrorContains(t, err, "instance `nonexistent-instance-for-test`")
+}
