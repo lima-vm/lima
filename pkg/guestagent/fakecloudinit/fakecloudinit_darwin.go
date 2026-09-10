@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"text/template"
 
 	"github.com/goccy/go-yaml"
 	"github.com/sethvargo/go-password/password"
@@ -117,7 +118,7 @@ func processUserData(ctx context.Context, mnt string) error {
 		}
 	}
 	for _, u := range userData.Users {
-		if err := createUser(ctx, &u); err != nil {
+		if err := createUser(ctx, &u, mnt); err != nil {
 			errs = append(errs, fmt.Errorf("failed to create user %#q: %w", u.Name, err))
 		}
 	}
@@ -219,7 +220,119 @@ func populateHomeDir(ctx context.Context, uid int, homedir string) error {
 	return nil
 }
 
-func createUser(ctx context.Context, u *cloudinittypes.User) error {
+// setupAssistantPlistTemplate is the built-in com.apple.SetupAssistant.plist.
+// The Build/Version stamps are what macOS checks to decide whether setup is
+// already complete; without them macOS resets MiniBuddyLaunchReason to 13 on
+// first GUI login.
+const setupAssistantPlistTemplate = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>DidSeeAccessibility</key><true/>
+	<key>DidSeeActivationLock</key><true/>
+	<key>DidSeeAppStore</key><true/>
+	<key>DidSeeAppearanceSetup</key><true/>
+	<key>DidSeeApplePaySetup</key><true/>
+	<key>DidSeeCloudSetup</key><true/>
+	<key>DidSeeLockdownMode</key><true/>
+	<key>DidSeePrivacy</key><true/>
+	<key>DidSeeScreenTime</key><true/>
+	<key>DidSeeSetupSequence</key><true/>
+	<key>DidSeeSiriSetup</key><true/>
+	<key>DidSeeSyncSetup</key><true/>
+	<key>DidSeeSyncSetup2</key><true/>
+	<key>DidSeeTermsOfAddress</key><true/>
+	<key>DidSeeTouchIDSetup</key><true/>
+	<key>DidSeeiCloudLoginForStorageServices</key><true/>
+	<key>LastPreLoginTasksPerformedBuild</key><string>{{.Build}}</string>
+	<key>LastPreLoginTasksPerformedVersion</key><string>{{.Version}}</string>
+	<key>LastSeenAgeRangeSelectionProductVersion</key><string>{{.Version}}</string>
+	<key>LastSeenBuddyBuildVersion</key><string>{{.Build}}</string>
+	<key>LastSeenCloudProductVersion</key><string>{{.Version}}</string>
+	<key>LastSeenDiagnosticsProductVersion</key><string>{{.Version}}</string>
+	<key>MiniBuddyLaunchReason</key><integer>0</integer>
+	<key>MiniBuddyShouldLaunchToResumeSetup</key><false/>
+	<key>SkipExpressSettingsUpdating</key><true/>
+	<key>SkipFirstLoginOptimization</key><true/>
+</dict>
+</plist>
+`
+
+var setupAssistantPlistTmpl = template.Must(template.New("setupAssistantPlist").Parse(setupAssistantPlistTemplate))
+
+// suppressFirstLoginScreens writes the SetupAssistant and SoftwareUpdate
+// preference plists before first login, so macOS treats them as the guest's
+// initial state instead of resetting them at GUI login. A custom plist at
+// mnt/setup-assistant.plist overrides the built-in template if present.
+func suppressFirstLoginScreens(ctx context.Context, mnt string, uid int, homedir string) error {
+	prefsDir := filepath.Join(homedir, "Library/Preferences")
+	if err := os.MkdirAll(prefsDir, 0o700); err != nil {
+		return fmt.Errorf("failed to create Preferences dir %#q: %w", prefsDir, err)
+	}
+	if err := os.Chown(prefsDir, uid, -1); err != nil {
+		logrus.WithError(err).Warnf("Failed to chown Preferences dir %#q", prefsDir)
+	}
+
+	var setupAssistantPlist string
+	if customPlistPath := filepath.Join(mnt, "setup-assistant.plist"); mnt != "" {
+		if data, err := os.ReadFile(customPlistPath); err == nil && len(data) > 0 {
+			setupAssistantPlist = string(data)
+			logrus.Infof("Using custom SetupAssistant plist from %#q", customPlistPath)
+		}
+	}
+	if setupAssistantPlist == "" {
+		buildVersion := "unknown"
+		if out, err := exec.CommandContext(ctx, "sw_vers", "-buildVersion").Output(); err == nil {
+			buildVersion = strings.TrimSpace(string(out))
+		} else {
+			logrus.WithError(err).Warn("Failed to get build version from sw_vers")
+		}
+		productVersion := "unknown"
+		if out, err := exec.CommandContext(ctx, "sw_vers", "-productVersion").Output(); err == nil {
+			productVersion = strings.TrimSpace(string(out))
+		} else {
+			logrus.WithError(err).Warn("Failed to get product version from sw_vers")
+		}
+
+		var buf strings.Builder
+		data := struct{ Build, Version string }{Build: buildVersion, Version: productVersion}
+		if err := setupAssistantPlistTmpl.Execute(&buf, data); err != nil {
+			return fmt.Errorf("failed to render SetupAssistant plist template: %w", err)
+		}
+		setupAssistantPlist = buf.String()
+	}
+
+	saPlist := filepath.Join(prefsDir, "com.apple.SetupAssistant.plist")
+	if err := os.WriteFile(saPlist, []byte(setupAssistantPlist), 0o600); err != nil {
+		return fmt.Errorf("failed to write SetupAssistant plist %#q: %w", saPlist, err)
+	}
+	if err := os.Chown(saPlist, uid, -1); err != nil {
+		logrus.WithError(err).Warnf("Failed to chown SetupAssistant plist %#q", saPlist)
+	}
+
+	// defaults write (not os.WriteFile) so cfprefsd owns the domain; raw file
+	// writes get overwritten when softwareupdated rewrites the plist on first boot.
+	swPrefs := [][]string{
+		{"AutomaticCheckEnabled", "-bool", "true"},
+		{"AutomaticDownload", "-bool", "false"},
+		{"AutomaticallyInstallMacOSUpdates", "-bool", "false"},
+		{"ConfigDataInstall", "-bool", "true"},
+		{"CriticalUpdateInstall", "-bool", "false"},
+	}
+	for _, pref := range swPrefs {
+		args := append([]string{"write", "/Library/Preferences/com.apple.SoftwareUpdate"}, pref...)
+		cmd := exec.CommandContext(ctx, "defaults", args...)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			// Non-fatal: the dialog is annoying but does not block VM operation.
+			logrus.WithError(err).Warnf("Failed to set SoftwareUpdate pref %v (output=%#q)", pref[0], output)
+		}
+	}
+
+	logrus.Infof("Suppressed first-login setup screens for uid %d in %#q", uid, homedir)
+	return nil
+}
+
+func createUser(ctx context.Context, u *cloudinittypes.User, mnt string) error {
 	homedir := u.Homedir
 	if homedir == "" {
 		return fmt.Errorf("homedir is required for user %#q", u.Name)
@@ -279,6 +392,17 @@ func createUser(ctx context.Context, u *cloudinittypes.User) error {
 	// sysadminctl does not create the custom home directory
 	if err = populateHomeDir(ctx, uid, homedir); err != nil {
 		return fmt.Errorf("failed to populate home directory for user %#q: %w", u.Name, err)
+	}
+
+	// Presence of setup-assistant.plist on the cidata volume (not any cloud-config
+	// key) is what signals this feature is enabled -- see GenerateISO9660.
+	if _, statErr := os.Stat(filepath.Join(mnt, "setup-assistant.plist")); statErr == nil {
+		// Write first-login preference plists now, as root, before any GUI session starts.
+		// cfprefsd reads these fresh at first login so macOS does not reset them.
+		if err := suppressFirstLoginScreens(ctx, mnt, uid, homedir); err != nil {
+			// Non-fatal: SSH provisioning (configure.sh) can still handle it if needed.
+			logrus.WithError(err).Warnf("Failed to suppress first-login screens for user %#q", u.Name)
+		}
 	}
 
 	cmd = exec.CommandContext(ctx, "chmod", "700", homedir)
