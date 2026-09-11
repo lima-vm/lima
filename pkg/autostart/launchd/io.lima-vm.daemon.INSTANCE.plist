@@ -6,6 +6,11 @@
 	<string>io.lima-vm.daemon.{{ .Instance }}</string>
 	<key>UserName</key>
 	<string>{{ .UserName }}</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LIMA_HOME</key>
+		<string>{{ .LimaHome }}</string>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
 		<string>{{ .Binary }}</string>

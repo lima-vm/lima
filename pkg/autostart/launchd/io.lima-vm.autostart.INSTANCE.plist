@@ -4,6 +4,11 @@
 <dict>
 	<key>Label</key>
 	<string>io.lima-vm.autostart.{{ .Instance }}</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LIMA_HOME</key>
+		<string>{{ .LimaHome }}</string>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
 		<string>{{ .Binary }}</string>

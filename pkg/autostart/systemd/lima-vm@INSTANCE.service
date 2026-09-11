@@ -3,6 +3,7 @@ Description=Lima - Linux virtual machines, with a focus on running containers.
 Documentation=man:lima(1)
 
 [Service]
+Environment=LIMA_HOME={{.LimaHome}}
 ExecStart={{.Binary}} start %i --foreground
 WorkingDirectory=%h
 Type=simple

@@ -15,6 +15,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/autostart/launchd"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
@@ -95,22 +96,36 @@ func autostartDisableAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func daemonInstall(ctx context.Context, instName, workDir, userName string, keepAlive bool) error {
-	selfExe, err := os.Executable()
+// renderDaemonPlist renders the system LaunchDaemon plist for an instance. Every key the
+// template references must be supplied here: a missing one renders as the literal string
+// "<no value>" rather than failing, which would be written into the installed plist.
+func renderDaemonPlist(binary, instName, workDir, userName string, keepAlive bool) ([]byte, error) {
+	// The daemon inherits no environment from the shell that registers it, so LIMA_HOME
+	// has to be recorded in the plist for the instance to be found at boot.
+	limaHome, err := dirnames.LimaDir()
 	if err != nil {
-		return fmt.Errorf("could not determine limactl path: %w", err)
+		return nil, err
 	}
-
 	vars := map[string]string{
-		"Binary":   selfExe,
+		"Binary":   binary,
 		"Instance": instName,
+		"LimaHome": limaHome,
 		"WorkDir":  workDir,
 		"UserName": userName,
 	}
 	if keepAlive {
 		vars["KeepAlive"] = "true"
 	}
-	content, err := textutil.ExecuteTemplate(launchd.DaemonTemplate, vars)
+	return textutil.ExecuteTemplate(launchd.DaemonTemplate, vars)
+}
+
+func daemonInstall(ctx context.Context, instName, workDir, userName string, keepAlive bool) error {
+	selfExe, err := os.Executable()
+	if err != nil {
+		return fmt.Errorf("could not determine limactl path: %w", err)
+	}
+
+	content, err := renderDaemonPlist(selfExe, instName, workDir, userName, keepAlive)
 	if err != nil {
 		return fmt.Errorf("failed to render daemon plist: %w", err)
 	}

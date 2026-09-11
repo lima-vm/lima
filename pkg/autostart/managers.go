@@ -14,6 +14,7 @@ import (
 	"runtime"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
 
@@ -120,9 +121,18 @@ func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getE
 	if err != nil {
 		return nil, err
 	}
+	// The generated unit must carry LIMA_HOME explicitly: neither launchd nor systemd
+	// inherits the environment of the shell that registered the instance, so without it
+	// the autostarted `limactl start` would look for the instance under the default
+	// ~/.lima and not find one that lives anywhere else.
+	limaHome, err := dirnames.LimaDir()
+	if err != nil {
+		return nil, err
+	}
 	data := map[string]string{
 		"Binary":   selfExeAbs,
 		"Instance": instName,
+		"LimaHome": limaHome,
 		"WorkDir":  workDir,
 	}
 	maps.Copy(data, t.extraTemplateVars)

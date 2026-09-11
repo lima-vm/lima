@@ -83,6 +83,11 @@ func TestRenderTemplate(t *testing.T) {
 <dict>
 	<key>Label</key>
 	<string>io.lima-vm.autostart.default</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LIMA_HOME</key>
+		<string>/some/lima/home</string>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/limactl</string>
@@ -120,6 +125,11 @@ func TestRenderTemplate(t *testing.T) {
 	<string>io.lima-vm.daemon.k3s</string>
 	<key>UserName</key>
 	<string>alice</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LIMA_HOME</key>
+		<string>/some/lima/home</string>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/limactl</string>
@@ -155,6 +165,11 @@ func TestRenderTemplate(t *testing.T) {
 <dict>
 	<key>Label</key>
 	<string>io.lima-vm.autostart.default</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LIMA_HOME</key>
+		<string>/some/lima/home</string>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/limactl</string>
@@ -197,6 +212,11 @@ func TestRenderTemplate(t *testing.T) {
 	<string>io.lima-vm.daemon.k3s</string>
 	<key>UserName</key>
 	<string>alice</string>
+	<key>EnvironmentVariables</key>
+	<dict>
+		<key>LIMA_HOME</key>
+		<string>/some/lima/home</string>
+	</dict>
 	<key>ProgramArguments</key>
 	<array>
 		<string>/limactl</string>
@@ -236,6 +256,7 @@ Description=Lima - Linux virtual machines, with a focus on running containers.
 Documentation=man:lima(1)
 
 [Service]
+Environment=LIMA_HOME=/some/lima/home
 ExecStart=/limactl start %i --foreground
 WorkingDirectory=%h
 Type=simple
@@ -259,6 +280,7 @@ Description=Lima - Linux virtual machines, with a focus on running containers.
 Documentation=man:lima(1)
 
 [Service]
+Environment=LIMA_HOME=/some/lima/home
 ExecStart=/limactl start %i --foreground
 WorkingDirectory=%h
 Type=simple
@@ -276,6 +298,9 @@ WantedBy=default.target
 	}
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
+			// Pin LIMA_HOME so the rendered unit does not depend on the host running the test.
+			// The directory does not exist, so LimaDir() returns it without resolving symlinks.
+			t.Setenv("LIMA_HOME", "/some/lima/home")
 			tmpl, err := tt.Manager.renderTemplate(tt.InstanceName, tt.WorkDir, tt.GetExecutable)
 			assert.NilError(t, err)
 			assert.Equal(t, string(tmpl), tt.Expected)
