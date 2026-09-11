@@ -818,24 +818,33 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 				args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, qemuSock))
 				args = append(args, "-device", fmt.Sprintf("%s,netdev=net%d,mac=%s", virtioNet, i+1, nw.MACAddress))
 			} else {
-				if runtime.GOOS != "darwin" {
-					return "", nil, fmt.Errorf("networks.yaml '%s' configuration is only supported on macOS right now", nw.Lima)
-				}
-				logrus.Debugf("Using socketVMNet (%#q)", nwCfg.Paths.SocketVMNet)
-				sock, err := networks.Sock(nw.Lima)
-				if err != nil {
-					return "", nil, err
-				}
-				if strings.Contains(string(features.NetdevHelp), "stream") {
-					netdev := fmt.Sprintf("stream,id=net%d,server=off,addr.type=unix,addr.path=%s", i+1, sock)
-					if !version.LessThan(*semver.New("9.2.0")) {
-						netdev += ",reconnect-ms=500"
-					} else if !version.LessThan(*semver.New("8.0.0")) {
-						netdev += ",reconnect=1"
+				switch runtime.GOOS {
+				case "darwin":
+					logrus.Debugf("Using socketVMNet (%#q)", nwCfg.Paths.SocketVMNet)
+					sock, err := networks.Sock(nw.Lima)
+					if err != nil {
+						return "", nil, err
 					}
-					args = append(args, "-netdev", netdev)
-				} else {
-					args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
+					if strings.Contains(string(features.NetdevHelp), "stream") {
+						netdev := fmt.Sprintf("stream,id=net%d,server=off,addr.type=unix,addr.path=%s", i+1, sock)
+						if !version.LessThan(*semver.New("9.2.0")) {
+							netdev += ",reconnect-ms=500"
+						} else if !version.LessThan(*semver.New("8.0.0")) {
+							netdev += ",reconnect=1"
+						}
+						args = append(args, "-netdev", netdev)
+					} else {
+						args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
+					}
+				case "linux":
+					// The tap device is owned by the current user and was attached to the
+					// bridge by networks/reconcile before the instance was started, so QEMU
+					// does not need any privileges (script=no).
+					tap := networks.TapName(cfg.Name, nw.Lima)
+					logrus.Debugf("Using tap device %#q for network %#q", tap, nw.Lima)
+					args = append(args, "-netdev", fmt.Sprintf("tap,id=net%d,ifname=%s,script=no,downscript=no", i+1, tap))
+				default:
+					return "", nil, fmt.Errorf("networks.yaml %#q configuration is only supported on macOS and Linux", nw.Lima)
 				}
 			}
 		} else if nw.Socket != "" {

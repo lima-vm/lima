@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
@@ -59,7 +60,7 @@ func (c *Config) Validate() error {
 	// validate all paths.* values
 	paths := reflect.ValueOf(&c.Paths).Elem()
 	pathsMap := make(map[string]string, paths.NumField())
-	var socketVMNetNotFound bool
+	var daemonNotFound string
 	for i := range paths.NumField() {
 		// extract YAML name from struct tag; strip options like "omitempty"
 		name := paths.Type().Field(i).Tag.Get("yaml")
@@ -79,23 +80,38 @@ func (c *Config) Validate() error {
 			}
 			path = findBaseDirectory(path)
 		}
-		err := validatePath(path, name == "varRun")
+		// Only socket_vmnet runs as the "daemon" user; the Linux helper writes
+		// varRun as root.
+		err := validatePath(path, name == "varRun" && runtime.GOOS == "darwin")
 		if err != nil {
-			if errors.Is(err, os.ErrNotExist) {
-				switch name {
-				// sudoers file does not need to exist; otherwise `limactl sudoers` couldn't bootstrap
-				case "sudoers":
-					continue
-				case "socketVMNet":
-					socketVMNetNotFound = true
-					continue
-				}
+			switch {
+			// sudoers file does not need to exist; otherwise `limactl sudoers` couldn't
+			// bootstrap it. /etc/sudoers.d is typically not readable by the user either.
+			case name == "sudoers" && (errors.Is(err, os.ErrNotExist) || errors.Is(err, os.ErrPermission)):
+				continue
+			case errors.Is(err, os.ErrNotExist) && name == "socketVMNet":
+				daemonNotFound = name
+				continue
 			}
 			return fmt.Errorf("networks.yaml field `paths.%s` error: %w", name, err)
 		}
 	}
-	if socketVMNetNotFound {
-		return fmt.Errorf("networks.yaml: %#q (`paths.socketVMNet`) has to be installed", pathsMap["socketVMNet"])
+	if daemonNotFound != "" {
+		return fmt.Errorf("networks.yaml: %#q (`paths.%s`) has to be installed", pathsMap[daemonNotFound], daemonNotFound)
+	}
+	// The Linux helper is not configurable, but it is interpolated into the sudoers
+	// file just like paths.socketVMNet, so it needs the same checks.
+	if slices.Contains(RequiredDaemons(), LimaPrivilegedNet) {
+		path := limaPrivilegedNetPath()
+		if path == "" {
+			return fmt.Errorf("%#q has to be installed", LimaPrivilegedNet)
+		}
+		if err := validatePath(path, false); err != nil {
+			if errors.Is(err, os.ErrNotExist) {
+				return fmt.Errorf("%#q has to be installed", path)
+			}
+			return fmt.Errorf("%#q error: %w", path, err)
+		}
 	}
 	return nil
 }
@@ -171,8 +187,8 @@ func validatePath(path string, allowDaemonGroupWritable bool) error {
 		// should never happen
 		return fmt.Errorf("could not retrieve stat buffer for %#q", path)
 	}
-	if runtime.GOOS != "darwin" {
-		return errors.New("vmnet code must not be called on non-Darwin") // TODO: move to *_darwin.go
+	if runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+		return errors.New("managed networks are only supported on macOS and Linux")
 	}
 	// TODO: cache looked up UIDs/GIDs
 	root, err := osutil.LookupUser("root")
