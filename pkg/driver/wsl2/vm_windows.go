@@ -7,7 +7,6 @@ import (
 	"context"
 	_ "embed"
 	"fmt"
-	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -269,23 +268,25 @@ func getSSHAddress(ctx context.Context, instName string) (string, error) {
 	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
 	out, err := cmd.CombinedOutput()
 	if err == nil {
-		return strings.TrimSpace(string(out)), nil
+		if addr := routableGuestIP(out); addr != "" {
+			return addr, nil
+		}
 	}
 	// Alpine
 	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "sh", "-c", `ip route get 1 | awk '{gsub("^.*src ",""); print $1; exit}'`)
 	out, err = cmd.CombinedOutput()
 	if err == nil {
-		return strings.TrimSpace(string(out)), nil
+		if addr := routableGuestIP(out); addr != "" {
+			return addr, nil
+		}
 	}
 	// fallback
 	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "hostname", "-i")
 	out, err = cmd.CombinedOutput()
 	if err == nil {
-		ip := net.ParseIP(strings.TrimSpace(string(out)))
-		// some distributions use "127.0.1.1" as the host IP, but we want something that we can route to here
-		if ip != nil && !ip.IsLoopback() {
-			return strings.TrimSpace(string(out)), nil
+		if addr := routableGuestIP(out); addr != "" {
+			return addr, nil
 		}
 	}
-	return "", fmt.Errorf("failed to get hostname for instance %#q, err: %w (out=%#q)", instName, err, string(out))
+	return "", fmt.Errorf("failed to get a routable address for instance %#q, err: %w (out=%#q)", instName, err, string(out))
 }
