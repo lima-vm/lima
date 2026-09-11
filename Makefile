@@ -141,6 +141,7 @@ help-targets:
 	@echo
 	@echo  'Targets for files in _output/libexec/lima/:'
 	@echo  '- limactl-plugins           : Build limactl-* CLI plugins'
+	@echo  '- lima-privileged-net       : Build the privileged network helper (Linux only)'
 	@echo
 	@echo  'Targets for files in _output/share/lima/:'
 	@echo  '- guestagents               : Build guestagents'
@@ -189,7 +190,7 @@ exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
 minimal: clean limactl native-guestagent default_template
-native: clean limactl limactl-plugins helpers native-guestagent templates template_experimentals additional-drivers
+native: clean limactl limactl-plugins lima-privileged-net helpers native-guestagent templates template_experimentals additional-drivers
 
 ################################################################################
 # These configs were once customizable but should no longer be changed.
@@ -210,7 +211,7 @@ CONFIG_GUESTAGENT_COMPRESS=y
 
 ################################################################################
 .PHONY: binaries
-binaries: limactl helpers limactl-plugins guestagents \
+binaries: limactl helpers limactl-plugins lima-privileged-net guestagents \
 	templates template_experimentals \
 	documentation create-links-in-doc-dir
 
@@ -317,12 +318,28 @@ ifeq ($(GOOS),darwin)
 endif
 
 LIBEXEC_LIMA := _output/libexec/lima
+# Privileged helpers are kept in their own directory so that they are easy to
+# audit and to tell apart from the unprivileged helpers next to them.
+LIBEXEC_LIMA_PRIVILEGED := $(LIBEXEC_LIMA)/privileged
 
 limactl-plugins: $(LIBEXEC_LIMA)/limactl-mcp$(exe) $(LIBEXEC_LIMA)/limactl-url-fedora-rawhide
 
 $(LIBEXEC_LIMA)/limactl-mcp$(exe): $(call dependencies_for_cmd,limactl-mcp) $$(call force_build,$$@)
 	@mkdir -p $(LIBEXEC_LIMA)
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/limactl-mcp
+
+# lima-privileged-net is the privileged helper that manages the bridges and tap
+# devices of the shared/host/bridged networks. It is only used on Linux hosts.
+.PHONY: lima-privileged-net
+ifeq ($(GOOS),linux)
+lima-privileged-net: $(LIBEXEC_LIMA_PRIVILEGED)/lima-privileged-net
+else
+lima-privileged-net:
+endif
+
+$(LIBEXEC_LIMA_PRIVILEGED)/lima-privileged-net: $(call dependencies_for_cmd,lima-privileged-net) $$(call force_build,$$@)
+	@mkdir -p $(LIBEXEC_LIMA_PRIVILEGED)
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-privileged-net
 
 $(LIBEXEC_LIMA)/limactl-url-fedora-rawhide: cmd/limactl-url-fedora-rawhide
 	cp -aL $< $@
@@ -600,7 +617,8 @@ uninstall:
 		"$(DEST)/libexec/lima/lima-driver-qemu$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)" \
-		"$(DEST)/libexec/lima/lima-driver-krunkit$(exe)"
+		"$(DEST)/libexec/lima/lima-driver-krunkit$(exe)" \
+		"$(DEST)/libexec/lima/privileged/lima-privileged-net"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 

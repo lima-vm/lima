@@ -35,6 +35,15 @@ func (c *Config) Validate() error {
 		if err := identifiers.Validate(name); err != nil {
 			return fmt.Errorf("invalid network name %#q: %w", name, err)
 		}
+		// On Linux the name of the bridge is derived from the network name, and the
+		// kernel truncates anything longer than IFNAMSIZ-1. Only enforced here so
+		// that existing macOS configurations, where no bridge is created, keep
+		// working.
+		if runtime.GOOS == "linux" && nw.Mode != ModeUserV2 && nw.Mode != ModeBridged {
+			if bridge := bridgePrefix + name; len(bridge) > maxIfNameLen {
+				return fmt.Errorf("network name %#q is too long: the bridge %#q would exceed %d characters", name, bridge, maxIfNameLen)
+			}
+		}
 		if nw.Mode != "" {
 			if err := identifiers.Validate(nw.Mode); err != nil {
 				return fmt.Errorf("invalid mode %#q for network %#q: %w", nw.Mode, name, err)
