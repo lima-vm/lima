@@ -27,6 +27,7 @@ type LimaYAML struct {
 	Memory                *string       `yaml:"memory,omitempty" json:"memory,omitempty" jsonschema:"nullable"` // go-units.RAMInBytes
 	Disk                  *string       `yaml:"disk,omitempty" json:"disk,omitempty" jsonschema:"nullable"`     // go-units.RAMInBytes
 	AdditionalDisks       []Disk        `yaml:"additionalDisks,omitempty" json:"additionalDisks,omitempty" jsonschema:"nullable"`
+	BlockDevices          []string      `yaml:"blockDevices,omitempty" json:"blockDevices,omitempty" jsonschema:"nullable"`
 	Mounts                []Mount       `yaml:"mounts,omitempty" json:"mounts,omitempty"`
 	MountTypesUnsupported []string      `yaml:"mountTypesUnsupported,omitempty" json:"mountTypesUnsupported,omitempty" jsonschema:"nullable"`
 	MountType             *MountType    `yaml:"mountType,omitempty" json:"mountType,omitempty" jsonschema:"nullable"`

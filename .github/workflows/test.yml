@@ -595,8 +595,8 @@ jobs:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
         # Submodules are required by the BATS port-forwarding test
-        submodules: true
         persist-credentials: false
+        submodules: true
     - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
       with:
         go-version: stable
@@ -604,7 +604,10 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: sudo make install
+      run: |
+        sudo install -d -o root -g wheel -m 0755 /opt/lima
+        sudo make PREFIX=/opt/lima install
+        echo /opt/lima/bin >>$GITHUB_PATH
     - name: Cache image used by templates/${{ matrix.template }}
       uses: $/.github/actions/setup_cache_for_template
       with:
@@ -620,6 +623,8 @@ jobs:
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats
       env:
         LIMA_BATS_ALL_TESTS_RETRIES: "2"
+    - name: Run BATS VZ block-device tests
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/vz-block-device.bats
     - if: failure()
       uses: $/.github/actions/upload_failure_logs_if_exists
       with:

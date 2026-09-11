@@ -151,3 +151,10 @@ func TestSwtpmCmdline(t *testing.T) {
 	_, err = os.Stat(swtpmSock)
 	assert.ErrorIs(t, err, os.ErrNotExist)
 }
+
+func TestValidateConfigRejectsBlockDevices(t *testing.T) {
+	err := validateConfig(&limatype.LimaYAML{
+		BlockDevices: []string{"/dev/disk4"},
+	})
+	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: qemu")
+}
