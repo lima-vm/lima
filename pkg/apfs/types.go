@@ -67,6 +67,12 @@ const noownersPlaceholderID = 99
 // VolRoleData is the APFS volume role for "Data" volumes.
 const VolRoleData = 0x0040 // APFS_VOL_ROLE_DATA (shifted representation: (1 << 2) << 4)
 
+// nxMaxBlockSize is an upper bound on the container block size read from
+// nx_block_size. It is NX_MAXIMUM_BLOCK_SIZE from the Apple File System
+// Reference; the cap keeps a bogus value from sizing every readBlock
+// allocation.
+const nxMaxBlockSize = 65536
+
 // Container superblock (nx_superblock_t) field offsets from block start.
 const (
 	nxMagicOff         = 32  // uint32
