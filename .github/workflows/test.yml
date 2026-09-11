@@ -56,6 +56,8 @@ jobs:
       run: go install github.com/google/go-licenses@v1.6.0
     - name: Check licenses
       run: make go-licenses
+    - name: Check the gomodjail confinement of Go dependencies
+      run: NO_COLOR=true make gomodjail
     - name: Check social reputation of Go dependencies
       run: make gosocialcheck
     - name: Check license boilerplates
@@ -593,10 +595,14 @@ jobs:
   # gomodjail is a library sandbox for Go
   # https://github.com/AkihiroSuda/gomodjail
   #
+  # The static analysis mode (`gomodjail analyze`) is enforced by the "Lints" job above.
+  # This job exercises the legacy dynamic mode (`gomodjail run`), which enforces a similar
+  # (but not identical) policy at runtime, via syscall interception.
+  #
   # This is an early experiment.
   # CI failures that only occurs with gomodjail shall not block merging PRs.
   gomodjail:
-    name: "gomodjail (experimental; failures shall not block merging PRs)"
+    name: "gomodjail, dynamic mode (experimental; failures shall not block merging PRs)"
     runs-on: macos-15-large  # Intel
     timeout-minutes: 30
     steps:
@@ -608,9 +614,11 @@ jobs:
         go-version: stable
         cache: false
     - name: Install gomodjail
+      env:
+        GOMODJAIL_VERSION: v2.0.1
       run: |
         set -eux -o pipefail
-        git clone https://github.com/AkihiroSuda/gomodjail
+        git clone --depth=1 --branch="${GOMODJAIL_VERSION}" https://github.com/AkihiroSuda/gomodjail
         cd gomodjail
         make binaries install
     - name: Install Lima
