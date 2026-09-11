@@ -203,3 +203,27 @@ func TestValidateConfigImages(t *testing.T) {
 		})
 	}
 }
+
+func TestGuestReportedIP(t *testing.T) {
+	tests := []struct {
+		name string
+		out  string
+		want string
+		ok   bool
+	}{
+		{name: "routable IPv4", out: "192.168.1.10\n", want: "192.168.1.10", ok: true},
+		{name: "trims surrounding space", out: "  10.0.0.5  ", want: "10.0.0.5", ok: true},
+		{name: "routable IPv6", out: "fd00::1\n", want: "fd00::1", ok: true},
+		{name: "empty", out: "\n", ok: false},
+		{name: "loopback", out: "127.0.1.1\n", ok: false},
+		{name: "not an ip", out: "example.com\n", ok: false},
+		{name: "attacker string", out: "$(reboot)\n", ok: false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			addr, ok := guestReportedIP([]byte(tt.out))
+			assert.Equal(t, ok, tt.ok)
+			assert.Equal(t, addr, tt.want)
+		})
+	}
+}
