@@ -50,6 +50,7 @@ declare -A CHECKS=(
 	["clone"]=""
 	["port-forwards"]="1"
 	["vmnet"]=""
+	["vmnet-isolated"]=""
 	["disk"]=""
 	["user-v2"]=""
 	["mount-path-with-spaces"]=""
@@ -110,6 +111,10 @@ fi
 case "$(limactl tmpl yq "$FILE_HOST" '.networks[].lima')" in
 "shared")
 	CHECKS["vmnet"]=1
+	;;
+"host")
+	CHECKS["vmnet"]=1
+	CHECKS["vmnet-isolated"]=1
 	;;
 "user-v2")
 	CHECKS["port-forwards"]=""
@@ -553,7 +558,19 @@ if [[ -n ${CHECKS["vmnet"]} ]]; then
 	limactl shell "$NAME" iperf3 -s -1 -D
 	${IPERF3} -c "$guestip"
 	set +x
-	# NOTE: we only test the shared interface here, as the bridged interface cannot be used on GHA (and systemd-networkd-wait-online.service will fail)
+	# NOTE: we only test the shared and host interfaces here, as the bridged interface cannot be used on GHA (and systemd-networkd-wait-online.service will fail)
+fi
+
+if [[ -n ${CHECKS["vmnet-isolated"]} ]]; then
+	INFO 'Testing that the "host" network cannot reach the outside world'
+	# `-I lima0` binds the interface, not just the source address: binding only the
+	# address would still route the packet through the user-mode network.
+	set -x
+	if limactl shell "$NAME" ping -c 1 -W 5 -I lima0 8.8.8.8; then
+		ERROR 'The "host" network is not isolated'
+		exit 1
+	fi
+	set +x
 fi
 
 if [[ -n ${CHECKS["disk"]} ]]; then
