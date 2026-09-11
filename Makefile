@@ -642,6 +642,30 @@ shellcheck:
 shfmt:
 	find . -name '*.sh' ! -path "./.git/*" | xargs $(GO) run -modfile=./hack/tools/go.mod mvdan.cc/sh/v3/cmd/shfmt -s -d
 
+CYCLONEDX_GOMOD = $(GO) run -modfile=./hack/tools/go.mod github.com/CycloneDX/cyclonedx-gomod/cmd/cyclonedx-gomod
+CYCLONEDX_GOMOD_FLAGS = -licenses -short-purls
+
+.PHONY: sbom
+sbom: sbom-mod sbom-app
+
+.PHONY: sbom-mod
+sbom-mod:
+	rm -rf vendor
+	GOOS="$(GOHOSTOS)" GOARCH="$(GOHOSTARCH)" GOFLAGS="" \
+	$(CYCLONEDX_GOMOD) mod $(CYCLONEDX_GOMOD_FLAGS) -json -output bom.json -type library
+
+SBOM_OS = $(call capitalize,$(GOOS))
+SBOM_ARCH = $(call to_uname_m,$(GOARCH))
+
+.PHONY: sbom-app
+sbom-app:
+ifeq ($(native_compiling),true)
+	rm -rf vendor
+	$(CYCLONEDX_GOMOD) app $(CYCLONEDX_GOMOD_FLAGS) -json -output limactl.$(SBOM_OS)-$(SBOM_ARCH).bom.json -main cmd/limactl
+	$(CYCLONEDX_GOMOD) app $(CYCLONEDX_GOMOD_FLAGS) -json -output limactl-mcp.$(SBOM_OS)-$(SBOM_ARCH).bom.json -main cmd/limactl-mcp
+	$(CYCLONEDX_GOMOD) app $(CYCLONEDX_GOMOD_FLAGS) -json -output lima-guestagent.$(SBOM_OS)-$(SBOM_ARCH).bom.json -main cmd/lima-guestagent
+endif
+
 .PHONY: go-licenses
 go-licenses:
 	# the allow list corresponds to https://github.com/cncf/foundation/blob/87e70a07d5a0cf06cd6f8208b8d52c16f035724a/policies-guidance/allowed-third-party-license-policy.md
@@ -826,9 +850,10 @@ artifacts-jsonschema: schema-limayaml.json | _artifacts
 	$(CP) $^ _artifacts/
 
 .PHONY: artifacts-misc
-artifacts-misc: | _artifacts
+artifacts-misc: sbom | _artifacts
 	go mod vendor
 	$(TAR) --no-xattrs -czf _artifacts/lima-$(VERSION_TRIMMED)-go-mod-vendor.tar.gz go.mod go.sum vendor
+	$(TAR) --no-xattrs -czf _artifacts/lima-$(VERSION_TRIMMED)-sbom.tar.gz *bom.json
 
 MKDIR_TARGETS += _artifacts
 
