@@ -17,6 +17,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
@@ -24,13 +25,17 @@ import (
 // MigrateDiskLayout creates symlinks from the current filenames (disk, iso) to
 // the legacy filenames (diffdisk, basedisk) used by older Lima versions.
 // The original files are left in place so older Lima versions can still use them.
-func MigrateDiskLayout(instDir string) error {
-	diskPath := filepath.Join(instDir, filenames.Disk)
+func MigrateDiskLayout(inst *limatype.Instance) error {
+	diskPath := filepath.Join(inst.Dir, filenames.Disk)
 	if osutil.FileExists(diskPath) {
 		return nil // already migrated or new instance
 	}
-
-	diffDiskPath := filepath.Join(instDir, filenames.DiffDiskLegacy)
+	if inst.Config != nil && inst.Config.DiskPath != nil {
+		if osutil.FileExists(filepath.Join(*inst.Config.DiskPath, inst.Name, filenames.Disk)) {
+			return nil
+		}
+	}
+	diffDiskPath := filepath.Join(inst.Dir, filenames.DiffDiskLegacy)
 	if osutil.FileExists(diffDiskPath) {
 		logrus.Infof("Creating symlink %#q -> %#q", filenames.Disk, filenames.DiffDiskLegacy)
 		if err := os.Symlink(filenames.DiffDiskLegacy, diskPath); err != nil {
@@ -38,8 +43,8 @@ func MigrateDiskLayout(instDir string) error {
 		}
 	}
 
-	baseDiskPath := filepath.Join(instDir, filenames.BaseDiskLegacy)
-	isoPath := filepath.Join(instDir, filenames.ISO)
+	baseDiskPath := filepath.Join(inst.Dir, filenames.BaseDiskLegacy)
+	isoPath := filepath.Join(inst.Dir, filenames.ISO)
 	if osutil.FileExists(baseDiskPath) && !osutil.FileExists(isoPath) {
 		isISO, err := iso9660util.IsISO9660(baseDiskPath)
 		if err != nil {

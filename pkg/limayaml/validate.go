@@ -114,7 +114,13 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	if _, err := units.RAMInBytes(*y.Disk); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `disk` has an invalid value: %w", err))
 	}
-
+	if y.DiskPath != nil {
+		if diskPath := *y.DiskPath; diskPath != "" {
+			if _, err := os.Stat(diskPath); err != nil {
+				errs = errors.Join(errs, fmt.Errorf("field `disk` disk-path invalid value: %w", err))
+			}
+		}
+	}
 	for i, disk := range y.AdditionalDisks {
 		if err := identifiers.Validate(disk.Name); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `additionalDisks[%d].name is invalid`: %w", i, err))

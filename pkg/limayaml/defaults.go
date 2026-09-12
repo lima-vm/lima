@@ -152,7 +152,7 @@ func defaultGuestInstallPrefix() string {
 func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath string, warn bool) {
 	instDir := filepath.Dir(filePath)
 
-	existingLimaVersion := ExistingLimaVersion(instDir)
+	existingLimaVersion := ExistingLimaVersion(o, instDir)
 
 	// OS has to be resolved before User
 	if y.OS == nil {
@@ -907,8 +907,8 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 // ExistingLimaVersion returns the version that created the instance, the empty string
 // for instances created before Lima v0.20 (which have no recorded version), or the
 // current version when the instance doesn't exist yet.
-func ExistingLimaVersion(instDir string) string {
-	if !IsExistingInstanceDir(instDir) {
+func ExistingLimaVersion(o *limatype.LimaYAML, instDir string) string {
+	if !IsExistingInstanceDir(o, instDir) {
 		return version.Version
 	}
 
@@ -1072,7 +1072,7 @@ func FillCopyToHostDefaults(rule *limatype.CopyToHost, instDir string, user lima
 	}
 }
 
-func IsExistingInstanceDir(dir string) bool {
+func IsExistingInstanceDir(cfg *limatype.LimaYAML, dir string) bool {
 	// existence of "lima.yaml" does not signify existence of the instance,
 	// because the file is created during the initialization of the instance.
 	for _, f := range []string{
@@ -1081,6 +1081,12 @@ func IsExistingInstanceDir(dir string) bool {
 	} {
 		file := filepath.Join(dir, f)
 		if _, err := os.Lstat(file); !errors.Is(err, os.ErrNotExist) {
+			return true
+		}
+	}
+	if cfg != nil && cfg.DiskPath != nil {
+		cusTomdir := filepath.Join(*cfg.DiskPath, dir, filenames.Disk)
+		if _, err := os.Lstat(cusTomdir); !errors.Is(err, os.ErrNotExist) {
 			return true
 		}
 	}

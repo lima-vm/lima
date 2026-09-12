@@ -259,7 +259,7 @@ func fillConfig(cfg *limatype.LimaYAML, instDir string) error {
 		if _, ok := mountTypesUnsupported[limatype.NINEP]; ok {
 			// Use REVSSHFS if the instance does not support 9p
 			cfg.MountType = new(limatype.REVSSHFS)
-		} else if limayaml.IsExistingInstanceDir(instDir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(instDir), "1.0.0") {
+		} else if limayaml.IsExistingInstanceDir(cfg, instDir) && !versionutil.GreaterEqual(limayaml.ExistingLimaVersion(cfg, instDir), "1.0.0") {
 			// Use REVSSHFS if the instance was created with Lima prior to v1.0
 			cfg.MountType = new(limatype.REVSSHFS)
 		}

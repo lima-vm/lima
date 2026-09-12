@@ -92,7 +92,18 @@ func minimumQemuVersion() (hardMin, softMin semver.Version) {
 // For ISO images, it renames the image to "iso" and creates an empty qcow2 disk.
 // For non-ISO images, it validates and renames the image to "disk".
 func EnsureDisk(ctx context.Context, cfg Config) error {
-	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	var diskPath string
+	if cfg.LimaYAML != nil && cfg.LimaYAML.DiskPath != nil && *cfg.LimaYAML.DiskPath != "" {
+		diskPath = filepath.Join(*cfg.LimaYAML.DiskPath, cfg.Name, filenames.Disk)
+		_, statErr := os.Stat(filepath.Dir(diskPath))
+		if os.IsNotExist(statErr) {
+			if err := os.MkdirAll(filepath.Dir(diskPath), 0o700); err != nil {
+				return err
+			}
+		}
+	} else {
+		diskPath = filepath.Join(cfg.InstanceDir, filenames.Disk)
+	}
 	if _, err := os.Stat(diskPath); err == nil || !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
@@ -157,7 +168,12 @@ func sendHmpCommand(cfg Config, cmd, tag string) (string, error) {
 }
 
 func execImgCommand(ctx context.Context, cfg Config, args ...string) (string, error) {
-	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	var diskPath string
+	if *cfg.LimaYAML.DiskPath != "" {
+		diskPath = filepath.Join(*cfg.LimaYAML.DiskPath, cfg.Name, filenames.Disk)
+	} else {
+		diskPath = filepath.Join(cfg.InstanceDir, filenames.Disk)
+	}
 	args = append(args, diskPath)
 	logrus.Debugf("Running qemu-img %v command", args)
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
@@ -637,7 +653,12 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 	}
 
 	// Disk
-	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	var diskPath string
+	if *cfg.LimaYAML.DiskPath != "" {
+		diskPath = filepath.Join(*cfg.LimaYAML.DiskPath, cfg.Name, filenames.Disk)
+	} else {
+		diskPath = filepath.Join(cfg.InstanceDir, filenames.Disk)
+	}
 	isoPath := filepath.Join(cfg.InstanceDir, filenames.ISO)
 	extraDisks := []string{}
 	for _, d := range y.AdditionalDisks {

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -31,6 +32,12 @@ func Delete(ctx context.Context, inst *limatype.Instance, force bool) error {
 	}
 	if err := os.RemoveAll(inst.Dir); err != nil {
 		return fmt.Errorf("failed to remove %#q: %w", inst.Dir, err)
+	}
+	diskPath := inst.Config.DiskPath
+	if diskPath != nil && *diskPath != "" {
+		if err := os.RemoveAll(filepath.Join(*diskPath, inst.Name)); err != nil {
+			return fmt.Errorf("failed to remove %#q: %w", *diskPath, err)
+		}
 	}
 
 	return nil

@@ -85,6 +85,7 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
 	})
 
+	flags.String("disk-path", "", commentPrefix+"Disk path for vm")
 	flags.String("vm-type", "", commentPrefix+"Virtual machine type")
 	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		var drivers []string
@@ -447,6 +448,18 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 			false,
 		},
 		{"disk", d(".disk= \"%sGiB\""), false, false},
+		{
+			"disk-path",
+			func(_ *flag.Flag) ([]string, error) {
+				diskPath, err := flags.GetString("disk-path")
+				if err != nil {
+					return nil, err
+				}
+				return []string{fmt.Sprintf(".diskPath = \"%s\"", diskPath)}, nil
+			},
+			false,
+			false,
+		},
 		{"plain", d(".plain = %s"), true, false},
 		{
 			"port-forward",

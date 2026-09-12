@@ -86,18 +86,22 @@ func Prepare(ctx context.Context, inst *limatype.Instance, guestAgent string) (*
 	if err := limaDriver.Create(ctx); err != nil {
 		return nil, err
 	}
-
 	// Migrate legacy disk layout (diffdisk → disk, ISO basedisk → iso)
-	if err := driverutil.MigrateDiskLayout(inst.Dir); err != nil {
+	if err := driverutil.MigrateDiskLayout(inst); err != nil {
 		return nil, err
 	}
 
 	supportedImageFormats := limaDriver.Info(ctx).Features.SupportedImageFormats
 
-	created := limayaml.IsExistingInstanceDir(inst.Dir)
+	created := limayaml.IsExistingInstanceDir(inst.Config, inst.Dir)
 
 	imagePath := filepath.Join(inst.Dir, filenames.Image)
-	disk := filepath.Join(inst.Dir, filenames.Disk)
+	var disk string
+	if inst.Config != nil && inst.Config.DiskPath != nil && *inst.Config.DiskPath != "" {
+		disk = filepath.Join(*inst.Config.DiskPath, inst.Name, filenames.Disk)
+	} else {
+		disk = filepath.Join(inst.Dir, filenames.Disk)
+	}
 	kernel := filepath.Join(inst.Dir, filenames.Kernel)
 	kernelCmdline := filepath.Join(inst.Dir, filenames.KernelCmdline)
 	initrd := filepath.Join(inst.Dir, filenames.Initrd)
@@ -515,8 +519,12 @@ func ShowMessage(inst *limatype.Instance) error {
 // prepareDisk resizes the VM disk if its size differs from the configured size.
 // Returns nil if the disk does not yet exist (instance not yet initialized).
 func prepareDisk(ctx context.Context, inst *limatype.Instance) error {
-	disk := filepath.Join(inst.Dir, filenames.Disk)
-
+	var disk string
+	if inst.Config.DiskPath != nil && *inst.Config.DiskPath != "" {
+		disk = filepath.Join(*inst.Config.DiskPath, inst.Name, filenames.Disk)
+	} else {
+		disk = filepath.Join(inst.Dir, filenames.Disk)
+	}
 	_, err := os.Stat(disk)
 	if err != nil {
 		if os.IsNotExist(err) {

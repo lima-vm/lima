@@ -28,22 +28,23 @@ import (
 )
 
 func TestExistingLimaVersion(t *testing.T) {
+	var o *limatype.LimaYAML
 	t.Run("instance does not exist yet", func(t *testing.T) {
-		assert.Equal(t, ExistingLimaVersion(t.TempDir()), version.Version)
+		assert.Equal(t, ExistingLimaVersion(o, t.TempDir()), version.Version)
 	})
 
 	t.Run("version has been recorded", func(t *testing.T) {
 		instDir := createInstanceDir(t, map[string]string{filenames.LimaVersion: "1.2.3\n"})
-		assert.Equal(t, ExistingLimaVersion(instDir), "1.2.3")
+		assert.Equal(t, ExistingLimaVersion(o, instDir), "1.2.3")
 	})
 
 	// Instances created before Lima v0.20 have no lima-version file. Reporting the current
 	// version for them would move the guest home directory to a path that doesn't exist.
 	t.Run("instance predates the version file", func(t *testing.T) {
 		instDir := createInstanceDir(t, nil)
-		assert.Equal(t, ExistingLimaVersion(instDir), "")
+		assert.Equal(t, ExistingLimaVersion(o, instDir), "")
 
-		user := osutil.LimaUser(t.Context(), ExistingLimaVersion(instDir), false, nil)
+		user := osutil.LimaUser(t.Context(), ExistingLimaVersion(o, instDir), false, nil)
 		assert.Equal(t, user.HomeDir, "/home/{{.User}}.linux")
 	})
 }
