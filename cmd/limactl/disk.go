@@ -21,6 +21,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
@@ -68,6 +69,7 @@ $ limactl disk create DISK --size SIZE [--format qcow2]
 	diskCreateCommand.Flags().String("size", "", "Configure the disk size")
 	_ = diskCreateCommand.MarkFlagRequired("size")
 	diskCreateCommand.Flags().String("format", "qcow2", "Specify the disk format")
+	diskCreateCommand.Flags().String("disk-path", "", "Custom directory path for the data disk file")
 	return diskCreateCommand
 }
 
@@ -79,6 +81,11 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	}
 
 	format, err := cmd.Flags().GetString("format")
+	if err != nil {
+		return err
+	}
+
+	dir, err := cmd.Flags().GetString("disk-path")
 	if err != nil {
 		return err
 	}
@@ -102,28 +109,67 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	if _, err := os.Stat(diskDir); !errors.Is(err, fs.ErrNotExist) {
+	if _, err := os.Lstat(diskDir); !errors.Is(err, fs.ErrNotExist) {
 		return fmt.Errorf("disk %#q already exists (%#q)", name, diskDir)
 	}
 
 	logrus.Infof("Creating %s disk %#q with size %s", format, name, units.BytesSize(float64(diskSize)))
 
+	// The disk directory in $LIMA_HOME/_disks always exists as a regular
+	// directory; when a custom directory is requested with `--dir`, only the
+	// data disk file is placed there and is symlinked from the disk directory.
+	// The rest of the disk directory (e.g. `in_use_by`) stays in $LIMA_HOME.
+	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
+	realDataDisk := dataDisk
+	if dir != "" {
+		// The path has to be absolute, because the symlink is resolved
+		// relative to the disk directory it is created in.
+		realDataDisk, err = filepath.Abs(filepath.Join(dir, filenames.DataDisk))
+		if err != nil {
+			return err
+		}
+		if _, err := os.Lstat(realDataDisk); !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("disk file %#q already exists", realDataDisk)
+		}
+	}
+
 	if err := os.MkdirAll(diskDir, 0o700); err != nil {
 		return err
 	}
+	if dir != "" {
+		if err := os.MkdirAll(filepath.Dir(realDataDisk), 0o700); err != nil {
+			return errors.Join(err, removeDiskDir(diskDir))
+		}
+		if err := os.Symlink(realDataDisk, dataDisk); err != nil {
+			return errors.Join(fmt.Errorf("failed to symlink %#q to %#q: %w", dataDisk, realDataDisk, err), removeDiskDir(diskDir))
+		}
+	}
 
 	// qemu may not be available, use it only if needed.
-	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 	err = diskUtil.CreateDisk(ctx, dataDisk, diskSize)
 	if err != nil {
-		rerr := os.RemoveAll(diskDir)
-		if rerr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to remove a directory %#q: %w", diskDir, rerr))
+		if dir != "" {
+			if rerr := os.Remove(dataDisk); rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {
+				err = errors.Join(err, fmt.Errorf("failed to remove a symlink %#q: %w", dataDisk, rerr))
+			}
+			if rerr := os.Remove(realDataDisk); rerr != nil && !errors.Is(rerr, fs.ErrNotExist) {
+				err = errors.Join(err, fmt.Errorf("failed to remove a disk file %#q: %w", realDataDisk, rerr))
+			}
 		}
-		return fmt.Errorf("failed to create %s disk in %#q: %w", format, diskDir, err)
+		if rerr := removeDiskDir(diskDir); rerr != nil {
+			err = errors.Join(err, rerr)
+		}
+		return fmt.Errorf("failed to create %s disk in %#q: %w", format, realDataDisk, err)
 	}
 
+	return nil
+}
+
+func removeDiskDir(diskDir string) error {
+	if err := os.RemoveAll(diskDir); err != nil {
+		return fmt.Errorf("failed to remove a directory %#q: %w", diskDir, err)
+	}
 	return nil
 }
 
@@ -207,7 +253,23 @@ func diskListAction(cmd *cobra.Command, args []string) error {
 			logrus.WithError(err).Errorf("disk %#q does not exist?", diskName)
 			continue
 		}
-		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", disk.Name, units.BytesSize(float64(disk.Size)), disk.Format, disk.Dir, disk.Instance)
+		dir := disk.Dir
+		if osutil.IsSymlink(disk.Dir) {
+			// Backward compatibility: disks created by older Lima versions
+			// with `--dir` symlinked the whole disk directory.
+			target, err := os.Readlink(disk.Dir)
+			if err != nil {
+				return err
+			}
+			dir = target
+		} else if dataDisk := filepath.Join(disk.Dir, filenames.DataDisk); osutil.IsSymlink(dataDisk) {
+			target, err := os.Readlink(dataDisk)
+			if err != nil {
+				return err
+			}
+			dir = filepath.Dir(target)
+		}
+		fmt.Fprintf(w, "%s\t%s\t%s\t%s\t%s\n", disk.Name, units.BytesSize(float64(disk.Size)), disk.Format, dir, disk.Instance)
 	}
 
 	return w.Flush()
@@ -292,6 +354,31 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 }
 
 func deleteDisk(disk *store.Disk) error {
+	// When the disk was created with a custom directory (`--dir`), the data disk
+	// file lives outside of disk.Dir and is symlinked into it. The target has to
+	// be removed explicitly, because os.RemoveAll would only remove the symlink.
+	dataDisk := filepath.Join(disk.Dir, filenames.DataDisk)
+	if osutil.IsSymlink(dataDisk) {
+		target, err := os.Readlink(dataDisk)
+		if err != nil {
+			return fmt.Errorf("failed to read symlink %#q: %w", dataDisk, err)
+		}
+		if err := os.Remove(target); err != nil && !errors.Is(err, fs.ErrNotExist) {
+			return fmt.Errorf("failed to remove %#q: %w", target, err)
+		}
+	}
+	// Backward compatibility: disks created by older Lima versions with `--dir`
+	// symlinked the whole disk directory to the directory containing the data.
+	if osutil.IsSymlink(disk.Dir) {
+		target, err := os.Readlink(disk.Dir)
+		if err != nil {
+			return fmt.Errorf("failed to read symlink %#q: %w", disk.Dir, err)
+		}
+		if err := os.RemoveAll(target); err != nil {
+			return fmt.Errorf("failed to remove %#q: %w", target, err)
+		}
+		return os.Remove(disk.Dir)
+	}
 	if err := os.RemoveAll(disk.Dir); err != nil {
 		return fmt.Errorf("failed to remove %#q: %w", disk.Dir, err)
 	}
