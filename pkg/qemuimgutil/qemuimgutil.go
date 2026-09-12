@@ -17,6 +17,8 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 const QemuImgFormat = "qcow2"
@@ -107,6 +109,11 @@ type InfoFormatSpecificDataVmdkExtent struct {
 }
 
 func convertToRaw(ctx context.Context, source, dest string) error {
+	// Replace a symlinked source/dest with its target, so that the tmp file is
+	// created next to the target and the rename below replaces the target file
+	// instead of the symlink itself.
+	source = osutil.ResolveSymlink(source)
+	dest = osutil.ResolveSymlink(dest)
 	if source != dest {
 		return execQemuImgConvert(ctx, source, dest)
 	}
