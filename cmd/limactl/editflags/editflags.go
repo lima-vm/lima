@@ -106,6 +106,8 @@ func RegisterCreate(cmd *cobra.Command, commentPrefix string) {
 	RegisterEdit(cmd, commentPrefix)
 	flags := cmd.Flags()
 
+	flags.String("disk-path", "", commentPrefix+"Custom path for the VM disk file")
+
 	flags.String("arch", "", commentPrefix+"Machine architecture (x86_64, aarch64, riscv64, armv7l, s390x, ppc64le)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("arch", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"x86_64", "aarch64", "riscv64", "armv7l", "s390x", "ppc64le"}, cobra.ShellCompDirectiveNoFileComp

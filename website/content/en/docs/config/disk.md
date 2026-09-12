@@ -19,7 +19,7 @@ limactl disk ls
 ### Creating a disk
 
 ```sh
-limactl disk create NAME --size SIZE [--format qcow2|raw]
+limactl disk create NAME --size SIZE [--format qcow2|raw] [--disk-path PATH]
 ```
 
 The supported formats are `qcow2` (default) and `raw`.
@@ -29,6 +29,19 @@ Example – create a 20 GiB disk named `data`:
 ```sh
 limactl disk create data --size 20GiB
 ```
+
+#### Custom disk path (experimental)
+
+By default the disk image lives in `$LIMA_HOME/_disks/NAME/datadisk`. To keep it on another
+volume, pass the path of the disk file itself:
+
+```sh
+limactl disk create data --size 20GiB --disk-path /var/lib/lima/data.img
+```
+
+The disk directory `$LIMA_HOME/_disks/data` stays in place, and its `datadisk` becomes a
+symlink to the given path. The file must not exist yet; its parent directory is created when
+needed. `--disk-path` is an [experimental]({{< ref "/docs/releases/experimental" >}}) flag.
 
 ### Attaching a disk to an instance
 
@@ -67,6 +80,27 @@ limactl disk delete NAME [NAME...]
 > **Note:** A disk cannot be deleted while attached to a running instance. Stop the instance first or use `--force`.
 
 ---
+
+## Relocating the VM's primary disk (experimental)
+
+`limactl create` and `limactl start` accept `--disk-path` to keep the primary disk image of a
+new instance at a custom path:
+
+```sh
+limactl create --name foo --disk-path /var/lib/lima/foo.img template:default
+```
+
+The instance directory `$LIMA_HOME/foo` stays in place, and `disk` in it becomes a symlink to
+the given path, so the rest of the instance metadata stays in `$LIMA_HOME`:
+
+```console
+$ ls -l "$HOME/.lima/foo/disk"
+lrwxrwxrwx 1 user user 22 Oct 29 12:00 /home/user/.lima/foo/disk -> /var/lib/lima/foo.img
+```
+
+The path has to point to a file (not a directory) outside of the instance directory, and the
+file must not exist yet. The parent directory is created when needed.
+`--disk-path` is an [experimental]({{< ref "/docs/releases/experimental" >}}) flag.
 
 ## Resizing the VM's primary disk
 
