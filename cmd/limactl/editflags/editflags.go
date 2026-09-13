@@ -84,7 +84,7 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 	_ = cmd.RegisterFlagCompletionFunc("disk", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		return []string{"10", "30", "50", "100", "200"}, cobra.ShellCompDirectiveNoFileComp
 	})
-
+	flags.String("disk-path", "", commentPrefix+"Disk path for vm instance")
 	flags.String("vm-type", "", commentPrefix+"Virtual machine type")
 	_ = cmd.RegisterFlagCompletionFunc("vm-type", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
 		var drivers []string

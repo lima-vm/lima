@@ -10,6 +10,14 @@ import (
 	"path/filepath"
 )
 
+func IsSymlink(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeSymlink != 0
+}
+
 // FileExists reports whether path exists and is accessible.
 // It returns true for any non-ErrNotExist stat result, including permission errors.
 func FileExists(path string) bool {
