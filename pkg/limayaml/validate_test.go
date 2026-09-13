@@ -300,6 +300,23 @@ additionalDisks:
 
 	err = Validate(y, false)
 	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty")
+
+	// A name too long to fit in the filesystem label is still valid: the label
+	// is truncated, but Lima does not identify the disk by its label. Rejecting
+	// these would break configurations that work correctly.
+	// Regression test: such disks used to be reformatted on every boot.
+	longDisks := `
+additionalDisks:
+  - name: "myproject-images"
+    fsType: "ext4"
+  - name: "project"
+    fsType: "xfs"
+`
+	y, err = Load(t.Context(), []byte(longDisks+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
 }
 
 func TestValidateParamName(t *testing.T) {
