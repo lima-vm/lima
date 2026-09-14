@@ -39,6 +39,13 @@ test_copy_dir_from_host_to_instance() {
     limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo/" "$INSTANCE":/tmp/test_limactl_copy/foo_src_dst_with_slash/
     limactl shell "$INSTANCE" -- test -d /tmp/test_limactl_copy/foo_src_dst_with_slash/foo
     limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy/foo_src_dst_with_slash
+
+    # SRC DST, with DST existing: SRC has to be copied into DST, like `cp -r` does.
+    # https://github.com/lima-vm/lima/issues/5500
+    limactl shell "$INSTANCE" -- mkdir -p /tmp/test_limactl_copy/existing_dst
+    limactl copy --backend="$backend" -r "$BATS_TEST_TMPDIR/foo" "$INSTANCE":/tmp/test_limactl_copy/existing_dst
+    limactl shell "$INSTANCE" -- test -d /tmp/test_limactl_copy/existing_dst/foo/bar
+    limactl shell "$INSTANCE" -- rm -rf /tmp/test_limactl_copy/existing_dst
 }
 
 @test "copy directory from host to Lima instance (scp)" {
@@ -70,6 +77,12 @@ test_copy_dir_from_instance_to_host() {
     # SRC/ DST/
     limactl copy --backend="$backend" -r "$INSTANCE":/tmp/test_limactl_copy/foo/ "$BATS_TEST_TMPDIR/foo_src_dst_with_slash/"
     assert_dir_exists "$BATS_TEST_TMPDIR/foo_src_dst_with_slash/bar"
+
+    # SRC DST, with DST existing: SRC has to be copied into DST, like `cp -r` does.
+    # https://github.com/lima-vm/lima/issues/5500
+    mkdir -p "$BATS_TEST_TMPDIR/existing_dst"
+    limactl copy --backend="$backend" -r "$INSTANCE":/tmp/test_limactl_copy/foo "$BATS_TEST_TMPDIR/existing_dst"
+    assert_dir_exists "$BATS_TEST_TMPDIR/existing_dst/foo/bar"
 }
 
 @test "copy directory from Lima instance to host (scp)" {
