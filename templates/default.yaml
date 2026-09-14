@@ -120,10 +120,13 @@ mountInotify: null
 # ADVANCED CONFIGURATION
 # ===================================================================== #
 
-# Lima disks to attach to the instance. The disks will be accessible from inside the
-# instance, labeled by name. (e.g. if the disk is named "data", it will be labeled
-# "lima-data" inside the instance). The disk will be mounted inside the instance at
-# `/mnt/lima-${VOLUME}`.
+# Lima disks to attach to the instance. On Linux guests, the disk will be mounted inside
+# the instance at `/mnt/lima-${VOLUME}`. When Lima formats the disk, its partition is
+# labeled by name: if the disk is named "data", it can be found inside the instance at
+# `/dev/disk/by-partlabel/lima-data` (names over 31 characters are truncated).
+# The filesystem label is the same, but truncated to what the filesystem accepts (only
+# 11 characters of the name on ext4), so prefer the partition label.
+# Disks formatted by older Lima versions carry only the filesystem label.
 # 🟢 Builtin default: []
 additionalDisks:
 # disks should either be a list of disk name strings, for example:
