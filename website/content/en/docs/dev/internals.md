@@ -14,6 +14,10 @@ which must be less than 104 characters on macOS.
 
 Unix: The directory can not be located on an NFS file system, it needs to be local.
 
+`_block-device-<disk>.lock` files coordinate host block-device use across VZ instances.
+Raw/block aliases and partitions share the whole-disk lock. The files remain after
+the VM stops so another VM cannot lock a different inode for the same disk.
+
 ### Config directory (`${LIMA_HOME}/_config`)
 
 The config directory contains global lima settings that apply to all instances.
