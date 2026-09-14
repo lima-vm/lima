@@ -13,6 +13,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
 func TestArgValue(t *testing.T) {
@@ -150,4 +151,73 @@ func TestSwtpmCmdline(t *testing.T) {
 	assert.NilError(t, err)
 	_, err = os.Stat(swtpmSock)
 	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestQemuExtraArgs(t *testing.T) {
+	type testCase struct {
+		name          string
+		inputYAML     string
+		expected      []string
+		expectedError string
+	}
+	testCases := []testCase{
+		{
+			name: "no vmOpts",
+			inputYAML: `
+vmType: "qemu"
+`,
+			expected: nil,
+		},
+		{
+			name: "qemu opts without extra args",
+			inputYAML: `
+vmType: "qemu"
+vmOpts:
+  qemu:
+    minimumVersion: "8.2.1"
+`,
+			expected: nil,
+		},
+		{
+			name: "extra args set",
+			inputYAML: `
+vmType: "qemu"
+vmOpts:
+  qemu:
+    extraArgs:
+    - "-device"
+    - "virtio-balloon"
+    - "-overcommit"
+    - "mem-lock=off"
+`,
+			expected: []string{"-device", "virtio-balloon", "-overcommit", "mem-lock=off"},
+		},
+		{
+			name: "structurally wrong extra args",
+			inputYAML: `
+vmType: "qemu"
+vmOpts:
+  qemu:
+    extraArgs:
+    - "-device"
+    - {bad: "shape"}
+`,
+			expectedError: "failed to convert `vmOpts.qemu`",
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			var y limatype.LimaYAML
+			err := limayaml.Unmarshal([]byte(tc.inputYAML), &y, "lima.yaml")
+			assert.NilError(t, err)
+
+			got, err := qemuExtraArgs(&y)
+			if tc.expectedError == "" {
+				assert.NilError(t, err)
+				assert.DeepEqual(t, got, tc.expected)
+			} else {
+				assert.ErrorContains(t, err, tc.expectedError)
+			}
+		})
+	}
 }
