@@ -79,7 +79,8 @@ lima
 NOTE: support for non-Linux OSes is [experimental](https://lima-vm.io/docs/releases/experimental/).
 
 - [`macos-15`](./macos-15.yaml): [macOS](https://lima-vm.io/docs/usage/guests/macos/) 15 (Sequoia)
-- [`macos-26`](./macos-26.yaml), `macos`: [macOS](https://lima-vm.io/docs/usage/guests/macos/) 26 (Tahoe)
+- [`macos-26`](./macos-26.yaml): [macOS](https://lima-vm.io/docs/usage/guests/macos/) 26 (Tahoe)
+- [`macos-27`](./macos-27.yaml), `macos`: [macOS](https://lima-vm.io/docs/usage/guests/macos/) 27 (Golden Gate)
 - [`freebsd-15`](./freebsd-15.yaml), `freebsd`: [FreeBSD](https://lima-vm.io/docs/usage/guests/freebsd/) 15
 - [`experimental/freebsd-current`](./experimental/freebsd-current.yaml): [FreeBSD](https://lima-vm.io/docs/usage/guests/freebsd/) CURRENT
 - [`windows-2025`](./windows-2025.yaml): [Windows](https://lima-vm.io/docs/usage/guests/windows/) server 2025
