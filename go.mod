@@ -45,7 +45,7 @@ require (
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.53.6 // gomodjail:unconfined
-	github.com/modelcontextprotocol/go-sdk v1.7.0 // gomodjail:unconfined
+	github.com/modelcontextprotocol/go-sdk v1.8.0 // gomodjail:unconfined
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
 	github.com/pb33f/ordered-map/v2 v2.3.1
