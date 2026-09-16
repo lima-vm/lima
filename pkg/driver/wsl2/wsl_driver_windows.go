@@ -380,8 +380,8 @@ func (l *LimaWslDriver) DeleteSnapshot(_ context.Context, _ string) error {
 	return errUnimplemented
 }
 
-func (l *LimaWslDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errUnimplemented
+func (l *LimaWslDriver) ListSnapshots(_ context.Context) ([]driver.Snapshot, error) {
+	return nil, errUnimplemented
 }
 
 func (l *LimaWslDriver) ForwardGuestAgent(_ context.Context) bool {

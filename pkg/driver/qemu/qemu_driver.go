@@ -820,7 +820,7 @@ func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
 	return Load(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
+func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) ([]driver.Snapshot, error) {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,

@@ -395,8 +395,8 @@ func (l *LimaKrunkitDriver) DeleteSnapshot(_ context.Context, _ string) error {
 	return errUnimplemented
 }
 
-func (l *LimaKrunkitDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errUnimplemented
+func (l *LimaKrunkitDriver) ListSnapshots(_ context.Context) ([]driver.Snapshot, error) {
+	return nil, errUnimplemented
 }
 
 func (l *LimaKrunkitDriver) Register(_ context.Context) error {

@@ -38,10 +38,10 @@ func Load(ctx context.Context, inst *limatype.Instance, tag string) error {
 	return limaDriver.ApplySnapshot(ctx, tag)
 }
 
-func List(ctx context.Context, inst *limatype.Instance) (string, error) {
+func List(ctx context.Context, inst *limatype.Instance) ([]driver.Snapshot, error) {
 	limaDriver, err := createConfiguredDriver(ctx, inst)
 	if err != nil {
-		return "", fmt.Errorf("failed to create driver instance: %w", err)
+		return nil, fmt.Errorf("failed to create driver instance: %w", err)
 	}
 	return limaDriver.ListSnapshots(ctx)
 }

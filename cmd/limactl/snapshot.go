@@ -4,13 +4,17 @@
 package main
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
+	"io"
+	"text/tabwriter"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/snapshot"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -168,12 +172,17 @@ func newSnapshotListCommand() *cobra.Command {
 
   List only snapshot tags:
   $ limactl snapshot list default --quiet
+
+  List snapshots in JSON format:
+  $ limactl snapshot list default --json
 `,
 		Args:              cobra.MinimumNArgs(1),
 		RunE:              snapshotListAction,
 		ValidArgsFunction: snapshotBashComplete,
 	}
 	listCmd.Flags().BoolP("quiet", "q", false, "Only show tags")
+	listCmd.Flags().Bool("json", false, "JSONify output")
+	listCmd.MarkFlagsMutuallyExclusive("quiet", "json")
 
 	return listCmd
 }
@@ -191,29 +200,51 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	out, err := snapshot.List(ctx, inst)
+	jsonFormat, err := cmd.Flags().GetBool("json")
 	if err != nil {
 		return err
 	}
-	if quiet {
-		for i, line := range strings.Split(out, "\n") {
-			// "ID", "TAG", "VM SIZE", "DATE", "VM CLOCK", "ICOUNT"
-			fields := strings.Fields(line)
-			if i == 0 && len(fields) > 1 && fields[1] != "TAG" {
-				// make sure that output matches the expected
-				return fmt.Errorf("unknown header: %s", line)
+	snapshots, err := snapshot.List(ctx, inst)
+	if err != nil {
+		return err
+	}
+	return printSnapshots(cmd.OutOrStdout(), snapshots, quiet, jsonFormat)
+}
+
+func printSnapshots(w io.Writer, snapshots []driver.Snapshot, quiet, jsonFormat bool) error {
+	if jsonFormat {
+		encoder := json.NewEncoder(w)
+		for _, snapshot := range snapshots {
+			if err := encoder.Encode(snapshot); err != nil {
+				return err
 			}
-			if i == 0 || line == "" {
-				// skip header and empty line after using split
-				continue
-			}
-			tag := fields[1]
-			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", tag)
 		}
 		return nil
 	}
-	fmt.Fprint(cmd.OutOrStdout(), out)
-	return nil
+
+	if quiet {
+		for _, snapshot := range snapshots {
+			if _, err := fmt.Fprintln(w, snapshot.Tag); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	tw := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
+	if _, err := fmt.Fprintln(tw, "ID\tTAG\tCREATED"); err != nil {
+		return err
+	}
+	for _, snapshot := range snapshots {
+		createdAt := "-"
+		if snapshot.CreatedAt != nil {
+			createdAt = snapshot.CreatedAt.Format(time.RFC3339)
+		}
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\n", snapshot.ID, snapshot.Tag, createdAt); err != nil {
+			return err
+		}
+	}
+	return tw.Flush()
 }
 
 func snapshotBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

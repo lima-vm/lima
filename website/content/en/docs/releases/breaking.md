@@ -11,6 +11,8 @@ weight: 20
 - External driver transport was reworked:
   - The `Driver.FillConfig()` method was removed; its logic was merged into `Driver.Configure()`,
     which now returns `(*ConfiguredDriver, error)`.
+  - The `SnapshotManager.ListSnapshots()` method now returns structured snapshot metadata instead of raw text.
+    External drivers must update their snapshot implementations and regenerate their protobuf bindings.
   - The external driver gRPC server socket moved from the OS temp directory (`/tmp/lima-driver-<name>-<pid>.sock`)
     to the instance directory (`~/.lima/<instance>/lima-driver-<name>.sock`).
   - External driver authors must update their drivers to match the new `driver.Driver` interface.
