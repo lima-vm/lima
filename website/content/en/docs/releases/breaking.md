@@ -7,6 +7,9 @@ weight: 20
 - The experimental `_LIMA_WINDOWS_EXTRA_PATH` environment variable was removed. It prepended directories to
   `limactl.exe`'s own PATH on Windows hosts, leaving the calling shell's PATH untouched. Put them on `PATH`
   instead.
+- The `SnapshotManager.ListSnapshots()` method now returns structured snapshot metadata instead of raw text.
+  `ApplySnapshot()` and `DeleteSnapshot()` now identify snapshots by ID instead of tag. External drivers must
+  update their snapshot implementations and regenerate their protobuf bindings.
 
 ## v2.2.0
 - The default [`socket_vmnet` group](../config/network/vmnet.md) in `networks.yaml` was changed from `everyone` to

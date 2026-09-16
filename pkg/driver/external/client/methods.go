@@ -195,47 +195,58 @@ func (d *DriverClient) CreateSnapshot(ctx context.Context, tag string) error {
 	return nil
 }
 
-func (d *DriverClient) ApplySnapshot(ctx context.Context, tag string) error {
-	d.logger.Debugf("Applying snapshot with tag: %s", tag)
+func (d *DriverClient) ApplySnapshot(ctx context.Context, id string) error {
+	d.logger.Debugf("Applying snapshot with ID: %s", id)
 
 	_, err := d.DriverSvc.ApplySnapshot(ctx, &pb.ApplySnapshotRequest{
-		Tag: tag,
+		Id: id,
 	})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to apply snapshot")
 		return err
 	}
 
-	d.logger.Debugf("Snapshot '%s' applied successfully", tag)
+	d.logger.Debugf("Snapshot %q applied successfully", id)
 	return nil
 }
 
-func (d *DriverClient) DeleteSnapshot(ctx context.Context, tag string) error {
-	d.logger.Debugf("Deleting snapshot with tag: %s", tag)
+func (d *DriverClient) DeleteSnapshot(ctx context.Context, id string) error {
+	d.logger.Debugf("Deleting snapshot with ID: %s", id)
 
 	_, err := d.DriverSvc.DeleteSnapshot(ctx, &pb.DeleteSnapshotRequest{
-		Tag: tag,
+		Id: id,
 	})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to delete snapshot")
 		return err
 	}
 
-	d.logger.Debugf("Snapshot '%s' deleted successfully", tag)
+	d.logger.Debugf("Snapshot %q deleted successfully", id)
 	return nil
 }
 
-func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
+func (d *DriverClient) ListSnapshots(ctx context.Context) ([]driver.Snapshot, error) {
 	d.logger.Debug("Listing snapshots")
 
 	resp, err := d.DriverSvc.ListSnapshots(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to list snapshots")
-		return "", err
+		return nil, err
 	}
 
-	d.logger.Debugf("Snapshots listed successfully: %s", resp.Snapshots)
-	return resp.Snapshots, nil
+	snapshots := make([]driver.Snapshot, len(resp.Snapshots))
+	for i, snapshot := range resp.Snapshots {
+		snapshots[i] = driver.Snapshot{ID: snapshot.Id, Tag: snapshot.Tag}
+		if snapshot.CreatedAt != nil {
+			if err := snapshot.CreatedAt.CheckValid(); err != nil {
+				return nil, err
+			}
+			createdAt := snapshot.CreatedAt.AsTime()
+			snapshots[i].CreatedAt = &createdAt
+		}
+	}
+	d.logger.Debugf("Snapshots listed successfully: %+v", snapshots)
+	return snapshots, nil
 }
 
 func (d *DriverClient) ForwardGuestAgent(ctx context.Context) bool {
