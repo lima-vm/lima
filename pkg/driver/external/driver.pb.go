@@ -10,6 +10,7 @@ import (
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	emptypb "google.golang.org/protobuf/types/known/emptypb"
+	timestamppb "google.golang.org/protobuf/types/known/timestamppb"
 	reflect "reflect"
 	sync "sync"
 	unsafe "unsafe"
@@ -549,18 +550,81 @@ func (x *DeleteSnapshotRequest) GetTag() string {
 	return ""
 }
 
+// Snapshot describes a VM snapshot.
+type Snapshot struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// Unique driver-specific identifier.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// Human-readable snapshot name.
+	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
+	// Time at which the snapshot was created, when available.
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *Snapshot) Reset() {
+	*x = Snapshot{}
+	mi := &file_driver_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *Snapshot) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*Snapshot) ProtoMessage() {}
+
+func (x *Snapshot) ProtoReflect() protoreflect.Message {
+	mi := &file_driver_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use Snapshot.ProtoReflect.Descriptor instead.
+func (*Snapshot) Descriptor() ([]byte, []int) {
+	return file_driver_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *Snapshot) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *Snapshot) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *Snapshot) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
 // ListSnapshotsResponse carries the existing snapshots.
 type ListSnapshotsResponse struct {
-	state protoimpl.MessageState `protogen:"open.v1"`
-	// Driver-formatted list of existing snapshots.
-	Snapshots     string `protobuf:"bytes,1,opt,name=snapshots,proto3" json:"snapshots,omitempty"`
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Snapshots     []*Snapshot            `protobuf:"bytes,2,rep,name=snapshots,proto3" json:"snapshots,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *ListSnapshotsResponse) Reset() {
 	*x = ListSnapshotsResponse{}
-	mi := &file_driver_proto_msgTypes[11]
+	mi := &file_driver_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -572,7 +636,7 @@ func (x *ListSnapshotsResponse) String() string {
 func (*ListSnapshotsResponse) ProtoMessage() {}
 
 func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_driver_proto_msgTypes[11]
+	mi := &file_driver_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -585,14 +649,14 @@ func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSnapshotsResponse.ProtoReflect.Descriptor instead.
 func (*ListSnapshotsResponse) Descriptor() ([]byte, []int) {
-	return file_driver_proto_rawDescGZIP(), []int{11}
+	return file_driver_proto_rawDescGZIP(), []int{12}
 }
 
-func (x *ListSnapshotsResponse) GetSnapshots() string {
+func (x *ListSnapshotsResponse) GetSnapshots() []*Snapshot {
 	if x != nil {
 		return x.Snapshots
 	}
-	return ""
+	return nil
 }
 
 // ForwardGuestAgentResponse reports how the guest agent is reached.
@@ -607,7 +671,7 @@ type ForwardGuestAgentResponse struct {
 
 func (x *ForwardGuestAgentResponse) Reset() {
 	*x = ForwardGuestAgentResponse{}
-	mi := &file_driver_proto_msgTypes[12]
+	mi := &file_driver_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -619,7 +683,7 @@ func (x *ForwardGuestAgentResponse) String() string {
 func (*ForwardGuestAgentResponse) ProtoMessage() {}
 
 func (x *ForwardGuestAgentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_driver_proto_msgTypes[12]
+	mi := &file_driver_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -632,7 +696,7 @@ func (x *ForwardGuestAgentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ForwardGuestAgentResponse.ProtoReflect.Descriptor instead.
 func (*ForwardGuestAgentResponse) Descriptor() ([]byte, []int) {
-	return file_driver_proto_rawDescGZIP(), []int{12}
+	return file_driver_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ForwardGuestAgentResponse) GetShouldForward() bool {
@@ -646,7 +710,7 @@ var File_driver_proto protoreflect.FileDescriptor
 
 const file_driver_proto_rawDesc = "" +
 	"\n" +
-	"\fdriver.proto\x1a\x1bgoogle/protobuf/empty.proto\"\x8e\x01\n" +
+	"\fdriver.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x8e\x01\n" +
 	"\x13BootScriptsResponse\x12;\n" +
 	"\ascripts\x18\x01 \x03(\v2!.BootScriptsResponse.ScriptsEntryR\ascripts\x1a:\n" +
 	"\fScriptsEntry\x12\x10\n" +
@@ -674,9 +738,14 @@ const file_driver_proto_rawDesc = "" +
 	"\x14ApplySnapshotRequest\x12\x10\n" +
 	"\x03tag\x18\x01 \x01(\tR\x03tag\")\n" +
 	"\x15DeleteSnapshotRequest\x12\x10\n" +
-	"\x03tag\x18\x01 \x01(\tR\x03tag\"5\n" +
-	"\x15ListSnapshotsResponse\x12\x1c\n" +
-	"\tsnapshots\x18\x01 \x01(\tR\tsnapshots\"B\n" +
+	"\x03tag\x18\x01 \x01(\tR\x03tag\"i\n" +
+	"\bSnapshot\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
+	"\x04name\x18\x02 \x01(\tR\x04name\x129\n" +
+	"\n" +
+	"created_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\tcreatedAt\"F\n" +
+	"\x15ListSnapshotsResponse\x12'\n" +
+	"\tsnapshots\x18\x02 \x03(\v2\t.SnapshotR\tsnapshotsJ\x04\b\x01\x10\x02\"B\n" +
 	"\x19ForwardGuestAgentResponse\x12%\n" +
 	"\x0eshould_forward\x18\x01 \x01(\bR\rshouldForward2\xee\t\n" +
 	"\x06Driver\x12:\n" +
@@ -715,7 +784,7 @@ func file_driver_proto_rawDescGZIP() []byte {
 	return file_driver_proto_rawDescData
 }
 
-var file_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
+var file_driver_proto_msgTypes = make([]protoimpl.MessageInfo, 15)
 var file_driver_proto_goTypes = []any{
 	(*BootScriptsResponse)(nil),          // 0: BootScriptsResponse
 	(*SSHAddressResponse)(nil),           // 1: SSHAddressResponse
@@ -728,58 +797,62 @@ var file_driver_proto_goTypes = []any{
 	(*CreateSnapshotRequest)(nil),        // 8: CreateSnapshotRequest
 	(*ApplySnapshotRequest)(nil),         // 9: ApplySnapshotRequest
 	(*DeleteSnapshotRequest)(nil),        // 10: DeleteSnapshotRequest
-	(*ListSnapshotsResponse)(nil),        // 11: ListSnapshotsResponse
-	(*ForwardGuestAgentResponse)(nil),    // 12: ForwardGuestAgentResponse
-	nil,                                  // 13: BootScriptsResponse.ScriptsEntry
-	(*emptypb.Empty)(nil),                // 14: google.protobuf.Empty
+	(*Snapshot)(nil),                     // 11: Snapshot
+	(*ListSnapshotsResponse)(nil),        // 12: ListSnapshotsResponse
+	(*ForwardGuestAgentResponse)(nil),    // 13: ForwardGuestAgentResponse
+	nil,                                  // 14: BootScriptsResponse.ScriptsEntry
+	(*timestamppb.Timestamp)(nil),        // 15: google.protobuf.Timestamp
+	(*emptypb.Empty)(nil),                // 16: google.protobuf.Empty
 }
 var file_driver_proto_depIdxs = []int32{
-	13, // 0: BootScriptsResponse.scripts:type_name -> BootScriptsResponse.ScriptsEntry
-	14, // 1: Driver.Validate:input_type -> google.protobuf.Empty
-	14, // 2: Driver.Create:input_type -> google.protobuf.Empty
-	14, // 3: Driver.CreateDisk:input_type -> google.protobuf.Empty
-	14, // 4: Driver.Start:input_type -> google.protobuf.Empty
-	14, // 5: Driver.Stop:input_type -> google.protobuf.Empty
-	14, // 6: Driver.Delete:input_type -> google.protobuf.Empty
-	14, // 7: Driver.BootScripts:input_type -> google.protobuf.Empty
-	14, // 8: Driver.RunGUI:input_type -> google.protobuf.Empty
-	6,  // 9: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
-	14, // 10: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
-	8,  // 11: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
-	9,  // 12: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
-	10, // 13: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
-	14, // 14: Driver.ListSnapshots:input_type -> google.protobuf.Empty
-	14, // 15: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
-	14, // 16: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
-	4,  // 17: Driver.Configure:input_type -> SetConfigRequest
-	14, // 18: Driver.Info:input_type -> google.protobuf.Empty
-	14, // 19: Driver.SSHAddress:input_type -> google.protobuf.Empty
-	14, // 20: Driver.AdditionalSetupForSSH:input_type -> google.protobuf.Empty
-	14, // 21: Driver.Validate:output_type -> google.protobuf.Empty
-	14, // 22: Driver.Create:output_type -> google.protobuf.Empty
-	14, // 23: Driver.CreateDisk:output_type -> google.protobuf.Empty
-	3,  // 24: Driver.Start:output_type -> StartResponse
-	14, // 25: Driver.Stop:output_type -> google.protobuf.Empty
-	14, // 26: Driver.Delete:output_type -> google.protobuf.Empty
-	0,  // 27: Driver.BootScripts:output_type -> BootScriptsResponse
-	14, // 28: Driver.RunGUI:output_type -> google.protobuf.Empty
-	14, // 29: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
-	7,  // 30: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
-	14, // 31: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
-	14, // 32: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
-	14, // 33: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
-	11, // 34: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
-	12, // 35: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
-	14, // 36: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
-	5,  // 37: Driver.Configure:output_type -> SetConfigResponse
-	2,  // 38: Driver.Info:output_type -> InfoResponse
-	1,  // 39: Driver.SSHAddress:output_type -> SSHAddressResponse
-	14, // 40: Driver.AdditionalSetupForSSH:output_type -> google.protobuf.Empty
-	21, // [21:41] is the sub-list for method output_type
-	1,  // [1:21] is the sub-list for method input_type
-	1,  // [1:1] is the sub-list for extension type_name
-	1,  // [1:1] is the sub-list for extension extendee
-	0,  // [0:1] is the sub-list for field type_name
+	14, // 0: BootScriptsResponse.scripts:type_name -> BootScriptsResponse.ScriptsEntry
+	15, // 1: Snapshot.created_at:type_name -> google.protobuf.Timestamp
+	11, // 2: ListSnapshotsResponse.snapshots:type_name -> Snapshot
+	16, // 3: Driver.Validate:input_type -> google.protobuf.Empty
+	16, // 4: Driver.Create:input_type -> google.protobuf.Empty
+	16, // 5: Driver.CreateDisk:input_type -> google.protobuf.Empty
+	16, // 6: Driver.Start:input_type -> google.protobuf.Empty
+	16, // 7: Driver.Stop:input_type -> google.protobuf.Empty
+	16, // 8: Driver.Delete:input_type -> google.protobuf.Empty
+	16, // 9: Driver.BootScripts:input_type -> google.protobuf.Empty
+	16, // 10: Driver.RunGUI:input_type -> google.protobuf.Empty
+	6,  // 11: Driver.ChangeDisplayPassword:input_type -> ChangeDisplayPasswordRequest
+	16, // 12: Driver.GetDisplayConnection:input_type -> google.protobuf.Empty
+	8,  // 13: Driver.CreateSnapshot:input_type -> CreateSnapshotRequest
+	9,  // 14: Driver.ApplySnapshot:input_type -> ApplySnapshotRequest
+	10, // 15: Driver.DeleteSnapshot:input_type -> DeleteSnapshotRequest
+	16, // 16: Driver.ListSnapshots:input_type -> google.protobuf.Empty
+	16, // 17: Driver.ForwardGuestAgent:input_type -> google.protobuf.Empty
+	16, // 18: Driver.GuestAgentConn:input_type -> google.protobuf.Empty
+	4,  // 19: Driver.Configure:input_type -> SetConfigRequest
+	16, // 20: Driver.Info:input_type -> google.protobuf.Empty
+	16, // 21: Driver.SSHAddress:input_type -> google.protobuf.Empty
+	16, // 22: Driver.AdditionalSetupForSSH:input_type -> google.protobuf.Empty
+	16, // 23: Driver.Validate:output_type -> google.protobuf.Empty
+	16, // 24: Driver.Create:output_type -> google.protobuf.Empty
+	16, // 25: Driver.CreateDisk:output_type -> google.protobuf.Empty
+	3,  // 26: Driver.Start:output_type -> StartResponse
+	16, // 27: Driver.Stop:output_type -> google.protobuf.Empty
+	16, // 28: Driver.Delete:output_type -> google.protobuf.Empty
+	0,  // 29: Driver.BootScripts:output_type -> BootScriptsResponse
+	16, // 30: Driver.RunGUI:output_type -> google.protobuf.Empty
+	16, // 31: Driver.ChangeDisplayPassword:output_type -> google.protobuf.Empty
+	7,  // 32: Driver.GetDisplayConnection:output_type -> GetDisplayConnectionResponse
+	16, // 33: Driver.CreateSnapshot:output_type -> google.protobuf.Empty
+	16, // 34: Driver.ApplySnapshot:output_type -> google.protobuf.Empty
+	16, // 35: Driver.DeleteSnapshot:output_type -> google.protobuf.Empty
+	12, // 36: Driver.ListSnapshots:output_type -> ListSnapshotsResponse
+	13, // 37: Driver.ForwardGuestAgent:output_type -> ForwardGuestAgentResponse
+	16, // 38: Driver.GuestAgentConn:output_type -> google.protobuf.Empty
+	5,  // 39: Driver.Configure:output_type -> SetConfigResponse
+	2,  // 40: Driver.Info:output_type -> InfoResponse
+	1,  // 41: Driver.SSHAddress:output_type -> SSHAddressResponse
+	16, // 42: Driver.AdditionalSetupForSSH:output_type -> google.protobuf.Empty
+	23, // [23:43] is the sub-list for method output_type
+	3,  // [3:23] is the sub-list for method input_type
+	3,  // [3:3] is the sub-list for extension type_name
+	3,  // [3:3] is the sub-list for extension extendee
+	0,  // [0:3] is the sub-list for field type_name
 }
 
 func init() { file_driver_proto_init() }
@@ -793,7 +866,7 @@ func file_driver_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_driver_proto_rawDesc), len(file_driver_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   14,
+			NumMessages:   15,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

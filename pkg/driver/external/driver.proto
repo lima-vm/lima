@@ -1,6 +1,7 @@
 syntax = "proto3";
 
 import "google/protobuf/empty.proto";
+import "google/protobuf/timestamp.proto";
 
 option go_package = "github.com/lima-vm/lima/v2/pkg/driver/external";
 
@@ -90,7 +91,7 @@ service Driver {
   // DeleteSnapshot removes the snapshot identified by the given tag.
   rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
 
-  // ListSnapshots returns the driver-formatted list of existing snapshots.
+  // ListSnapshots returns the existing snapshots.
   rpc ListSnapshots(google.protobuf.Empty) returns (ListSnapshotsResponse);
 
   // ForwardGuestAgent reports whether the host agent must forward the guest
@@ -204,10 +205,20 @@ message DeleteSnapshotRequest {
   string tag = 1;
 }
 
+// Snapshot describes a VM snapshot.
+message Snapshot {
+  // Unique driver-specific identifier.
+  string id = 1;
+  // Human-readable snapshot name.
+  string name = 2;
+  // Time at which the snapshot was created, when available.
+  google.protobuf.Timestamp created_at = 3;
+}
+
 // ListSnapshotsResponse carries the existing snapshots.
 message ListSnapshotsResponse {
-  // Driver-formatted list of existing snapshots.
-  string snapshots = 1;
+  reserved 1; // Used by the former string snapshots field.
+  repeated Snapshot snapshots = 2;
 }
 
 // ForwardGuestAgentResponse reports how the guest agent is reached.
