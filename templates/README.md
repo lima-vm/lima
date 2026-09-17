@@ -77,6 +77,7 @@ lima
 ### Non-Linux
 
 NOTE: support for non-Linux OSes is [experimental](https://lima-vm.io/docs/releases/experimental/).
+For running macOS guests, you need a macOS host that is same or newer than the guest OS.
 
 - [`macos-15`](./macos-15.yaml): [macOS](https://lima-vm.io/docs/usage/guests/macos/) 15 (Sequoia)
 - [`macos-26`](./macos-26.yaml): [macOS](https://lima-vm.io/docs/usage/guests/macos/) 26 (Tahoe)
