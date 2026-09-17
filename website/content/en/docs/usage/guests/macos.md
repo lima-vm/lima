@@ -3,7 +3,7 @@ title: macOS
 weight: 2
 ---
 
-| ⚡ Requirement | Lima >= 2.1, macOS, ARM  |
+| ⚡ Requirement | Lima >= 2.1, macOS (same or newer than the guest OS), ARM  |
 |-------------------|-----------------------------|
 
 Running macOS guests is experimentally supported since Lima v2.1.
@@ -12,6 +12,11 @@ Running macOS guests is experimentally supported since Lima v2.1.
 {{% tab header="macOS only" %}}
 ```bash
 limactl start template:macos
+```
+
+To specify the macOS version explicitly:
+```bash
+limactl start template:macos-27
 ```
 {{% /tab %}}
 {{% tab header="With Homebrew" %}}
