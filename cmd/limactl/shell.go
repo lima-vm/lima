@@ -440,13 +440,16 @@ func shellAction(cmd *cobra.Command, args []string) error {
 			destRsyncDir = shellescape.Quote(destRsyncDir)
 		}
 
+		// The trailing slash makes rsync mirror the contents of the source directory into
+		// the destination directory, instead of copying the source directory into it like
+		// `limactl copy -r` does. Options.Recursive is deliberately left unset, so that
+		// the paths reach rsync as they are; `-a` already implies `-r`.
 		paths := []string{
-			hostCurrentDir,
-			fmt.Sprintf("%s:%s", inst.Name, destRsyncDir),
+			hostCurrentDir + "/",
+			fmt.Sprintf("%s:%s/", inst.Name, destRsyncDir),
 		}
 		rsync, err = copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
-			Recursive: true,
-			Verbose:   false,
+			Verbose: false,
 			AdditionalArgs: []string{
 				"--delete",
 			},
@@ -537,13 +540,15 @@ func windowsQuoteShell(shell string) string {
 
 func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool) error {
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
+	// See the comment on the trailing slash where the rsync tool is created.
+	remoteContents := remoteSource + "/"
 	clean := filepath.Clean(hostCurrentDir)
 	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
 	cleanupGuestWorkdir := false
 
 	rsyncBack := func() error {
 		paths := []string{
-			remoteSource,
+			remoteContents,
 			hostCurrentDir,
 		}
 
@@ -630,7 +635,7 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 				diffCmd = exec.CommandContext(ctx, "diff", "-ruN", "--color=always", hostCurrentDir, hostTmpDest)
 				if !rsyncToTempDir {
 					paths := []string{
-						remoteSource,
+						remoteContents,
 						hostTmpDest,
 					}
 
