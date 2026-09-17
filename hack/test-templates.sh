@@ -64,9 +64,6 @@ declare -A CHECKS=(
 
 case "$NAME" in
 "default")
-	# CI failure:
-	# "[hostagent] failed to confirm whether /c/Users/runneradmin [remote] is successfully mounted"
-	[ "${OS_HOST}" = "Msys" ] && CHECKS["mount-home"]=
 	[ "${OS_HOST}" = "Darwin" ] && CHECKS["ssh-over-vsock"]="1"
 	;;
 "alpine"*)
