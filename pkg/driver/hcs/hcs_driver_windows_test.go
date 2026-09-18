@@ -10,6 +10,8 @@ import (
 	"runtime"
 	"testing"
 
+	"github.com/lima-vm/go-qcow2reader/image/qcow2"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"gotest.tools/v3/assert"
 
@@ -191,7 +193,7 @@ func TestInfo(t *testing.T) {
 
 	assert.Equal(t, info.Features.DynamicSSHAddress, true)
 	assert.Equal(t, info.Features.StaticSSHPort, true)
-	assert.DeepEqual(t, info.Features.SupportedImageFormats, []string{string(vhdx.Type)})
+	assert.DeepEqual(t, info.Features.SupportedImageFormats, []string{string(raw.Type), string(qcow2.Type), string(vhdx.Type)})
 
 	l.Instance = newTestInstance(t, &limatype.LimaYAML{})
 	assert.Equal(t, l.Info(t.Context()).InstanceDir, l.Instance.Dir)
@@ -211,7 +213,8 @@ func TestSSHAddress(t *testing.T) {
 
 func TestCreateDisk(t *testing.T) {
 	l := New()
-	l.Instance = newTestInstance(t, &limatype.LimaYAML{})
+	diskSize := "1GiB"
+	l.Instance = newTestInstance(t, &limatype.LimaYAML{Disk: &diskSize})
 
 	diskPath := filepath.Join(l.Instance.Dir, filenames.Disk)
 	const content = "not a real disk"
