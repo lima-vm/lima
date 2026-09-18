@@ -12,6 +12,7 @@ import (
 
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader/image"
+	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
@@ -101,8 +102,13 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 			return err
 		}
 
-		// Resize handled by prepareDisk() after CreateDisk()
+		// Resize handled by prepareDisk() after CreateDisk(), except for a format
+		// whose size go-qcow2reader cannot read: prepareDisk() skips it, so the
+		// image keeps its own virtual size instead of diskSize.
 		if format == string(diskImageFormat) {
+			if diskImageFormat == vhdx.Type {
+				logrus.Warnf("Disk size %#q is not applied to %#q: a %s image keeps the virtual size it was built with", diskSize, diskPath, diskImageFormat)
+			}
 			if err = os.Rename(imagePath, diskPath); err != nil {
 				return fmt.Errorf("failed to rename %#q to %#q: %w", imagePath, diskPath, err)
 			}

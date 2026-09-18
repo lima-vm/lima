@@ -6,7 +6,7 @@ go 1.26.0
 // Our own packages and golang.org/x packages are trusted
 //gosocialcheck:trusted
 require (
-	github.com/lima-vm/go-qcow2reader v0.7.1 // gomodjail:unconfined
+	github.com/lima-vm/go-qcow2reader v0.8.0 // gomodjail:unconfined
 	github.com/lima-vm/sshocker v0.3.11 // gomodjail:unconfined
 	golang.org/x/image v0.45.0
 	golang.org/x/net v0.58.0 // gomodjail:unconfined
@@ -150,6 +150,8 @@ require (
 	// gomodjail:unconfined
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
+
+require github.com/klauspost/compress v1.18.5
 
 require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect

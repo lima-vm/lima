@@ -23,6 +23,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/asif"
 	"github.com/lima-vm/go-qcow2reader/image/qcow2"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
+	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
@@ -43,7 +44,7 @@ func roundUp(size int64) int64 {
 	return sectors * sectorSize
 }
 
-// convertTo converts a source disk into a raw or ASIF disk.
+// convertTo converts a source disk into a raw, ASIF, or VHDX disk.
 // source and dest may be same.
 // convertTo is a NOP if source == dest, and no resizing is needed.
 func convertTo(destType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
@@ -97,7 +98,7 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 		attachedDevice string
 	)
 	switch destType {
-	case raw.Type:
+	case raw.Type, vhdx.Type:
 		destTmpF, err = os.CreateTemp(filepath.Dir(dest), filepath.Base(dest)+".lima-*.tmp")
 		destTmp = destTmpF.Name()
 	case asif.Type:
@@ -122,27 +123,51 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 	defer os.RemoveAll(destTmp)
 	defer destTmpF.Close()
 
-	// Truncating before copy eliminates the seeks during copy and provide a
-	// hint to the file system that may minimize allocations and fragmentation
-	// of the file.
-	if err := makeSparse(destTmpF, srcImg.Size()); err != nil {
-		return err
+	// Copy
+	var (
+		wa     io.WriterAt = destTmpF
+		finish func() error
+	)
+	switch destType {
+	case vhdx.Type:
+		// A vhdx image records its virtual size in its metadata, so it is set on
+		// creation rather than by resizing the file after the copy.
+		virtualSize := srcImg.Size()
+		if size != nil {
+			virtualSize = *size
+		}
+		w, err := vhdx.NewWriter(destTmpF, roundUp(virtualSize), vhdx.WriterOptions{})
+		if err != nil {
+			return err
+		}
+		wa, finish = w, w.Close
+	default:
+		// Truncating before copy eliminates the seeks during copy and provide a
+		// hint to the file system that may minimize allocations and fragmentation
+		// of the file.
+		if err := makeSparse(destTmpF, srcImg.Size()); err != nil {
+			return err
+		}
 	}
 
-	// Copy
 	bar, err := progressbar.New(srcImg.Size())
 	if err != nil {
 		return err
 	}
 	bar.Start()
-	err = convert.Convert(destTmpF, srcImg, convert.Options{Progress: bar})
+	err = convert.Convert(wa, srcImg, convert.Options{Progress: bar})
 	bar.Finish()
 	if err != nil {
 		return fmt.Errorf("failed to convert image: %w", err)
 	}
+	if finish != nil {
+		if err = finish(); err != nil {
+			return fmt.Errorf("failed to finalize the %s image: %w", destType, err)
+		}
+	}
 
 	// Resize
-	if size != nil {
+	if size != nil && destType != vhdx.Type {
 		logrus.Infof("Expanding to %s", units.BytesSize(float64(*size)))
 		if err = makeSparse(destTmpF, *size); err != nil {
 			return err
@@ -157,6 +182,10 @@ func convertTo(destType image.Type, source, dest string, size *int64, allowSourc
 		if err != nil {
 			return fmt.Errorf("failed to detach ASIF image %#q: %w", attachedDevice, err)
 		}
+	}
+
+	if err = srcF.Close(); err != nil {
+		return err
 	}
 
 	// Rename destTmp into dest
@@ -247,7 +276,7 @@ func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64)
 }
 
 // Convert converts a disk image to the specified format.
-// Currently supported formats are raw.Type and asif.Type.
+// Currently supported formats are raw.Type, asif.Type, and vhdx.Type.
 func (n *NativeImageUtil) Convert(_ context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	return convertTo(imageType, source, dest, size, allowSourceWithBackingFile)
 }
