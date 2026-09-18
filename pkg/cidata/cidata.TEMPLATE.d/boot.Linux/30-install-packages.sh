@@ -75,8 +75,13 @@ elif command -v dnf >/dev/null 2>&1; then
 			extrapkgs="${extrapkgs} fuse-sshfs"
 		fi
 	fi
-	if [ "${INSTALL_IPTABLES}" = 1 ] && [ ! -e /usr/sbin/iptables ]; then
-		pkgs="${pkgs} iptables"
+	if [ "${INSTALL_IPTABLES}" = 1 ]; then
+		if [ ! -e /usr/sbin/iptables ]; then
+			pkgs="${pkgs} iptables"
+		fi
+		if ! modprobe -n iptable_nat >/dev/null 2>&1 || ! modprobe -n xt_comment >/dev/null 2>&1; then
+			extrapkgs="${extrapkgs} kernel-modules-extra-$(uname -r) kernel-modules-extra"
+		fi
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ]; then
 		if ! command -v newuidmap >/dev/null 2>&1; then
@@ -132,7 +137,12 @@ elif command -v dnf >/dev/null 2>&1; then
 		fi
 		if [ -n "${extrapkgs}" ]; then
 			# shellcheck disable=SC2086
-			dnf install ${dnf_install_flags} ${epel_install_flags} ${extrapkgs}
+			dnf install ${dnf_install_flags} ${epel_install_flags} ${extrapkgs} || true
+			if echo "${extrapkgs}" | grep -q "kernel-modules-extra"; then
+				if [ -f "${LIMA_CIDATA_MNT}"/boot.Linux/00-modprobe.sh ]; then
+					sh "${LIMA_CIDATA_MNT}"/boot.Linux/00-modprobe.sh || true
+				fi
+			fi
 		fi
 	fi
 	if [ "${LIMA_CIDATA_CONTAINERD_USER}" = 1 ] && [ ! -e /usr/bin/fusermount ]; then
