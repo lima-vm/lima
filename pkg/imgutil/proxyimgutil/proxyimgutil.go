@@ -56,7 +56,7 @@ func (p *ImageDiskManager) ResizeDisk(ctx context.Context, disk string, size int
 }
 
 // Convert converts a disk image to the specified format.
-// Currently supported formats are raw.Type and asif.Type.
+// Currently supported formats are raw.Type, asif.Type, and vhdx.Type.
 func (p *ImageDiskManager) Convert(ctx context.Context, imageType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
 	if imageType == raw.Type {
 		err := p.qemu.Convert(ctx, imageType, source, dest, size, allowSourceWithBackingFile)

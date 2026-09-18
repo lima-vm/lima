@@ -155,7 +155,10 @@ type DriverFeatures struct {
 	// RosettaBinFmt reports that Rosetta is registered as a binfmt_misc handler
 	// in the guest.
 	RosettaBinFmt bool `json:"rosettaBinFmt"`
-	// SupportedImageFormats lists the disk image formats the driver can boot
-	// (e.g. "raw", "qcow2"), used to select or convert the instance image.
+	// SupportedImageFormats lists the disk image formats the driver accepts as
+	// its instance image (e.g. "raw", "qcow2"); Lima converts any other format
+	// to raw before the driver sees it. A driver that converts the image itself
+	// in CreateDisk should list every format it can convert from, not just the
+	// format it ultimately boots.
 	SupportedImageFormats []string `json:"supportedImageFormats,omitempty"`
 }
