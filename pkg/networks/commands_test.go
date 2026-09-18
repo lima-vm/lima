@@ -4,6 +4,8 @@
 package networks
 
 import (
+	"fmt"
+	"math"
 	"path/filepath"
 	"runtime"
 	"testing"
@@ -89,31 +91,67 @@ func TestStartCmd(t *testing.T) {
 	})
 
 	t.Run("lima-privileged-net", func(t *testing.T) {
-		if ok, _ := config.IsDaemonInstalled(LimaPrivilegedNet); !ok {
-			t.Skip("lima-privileged-net is not installed")
-		}
-		helper, err := limaPrivilegedNetPath()
-		assert.NilError(t, err)
+		// The helper path is passed in, so the rendering is asserted on every host,
+		// including the ones where the helper is not installed.
+		const helper = "/usr/local/libexec/lima/privileged/lima-privileged-net"
 
-		cmd := config.StartCmd("shared", LimaPrivilegedNet)
+		cmd := config.startCmd("shared", LimaPrivilegedNet, helper)
 		assert.Equal(t, cmd, helper+" start --pidfile="+filepath.Join(varRunDir, "shared_lima-privileged-net.pid")+" --mode=shared --bridge=lima-shared "+
 			"--gateway=192.168.105.1 --dhcp-end=192.168.105.254 --netmask=255.255.255.0")
 
-		cmd = config.StartCmd("bridged", LimaPrivilegedNet)
-		assert.Equal(t, cmd, helper+" start --pidfile="+filepath.Join(varRunDir, "bridged_lima-privileged-net.pid")+" --mode=bridged --bridge=br0")
+		cmd = config.startCmd("bridged", LimaPrivilegedNet, helper)
+		assert.Equal(t, cmd, helper+" start --pidfile="+filepath.Join(varRunDir, "bridged_lima-privileged-net.pid")+" --mode=bridged --bridge="+config.Networks["bridged"].Interface)
 
-		assert.Equal(t, config.TapCmd("shared", TapNamePattern()),
-			helper+" tap --bridge=lima-shared limatap[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]")
+		assert.Equal(t, config.tapCmd(helper, "shared", "default"),
+			helper+" tap --bridge=lima-shared --network=shared -- default")
+		assert.Equal(t, config.tapCmd(helper, "shared", "*"),
+			helper+" tap --bridge=lima-shared --network=shared -- *")
 	})
 }
 
 func TestTapName(t *testing.T) {
-	tap := TapName("default", "shared")
-	assert.Equal(t, len(tap), 15)
+	tap := TapName(1000, "default", "shared")
+	assert.Equal(t, len(tap), maxIfNameLen)
 	assert.Assert(t, IsTapName(tap))
-	assert.Assert(t, TapName("default", "host") != tap)
+	assert.Assert(t, TapName(1000, "default", "host") != tap)
+	assert.Assert(t, TapName(1001, "default", "shared") != tap)
 	assert.Assert(t, !IsTapName("eth0"))
-	assert.Assert(t, !IsTapName("limatapzzzzzzzz"))
+
+	// A hash collision between two uids must not produce the same name: the uid
+	// is written in clear, so the names differ before the hash is ever reached.
+	// Large uids are no exception: the uid does not eat into the hash, because
+	// both are packed into a field of a fixed width.
+	uids := []int{0, 1, 1000, 1001, 65534, 1000000, 3000000000, math.MaxUint32}
+	for i, uidA := range uids {
+		for _, uidB := range uids[i+1:] {
+			for _, netName := range []string{"shared", "host"} {
+				assert.Assert(t, TapName(uidA, "default", netName) != TapName(uidB, "default", netName))
+			}
+		}
+	}
+
+	// Every name is of the same length, whatever the uid, and keeps the full hash.
+	for _, uid := range uids {
+		name := TapName(uid, "default", "shared")
+		assert.Equal(t, len(name), maxIfNameLen)
+		assert.Assert(t, IsTapName(name))
+		assert.Assert(t, name != TapName(uid, "default", "host"))
+	}
+
+	// Names that only differ in the hash must not collide for a large uid either;
+	// vm334/host and vm1471/shared used to share one for uid 3000000000.
+	seen := make(map[string]string)
+	for i := range 2000 {
+		for _, netName := range []string{"shared", "host"} {
+			instName := fmt.Sprintf("vm%d", i)
+			name := TapName(3000000000, instName, netName)
+			key := instName + "/" + netName
+			if other, ok := seen[name]; ok {
+				t.Errorf("tap name %q is shared by %q and %q", name, other, key)
+			}
+			seen[name] = key
+		}
+	}
 }
 
 func TestStopCmd(t *testing.T) {
@@ -130,8 +168,8 @@ func TestIsManagedBridge(t *testing.T) {
 }
 
 func TestIsTapName(t *testing.T) {
-	assert.Assert(t, len(tapPrefix)+tapDigits <= maxIfNameLen)
-	assert.Assert(t, IsTapName("limatap01234567"))
+	assert.Assert(t, IsTapName(TapName(1000, "default", "shared")))
 	assert.Assert(t, !IsTapName("eth0"))
-	assert.Assert(t, !IsTapName("limatapzzzzzzzz"))
+	assert.Assert(t, !IsTapName("ltrs01234567"))  // too short: not maxIfNameLen
+	assert.Assert(t, !IsTapName("ltrs-01234567")) // not all base-36 digits
 }

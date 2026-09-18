@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 
 	"github.com/goccy/go-yaml"
@@ -198,5 +199,15 @@ func limaPrivilegedNetPath() (string, error) {
 	if len(dirs) == 0 {
 		return "", errors.New("could not find the libexec/lima directory")
 	}
-	return filepath.Join(dirs[0], privilegedSubdir, LimaPrivilegedNet), nil
+	path := filepath.Join(dirs[0], privilegedSubdir, LimaPrivilegedNet)
+	if !filepath.IsAbs(path) {
+		return "", fmt.Errorf("path %#q is not an absolute path", path)
+	}
+	if strings.ContainsAny(path, " \t\r\n\v\f") {
+		return "", fmt.Errorf("path %#q contains whitespace", path)
+	}
+	if strings.ContainsAny(path, `,=:#!"\*?[]`) {
+		return "", fmt.Errorf("path %#q contains sudoers metacharacters", path)
+	}
+	return path, nil
 }

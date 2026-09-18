@@ -61,15 +61,17 @@ func newStartCommand() *cobra.Command {
 }
 
 func newTapCommand() *cobra.Command {
-	var bridge string
+	var bridge, network string
 	cmd := &cobra.Command{
-		Use:   "tap TAP",
+		Use:   "tap INSTANCE",
 		Short: "Create a tap device owned by the calling user and attach it to a bridge",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			return tapUp(cmd.Context(), args[0], bridge)
+			return tapUp(cmd.Context(), bridge, network, args[0])
 		},
 	}
+	cmd.Flags().SetInterspersed(false)
 	cmd.Flags().StringVar(&bridge, "bridge", "", "name of the bridge to attach the tap device to")
+	cmd.Flags().StringVar(&network, "network", "", "name of the Lima network the instance is connected to")
 	return cmd
 }
