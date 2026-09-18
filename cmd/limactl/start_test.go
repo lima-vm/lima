@@ -12,7 +12,15 @@ import (
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
+
+func TestMain(m *testing.M) {
+	usrlocal.ExecutableViaArgs0 = func() (string, error) {
+		return filepath.Abs("../../bin/limactl")
+	}
+	os.Exit(m.Run())
+}
 
 func TestLoadOrCreateInstance(t *testing.T) {
 	tests := []struct {

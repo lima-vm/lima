@@ -126,6 +126,38 @@ func ShareLima() ([]string, error) {
 	return candidates, nil
 }
 
+func readFileFromDirs(name string, dirs []string) ([]byte, error) {
+	var attempted []string
+	for _, dir := range dirs {
+		path := filepath.Join(dir, filepath.FromSlash(name))
+		attempted = append(attempted, path)
+		b, err := os.ReadFile(path)
+		if err == nil {
+			return b, nil
+		}
+		if !errors.Is(err, fs.ErrNotExist) {
+			return nil, fmt.Errorf("failed to read %q: %w", path, err)
+		}
+	}
+	return nil, fmt.Errorf("%w: attempted %v", fs.ErrNotExist, attempted)
+}
+
+func ReadFile(name string) ([]byte, error) {
+	if !fs.ValidPath(name) || strings.ContainsRune(name, '\\') || filepath.IsAbs(filepath.FromSlash(name)) {
+		return nil, fmt.Errorf("invalid resource path %q", name)
+	}
+
+	dirs, err := ShareLima()
+	if err != nil {
+		return nil, err
+	}
+	b, err := readFileFromDirs(name, dirs)
+	if err != nil {
+		return nil, fmt.Errorf("failed to locate Lima resource %q: %w", name, err)
+	}
+	return b, nil
+}
+
 // GuestAgentBinary returns the absolute path of the guest agent binary, possibly with ".gz" suffix.
 func GuestAgentBinary(ostype limatype.OS, arch limatype.Arch) (string, error) {
 	if ostype == "" {
