@@ -214,3 +214,27 @@ This page documents the environment variables used in Lima.
   ```sh
   export QEMU_SYSTEM_X86_64=/usr/local/bin/qemu-system-x86_64
   ```
+
+### `SSH`
+
+- **Description**: Command to run in place of the `ssh` executable. The value is
+  split into shell tokens, so it can include arguments as well as a path.
+  `limactl copy` passes none of the `SSH` arguments to `scp`. It finds `scp`
+  on `$PATH`, except on Windows, where it takes the `scp.exe` next to the
+  selected `ssh.exe`. Tokenization reads `\` as an escape and splits on
+  spaces, so a Windows path works only inside single quotes; unquoted,
+  `C:\Program Files\Git\usr\bin\ssh.exe` arrives as `C:Program`.
+- **Default**: unset. Lima then searches `$PATH`; on Windows it takes the first
+  directory holding `ssh.exe`, `scp.exe`, and `ssh-keygen.exe` together, and
+  falls back to `%SystemRoot%\System32\OpenSSH`.
+- **Usage**:
+  ```sh
+  export SSH=/opt/homebrew/bin/ssh
+  ```
+  ```powershell
+  $env:SSH = "'C:\Program Files\Git\usr\bin\ssh.exe'"
+  ```
+- **Note**: On Windows some paths still follow `PATH`, among them the guest
+  mount point and `limactl shell`'s working directory, so point `SSH` at the
+  install that comes first on `PATH`. `limactl guest-install` ignores this
+  variable altogether.
