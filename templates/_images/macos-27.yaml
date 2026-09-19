@@ -1,0 +1,11 @@
+# Apple Software License Agreements: https://www.apple.com/legal/sla/
+# (macOS users should have already accepted the agreements on their host machines)
+
+images:
+- location: "https://updates.cdn-apple.com/2026FallFCS/afcfc88e-bbe6-44bf-a5da-07c56eebc06c/UniversalMac_27.0_26A428_Restore.ipsw"
+  arch: "aarch64"
+  digest: "sha256:2a5d3c695d501022b7fad9adaffcf2627bcb867d993fb5662dcd41bac99a2836"
+os: Darwin
+arch: aarch64
+# vz is the only supported VM type for macOS guests
+vmType: vz
