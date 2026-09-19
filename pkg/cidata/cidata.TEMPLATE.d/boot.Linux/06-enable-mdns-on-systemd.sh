@@ -16,9 +16,12 @@ command -v resolvectl >/dev/null 2>&1 || exit 0
 
 # Configure systemd-resolved to enable mDNS resolution globally
 enable_mdns_conf_path=/etc/systemd/resolved.conf.d/00-lima-enable-mdns.conf
-enable_mdns_conf_content="[Resolve]
+enable_mdns_conf_content='[Resolve]
 MulticastDNS=yes
-"
+{{if eq .Param.internal_disableLLMNR "true" -}}
+LLMNR=no
+{{end -}}
+'
 # Create /etc/systemd/resolved.conf.d/00-lima-enable-mdns.conf if its content is different
 if [ "$(echo "${enable_mdns_conf_content}" | sha256sum)" != "$(sha256sum <"${enable_mdns_conf_path}" 2>/dev/null)" ]; then
 	mkdir -p "$(dirname "${enable_mdns_conf_path}")"

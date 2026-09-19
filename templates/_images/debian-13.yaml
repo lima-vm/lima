@@ -64,3 +64,11 @@ images:
   variant: "nocloud"
 
 mountTypesUnsupported: [9p]
+
+# Debian 13's sshd passes an UNKNOWN peer address for vsock connections to Linux
+# audit, which tries to resolve it via LLMNR and delays interactive SSH logins.
+# Remove this workaround when the images include the OpenSSH fix:
+# https://github.com/openssh/openssh-portable/commit/e5055ef26abc
+# See https://github.com/lima-vm/lima/issues/5389
+param:
+  internal_disableLLMNR: "true"
