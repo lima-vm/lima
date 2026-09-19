@@ -27,6 +27,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 	"github.com/lima-vm/lima/v2/pkg/version/versionutil"
 )
@@ -383,6 +384,13 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 
 		for _, instance := range instances {
 			dir := instance.Dir
+			if osutil.IsSymlink(instance.Dir) {
+				target, err := os.Readlink(instance.Dir)
+				if err != nil {
+					return err
+				}
+				dir = target
+			}
 			if strings.HasPrefix(dir, homeDir) {
 				dir = strings.Replace(dir, homeDir, "~", 1)
 			}
