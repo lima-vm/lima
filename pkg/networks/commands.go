@@ -90,9 +90,10 @@ func (c *Config) DaemonPath(daemon string) (string, error) {
 // DigestSpec returns the sudoers `Digest_Spec` pinning the contents of the daemon
 // binary. sudo (>= 1.8.7) hashes the file immediately before executing it and
 // refuses to run it when the digest no longer matches, so an attacker who manages
-// to replace the helper cannot get the replacement executed as root. Unlike the
-// ownership checks in validate.go, this is enforced inside sudo itself and is
-// therefore not subject to a time-of-check/time-of-use race with limactl.
+// to replace the helper cannot get the replacement executed as root. The helper's
+// own verifySelf() rejects a binary that is not on a root-owned path, but that
+// check only runs once the replaced binary is already executing as root; the
+// digest is checked inside sudo, so it cannot be raced by limactl either.
 func (c *Config) DigestSpec(daemon string) (string, error) {
 	path, err := c.DaemonPath(daemon)
 	if err != nil {
@@ -162,15 +163,18 @@ func (c *Config) StartCmd(name, daemon string) string {
 	if ok, _ := c.IsDaemonInstalled(daemon); !ok {
 		panic(fmt.Errorf("daemon %#q is not available", daemon))
 	}
+	return c.startCmd(name, daemon, c.daemonPath(daemon))
+}
+
+// startCmd renders the command line from an already resolved daemon path, so that
+// the rendering can be tested on a host where the daemon is not installed.
+func (c *Config) startCmd(name, daemon, daemonPath string) string {
+	nw := c.Networks[name]
 	var cmd string
 	switch daemon {
 	case SocketVMNet:
-		nw := c.Networks[name]
-		if c.Paths.SocketVMNet == "" {
-			panic("c.Paths.SocketVMNet is empty")
-		}
 		cmd = fmt.Sprintf("%s --pidfile=%s --socket-group=%s --vmnet-mode=%s",
-			c.Paths.SocketVMNet, c.PIDFile(name, SocketVMNet), c.Group, nw.Mode)
+			daemonPath, c.PIDFile(name, SocketVMNet), c.Group, nw.Mode)
 		switch nw.Mode {
 		case ModeBridged:
 			cmd += fmt.Sprintf(" --vmnet-interface=%s", nw.Interface)
@@ -180,13 +184,8 @@ func (c *Config) StartCmd(name, daemon string) string {
 		}
 		cmd += " " + c.Sock(name)
 	case LimaPrivilegedNet:
-		nw := c.Networks[name]
-		privilegedNetPath, err := limaPrivilegedNetPath()
-		if err != nil {
-			panic(fmt.Errorf("failed to get lima-privileged-net path: %w", err))
-		}
 		cmd = fmt.Sprintf("%s start --pidfile=%s --mode=%s --bridge=%s",
-			privilegedNetPath, c.PIDFile(name, LimaPrivilegedNet), nw.Mode, c.BridgeName(name))
+			daemonPath, c.PIDFile(name, LimaPrivilegedNet), nw.Mode, c.BridgeName(name))
 		if nw.Mode != ModeBridged {
 			cmd += fmt.Sprintf(" --gateway=%s --dhcp-end=%s --netmask=%s",
 				nw.Gateway, nw.DHCPEnd, nw.NetMask)
@@ -195,6 +194,17 @@ func (c *Config) StartCmd(name, daemon string) string {
 		panic(fmt.Errorf("unexpected daemon %#q", daemon))
 	}
 	return cmd
+}
+
+// daemonPath panics instead of returning an error because the command renderers
+// below interpolate the result into a root command line, where an empty path
+// would silently turn the first argument into the program to run.
+func (c *Config) daemonPath(daemon string) string {
+	path, err := c.DaemonPath(daemon)
+	if err != nil {
+		panic(fmt.Errorf("failed to get the path of daemon %#q: %w", daemon, err))
+	}
+	return path
 }
 
 func (c *Config) StopCmd(name, daemon string) string {
@@ -226,28 +236,32 @@ func (c *Config) BridgeName(name string) string {
 }
 
 // TapCmd returns the command creating the tap device that connects an instance
-// to the bridge of a network. Passing TapNamePattern renders the sudoers entry.
-func (c *Config) TapCmd(name, tap string) string {
-	privilegedNetPath, err := limaPrivilegedNetPath()
-	if err != nil {
-		panic(fmt.Errorf("failed to get lima-privileged-net path: %w", err))
-	}
-	return fmt.Sprintf("%s tap --bridge=%s %s", privilegedNetPath, c.BridgeName(name), tap)
+// to the bridge of a network. The device is named by lima-privileged-net, not
+// here, so that it can only ever belong to the calling user; see TapName.
+func (c *Config) TapCmd(instName, netName string) string {
+	return c.tapCmd(c.daemonPath(LimaPrivilegedNet), netName, instName)
+}
+
+// TapCmdPattern returns the sudoers entry authorizing TapCmd for every instance
+// on a network. The instance name is the only wildcard, and "*" also matches
+// whitespace, so it is passed as the last argument and as a positional one:
+// lima-privileged-net stops parsing flags there, which keeps smuggled words from
+// overriding a flag this entry pins, and then rejects them as surplus arguments.
+func (c *Config) TapCmdPattern(netName string) string {
+	return c.tapCmd(c.daemonPath(LimaPrivilegedNet), netName, "*")
+}
+
+func (c *Config) tapCmd(daemonPath, netName, instArg string) string {
+	return fmt.Sprintf("%s tap --bridge=%s --network=%s %s", daemonPath, c.BridgeName(netName), netName, instArg)
 }
 
 // TapName returns the name of the tap device connecting an instance to a
-// network. A hash keeps the name within the maxIfNameLen limit and within the
-// fixed shape that TapNamePattern pins down in the sudoers file. The uid is part
+// network. A hash keeps the name within the maxIfNameLen limit. The uid is part
 // of the hash because the bridges are shared between all users of the sudoers
-// group, and a tap device may only ever be used by its owner.
-func TapName(instName, netName string) string {
-	sum := sha256.Sum256(fmt.Appendf(nil, "%d/%s/%s", os.Getuid(), instName, netName))
+// group, and a tap device may only ever be used by its owner. lima-privileged-net
+// derives the name the same way, from the uid that sudo reports, so that no
+// member of the group can create, and thereby deny, another member's device.
+func TapName(uid int, instName, netName string) string {
+	sum := sha256.Sum256(fmt.Appendf(nil, "%d/%s/%s", uid, instName, netName))
 	return fmt.Sprintf("%s%x", tapPrefix, sum)[:len(tapPrefix)+tapDigits]
-}
-
-// TapNamePattern is the sudoers wildcard matching exactly the names generated by
-// TapName. Character classes are used instead of "*" because "*" would also
-// match whitespace, which would allow smuggling extra arguments into the command.
-func TapNamePattern() string {
-	return tapPrefix + strings.Repeat("[0-9a-f]", tapDigits)
 }
