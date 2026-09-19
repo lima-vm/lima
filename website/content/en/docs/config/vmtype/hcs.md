@@ -36,7 +36,6 @@ dns:
 ### Caveats
 - We tested it works only on Windows 11 (x86_64).
 - Only plain mode is supported (no file mount, no dynamic port-forwarding).
-- `qemu-img` is required for the image conversion; see [Disk images](#disk-images).
 - The user must be a member of the Hyper-V Administrators group; see [Setup for HCS driver](#setup-for-hcs-driver)
 - `limactl` should be run from a shell opened with Administrator privileges.
 - Currently, only one instance can run using hcs at a time, beucause the HCN network subnet is fixed and cannot be shared by multiple instances.
@@ -45,8 +44,7 @@ dns:
 
 ### Disk images
 - The `hcs` driver can only boot from a `.vhdx` disk image.
-- If the image is not a `.vhdx` (for example `.qcow2`), Lima automatically converts it to `.vhdx` by running `qemu-img convert -O vhdx`.
-- Therefore, if you would like to download the image or to pass a disk image which is not `.vhdx`, `qemu-img` is required.
+- If the image is not a `.vhdx` (for example `.qcow2`), Lima automatically converts it to `.vhdx` natively.
 
 ### Setup for HCS driver
 1. **Enable virtualization on Windows:**
