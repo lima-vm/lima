@@ -604,7 +604,11 @@ jobs:
     - name: Make
       run: make
     - name: Install
-      run: sudo make install
+      run: |
+        # The privileged helper requires root-owned ancestors; Homebrew owns /usr/local on runners.
+        sudo install -d -o root -g wheel -m 0755 /opt/lima
+        sudo make PREFIX=/opt/lima install
+        echo /opt/lima/bin >>$GITHUB_PATH
     - name: Cache image used by templates/${{ matrix.template }}
       uses: $/.github/actions/setup_cache_for_template
       with:
@@ -618,6 +622,11 @@ jobs:
     - name: "Run BATS port-forwarding test (vz, macOS host)"
       if: matrix.template == 'default.yaml'
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats
+      env:
+        LIMA_BATS_ALL_TESTS_RETRIES: "2"
+    - name: Run BATS VZ block-device tests
+      if: matrix.template == 'default.yaml'
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/vz-block-device.bats
       env:
         LIMA_BATS_ALL_TESTS_RETRIES: "2"
     - if: failure()

@@ -36,6 +36,11 @@ func TestValidateConfig(t *testing.T) {
 		expectedErr string
 	}{
 		{
+			name:        "block devices are rejected",
+			cfg:         &limatype.LimaYAML{BlockDevices: []string{"/dev/disk4"}},
+			expectedErr: "field `blockDevices` is not supported for vmType: hcs",
+		},
+		{
 			name:        "nil config is rejected",
 			cfg:         nil,
 			expectedErr: "configuration is nil",

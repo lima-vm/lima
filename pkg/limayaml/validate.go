@@ -21,6 +21,7 @@ import (
 	"github.com/docker/go-units"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
@@ -63,6 +64,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	if !slices.Contains(limatype.ArchTypes, *y.Arch) {
 		errs = errors.Join(errs, fmt.Errorf("field `arch` must be one of %v; got %#q", limatype.ArchTypes, *y.Arch))
 	}
+	errs = errors.Join(errs, validateBlockDevices(y.BlockDevices))
 
 	if y.User.Shell != nil {
 		shell := *y.User.Shell
@@ -494,6 +496,22 @@ func IsSupportedWindowsShell(shell string) bool {
 		}
 	}
 	return false
+}
+
+func validateBlockDevices(blockDevices []string) error {
+	var errs error
+
+	for i, blockDevice := range blockDevices {
+		field := fmt.Sprintf("blockDevices[%d]", i)
+		if slices.Contains(blockDevices[:i], blockDevice) {
+			errs = errors.Join(errs, fmt.Errorf("field `%s` is a duplicate block device %q", field, blockDevice))
+		}
+		if err := blockdevice.ValidateDiskDevicePath(blockDevice); err != nil {
+			errs = errors.Join(errs, fmt.Errorf("field `%s`: %w", field, err))
+		}
+	}
+
+	return errs
 }
 
 func validateFileObject(f limatype.File, fieldName string) error {

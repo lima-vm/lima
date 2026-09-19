@@ -86,3 +86,91 @@ limactl edit default --disk 20
 > **Note:**
 > - Increasing disk size is supported, but shrinking disks is not recommended.
 > - The instance may need to be stopped before editing disk size.
+
+## Attach host block devices
+
+| ⚡ Requirement | Lima >= 2.3, macOS >= 14.0, vmType: vz |
+| ------------- | -------------------------------------- |
+
+Lima can attach a host block device directly to the guest.
+
+### Sudoers setup
+
+Opening a host block device requires a privileged helper on macOS.
+There are two setup steps: a protected helper installation, then authorization for
+the specific devices. `start --block-device` does not grant root access automatically.
+
+The helper and every ancestor directory must be root-owned and not writable by regular
+users. If your installation already meets this requirement, skip to the sudoers commands below.
+For a user-writable installation (including typical Homebrew installs), download the
+macOS binary archive for your architecture from the [Lima releases](https://github.com/lima-vm/lima/releases)
+and extract it into a protected prefix. A source build is not required:
+
+```sh
+# Replace VERSION and ARCH with the filename of the downloaded release archive.
+sudo install -d -o root -g wheel -m 0755 /opt/lima
+sudo tar --no-same-owner -xzf lima-VERSION-Darwin-ARCH.tar.gz -C /opt/lima
+```
+
+Use `/opt/lima/bin/limactl` directly for the commands below and for starting the VM
+if you installed this copy. The helper is found relative to the invoked executable;
+a symlink in another prefix does not select the protected installation.
+
+Generate the grant as your regular user, inspect it, check its syntax, then install it.
+Replace `/dev/disk4` with the intended device and include every existing device grant
+you want to retain:
+
+```sh
+limactl sudoers --block-device=/dev/disk4 >etc_sudoers.d_lima
+less etc_sudoers.d_lima
+visudo -cf etc_sudoers.d_lima
+sudo install -o root -g wheel -m 0440 etc_sudoers.d_lima /etc/sudoers.d/lima
+rm etc_sudoers.d_lima
+```
+
+The block-device entry is scoped to the current user. Do not run `limactl sudoers` as root.
+The helper only accepts real macOS disk device nodes such as `/dev/disk4` and `/dev/rdisk4s1`.
+Use builtin VZ through the installed `limactl` executable; external VZ drivers and
+renamed executables are not supported for block-device attachment.
+
+Include every `--block-device` grant you want to keep when regenerating this file.
+If network validation fails, the generated file omits network grants; installing it over
+an existing file removes those grants. Review the output before replacing it.
+Device grants persist until removed from sudoers and allow root read-write access to the
+device slot, not a particular physical disk. macOS may reuse `/dev/diskN` for another disk.
+Never grant your boot/system disk; raw write access can compromise the host.
+To revoke a device grant, stop the VM, remove that device's helper command using
+`sudo visudo -f /etc/sudoers.d/lima`, and preserve the other grants in the file.
+
+Example configuration:
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
+```bash
+# hdiutil attach -nomount ram://65536   # create a ramdisk to test without a USB key or real drive
+limactl start --vm-type=vz --block-device=/dev/disk4 template:default
+```
+
+`/dev/rdiskN` also works:
+
+```bash
+# hdiutil attach -nomount ram://65536   # create a ramdisk to test without a USB key or real drive
+limactl start --vm-type=vz --block-device=/dev/rdisk4 template:default
+```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+vmType: "vz"
+blockDevices:
+- /dev/disk4
+- /dev/rdisk5
+```
+{{% /tab %}}
+{{< /tabpane >}}
+
+The `--block-device` flag can be specified multiple times to attach multiple host block devices.
+
+### Notes
+
+- The configured path must be a macOS disk device path under `/dev`, e.g. `/dev/disk4` or `/dev/rdisk4s1`.
+- The guest sees `/dev/disk/by-id/virtio-<device basename>`, with the basename capped at 20 ASCII bytes (e.g. `virtio-disk4` or `virtio-rdisk5`). You are responsible for partitioning, formatting, and mounting filesystems on the block devices.
+- Never mount the same filesystem on the host and a guest, or in two guests, at the same time: this can corrupt data. Instances sharing a `LIMA_HOME` lock the whole disk, including its raw/block aliases and partitions, until the VM stops. This lock does not coordinate other users, other `LIMA_HOME` directories, or host mounts.
