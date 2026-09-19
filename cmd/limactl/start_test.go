@@ -11,6 +11,7 @@ import (
 	"github.com/spf13/cobra"
 	"gotest.tools/v3/assert"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
@@ -67,4 +68,47 @@ func newTestStartCommand(t *testing.T) *cobra.Command {
 	cmd.Flags().Bool("tty", false, "")
 	cmd.SetContext(t.Context())
 	return cmd
+}
+
+// removeStaleHostAgentFiles must not delete the PID file of a VM driver that runs as its
+// own process: that driver may still be alive, and hiding it from the next inspection would
+// let a second driver be started for the same instance.
+func TestRemoveStaleHostAgentFilesKeepsSeparateDriver(t *testing.T) {
+	dir := t.TempDir()
+	driverPID := filepath.Join(dir, filenames.PIDFile("qemu"))
+	for _, name := range []string{filenames.HostAgentPID, filenames.HostAgentSock, "qemu.sock"} {
+		assert.NilError(t, os.WriteFile(filepath.Join(dir, name), []byte("1"), 0o600))
+	}
+	assert.NilError(t, os.WriteFile(driverPID, []byte("222"), 0o600))
+
+	removeStaleHostAgentFiles(&limatype.Instance{
+		Dir: dir, VMType: "qemu", HostAgentPID: 111, DriverPID: 222,
+	})
+
+	for _, name := range []string{filenames.HostAgentPID, filenames.HostAgentSock} {
+		_, err := os.Stat(filepath.Join(dir, name))
+		assert.Assert(t, os.IsNotExist(err), "%s should have been removed", name)
+	}
+	_, err := os.Stat(driverPID)
+	assert.NilError(t, err, "a separate driver's PID file must be kept")
+	_, err = os.Stat(filepath.Join(dir, "qemu.sock"))
+	assert.NilError(t, err, "a separate driver's socket must be kept")
+}
+
+// A driver that runs the VM inside the host agent process (such as vz) records the same PID,
+// so its PID file refers to the departed host agent too and must be removed as well.
+func TestRemoveStaleHostAgentFilesRemovesInProcessDriver(t *testing.T) {
+	dir := t.TempDir()
+	driverPID := filepath.Join(dir, filenames.PIDFile("vz"))
+	for _, name := range []string{filenames.HostAgentPID, filenames.HostAgentSock} {
+		assert.NilError(t, os.WriteFile(filepath.Join(dir, name), []byte("111"), 0o600))
+	}
+	assert.NilError(t, os.WriteFile(driverPID, []byte("111"), 0o600))
+
+	removeStaleHostAgentFiles(&limatype.Instance{
+		Dir: dir, VMType: "vz", HostAgentPID: 111, DriverPID: 111,
+	})
+
+	_, err := os.Stat(driverPID)
+	assert.Assert(t, os.IsNotExist(err), "an in-process driver's PID file should have been removed")
 }
