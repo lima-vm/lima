@@ -6,7 +6,7 @@ go 1.26.0
 // Our own packages and golang.org/x packages are trusted
 //gosocialcheck:trusted
 require (
-	github.com/lima-vm/go-qcow2reader v0.7.1 // gomodjail:unconfined
+	github.com/lima-vm/go-qcow2reader v0.8.0 // gomodjail:unconfined
 	github.com/lima-vm/sshocker v0.3.11 // gomodjail:unconfined
 	golang.org/x/image v0.46.0
 	golang.org/x/net v0.59.0 // gomodjail:unconfined

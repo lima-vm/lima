@@ -13,8 +13,10 @@ import (
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"github.com/lima-vm/lima/v2/pkg/bicopy"
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -298,7 +300,18 @@ func (s *DriverServer) ListSnapshots(ctx context.Context, _ *emptypb.Empty) (*pb
 		return nil, err
 	}
 	s.logger.Debug("ListSnapshots succeeded")
-	return &pb.ListSnapshotsResponse{Snapshots: snapshots}, nil
+	return &pb.ListSnapshotsResponse{Snapshots: snapshotsToProto(snapshots)}, nil
+}
+
+func snapshotsToProto(snapshots []driver.Snapshot) []*pb.Snapshot {
+	result := make([]*pb.Snapshot, len(snapshots))
+	for i, snapshot := range snapshots {
+		result[i] = &pb.Snapshot{Id: snapshot.ID, Name: snapshot.Name}
+		if snapshot.CreatedAt != nil {
+			result[i].CreatedAt = timestamppb.New(*snapshot.CreatedAt)
+		}
+	}
+	return result
 }
 
 func (s *DriverServer) ForwardGuestAgent(ctx context.Context, _ *emptypb.Empty) (*pb.ForwardGuestAgentResponse, error) {
