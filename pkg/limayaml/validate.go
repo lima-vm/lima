@@ -119,6 +119,23 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		if err := identifiers.Validate(disk.Name); err != nil {
 			errs = errors.Join(errs, fmt.Errorf("field `additionalDisks[%d].name is invalid`: %w", i, err))
 		}
+		// Only the Linux boot script labels a disk, and only when it formats it.
+		if warn && *y.OS == limatype.LINUX && (disk.Format == nil || *disk.Format) {
+			fsType := DefaultDiskFSType
+			if disk.FSType != nil && *disk.FSType != "" {
+				fsType = *disk.FSType
+			}
+			// A maxLen of 0 means Lima does not know the label limit for fsType;
+			// the boot script omits the label rather than guess, so there is
+			// nothing to warn about.
+			if maxLen := FSLabelMaxLen(fsType); maxLen > 0 {
+				if label := DiskFSLabel(disk.Name); len(label) > maxLen {
+					logrus.Infof("field `additionalDisks[%d].name`: %#q is too long for the %s filesystem label; "+
+						"the label will be truncated to %#q. The disk itself is unaffected: Lima does not identify it by label.",
+						i, disk.Name, fsType, label[:maxLen])
+				}
+			}
+		}
 	}
 
 	for i, f := range y.Mounts {

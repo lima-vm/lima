@@ -6,8 +6,10 @@ package limayaml
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"testing"
 
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -300,6 +302,59 @@ additionalDisks:
 
 	err = Validate(y, false)
 	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty")
+
+	// A name too long to fit in the filesystem label is still valid: the label
+	// is truncated, but Lima does not identify the disk by its label. Rejecting
+	// these would break configurations that work correctly. Validate logs a
+	// notice instead, once for each such disk. Validate(y, true) also runs
+	// warnExperimental, which needs mountType; Load leaves it unset.
+	longDisks := `
+mountType: "reverse-sshfs"
+additionalDisks:
+  - name: "myproject-images"
+    fsType: "ext4"
+  - name: "project1"
+    fsType: "xfs"
+  - name: "project"
+    fsType: "xfs"
+`
+	y, err = Load(t.Context(), []byte(longDisks+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+
+	notices := labelNotices(t, y)
+	assert.Equal(t, len(notices), 2)
+	assert.Assert(t, strings.Contains(notices[0], "`lima-myproject-i`"), notices[0])
+	assert.Assert(t, strings.Contains(notices[1], "`lima-project`"), notices[1])
+
+	// Lima writes a label only when the Linux boot script formats the disk, so
+	// neither of these configurations may report truncating one.
+	for name, yml := range map[string]string{
+		"format: false": "additionalDisks: [{name: preformatted-disk, format: false}]",
+		"darwin guest":  "os: Darwin\nadditionalDisks: [{name: preformatted-disk}]",
+	} {
+		t.Run(name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte("mountType: reverse-sshfs\n"+images+"\n"+yml), "lima.yaml")
+			assert.NilError(t, err)
+			assert.DeepEqual(t, labelNotices(t, y), []string(nil))
+		})
+	}
+}
+
+// labelNotices validates y with warnings enabled and returns the messages of
+// the additionalDisks label-length notices it logged. Validation errors are
+// ignored: only the notices are of interest.
+func labelNotices(t *testing.T, y *limatype.LimaYAML) []string {
+	t.Helper()
+	hook := logrustest.NewGlobal()
+	defer hook.Reset()
+	_ = Validate(y, true)
+	var notices []string
+	for _, e := range hook.AllEntries() {
+		if strings.Contains(e.Message, "filesystem label") {
+			notices = append(notices, e.Message)
+		}
+	}
+	return notices
 }
 
 func TestValidateParamName(t *testing.T) {
