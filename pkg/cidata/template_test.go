@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -210,6 +211,103 @@ func TestTemplateNICRename(t *testing.T) {
 		assert.Assert(t, strings.Contains(files["user-data"], "52:55:55:ab:cd:ef=lima0"))
 		assert.Assert(t, strings.Contains(files["network-config"], "set-name: eth0"))
 		assert.Equal(t, strings.Contains(files["network-config"], "optional: true"), optional)
+	}
+}
+
+// TestTemplateDHCPUseDomains is a regression test for
+// https://github.com/lima-vm/lima/issues/5515: Ubuntu 24.04 guests inherit the
+// DHCP search domain "local", which makes hostname qualification and sudo take
+// several seconds. dhcp4-overrides.use-domains must be false on every interface
+// so additional NICs cannot independently supply the domain.
+func TestTemplateDHCPUseDomains(t *testing.T) {
+	args := &TemplateArgs{
+		Name:         "default",
+		User:         "foo",
+		UID:          501,
+		Home:         "/home/foo.guest",
+		Shell:        "/bin/bash",
+		SSHPubKeys:   []string{"ssh-rsa dummy foo@example.com"},
+		MountType:    "reverse-sshfs",
+		SlirpNICName: "eth0",
+		Networks: []Network{
+			{MACAddress: "52:55:55:12:34:56", Interface: "eth0", Metric: 200},
+			{MACAddress: "52:55:55:ab:cd:ef", Interface: "lima0", Metric: 300},
+		},
+	}
+
+	type dhcp4Overrides struct {
+		RouteMetric uint32 `yaml:"route-metric"`
+		UseDomains  *bool  `yaml:"use-domains"`
+	}
+	type nameservers struct {
+		Addresses []string `yaml:"addresses"`
+	}
+	type ethernet struct {
+		Match struct {
+			MACAddress string `yaml:"macaddress"`
+		} `yaml:"match"`
+		DHCP4          bool           `yaml:"dhcp4"`
+		SetName        string         `yaml:"set-name"`
+		DHCP4Overrides dhcp4Overrides `yaml:"dhcp4-overrides"`
+		Nameservers    *nameservers   `yaml:"nameservers"`
+	}
+	type networkConfig struct {
+		Version   int                 `yaml:"version"`
+		Ethernets map[string]ethernet `yaml:"ethernets"`
+	}
+
+	for _, tc := range []struct {
+		name         string
+		dnsAddresses []string
+	}{
+		{name: "empty DNSAddresses"},
+		{name: "populated DNSAddresses", dnsAddresses: []string{"192.0.2.53", "192.0.2.54"}},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			args.DNSAddresses = tc.dnsAddresses
+			layout, err := ExecuteTemplateCIDataISO(args)
+			assert.NilError(t, err)
+
+			var raw []byte
+			for _, f := range layout {
+				if f.Path != "network-config" {
+					continue
+				}
+				raw, err = io.ReadAll(f.Reader)
+				assert.NilError(t, err)
+			}
+			assert.Assert(t, len(raw) > 0, "network-config missing from ISO layout")
+
+			var cfg networkConfig
+			assert.NilError(t, yaml.Unmarshal(raw, &cfg))
+			assert.Equal(t, len(cfg.Ethernets), 2)
+
+			eth0, ok := cfg.Ethernets["eth0"]
+			assert.Assert(t, ok, "eth0 missing")
+			lima0, ok := cfg.Ethernets["lima0"]
+			assert.Assert(t, ok, "lima0 missing")
+
+			for name, iface := range map[string]ethernet{"eth0": eth0, "lima0": lima0} {
+				assert.Equal(t, iface.DHCP4, true, name)
+				assert.Assert(t, iface.DHCP4Overrides.UseDomains != nil, "%s: use-domains must be set", name)
+				assert.Equal(t, *iface.DHCP4Overrides.UseDomains, false, name)
+				assert.Equal(t, iface.SetName, name)
+			}
+
+			assert.Equal(t, eth0.Match.MACAddress, "52:55:55:12:34:56")
+			assert.Equal(t, lima0.Match.MACAddress, "52:55:55:ab:cd:ef")
+			assert.Equal(t, eth0.DHCP4Overrides.RouteMetric, uint32(200))
+			assert.Equal(t, lima0.DHCP4Overrides.RouteMetric, uint32(300))
+
+			if len(tc.dnsAddresses) > 0 {
+				assert.Assert(t, eth0.Nameservers != nil, "explicit nameservers must remain on the primary interface")
+				assert.DeepEqual(t, eth0.Nameservers.Addresses, tc.dnsAddresses)
+				assert.Assert(t, lima0.Nameservers == nil, "nameservers must not appear on additional interfaces")
+			} else {
+				assert.Assert(t, eth0.Nameservers == nil, "empty DNSAddresses must not introduce a nameservers block")
+				assert.Assert(t, lima0.Nameservers == nil)
+			}
+		})
 	}
 }
 
