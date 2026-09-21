@@ -64,3 +64,27 @@ images:
   variant: "nocloud"
 
 mountTypesUnsupported: [9p]
+
+# Debian 13's sshd passes an UNKNOWN peer address for vsock connections to Linux
+# audit, which tries to resolve it via LLMNR and delays interactive SSH logins.
+# Remove this workaround when the images include the OpenSSH fix:
+# https://github.com/openssh/openssh-portable/commit/e5055ef26abc
+# See https://github.com/lima-vm/lima/issues/5389
+# Debian bug report: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1147100
+provision:
+- mode: system
+  script: |
+    #!/bin/bash
+    set -eux -o pipefail
+    command -v systemctl >/dev/null 2>&1 || exit 0
+    command -v resolvectl >/dev/null 2>&1 || exit 0
+    conf_path=/etc/systemd/resolved.conf.d/10-lima-disable-llmnr.conf
+    conf_content='[Resolve]
+    LLMNR=no
+    '
+    if [ "$(echo "${conf_content}" | sha256sum)" != "$(sha256sum <"${conf_path}" 2>/dev/null)" ]; then
+      mkdir -p "$(dirname "${conf_path}")"
+      echo "${conf_content}" >"${conf_path}"
+      systemctl daemon-reload
+      systemctl restart systemd-resolved.service
+    fi
