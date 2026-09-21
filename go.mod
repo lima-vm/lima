@@ -40,7 +40,7 @@ require (
 	github.com/inetaf/tcpproxy v0.0.0-20250222171855-c4b9df066048 // gomodjail:unconfined
 	github.com/invopop/jsonschema v0.14.0 // gomodjail:unconfined
 	github.com/mattn/go-isatty v0.0.24 // gomodjail:unconfined
-	github.com/mattn/go-shellwords v1.0.14 // gomodjail:unconfined
+	github.com/mattn/go-shellwords v1.0.15 // gomodjail:unconfined
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
