@@ -186,6 +186,8 @@ type SSHFS struct {
 	Cache          *bool       `yaml:"cache,omitempty" json:"cache,omitempty" jsonschema:"nullable"`
 	FollowSymlinks *bool       `yaml:"followSymlinks,omitempty" json:"followSymlinks,omitempty" jsonschema:"nullable"`
 	SFTPDriver     *SFTPDriver `yaml:"sftpDriver,omitempty" json:"sftpDriver,omitempty" jsonschema:"nullable"`
+	// ReadonlyNames makes every path with a component matching one of these names read-only.
+	ReadonlyNames []string `yaml:"readonlyNames,omitempty" json:"readonlyNames,omitempty"`
 }
 
 type NineP struct {
