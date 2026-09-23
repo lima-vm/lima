@@ -1,5 +1,5 @@
 
-ã
+ý
 guestservice.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"0
 Info(
 local_ports (2.IPPortR
@@ -12,11 +12,12 @@ localPorts"½
 IPPort
 protocol (	Rprotocol
 ip (	Rip
-port (Rport"X
+port (Rport"r
 Inotify
 
 mount_path (	R	mountPath.
-time (2.google.protobuf.TimestampRtime"–
+time (2.google.protobuf.TimestampRtime
+removed (Rremoved"–
 TunnelMessage
 id (	Rid
 protocol (	Rprotocol

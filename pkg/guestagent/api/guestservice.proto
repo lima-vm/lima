@@ -34,6 +34,8 @@ message IPPort {
 message Inotify {
   string mount_path = 1;
   google.protobuf.Timestamp time = 2;
+  // removed is set when mount_path was removed on the host.
+  bool removed = 3;
 }
 
 message TunnelMessage {

@@ -234,4 +234,7 @@ mounts:
 
 #### Caveats
 - For `mountType: 9p`, Inotify events are not triggered for nested files from the listening directory.
-- Inotify events are not triggered when files are removed from host
+- Inotify events are not triggered when files are removed from host, except for `mountType: reverse-sshfs`
+  with `sftpDriver: builtin` on Linux and macOS hosts.
+  There, the guest agent removes the file in the guest, and the host ignores that removal.
+  The guest only gets an event for files it had looked up or listed before.

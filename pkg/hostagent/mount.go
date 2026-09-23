@@ -19,7 +19,12 @@ import (
 )
 
 type mount struct {
-	close func() error
+	location   string
+	mountPoint string
+	// expectRemove makes the next removal of a host path by the guest a no-op on the host.
+	// It returns false when unsupported.
+	expectRemove func(hostPath string) bool
+	close        func() error
 }
 
 // mountPathAndSftpServer returns location in the native path form, and the
@@ -118,6 +123,9 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	}
 
 	res := &mount{
+		location:     m.Location,
+		mountPoint:   *m.MountPoint,
+		expectRemove: rsf.ExpectRemove,
 		close: func() error {
 			logrus.Infof("Unmounting %#q", resolvedLocation)
 			if err := rsf.Close(); err != nil {
