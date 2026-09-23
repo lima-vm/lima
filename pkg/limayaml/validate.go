@@ -178,6 +178,10 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 	}
 
+	if err := validateReadonlyNames(y); err != nil {
+		errs = errors.Join(errs, err)
+	}
+
 	if warn && runtime.GOOS != "linux" {
 		for i, mount := range y.Mounts {
 			if mount.Virtiofs.QueueSize != nil {
@@ -652,6 +656,34 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 		}
 	}
 	return nil
+}
+
+// validateReadonlyNames rejects configurations where `sshfs.readonlyNames` would not be enforced on the host.
+// Every mount must use the builtin SFTP driver, as the OpenSSH sftp-server lets a compromised guest
+// access any host path, including the read-only ones of the other mounts.
+func validateReadonlyNames(y *limatype.LimaYAML) error {
+	used := slices.ContainsFunc(y.Mounts, func(m limatype.Mount) bool { return len(m.SSHFS.ReadonlyNames) > 0 })
+	if !used {
+		return nil
+	}
+	var errs error
+	if runtime.GOOS == "windows" {
+		errs = errors.Join(errs, errors.New("field `mounts[*].sshfs.readonlyNames` is not supported on Windows hosts"))
+	}
+	if y.MountType == nil || *y.MountType != limatype.REVSSHFS {
+		errs = errors.Join(errs, fmt.Errorf("field `mounts[*].sshfs.readonlyNames` requires `mountType` to be %#q", limatype.REVSSHFS))
+	}
+	for i, m := range y.Mounts {
+		if m.SSHFS.SFTPDriver == nil || *m.SSHFS.SFTPDriver != limatype.SFTPDriverBuiltin {
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].sshfs.sftpDriver` must be %#q when any mount sets `sshfs.readonlyNames`", i, limatype.SFTPDriverBuiltin))
+		}
+		for _, name := range m.SSHFS.ReadonlyNames {
+			if name == "" || name == "." || name == ".." || strings.ContainsAny(name, `/\`) {
+				errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].sshfs.readonlyNames` must contain file names, got %#q", i, name))
+			}
+		}
+	}
+	return errs
 }
 
 func validatePort(field string, port int) error {
