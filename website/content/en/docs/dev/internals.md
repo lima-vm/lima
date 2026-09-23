@@ -69,6 +69,8 @@ VZ:
 - `vz.pid`: VZ PID
 - `vz-identifier`: Unique machine identifier file for a VM
 - `vz-hwmodel`: Hardware model information for a Mac VM
+- `vz-guest-os-version`: macOS version of the restore image a Mac VM was created from, e.g. `27.0.0` (written once, at create time)
+- `vz-guest-os-build-version`: build number of that restore image, e.g. `26A428`
 - `vz-aux`: Auxiliary storage for a Mac VM
 - `vz-efi`: EFIVariable store file for a VM
 
@@ -229,6 +231,8 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_VMTYPE`: the VM driver type ("qemu", "vz", "wsl2", ...), used to conditionally enable VM-specific behavior (e.g. virtiofs mounts on `vz`).
 - `LIMA_CIDATA_VSOCK_PORT`: the vsock port used by the guest agent (0 when vsock is not used).
 - `LIMA_CIDATA_VIRTIO_PORT`: the virtio-serial port name used by the guest agent (empty when virtio-serial is not used).
+- `LIMA_CIDATA_GUEST_OS_VERSION`: for macOS guests on the `vz` driver, the macOS version of the restore image the instance was created from, e.g. `27.0.0`. Empty for other guests and for instances created before this was recorded.
+- `LIMA_CIDATA_GUEST_OS_BUILD_VERSION`: the corresponding build number, e.g. `26A428`. Empty in the same cases.
 - `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in [plain mode](../config/plain.md) (no mounts, port forwarding, or containerd), empty otherwise.
 - `LIMA_CIDATA_NO_CLOUD_INIT`: set to "1" if cloud-init should be skipped on this boot, empty otherwise.
 

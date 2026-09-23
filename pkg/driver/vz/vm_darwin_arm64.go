@@ -65,6 +65,17 @@ func newMacPlatformConfiguration(inst *limatype.Instance) (vz.PlatformConfigurat
 		if err != nil {
 			return nil, err
 		}
+		// Record the guest macOS version too: the IPSW is removed after
+		// installation, so this is the only point where it can be read.
+		osVersion := ipswImage.OperatingSystemVersion().String()
+		buildVersion := ipswImage.BuildVersion()
+		logrus.Infof("Guest macOS version: %s (build %s)", osVersion, buildVersion)
+		if err = os.WriteFile(filepath.Join(inst.Dir, filenames.VzGuestOSVersion), []byte(osVersion+"\n"), 0o644); err != nil {
+			return nil, err
+		}
+		if err = os.WriteFile(filepath.Join(inst.Dir, filenames.VzGuestOSBuildVersion), []byte(buildVersion+"\n"), 0o644); err != nil {
+			return nil, err
+		}
 		ipswMostFeatureFul := ipswImage.MostFeaturefulSupportedConfiguration()
 		hwModelData = ipswMostFeatureFul.HardwareModel().DataRepresentation()
 		if err = os.WriteFile(hwModelFile, hwModelData, 0o666); err != nil {

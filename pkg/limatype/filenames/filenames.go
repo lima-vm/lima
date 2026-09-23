@@ -67,10 +67,12 @@ const (
 	ExternalDriverStderrLog = "driver.stderr.log"
 	BootSession             = "boot-session.tmp" // boot of the host during which the PID files in the same directory were written
 	VzIdentifier            = "vz-identifier"
-	VzHwModel               = "vz-hwmodel"       // macOS guests only
-	VzAux                   = "vz-aux"           // macOS guests only
-	VzEfi                   = "vz-efi"           // efi variable store
-	QemuEfiCodeFD           = "qemu-efi-code.fd" // efi code; not always created
+	VzHwModel               = "vz-hwmodel"                // macOS guests only
+	VzGuestOSVersion        = "vz-guest-os-version"       // macOS guests only; restore-image OS version, e.g. "27.0.0"
+	VzGuestOSBuildVersion   = "vz-guest-os-build-version" // macOS guests only; restore-image build, e.g. "26A428"
+	VzAux                   = "vz-aux"                    // macOS guests only
+	VzEfi                   = "vz-efi"                    // efi variable store
+	QemuEfiCodeFD           = "qemu-efi-code.fd"          // efi code; not always created
 	AnsibleInventoryYAML    = "ansible-inventory.yaml"
 
 	// SocketDir is the default location for forwarded sockets with a relative paths in HostSocket.
