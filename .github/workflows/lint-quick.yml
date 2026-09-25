@@ -41,5 +41,6 @@ jobs:
           --exclude https://xbarapp.com
           --exclude https://api.github.com
           --exclude https://cloud-native.slack.com
+          --exclude https://x.com
           README.md
         token: ${{ secrets.GITHUB_TOKEN }}

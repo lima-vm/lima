@@ -104,7 +104,7 @@ GUI:
 
 Follow us for project updates, release announcements, and community news:
 
-- https://x.com/@TheLimaProject
+- https://x.com/thelimaproject
 - https://mastodon.social/@TheLimaProject
 
 ### Code of Conduct
