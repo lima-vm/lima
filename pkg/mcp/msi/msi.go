@@ -19,6 +19,8 @@
 //   - [RunShellCommandParams].Command is a string slice, not a string
 //   - [RunShellCommandParams].Directory is an absolute path, not a relative path
 //   - [RunShellCommandParams].Directory must not be empty
+//   - [Replace] does not use an AI model to correct an old_string that does not match
+//   - [ReplaceParams].OldString must not be empty; use [WriteFile] to create a file
 //
 // Eventually, this package may be split to a separate repository.
 package msi

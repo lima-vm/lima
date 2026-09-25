@@ -96,4 +96,18 @@ type SearchFileContentResult struct {
 	GitGrepOutput string `json:"git_grep_output" jsonschema:"The raw output from the 'git grep -n --no-index' command, containing matching lines with filenames and line numbers."`
 }
 
-// TODO: implement Replace
+var Replace = &mcp.Tool{
+	Name:        "replace",
+	Description: `Replaces text within a file. By default, replaces a single occurrence, but can replace multiple occurrences when expected_replacements is specified. This tool is designed for precise, targeted changes and requires significant context around the old_string to ensure it modifies the correct location.`,
+}
+
+type ReplaceParams struct {
+	Path                 string `json:"path" jsonschema:"The absolute path to the file to modify."`
+	OldString            string `json:"old_string" jsonschema:"The exact literal text to replace. This string must uniquely identify the single instance to change. It should include at least 3 lines of context before and after the target text, matching whitespace and indentation precisely."`
+	NewString            string `json:"new_string" jsonschema:"The exact literal text to replace old_string with."`
+	ExpectedReplacements *int   `json:"expected_replacements,omitempty" jsonschema:"The number of occurrences to replace. Defaults to 1."`
+}
+
+type ReplaceResult struct {
+	Replacements int `json:"replacements" jsonschema:"The number of occurrences that were replaced."`
+}

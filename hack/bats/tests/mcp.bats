@@ -87,6 +87,7 @@ tools_call() {
     assert_line glob
     assert_line list_directory
     assert_line read_file
+    assert_line replace
     assert_line run_shell_command
     assert_line search_file_content
     assert_line write_file
@@ -269,6 +270,90 @@ tools_call() {
 
 @test 'write_file returns an error when path is not absolute' {
     tools_call write_file '{"path":"tmp/mcp.test","content":"baz"}'
+    json=$output
+
+    run_yq '.isError' <<<"$json"
+    assert_output "true"
+
+    run_yq '.content[0].text' <<<"$json"
+    assert_output --partial "expected an absolute path"
+}
+
+@test 'replace replaces a unique occurrence' {
+    limactl shell "$INSTANCE" sh -c 'printf "foo\nbar\nbaz\n" >/tmp/mcp.replace'
+    tools_call replace '{"path":"/tmp/mcp.replace","old_string":"bar","new_string":"BAR"}'
+    json=$output
+
+    run_yq '.structuredContent.replacements' <<<"$json"
+    assert_output 1
+
+    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.replace
+    assert_output $'foo\nBAR\nbaz'
+}
+
+@test 'replace replaces multiple occurrences with expected_replacements' {
+    limactl shell "$INSTANCE" sh -c 'printf "foo\nbar\nfoo\n" >/tmp/mcp.replace'
+    tools_call replace '{"path":"/tmp/mcp.replace","old_string":"foo","new_string":"FOO","expected_replacements":2}'
+    json=$output
+
+    run_yq '.structuredContent.replacements' <<<"$json"
+    assert_output 2
+
+    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.replace
+    assert_output $'FOO\nbar\nFOO'
+}
+
+@test 'replace keeps the file mode' {
+    limactl shell "$INSTANCE" sh -c 'printf "foo\n" >/tmp/mcp.replace && chmod 750 /tmp/mcp.replace'
+    tools_call replace '{"path":"/tmp/mcp.replace","old_string":"foo","new_string":"bar"}'
+
+    run -0 limactl shell "$INSTANCE" stat -c %a /tmp/mcp.replace
+    assert_output 750
+}
+
+@test 'replace returns an error and leaves the file unchanged when old_string is ambiguous' {
+    limactl shell "$INSTANCE" sh -c 'printf "foo\nbar\nfoo\n" >/tmp/mcp.replace'
+    tools_call replace '{"path":"/tmp/mcp.replace","old_string":"foo","new_string":"FOO"}'
+    json=$output
+
+    run_yq '.isError' <<<"$json"
+    assert_output "true"
+
+    run_yq '.content[0].text' <<<"$json"
+    assert_output "expected 1 occurrence(s) of old_string, found 2"
+
+    run -0 limactl shell "$INSTANCE" cat /tmp/mcp.replace
+    assert_output $'foo\nbar\nfoo'
+}
+
+@test 'replace returns an error when old_string is not found' {
+    limactl shell "$INSTANCE" sh -c 'printf "foo\n" >/tmp/mcp.replace'
+    tools_call replace '{"path":"/tmp/mcp.replace","old_string":"bar","new_string":"BAR"}'
+    json=$output
+
+    run_yq '.isError' <<<"$json"
+    assert_output "true"
+
+    run_yq '.content[0].text' <<<"$json"
+    assert_output "old_string not found"
+}
+
+@test 'replace returns an error and does not create the file when it does not exist' {
+    limactl shell "$INSTANCE" rm -f /tmp/mcp.replace
+    tools_call replace '{"path":"/tmp/mcp.replace","old_string":"foo","new_string":"bar"}'
+    json=$output
+
+    run_yq '.isError' <<<"$json"
+    assert_output "true"
+
+    run_yq '.content[0].text' <<<"$json"
+    assert_output "file does not exist"
+
+    run -1 limactl shell "$INSTANCE" test -e /tmp/mcp.replace
+}
+
+@test 'replace returns an error when path is not absolute' {
+    tools_call replace '{"path":"tmp/mcp.replace","old_string":"foo","new_string":"bar"}'
     json=$output
 
     run_yq '.isError' <<<"$json"

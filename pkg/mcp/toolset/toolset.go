@@ -85,6 +85,7 @@ func (ts *ToolSet) RegisterServer(server *mcp.Server) error {
 	mcp.AddTool(server, msi.ListDirectory, ts.ListDirectory)
 	mcp.AddTool(server, msi.ReadFile, ts.ReadFile)
 	mcp.AddTool(server, msi.WriteFile, ts.WriteFile)
+	mcp.AddTool(server, msi.Replace, ts.Replace)
 	mcp.AddTool(server, msi.Glob, ts.Glob)
 	mcp.AddTool(server, msi.SearchFileContent, ts.SearchFileContent)
 	mcp.AddTool(server, msi.RunShellCommand, ts.RunShellCommand)

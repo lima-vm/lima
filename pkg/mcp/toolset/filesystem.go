@@ -6,15 +6,20 @@ package toolset
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"os"
 	"path"
 	"path/filepath"
+	"strings"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/lima-vm/lima/v2/pkg/mcp/msi"
 )
+
+// readLimitBytes is the maximum size of a file that ReadFile and Replace read.
+const readLimitBytes = 32 * 1024 * 1024
 
 func (ts *ToolSet) ListDirectory(ctx context.Context,
 	_ *mcp.CallToolRequest, args msi.ListDirectoryParams,
@@ -60,8 +65,7 @@ func (ts *ToolSet) ReadFile(_ context.Context,
 		return nil, nil, err
 	}
 	defer f.Close()
-	const limitBytes = 32 * 1024 * 1024
-	lr := io.LimitReader(f, limitBytes)
+	lr := io.LimitReader(f, readLimitBytes)
 	b, err := io.ReadAll(lr)
 	if err != nil {
 		return nil, nil, err
@@ -108,6 +112,81 @@ func (ts *ToolSet) WriteFile(_ context.Context,
 		// or `Successfully created and wrote to new file: /path/to/new/file.txt.`
 		StructuredContent: res,
 	}, res, nil
+}
+
+func (ts *ToolSet) Replace(_ context.Context,
+	_ *mcp.CallToolRequest, args msi.ReplaceParams,
+) (*mcp.CallToolResult, *msi.ReplaceResult, error) {
+	if ts.inst == nil {
+		return nil, nil, errors.New("instance not registered")
+	}
+	guestPath, err := ts.TranslateHostPath(args.Path)
+	if err != nil {
+		return nil, nil, err
+	}
+	expected := 1
+	if args.ExpectedReplacements != nil {
+		expected = *args.ExpectedReplacements
+	}
+	f, err := ts.sftp.Open(guestPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	// Read one byte past the limit, so that a truncated read is never written back.
+	b, err := io.ReadAll(io.LimitReader(f, readLimitBytes+1))
+	f.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(b) > readLimitBytes {
+		return nil, nil, fmt.Errorf("file is larger than %d bytes", readLimitBytes)
+	}
+	content, err := replaceExact(string(b), args.OldString, args.NewString, expected)
+	if err != nil {
+		return nil, nil, err
+	}
+	// No O_CREATE: Replace never creates a file, and keeps the mode of the existing one.
+	w, err := ts.sftp.OpenFile(guestPath, os.O_WRONLY|os.O_TRUNC)
+	if err != nil {
+		return nil, nil, err
+	}
+	if _, err = w.Write([]byte(content)); err != nil {
+		w.Close()
+		return nil, nil, err
+	}
+	if err = w.Close(); err != nil {
+		return nil, nil, err
+	}
+	res := &msi.ReplaceResult{
+		Replacements: expected,
+	}
+	return &mcp.CallToolResult{
+		// Gemini:
+		// On success: `Successfully modified file: /path/to/file.txt (1 replacements).`
+		StructuredContent: res,
+	}, res, nil
+}
+
+// replaceExact replaces oldString with newString in content, and fails unless
+// oldString occurs exactly expected times.
+func replaceExact(content, oldString, newString string, expected int) (string, error) {
+	if oldString == "" {
+		return "", errors.New("old_string must not be empty")
+	}
+	if oldString == newString {
+		return "", errors.New("old_string and new_string are identical")
+	}
+	if expected < 1 {
+		return "", fmt.Errorf("expected_replacements must be at least 1, got %d", expected)
+	}
+	found := strings.Count(content, oldString)
+	if found == 0 {
+		return "", errors.New("old_string not found")
+	}
+	if found != expected {
+		return "", fmt.Errorf("expected %d occurrence(s) of old_string, found %d", expected, found)
+	}
+	return strings.Replace(content, oldString, newString, expected), nil
 }
 
 func (ts *ToolSet) Glob(_ context.Context,
