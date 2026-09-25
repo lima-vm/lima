@@ -58,7 +58,7 @@ require (
 	github.com/spakin/netpbm v1.3.2
 	github.com/spf13/cobra v1.10.2 // gomodjail:unconfined
 	github.com/spf13/pflag v1.0.10
-	google.golang.org/grpc v1.83.2 // gomodjail:unconfined
+	google.golang.org/grpc v1.84.0 // gomodjail:unconfined
 	google.golang.org/protobuf v1.36.12 // gomodjail:unconfined
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473 // gomodjail:unconfined
 	gotest.tools/v3 v3.5.2
@@ -145,7 +145,7 @@ require (
 	go.opencensus.io v0.24.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
-	google.golang.org/genproto/googleapis/rpc v0.0.0-20260526163538-3dc84a4a5aaa // indirect
+	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	// gomodjail:unconfined
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
