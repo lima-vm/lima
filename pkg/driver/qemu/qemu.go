@@ -796,7 +796,15 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 		default:
 			return "", nil, fmt.Errorf("TPM is not supported for architecture %#q", *y.Arch)
 		}
-		args = append(args, "-device", tpmDevice+",tpmdev=tpm0")
+		tpmDevice += ",tpmdev=tpm0"
+		// QEMU >= 11.0 aborts under HVF when the guest has a RAM region smaller than the host page
+		// size, and the TPM PPI region is 0x400 bytes.
+		// https://gitlab.com/qemu-project/qemu/-/issues/4587
+		if accel == "hvf" && version != nil && !version.LessThan(*semver.New("11.0.0")) {
+			logrus.Warnf("Disabling the TPM PPI to work around https://gitlab.com/qemu-project/qemu/-/issues/4587 (QEMU %v with HVF); QEMU 10.1.x does not need this", version)
+			tpmDevice += ",ppi=off"
+		}
+		args = append(args, "-device", tpmDevice)
 	}
 
 	// Network
