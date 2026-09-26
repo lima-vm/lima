@@ -219,3 +219,10 @@ func TestNestedVirtualizationEnabled(t *testing.T) {
 		assert.Equal(t, true, enabled)
 	}
 }
+
+func TestValidateConfigRejectsBlockDevices(t *testing.T) {
+	err := validateConfig(&limatype.LimaYAML{
+		BlockDevices: []string{"/dev/disk4"},
+	})
+	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: qemu")
+}

@@ -10,11 +10,12 @@ package filenames
 // Instance names starting with an underscore are reserved for lima internal usage
 
 const (
-	CacheDir     = "_cache" // not yet implemented
-	ConfigDir    = "_config"
-	DisksDir     = "_disks"     // disks are stored here
-	NetworksDir  = "_networks"  // network log files are stored here
-	TemplatesDir = "_templates" // user templates are stored here
+	BlockDeviceLock = "_block-device-%s.lock" // whole host disk lock, shared across instances
+	CacheDir        = "_cache"                // not yet implemented
+	ConfigDir       = "_config"
+	DisksDir        = "_disks"     // disks are stored here
+	NetworksDir     = "_networks"  // network log files are stored here
+	TemplatesDir    = "_templates" // user templates are stored here
 )
 
 // Filenames used inside the ConfigDir
@@ -55,6 +56,7 @@ const (
 	SSHSock                 = "ssh.sock"
 	SSHConfig               = "ssh.config"
 	VhostSock               = "virtiofsd-%d.sock"
+	VZBlockDeviceSock       = "vz-block-device.%d.sock"
 	VNCDisplayFile          = "vncdisplay"
 	VNCPasswordFile         = "vncpassword"
 	GuestAgentSock          = "ga.sock"
