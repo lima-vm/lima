@@ -89,29 +89,30 @@ func TestStartCmd(t *testing.T) {
 	})
 
 	t.Run("lima-privileged-net", func(t *testing.T) {
-		if ok, _ := config.IsDaemonInstalled(LimaPrivilegedNet); !ok {
-			t.Skip("lima-privileged-net is not installed")
-		}
-		helper, err := limaPrivilegedNetPath()
-		assert.NilError(t, err)
+		// The helper path is passed in, so the rendering is asserted on every host,
+		// including the ones where the helper is not installed.
+		const helper = "/usr/local/libexec/lima/privileged/lima-privileged-net"
 
-		cmd := config.StartCmd("shared", LimaPrivilegedNet)
+		cmd := config.startCmd("shared", LimaPrivilegedNet, helper)
 		assert.Equal(t, cmd, helper+" start --pidfile="+filepath.Join(varRunDir, "shared_lima-privileged-net.pid")+" --mode=shared --bridge=lima-shared "+
 			"--gateway=192.168.105.1 --dhcp-end=192.168.105.254 --netmask=255.255.255.0")
 
-		cmd = config.StartCmd("bridged", LimaPrivilegedNet)
-		assert.Equal(t, cmd, helper+" start --pidfile="+filepath.Join(varRunDir, "bridged_lima-privileged-net.pid")+" --mode=bridged --bridge=br0")
+		cmd = config.startCmd("bridged", LimaPrivilegedNet, helper)
+		assert.Equal(t, cmd, helper+" start --pidfile="+filepath.Join(varRunDir, "bridged_lima-privileged-net.pid")+" --mode=bridged --bridge=en0")
 
-		assert.Equal(t, config.TapCmd("shared", TapNamePattern()),
-			helper+" tap --bridge=lima-shared limatap[0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f][0-9a-f]")
+		assert.Equal(t, config.tapCmd(helper, "shared", "default"),
+			helper+" tap --bridge=lima-shared --network=shared default")
+		assert.Equal(t, config.tapCmd(helper, "shared", "*"),
+			helper+" tap --bridge=lima-shared --network=shared *")
 	})
 }
 
 func TestTapName(t *testing.T) {
-	tap := TapName("default", "shared")
+	tap := TapName(1000, "default", "shared")
 	assert.Equal(t, len(tap), 15)
 	assert.Assert(t, IsTapName(tap))
-	assert.Assert(t, TapName("default", "host") != tap)
+	assert.Assert(t, TapName(1000, "default", "host") != tap)
+	assert.Assert(t, TapName(1001, "default", "shared") != tap)
 	assert.Assert(t, !IsTapName("eth0"))
 	assert.Assert(t, !IsTapName("limatapzzzzzzzz"))
 }
