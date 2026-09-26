@@ -744,7 +744,7 @@ func mountsContainPath(mounts []limatype.Mount, path string) bool {
 		resolvedPath = path
 	}
 	for _, m := range mounts {
-		loc, err := localpathutil.Expand(m.Location)
+		loc, err := localpathutil.Expand(*m.MountPoint)
 		if err != nil {
 			continue
 		}
