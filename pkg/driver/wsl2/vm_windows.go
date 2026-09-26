@@ -257,6 +257,8 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 }
 
 // GetSSHAddress runs a hostname command to get the IP from inside of a wsl2 VM.
+// In WSL2 mirrrored mode, this should return 127.0.0.1 per Microsoft docs
+// https://learn.microsoft.com/en-us/windows/wsl/networking
 //
 // Expected output (whitespace preserved, [] for optional):
 // PS > wsl -d <distroName> bash -c hostname -I | cut -d' ' -f1
@@ -265,9 +267,20 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 // hostname: unrecognized option: I
 func getSSHAddress(ctx context.Context, instName string) (string, error) {
 	distroName := "lima-" + instName
-	// Ubuntu
-	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+
+	// Mirrored networking
+	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "wslinfo", "--networking-mode")
 	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to check networking mode for instance %s: %w", distroName, err)
+	}
+	if strings.TrimSpace(string(out)) == "mirrored" {
+		return "127.0.0.1", nil
+	}
+
+	// Ubuntu
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+	out, err = cmd.CombinedOutput()
 	if err == nil {
 		return strings.TrimSpace(string(out)), nil
 	}
