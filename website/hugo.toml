@@ -163,7 +163,7 @@ enable = false
   desc = "Chat with other project developers"
 [[params.links.developer]]
   name = "X (Twitter)"
-  url = "https://x.com/@TheLimaProject"
+  url = "https://x.com/thelimaproject"
   icon = "fab fa-x-twitter"
   desc = "Follow for updates"
 [[params.links.developer]]
@@ -183,7 +183,7 @@ enable = false
   desc = "Chat with other project users"
 [[params.links.user]]
   name = "X (Twitter)"
-  url = "https://x.com/@TheLimaProject"
+  url = "https://x.com/thelimaproject"
   icon = "fab fa-x-twitter"
   desc = "Follow for updates"
 [[params.links.user]]
