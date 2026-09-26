@@ -16,10 +16,12 @@ import (
 	"strings"
 	"syscall"
 	"time"
+	"unicode"
 
 	"github.com/coreos/go-semver/semver"
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/unix"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
@@ -383,20 +385,170 @@ func (l *LimaKrunkitDriver) DisplayConnection(_ context.Context) (string, error)
 	return "", errUnimplemented
 }
 
-func (l *LimaKrunkitDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return errUnimplemented
+const snapshotsDirName = "snapshots"
+
+func (l *LimaKrunkitDriver) CreateSnapshot(_ context.Context, tag string) error {
+	if err := l.requireStopped(); err != nil {
+		return err
+	}
+	if err := validateSnapshotTag(tag); err != nil {
+		return err
+	}
+	instDir := l.Instance.Dir
+	destDir := filepath.Join(instDir, snapshotsDirName, tag)
+	if _, err := os.Stat(destDir); err == nil {
+		return fmt.Errorf("snapshot %q already exists", tag)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	parent, err := os.ReadFile(filepath.Join(instDir, snapshotsDirName, "HEAD"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := os.MkdirAll(destDir, 0o755); err != nil {
+		return err
+	}
+	bootDisk := filepath.Join(instDir, filenames.Disk)
+	if err := unix.Clonefile(bootDisk, filepath.Join(destDir, filenames.Disk), 0); err != nil {
+		_ = os.RemoveAll(destDir)
+		return fmt.Errorf("clonefile %#q to %#q: %w", bootDisk, filepath.Join(destDir, filenames.Disk), err)
+	}
+	if err := os.WriteFile(filepath.Join(destDir, "parent"), []byte(strings.TrimSpace(string(parent))), 0o644); err != nil {
+		_ = os.RemoveAll(destDir)
+		return err
+	}
+	if err := writeHEAD(instDir, tag); err != nil {
+		_ = os.RemoveAll(destDir)
+		return err
+	}
+	l.warnPartialSnapshot()
+	return nil
 }
 
-func (l *LimaKrunkitDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return errUnimplemented
+func (l *LimaKrunkitDriver) ApplySnapshot(_ context.Context, tag string) error {
+	if err := l.requireStopped(); err != nil {
+		return err
+	}
+	if err := validateSnapshotTag(tag); err != nil {
+		return err
+	}
+	instDir := l.Instance.Dir
+	src := filepath.Join(instDir, snapshotsDirName, tag, filenames.Disk)
+	if _, err := os.Stat(src); err != nil {
+		return fmt.Errorf("snapshot %q: %w", tag, err)
+	}
+	tmp := filepath.Join(instDir, filenames.Disk+".snap-tmp")
+	_ = os.Remove(tmp)
+	if err := unix.Clonefile(src, tmp, 0); err != nil {
+		return fmt.Errorf("clonefile %#q to %#q: %w", src, tmp, err)
+	}
+	if err := os.Rename(tmp, filepath.Join(instDir, filenames.Disk)); err != nil {
+		_ = os.Remove(tmp)
+		return err
+	}
+	if err := writeHEAD(instDir, tag); err != nil {
+		return err
+	}
+	l.warnPartialSnapshot()
+	return nil
 }
 
-func (l *LimaKrunkitDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return errUnimplemented
+func (l *LimaKrunkitDriver) DeleteSnapshot(_ context.Context, tag string) error {
+	if err := l.requireStopped(); err != nil {
+		return err
+	}
+	if err := validateSnapshotTag(tag); err != nil {
+		return err
+	}
+	instDir := l.Instance.Dir
+	dir := filepath.Join(instDir, snapshotsDirName, tag)
+	if _, err := os.Stat(dir); err != nil {
+		return fmt.Errorf("snapshot %q: %w", tag, err)
+	}
+	if err := os.RemoveAll(dir); err != nil {
+		return err
+	}
+	head, err := os.ReadFile(filepath.Join(instDir, snapshotsDirName, "HEAD"))
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if strings.TrimSpace(string(head)) == tag {
+		return os.Remove(filepath.Join(instDir, snapshotsDirName, "HEAD"))
+	}
+	return nil
 }
 
 func (l *LimaKrunkitDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errUnimplemented
+	instDir := l.Instance.Dir
+	root := filepath.Join(instDir, snapshotsDirName)
+	entries, err := os.ReadDir(root)
+	if errors.Is(err, os.ErrNotExist) {
+		return "ID TAG PARENT\n", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	var b strings.Builder
+	b.WriteString("ID TAG PARENT\n")
+	id := 1
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		tag := entry.Name()
+		parentBytes, err := os.ReadFile(filepath.Join(root, tag, "parent"))
+		if err != nil {
+			return "", err
+		}
+		parent := strings.TrimSpace(string(parentBytes))
+		if parent == "" {
+			parent = "-"
+		}
+		fmt.Fprintf(&b, "%d %s %s\n", id, tag, parent)
+		id++
+	}
+	return b.String(), nil
+}
+
+func (l *LimaKrunkitDriver) requireStopped() error {
+	if l.Instance == nil {
+		return errors.New("krunkit instance is not configured")
+	}
+	if l.Instance.Status != limatype.StatusStopped {
+		return fmt.Errorf("krunkit disk snapshots require a stopped instance (status %q)", l.Instance.Status)
+	}
+	return nil
+}
+
+func validateSnapshotTag(tag string) error {
+	if tag == "." || tag == ".." || strings.EqualFold(tag, "HEAD") || tag != filepath.Base(tag) || strings.Contains(tag, `\`) {
+		return fmt.Errorf("invalid snapshot tag %q", tag)
+	}
+	for _, r := range tag {
+		if unicode.IsSpace(r) {
+			return fmt.Errorf("invalid snapshot tag %q", tag)
+		}
+	}
+	return nil
+}
+
+func (l *LimaKrunkitDriver) warnPartialSnapshot() {
+	if l.Instance.Config == nil || len(l.Instance.Config.AdditionalDisks) == 0 {
+		return
+	}
+	names := make([]string, len(l.Instance.Config.AdditionalDisks))
+	for i, d := range l.Instance.Config.AdditionalDisks {
+		names[i] = d.Name
+	}
+	logrus.Warnf("krunkit snapshot covers only the boot disk; additional disks not included: %s", strings.Join(names, ", "))
+}
+
+func writeHEAD(instDir, tag string) error {
+	dir := filepath.Join(instDir, snapshotsDirName)
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(filepath.Join(dir, "HEAD"), []byte(tag), 0o644)
 }
 
 func (l *LimaKrunkitDriver) Register(_ context.Context) error {
