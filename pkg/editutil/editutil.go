@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/sirupsen/logrus"
@@ -76,7 +77,12 @@ func OpenEditor(ctx context.Context, content []byte, hdr string) ([]byte, error)
 		return nil, err
 	}
 
-	editorCmd := exec.CommandContext(ctx, editor, tmpYAMLPath)
+	var editorCmd *exec.Cmd
+	if editorcmd.HasShellMeta(editor) && runtime.GOOS != "windows" {
+		editorCmd = exec.CommandContext(ctx, "sh", "-c", editor+` "$@"`, editor, tmpYAMLPath)
+	} else {
+		editorCmd = exec.CommandContext(ctx, editor, tmpYAMLPath)
+	}
 	editorCmd.Env = os.Environ()
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
