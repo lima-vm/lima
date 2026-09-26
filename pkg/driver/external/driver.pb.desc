@@ -1,6 +1,6 @@
 
-‰
-driver.protogoogle/protobuf/empty.proto"Ž
+¦
+driver.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"Ž
 BootScriptsResponse;
 scripts (2!.BootScriptsResponse.ScriptsEntryRscripts:
 ScriptsEntry
@@ -28,9 +28,14 @@ connection")
 ApplySnapshotRequest
 tag (	Rtag")
 DeleteSnapshotRequest
-tag (	Rtag"5
-ListSnapshotsResponse
-	snapshots (	R	snapshots"B
+tag (	Rtag"i
+Snapshot
+id (	Rid
+name (	Rname9
+
+created_at (2.google.protobuf.TimestampR	createdAt"F
+ListSnapshotsResponse'
+	snapshots (2	.SnapshotR	snapshotsJ"B
 ForwardGuestAgentResponse%
 should_forward (RshouldForward2î	
 Driver:

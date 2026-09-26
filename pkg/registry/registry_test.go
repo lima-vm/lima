@@ -39,7 +39,7 @@ func (m *mockDriver) DisplayConnection(_ context.Context) (string, error)       
 func (m *mockDriver) CreateSnapshot(_ context.Context, _ string) error           { return nil }
 func (m *mockDriver) ApplySnapshot(_ context.Context, _ string) error            { return nil }
 func (m *mockDriver) DeleteSnapshot(_ context.Context, _ string) error           { return nil }
-func (m *mockDriver) ListSnapshots(_ context.Context) (string, error)            { return "", nil }
+func (m *mockDriver) ListSnapshots(_ context.Context) ([]driver.Snapshot, error) { return nil, nil }
 func (m *mockDriver) Register(_ context.Context) error                           { return nil }
 func (m *mockDriver) Unregister(_ context.Context) error                         { return nil }
 func (m *mockDriver) ForwardGuestAgent(_ context.Context) bool                   { return false }

@@ -225,17 +225,28 @@ func (d *DriverClient) DeleteSnapshot(ctx context.Context, tag string) error {
 	return nil
 }
 
-func (d *DriverClient) ListSnapshots(ctx context.Context) (string, error) {
+func (d *DriverClient) ListSnapshots(ctx context.Context) ([]driver.Snapshot, error) {
 	d.logger.Debug("Listing snapshots")
 
 	resp, err := d.DriverSvc.ListSnapshots(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to list snapshots")
-		return "", err
+		return nil, err
 	}
 
-	d.logger.Debugf("Snapshots listed successfully: %s", resp.Snapshots)
-	return resp.Snapshots, nil
+	snapshots := make([]driver.Snapshot, len(resp.Snapshots))
+	for i, snapshot := range resp.Snapshots {
+		snapshots[i] = driver.Snapshot{ID: snapshot.Id, Name: snapshot.Name}
+		if snapshot.CreatedAt != nil {
+			if err := snapshot.CreatedAt.CheckValid(); err != nil {
+				return nil, err
+			}
+			createdAt := snapshot.CreatedAt.AsTime()
+			snapshots[i].CreatedAt = &createdAt
+		}
+	}
+	d.logger.Debugf("Snapshots listed successfully: %+v", snapshots)
+	return snapshots, nil
 }
 
 func (d *DriverClient) ForwardGuestAgent(ctx context.Context) bool {

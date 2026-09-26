@@ -6,11 +6,14 @@ package main
 import (
 	"errors"
 	"fmt"
-	"strings"
+	"io"
+	"text/tabwriter"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/snapshot"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -191,29 +194,37 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
-	out, err := snapshot.List(ctx, inst)
+	snapshots, err := snapshot.List(ctx, inst)
 	if err != nil {
 		return err
 	}
+	return printSnapshots(cmd.OutOrStdout(), snapshots, quiet)
+}
+
+func printSnapshots(w io.Writer, snapshots []driver.Snapshot, quiet bool) error {
 	if quiet {
-		for i, line := range strings.Split(out, "\n") {
-			// "ID", "TAG", "VM SIZE", "DATE", "VM CLOCK", "ICOUNT"
-			fields := strings.Fields(line)
-			if i == 0 && len(fields) > 1 && fields[1] != "TAG" {
-				// make sure that output matches the expected
-				return fmt.Errorf("unknown header: %s", line)
+		for _, snapshot := range snapshots {
+			if _, err := fmt.Fprintln(w, snapshot.Name); err != nil {
+				return err
 			}
-			if i == 0 || line == "" {
-				// skip header and empty line after using split
-				continue
-			}
-			tag := fields[1]
-			fmt.Fprintf(cmd.OutOrStdout(), "%s\n", tag)
 		}
 		return nil
 	}
-	fmt.Fprint(cmd.OutOrStdout(), out)
-	return nil
+
+	tw := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
+	if _, err := fmt.Fprintln(tw, "ID\tTAG\tCREATED"); err != nil {
+		return err
+	}
+	for _, snapshot := range snapshots {
+		createdAt := "-"
+		if snapshot.CreatedAt != nil {
+			createdAt = snapshot.CreatedAt.Format(time.RFC3339)
+		}
+		if _, err := fmt.Fprintf(tw, "%s\t%s\t%s\n", snapshot.ID, snapshot.Name, createdAt); err != nil {
+			return err
+		}
+	}
+	return tw.Flush()
 }
 
 func snapshotBashComplete(cmd *cobra.Command, _ []string, _ string) ([]string, cobra.ShellCompDirective) {

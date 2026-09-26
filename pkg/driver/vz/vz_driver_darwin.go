@@ -636,8 +636,8 @@ func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, _ string) error {
 	return errUnimplemented
 }
 
-func (l *LimaVzDriver) ListSnapshots(_ context.Context) (string, error) {
-	return "", errUnimplemented
+func (l *LimaVzDriver) ListSnapshots(_ context.Context) ([]driver.Snapshot, error) {
+	return nil, errUnimplemented
 }
 
 func (l *LimaVzDriver) ForwardGuestAgent(_ context.Context) bool {
