@@ -6,11 +6,13 @@ package cidata
 import (
 	"fmt"
 	"io"
+	"slices"
 	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
 
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
@@ -170,6 +172,42 @@ func TestTemplate9p(t *testing.T) {
 			assert.Assert(t, strings.Contains(string(b), "mounts:"))
 		}
 	}
+}
+
+func TestTemplateGuestOSVersion(t *testing.T) {
+	args := &TemplateArgs{
+		Name:                "default",
+		User:                "foo",
+		UID:                 501,
+		Home:                "/home/foo.guest",
+		Shell:               "/bin/bash",
+		SSHPubKeys:          []string{"ssh-rsa dummy foo@example.com"},
+		MountType:           "reverse-sshfs",
+		OS:                  "Darwin",
+		GuestOSVersion:      "27.0.0",
+		GuestOSBuildVersion: "26A428",
+	}
+	limaEnv := renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_OS_VERSION=27.0.0\n"))
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_OS_BUILD_VERSION=26A428\n"))
+
+	// Emitted empty when unknown, like the other optional LIMA_CIDATA_* vars.
+	args.GuestOSVersion = ""
+	args.GuestOSBuildVersion = ""
+	limaEnv = renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_OS_VERSION=\n"))
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_OS_BUILD_VERSION=\n"))
+}
+
+func renderLimaEnv(t *testing.T, args *TemplateArgs) string {
+	t.Helper()
+	layout, err := ExecuteTemplateCIDataISO(args)
+	assert.NilError(t, err)
+	idx := slices.IndexFunc(layout, func(f iso9660util.Entry) bool { return f.Path == "lima.env" })
+	assert.Assert(t, idx >= 0, "lima.env not found in cidata layout")
+	b, err := io.ReadAll(layout[idx].Reader)
+	assert.NilError(t, err)
+	return string(b)
 }
 
 // TestTemplateNICRename is a regression test for
