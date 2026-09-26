@@ -151,6 +151,8 @@ require (
 	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
 )
 
+require github.com/klauspost/compress v1.18.5
+
 require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect

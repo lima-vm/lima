@@ -15,10 +15,14 @@ import (
 	"github.com/Microsoft/go-winio"
 	"github.com/Microsoft/hcsshim/hcn"
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader/image/qcow2"
+	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
@@ -347,12 +351,13 @@ func (l *LimaHcsDriver) Info(_ context.Context) driver.Info {
 	info.VsockPort = l.vSockPort
 
 	info.Features = driver.DriverFeatures{
-		DynamicSSHAddress:     true,
-		StaticSSHPort:         true,
-		SkipSocketForwarding:  true,
-		NoCloudInit:           false,
-		CanRunGUI:             false,
-		SupportedImageFormats: []string{string(vhdx.Type)},
+		DynamicSSHAddress:    true,
+		StaticSSHPort:        true,
+		SkipSocketForwarding: true,
+		NoCloudInit:          false,
+		CanRunGUI:            false,
+		// HCS natively uses VHDX only, RAW and QCOW2 are added here to avoid the default conversion to RAW.
+		SupportedImageFormats: []string{string(raw.Type), string(qcow2.Type), string(vhdx.Type)},
 	}
 	return info
 }
@@ -369,10 +374,32 @@ func (l *LimaHcsDriver) Create(_ context.Context) error {
 }
 
 func (l *LimaHcsDriver) CreateDisk(ctx context.Context) error {
-	if err := mayConvertQcow2ToVHDX(ctx, l.Instance.Dir); err != nil {
+	disk := filepath.Join(l.Instance.Dir, filenames.Disk)
+	_, err := os.Stat(disk)
+	diskExisted := err == nil
+	if err != nil && !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
-	disk := filepath.Join(l.Instance.Dir, filenames.Disk)
+	if !diskExisted {
+		// driverutil.EnsureDisk would split an ISO image into `iso` plus an empty
+		// disk, but HCS attaches only the VHDX disk and `cidata.iso`.
+		image := filepath.Join(l.Instance.Dir, filenames.Image)
+		isISO, err := iso9660util.IsISO9660(image)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		if isISO {
+			return fmt.Errorf("the HCS driver cannot boot from the ISO 9660 image %#q; use a disk image instead", image)
+		}
+	}
+	if err := driverutil.EnsureDisk(ctx, l.Instance.Dir, *l.Instance.Config.Disk, vhdx.Type); err != nil {
+		return err
+	}
+	if !diskExisted {
+		if err := execFsutil(ctx, disk); err != nil {
+			return fmt.Errorf("failed to clear the sparse flag on %#q: %w", disk, err)
+		}
+	}
 	link := disk + ".vhdx"
 	if _, err := os.Stat(link); err == nil {
 		return nil
