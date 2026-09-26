@@ -57,6 +57,13 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if arg == "" {
 		arg = DefaultInstanceName
 	}
+	flags := cmd.Flags()
+	tty, err := flags.GetBool("tty")
+	if err != nil {
+		return err
+	}
+
+	wasRunning := false
 	if err := dirnames.ValidateInstName(arg); err == nil {
 		inst, err = store.Inspect(ctx, arg)
 		if err != nil {
@@ -66,7 +73,24 @@ func editAction(cmd *cobra.Command, args []string) error {
 			return err
 		}
 		if inst.Status == limatype.StatusRunning {
-			return errors.New("cannot edit a running instance")
+			wasRunning = true
+			if tty {
+				stop, err := askWhetherToStop(cmd, inst.Name)
+				if err != nil {
+					return err
+				}
+				if !stop {
+					return nil
+				}
+				logrus.Infof("Stopping %q for editing", inst.Name)
+				if err := instance.StopGracefully(ctx, inst, false); err != nil {
+					return err
+				}
+			} else if flags.Changed("set") {
+				// non-interactive: validate first, stop after (below)
+			} else {
+				return errors.New("cannot edit a running instance")
+			}
 		}
 		filePath = filepath.Join(inst.Dir, filenames.LimaYAML)
 	} else {
@@ -78,11 +102,6 @@ func editAction(cmd *cobra.Command, args []string) error {
 	}
 
 	yContent, err := os.ReadFile(filePath)
-	if err != nil {
-		return err
-	}
-	flags := cmd.Flags()
-	tty, err := flags.GetBool("tty")
 	if err != nil {
 		return err
 	}
@@ -163,6 +182,17 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return saveRejectedYAML(yBytes, err)
 	}
 
+	if wasRunning && flags.Changed("set") {
+		logrus.Infof("Stopping %q to apply changes", inst.Name)
+		inst, err = store.Inspect(ctx, inst.Name)
+		if err != nil {
+			return err
+		}
+		if err := instance.StopGracefully(ctx, inst, false); err != nil {
+			return err
+		}
+	}
+
 	if err := os.WriteFile(filePath, yBytes, 0o644); err != nil {
 		return err
 	}
@@ -186,6 +216,8 @@ func editAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
+	} else if wasRunning && flags.Changed("set") && !flags.Changed("start") {
+		start = true
 	}
 	if !start {
 		return nil
@@ -207,6 +239,15 @@ func editAction(cmd *cobra.Command, args []string) error {
 		return err
 	}
 	return instance.Start(ctx, inst, false, false)
+}
+
+func askWhetherToStop(cmd *cobra.Command, name string) (bool, error) {
+	isTTY := uiutil.InputIsTTY(cmd.InOrStdin())
+	if isTTY {
+		message := fmt.Sprintf("Instance %q is running. Stop it to proceed with editing? ", name)
+		return uiutil.Confirm(message, true)
+	}
+	return false, nil
 }
 
 func askWhetherToStart(cmd *cobra.Command) (bool, error) {
