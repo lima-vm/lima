@@ -142,6 +142,7 @@ help-targets:
 	@echo  'Targets for files in _output/libexec/lima/:'
 	@echo  '- limactl-plugins           : Build limactl-* CLI plugins'
 	@echo  '- lima-privileged-net       : Build the privileged network helper (Linux only)'
+	@echo  '- lima-privileged-block-device: Build the privileged block-device helper (macOS only)'
 	@echo
 	@echo  'Targets for files in _output/share/lima/:'
 	@echo  '- guestagents               : Build guestagents'
@@ -189,8 +190,8 @@ help-artifact:
 exe: _output/bin/limactl$(exe)
 
 .PHONY: minimal native
-minimal: clean limactl native-guestagent default_template
-native: clean limactl limactl-plugins lima-privileged-net helpers native-guestagent templates template_experimentals additional-drivers
+minimal: clean limactl lima-privileged-block-device native-guestagent default_template
+native: clean limactl limactl-plugins lima-privileged-net lima-privileged-block-device helpers native-guestagent templates template_experimentals additional-drivers
 
 ################################################################################
 # These configs were once customizable but should no longer be changed.
@@ -211,7 +212,7 @@ CONFIG_GUESTAGENT_COMPRESS=y
 
 ################################################################################
 .PHONY: binaries
-binaries: limactl helpers limactl-plugins lima-privileged-net guestagents \
+binaries: limactl helpers limactl-plugins lima-privileged-net lima-privileged-block-device guestagents \
 	templates template_experimentals \
 	documentation create-links-in-doc-dir
 
@@ -340,6 +341,19 @@ endif
 $(LIBEXEC_LIMA_PRIVILEGED)/lima-privileged-net: $(call dependencies_for_cmd,lima-privileged-net) $$(call force_build,$$@)
 	@mkdir -p $(LIBEXEC_LIMA_PRIVILEGED)
 	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-privileged-net
+
+# lima-privileged-block-device is the privileged helper that opens opted-in
+# macOS host block devices and returns them to the unprivileged hostagent.
+.PHONY: lima-privileged-block-device
+ifeq ($(GOOS),darwin)
+lima-privileged-block-device: $(LIBEXEC_LIMA_PRIVILEGED)/lima-privileged-block-device
+else
+lima-privileged-block-device:
+endif
+
+$(LIBEXEC_LIMA_PRIVILEGED)/lima-privileged-block-device: $(call dependencies_for_cmd,lima-privileged-block-device) $$(call force_build,$$@)
+	@mkdir -p $(LIBEXEC_LIMA_PRIVILEGED)
+	$(ENVS_$@) $(GO_BUILD) -o $@ ./cmd/lima-privileged-block-device
 
 $(LIBEXEC_LIMA)/limactl-url-fedora-rawhide: cmd/limactl-url-fedora-rawhide
 	cp -aL $< $@
@@ -618,7 +632,8 @@ uninstall:
 		"$(DEST)/libexec/lima/lima-driver-vz$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-wsl2$(exe)" \
 		"$(DEST)/libexec/lima/lima-driver-krunkit$(exe)" \
-		"$(DEST)/libexec/lima/privileged/lima-privileged-net"
+		"$(DEST)/libexec/lima/privileged/lima-privileged-net" \
+		"$(DEST)/libexec/lima/privileged/lima-privileged-block-device"
 	if [ "$$(readlink "$(DEST)/bin/nerdctl")" = "nerdctl.lima" ]; then rm "$(DEST)/bin/nerdctl"; fi
 	if [ "$$(readlink "$(DEST)/bin/apptainer")" = "apptainer.lima" ]; then rm "$(DEST)/bin/apptainer"; fi
 
@@ -807,6 +822,7 @@ artifact: $(addprefix $(ARTIFACT_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS)) \
 	$(addprefix $(ARTIFACT_ADDITIONAL_GUESTAGENTS_PATH_COMMON),$(ARTIFACT_FILE_EXTENSIONS))
 
 ARTIFACT_DES =  _output/bin/limactl$(exe) limactl-plugins $(LIMA_DEPS) $(HELPERS_DEPS) \
+	lima-privileged-net lima-privileged-block-device \
 	$(NATIVE_GUESTAGENT) \
 	$(TEMPLATES) $(TEMPLATE_IMAGES) $(TEMPLATE_DEFAULTS) $(TEMPLATE_EXPERIMENTALS) \
 	additional-drivers \

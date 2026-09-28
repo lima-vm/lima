@@ -6,6 +6,7 @@ package limayaml
 import (
 	"fmt"
 	"runtime"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -300,6 +301,63 @@ additionalDisks:
 
 	err = Validate(y, false)
 	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty")
+}
+
+func TestValidateBlockDevices(t *testing.T) {
+	for _, path := range []string{"/etc/passwd", "/dev/null", "/dev/./disk4", "/dev/DISK4", "/dev/disk4 ", "/dev/disk4\n", "/dev/disk4/../disk5"} {
+		assert.Assert(t, validateBlockDevices([]string{path}) != nil, "accepted %q", path)
+	}
+	assert.ErrorContains(t, validateBlockDevices([]string{"/dev/disk4", "/dev/disk4"}), "duplicate")
+	y, err := Load(t.Context(), []byte(`
+images:
+  - location: /
+vmType: qemu
+blockDevices:
+  - /dev/disk4
+`), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.NilError(t, err)
+}
+
+func TestValidateBlockDevicesRequiresAbsolutePaths(t *testing.T) {
+	y, err := Load(t.Context(), []byte(`
+images:
+  - location: /
+blockDevices:
+  - disk4
+`), "lima.yaml")
+	assert.NilError(t, err)
+
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `blockDevices[0]`")
+	assert.ErrorContains(t, err, "must be an absolute path")
+}
+
+func TestValidateBlockDevicesRejectsOverlappingStorage(t *testing.T) {
+	for _, devices := range [][]string{
+		{"/dev/disk4", "/dev/rdisk4"},
+		{"/dev/disk4", "/dev/disk4s1"},
+		{"/dev/rdisk4s1", "/dev/disk4s1"},
+		{"/dev/disk4s1", "/dev/rdisk4s1s2"},
+	} {
+		for _, pair := range [][]string{devices, {devices[1], devices[0]}} {
+			t.Run(strings.Join(pair, "+"), func(t *testing.T) {
+				assert.ErrorContains(t, validateBlockDevices(pair), "overlap")
+			})
+		}
+	}
+	// Reusing the whole-disk lock is necessary for disjoint partitions; name
+	// prefixes alone must not confuse disk4 with disk40 or partition 1 with 10.
+	for _, devices := range [][]string{
+		{"/dev/disk4s1", "/dev/rdisk4s2"},
+		{"/dev/disk4", "/dev/rdisk40"},
+		{"/dev/disk4s1", "/dev/disk4s10"},
+		{"/dev/disk4s1s1", "/dev/rdisk4s1s2"},
+	} {
+		assert.NilError(t, validateBlockDevices(devices))
+	}
 }
 
 func TestValidateParamName(t *testing.T) {

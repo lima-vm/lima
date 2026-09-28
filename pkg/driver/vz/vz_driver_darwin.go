@@ -25,6 +25,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/guestpatch/macos"
@@ -43,6 +44,7 @@ var knownYamlProperties = []string{
 	"AdditionalDisks",
 	"Arch",
 	"Audio",
+	"BlockDevices",
 	"CACertificates",
 	"Containerd",
 	"CopyToHost",
@@ -255,12 +257,34 @@ func (l *LimaVzDriver) BootScripts(_ context.Context) (map[string][]byte, error)
 }
 
 func (l *LimaVzDriver) Validate(_ context.Context) error {
-	return validateConfig(l.Instance.Config)
+	if err := validateConfig(l.Instance.Config); err != nil {
+		return err
+	}
+	if len(l.Instance.Config.BlockDevices) == 0 {
+		return nil
+	}
+	exe, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	// Configure is also used by deletion; only startup validation requires an
+	// installed helper.
+	_, err = blockdevice.PrivilegedHelperPath(exe)
+	return err
 }
 
 func validateConfig(cfg *limatype.LimaYAML) error {
 	if cfg == nil {
 		return errors.New("configuration is nil")
+	}
+	if len(cfg.BlockDevices) > 0 {
+		exe, err := os.Executable()
+		if err != nil {
+			return err
+		}
+		if err := blockdevice.ValidateExecutable(exe); err != nil {
+			return err
+		}
 	}
 	macOSProductVersion, err := osutil.ProductVersion()
 	if err != nil {
@@ -355,6 +379,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		}
 	default:
 		return fmt.Errorf("field `vmOpts.vz.diskImageFormat` must be %#q or %#q, got %#q", raw.Type, asif.Type, *vzOpts.DiskImageFormat)
+	}
+	if len(cfg.BlockDevices) > 0 && macOSProductVersion.LessThan(*semver.New("14.0.0")) {
+		return fmt.Errorf("field `blockDevices` requires macOS 14 or higher to run, got %q", macOSProductVersion)
 	}
 	return nil
 }

@@ -57,6 +57,11 @@ validate_artifact() {
 	elif [[ $FILE == *"lima-"*".tar.gz" || $FILE == *"lima-"*".zip" ]]; then
 		must_not_contain "$FILE" "lima-guestagent.Linux-$OTHERARCH"
 		must_contain "$FILE" "lima-guestagent.Linux-$MYARCH"
+		# Native builds alone do not ensure the privileged helpers ship in releases.
+		case "$FILE" in
+		*-Darwin-*) must_contain "$FILE" 'libexec/lima/privileged/lima-privileged-block-device$' ;;
+		*-Linux-*) must_contain "$FILE" 'libexec/lima/privileged/lima-privileged-net$' ;;
+		esac
 	else
 		echo >&2 "ERROR: Unexpected file: $FILE"
 		exit 1

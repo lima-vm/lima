@@ -114,6 +114,9 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 	if cfg == nil {
 		return errors.New("configuration is nil")
 	}
+	if len(cfg.BlockDevices) > 0 {
+		return fmt.Errorf("field `blockDevices` is not supported for vmType: %s", limatype.HCS)
+	}
 	// TODO: revise this list for HCS
 	if cfg.VMType != nil {
 		if unknown := reflectutil.UnknownNonEmptyFields(cfg, knownYamlProperties...); len(unknown) > 0 {

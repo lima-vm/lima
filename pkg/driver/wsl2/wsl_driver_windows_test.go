@@ -12,6 +12,11 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
+func TestValidateConfigRejectsBlockDevices(t *testing.T) {
+	err := validateConfig(t.Context(), &limatype.LimaYAML{BlockDevices: []string{"/dev/disk4"}})
+	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: wsl2")
+}
+
 func TestValidateConfigImages(t *testing.T) {
 	var arch limatype.Arch
 	switch runtime.GOARCH {
