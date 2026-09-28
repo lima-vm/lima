@@ -466,6 +466,10 @@ func (tmpl *Template) combineMounts() {
 				tmpl.copyListEntryField(mounts, dst, src, "sshfs.sftpDriver")
 				dest.SSHFS.SFTPDriver = mount.SSHFS.SFTPDriver
 			}
+			if dest.SSHFS.ReadonlyNames == nil && mount.SSHFS.ReadonlyNames != nil {
+				tmpl.copyListEntryField(mounts, dst, src, "sshfs.readonlyNames")
+				dest.SSHFS.ReadonlyNames = mount.SSHFS.ReadonlyNames
+			}
 			// NineP
 			if dest.NineP.SecurityModel == nil && mount.NineP.SecurityModel != nil {
 				tmpl.copyListEntryField(mounts, dst, src, "9p.securityModel")

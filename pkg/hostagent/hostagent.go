@@ -87,6 +87,9 @@ type HostAgent struct {
 	// this lock they can race on os.RemoveAll/bind and leave ga.sock missing.
 	gaSockForwardMu sync.Mutex
 
+	// reverse-sshfs mounts, set before the guest agent routines start.
+	mounts []*mount
+
 	guestAgentAliveCh     chan struct{} // closed on establishing the connection
 	guestAgentAliveChOnce sync.Once
 
@@ -629,6 +632,7 @@ ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 		if err != nil {
 			errs = append(errs, err)
 		}
+		a.mounts = mounts
 		a.cleanUp(func() error {
 			var unmountErrs []error
 			for _, m := range mounts {

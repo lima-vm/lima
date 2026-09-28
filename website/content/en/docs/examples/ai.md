@@ -131,6 +131,53 @@ See also <https://github.com/anomalyco/opencode>.
 {{< /tabpane >}}
 
 
+# Protecting `.git` from the agent
+
+ | ⚡ Requirement | Lima >= 2.4, Linux or macOS host |
+ |----------------|----------------------------------|
+
+A writable project mount lets the agent write `.git/hooks/*` or `.git/config` (e.g., `core.fsmonitor`),
+which run on the host the next time you use `git` in the project.
+`sshfs.readonlyNames` keeps the working tree writable, with live updates on both sides,
+while `.git` stays read-only for the guest:
+
+```yaml
+# agent.yaml
+# Unlike template:default, this base does not mount the home directory.
+base: template:_images/ubuntu
+mountType: "reverse-sshfs"
+mountInotify: true
+mounts:
+- location: "~/my-project"
+  writable: true
+  sshfs:
+    sftpDriver: "builtin"
+    readonlyNames: [".git"]
+```
+
+```bash
+limactl start --name=agent ./agent.yaml
+cd ~/my-project
+limactl shell agent claude
+```
+
+The project must be the only host directory mounted in the guest, and every mount must use `sftpDriver: "builtin"`.
+
+This is enforced by the SFTP server running on the host, not by the guest, so it also holds when the agent gains root
+in the guest.
+`.git` is protected at any depth, including nested repositories and names differing only by case.
+See [Filesystem mounts » Read-only names](../config/mount.md#read-only-names) for details.
+
+The agent can still read `.git` and run `git status`, `git diff` and `git log`, but not `git commit`.
+Review and commit its changes from the host.
+
+Other files in the working tree remain writable by the agent, so be careful with files that tools run on the host:
+- `core.hooksPath` pointing into the working tree (e.g., `.husky`)
+- `.envrc` (direnv), `.vscode/tasks.json`, `Makefile`, `package.json` scripts, etc.
+
+Setting `git config --global safe.bareRepository explicit` on the host also prevents `git` from using a bare repository
+that the agent could create outside of `.git`.
+
 # Syncing Working Directory
 
  | ⚡ Requirement | Lima >= 2.1 |

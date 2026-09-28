@@ -65,9 +65,37 @@ Cygwin-based one. Only if that finds nothing does the generic search apply.
 This matters when a Cygwin-based OpenSSH (Git for Windows, MSYS2) and the native Windows OpenSSH are both
 installed. The host path handed to the server is always the native `C:/Users/USER` form, which both kinds resolve.
 
+#### Read-only names
+
+`sshfs.readonlyNames` lists file names that the guest cannot modify, at any depth of the mount.
+For example, `.git` keeps a repository's hooks and config out of reach of the guest, while the
+working tree stays writable:
+
+```yaml
+mountType: "reverse-sshfs"
+mounts:
+- location: "~/src/project"
+  writable: true
+  sshfs:
+    sftpDriver: "builtin"
+    readonlyNames: [".git"]
+```
+
+This is enforced by the builtin SFTP server on the host, so it also holds against a compromised guest.
+The server does not follow symlinks when writing, and matches names case-insensitively.
+Reading is still allowed, so tools such as `git status` work in the guest, while `git commit` does not.
+
+[`mountInotify`](#mount-inotify) also works for read-only names: the server accepts setting the access and
+modification times of such a file to its current modification time, without modifying the file.
+
+Every mount of the instance must use `sftpDriver: "builtin"`, as the OpenSSH SFTP server lets
+a compromised guest access any host path.
+Not supported on Windows hosts.
+
 #### Caveats
 - A mount is disabled when the SSH connection was shut down.
-- A compromised `sshfs` process in the guest may have access to unexposed host directories.
+- With `sftpDriver: "openssh-sftp-server"`, a compromised `sshfs` process in the guest may have access to unexposed host directories.
+  The builtin driver only serves the mounted directory on Linux and macOS hosts.
 
 ### 9p
 
@@ -206,4 +234,7 @@ mounts:
 
 #### Caveats
 - For `mountType: 9p`, Inotify events are not triggered for nested files from the listening directory.
-- Inotify events are not triggered when files are removed from host
+- Inotify events are not triggered when files are removed from host, except for `mountType: reverse-sshfs`
+  with `sftpDriver: builtin` on Linux and macOS hosts.
+  There, the guest agent removes the file in the guest, and the host ignores that removal.
+  The guest only gets an event for files it had looked up or listed before.

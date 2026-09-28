@@ -189,8 +189,8 @@ mounts:
 		// This entry can be deleted when the previous one no longer fails
 		"mounts append, but merge fields on shared mountPoint (no comments version)",
 		`mounts: [{location: loc1}, {location: loc1, mountPoint: loc2}]`,
-		`mounts: [{location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true}}, {location: loc1, mountPoint: loc3, writable: true}]`,
-		`mounts: [{location: loc1}, {location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true}}, {location: loc1, mountPoint: loc3, writable: true}]`,
+		`mounts: [{location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true, readonlyNames: [.git]}}, {location: loc1, mountPoint: loc3, writable: true}]`,
+		`mounts: [{location: loc1}, {location: loc1, mountPoint: loc2, writable: true, sshfs: {followSymlinks: true, readonlyNames: [.git]}}, {location: loc1, mountPoint: loc3, writable: true}]`,
 	},
 	{
 		"template: URLs are not embedded when embedAll is false",
