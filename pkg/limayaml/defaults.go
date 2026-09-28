@@ -767,6 +767,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if mount.SSHFS.SFTPDriver != nil {
 				mounts[i].SSHFS.SFTPDriver = mount.SSHFS.SFTPDriver
 			}
+			if mount.SSHFS.ReadonlyNames != nil {
+				mounts[i].SSHFS.ReadonlyNames = mount.SSHFS.ReadonlyNames
+			}
 			if mount.NineP.SecurityModel != nil {
 				mounts[i].NineP.SecurityModel = mount.NineP.SecurityModel
 			}

@@ -155,3 +155,5 @@ require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 )
+
+replace github.com/lima-vm/sshocker => github.com/sylvinus/sshocker v0.0.0-20260923211833-9bceda181100

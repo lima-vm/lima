@@ -302,6 +302,61 @@ additionalDisks:
 	assert.Error(t, err, "field `additionalDisks[0].name is invalid`: identifier must not be empty")
 }
 
+func TestValidateReadonlyNames(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("readonlyNames is not supported on Windows hosts")
+	}
+	images := `images: [{"location": "/"}]`
+	dir1, dir2 := t.TempDir(), t.TempDir()
+	mounts := func(sshfs1, sshfs2 string) string {
+		return fmt.Sprintf("mounts: [{location: %q, writable: true, sshfs: %s}, {location: %q, sshfs: %s}]", dir1, sshfs1, dir2, sshfs2)
+	}
+	builtin := "{sftpDriver: builtin}"
+	protected := "{sftpDriver: builtin, readonlyNames: [.git]}"
+	tests := []struct {
+		name    string
+		config  string
+		wantErr string
+	}{
+		{
+			name:   "valid",
+			config: "mountType: reverse-sshfs\n" + mounts(protected, builtin),
+		},
+		{
+			name:    "virtiofs",
+			config:  "mountType: virtiofs\n" + mounts(protected, builtin),
+			wantErr: "field `mounts[*].sshfs.readonlyNames` requires `mountType` to be `reverse-sshfs`",
+		},
+		{
+			name:    "default driver",
+			config:  "mountType: reverse-sshfs\n" + mounts("{readonlyNames: [.git]}", builtin),
+			wantErr: "field `mounts[0].sshfs.sftpDriver` must be `builtin` when any mount sets `sshfs.readonlyNames`",
+		},
+		{
+			name:    "other mount with openssh-sftp-server",
+			config:  "mountType: reverse-sshfs\n" + mounts(protected, "{sftpDriver: openssh-sftp-server}"),
+			wantErr: "field `mounts[1].sshfs.sftpDriver` must be `builtin` when any mount sets `sshfs.readonlyNames`",
+		},
+		{
+			name:    "path instead of name",
+			config:  "mountType: reverse-sshfs\n" + mounts("{sftpDriver: builtin, readonlyNames: [.git/hooks]}", builtin),
+			wantErr: "field `mounts[0].sshfs.readonlyNames` must contain file names, got `.git/hooks`",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte(tt.config+"\n"+images), "lima.yaml")
+			assert.NilError(t, err)
+			err = Validate(y, false)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.Error(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 func TestValidateParamName(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProvision := `provision: [{"script": "echo $PARAM_name $PARAM_NAME $PARAM_Name_123"}]`
