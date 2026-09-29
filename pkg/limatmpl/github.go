@@ -14,6 +14,8 @@ import (
 	"os"
 	"path"
 	"strings"
+
+	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
 )
 
 const defaultFilename = ".lima.yaml"
@@ -99,7 +101,7 @@ func getGitHubUserContent(ctx context.Context, org, repo, branch, filePath strin
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
 	req.Header.Set("User-Agent", "lima")
-	return http.DefaultClient.Do(req)
+	return httpclientutil.RedirectSafeClient().Do(req)
 }
 
 // getGitHubDefaultBranch queries the GitHub API to get the default branch for a repository.
@@ -120,7 +122,7 @@ func getGitHubDefaultBranch(ctx context.Context, org, repo string) (string, erro
 		req.Header.Set("Authorization", "token "+token)
 	}
 
-	resp, err := http.DefaultClient.Do(req)
+	resp, err := httpclientutil.RedirectSafeClient().Do(req)
 	if err != nil {
 		return "", fmt.Errorf("failed to query GitHub API: %w", err)
 	}
