@@ -61,6 +61,34 @@ This applies to both `--condition=login` (macOS LaunchAgent) and
 `--condition=boot` (macOS LaunchDaemon). On Linux, the flag sets the systemd unit's
 `Restart=` directive: `on-failure` when enabled (the default), or `no` when disabled.
 
+## Unclean shutdown recovery
+
+A host agent that dies without stopping the VM — because launchd's shutdown timeout expired,
+or after a crash, a `kill -9`, or a power loss — can leave an instance in one of two broken
+states, in which `limactl start` refuses to start it. Neither is a sign of misconfiguration.
+
+- **Orphaned VM driver** — a driver that runs as its own process, such as `qemu`, is still
+  running with no host agent attached. The same state is reported when a PID file left on
+  disk names a PID that an unrelated process has since been given.
+- **Stale host agent socket** — `ha.pid` names a live PID, but nothing is listening on
+  `ha.sock`, because that PID now belongs to an unrelated process.
+
+Lima detects and recovers from both states automatically on the next `limactl start`:
+
+- For an orphaned driver, `limactl start` force-stops the driver process and starts cleanly.
+- For a stale socket, `limactl start` removes the stale `ha.pid` and `ha.sock` files (without
+  signaling the unrelated process) and starts cleanly. A driver that runs the VM inside the
+  host agent process, such as `vz`, records the same PID, so its PID file is removed as well;
+  a driver running as its own process is left untouched and handled as an orphaned driver.
+
+No manual intervention is required. To clear either state by hand — for example on an
+instance left behind by an older version of Lima — use:
+
+```bash
+limactl stop --force <instance>
+limactl start <instance>
+```
+
 ## Lima < 2.2
 
 Use `limactl start-at-login` (equivalent to `limactl autostart enable --condition=login`):
