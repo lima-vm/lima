@@ -32,9 +32,17 @@ jobs:
     - name: Run file and directory name linter
       uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1
     - name: Check hyperlinks
-      uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
-      with:
-        args: >-
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        LYCHEE_VERSION: v0.24.2
+        LYCHEE_SHA256: 1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
+      run: |
+        tarball=lychee-x86_64-unknown-linux-gnu.tar.gz
+        curl --fail --silent --show-error --location --remote-name \
+          "https://github.com/lycheeverse/lychee/releases/download/lychee-${LYCHEE_VERSION}/${tarball}"
+        echo "${LYCHEE_SHA256}  ${tarball}" | sha256sum --check -
+        tar --extract --gzip --file "${tarball}" --strip-components=1 lychee-x86_64-unknown-linux-gnu/lychee
+        args=(
           --exclude https://img.shields.io
           --exclude http://127.0.0.1:8080
           --exclude https://github.com/lima-vm/lima/releases/download
@@ -44,4 +52,16 @@ jobs:
           --exclude https://x.com
           --exclude https://deepwiki.com
           README.md
-        token: ${{ secrets.GITHUB_TOKEN }}
+        )
+        # lychee does not retry a failed connection, so one briefly unreachable
+        # host fails the whole check. Run it again after a pause.
+        for attempt in 1 2 3; do
+          if ./lychee "${args[@]}"; then
+            exit 0
+          fi
+          if [ "${attempt}" -lt 3 ]; then
+            echo "::warning::Check hyperlinks attempt ${attempt} failed; retrying"
+            sleep $((attempt * 10))
+          fi
+        done
+        exit 1
