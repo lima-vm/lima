@@ -68,6 +68,7 @@ jobs:
           --exclude https://api.github.com
           --exclude https://cloud-native.slack.com
           --exclude https://x.com
+          --exclude https://deepwiki.com
           README.md
         token: ${{ secrets.GITHUB_TOKEN }}
     - name: Install go-licenses
