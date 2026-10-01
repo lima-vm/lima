@@ -16,6 +16,9 @@ elif [ "$(limactl ls -f '{{ .Status }}' "$LIMA_INSTANCE" 2>/dev/null)" != "Runni
 fi
 DOCKER=$(command -v "$DOCKER" || true)
 if [ -n "$DOCKER" ]; then
+    [ "$(readlink -f -- "$DOCKER")" = "$(readlink -f -- "$0")" ] && DOCKER=""
+fi
+if [ -n "$DOCKER" ]; then
   DOCKER_HOST=$(limactl list "$LIMA_INSTANCE" --format 'unix://{{.Dir}}/sock/docker.sock')
   export DOCKER_HOST
   exec "$DOCKER" "$@"
