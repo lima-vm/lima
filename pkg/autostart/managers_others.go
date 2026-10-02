@@ -6,11 +6,11 @@
 package autostart
 
 // Manager returns a notSupportedManager for unsupported OSes.
-func Manager() autoStartManager {
+func Manager() AutoStartManager {
 	return &notSupportedManager{}
 }
 
 // DaemonManager is not supported on this OS.
-func DaemonManager(_ string) autoStartManager {
+func DaemonManager(_ string) AutoStartManager {
 	return &notSupportedManager{}
 }
