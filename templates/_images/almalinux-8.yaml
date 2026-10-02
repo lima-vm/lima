@@ -1,18 +1,18 @@
 # NOTE: EL8-based distros are known not to work on M1 chips: https://github.com/lima-vm/lima/issues/841
 # EL9-based distros are known to work.
 images:
-- location: "https://repo.almalinux.org/almalinux/8.10/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.10-20260518.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/8.10/cloud/x86_64/images/AlmaLinux-8-GenericCloud-8.10-20260928.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:9e6e3f98b809bca9bc89d8ac3c7fbb7d5aed76e34b7339233138319adb7f0343"
-- location: "https://repo.almalinux.org/almalinux/8.10/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.10-20260518.aarch64.qcow2"
+  digest: "sha256:4a4dfcbd0a02f9fbf62dee6420a168858ff1640a26fb8840ea4013db57436a6c"
+- location: "https://repo.almalinux.org/almalinux/8.10/cloud/aarch64/images/AlmaLinux-8-GenericCloud-8.10-20260928.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:8667b32e7dd487794a96e01f459d3ed13356967b1e36f4702c3b53ff740515f1"
-- location: "https://repo.almalinux.org/almalinux/8.10/cloud/s390x/images/AlmaLinux-8-GenericCloud-8.10-20260518.s390x.qcow2"
+  digest: "sha256:b5deb2b8c9d19a92b5d8f12cdbdc20d255ed48e397fb5321a7ccf23f854b5a54"
+- location: "https://repo.almalinux.org/almalinux/8.10/cloud/s390x/images/AlmaLinux-8-GenericCloud-8.10-20260928.s390x.qcow2"
   arch: "s390x"
-  digest: "sha256:a532004d8d3034608e321d126d7a25f587de8bcdf117b388bf56b1aab6505ff6"
-- location: "https://repo.almalinux.org/almalinux/8.10/cloud/ppc64le/images/AlmaLinux-8-GenericCloud-8.10-20260518.ppc64le.qcow2"
+  digest: "sha256:d84400eb8b08ee9e17474f408deb2092ab377e1e1763339a8d9fdc09a1d03774"
+- location: "https://repo.almalinux.org/almalinux/8.10/cloud/ppc64le/images/AlmaLinux-8-GenericCloud-8.10-20260928.ppc64le.qcow2"
   arch: "ppc64le"
-  digest: "sha256:0b9608c674fe3a0476b21455909af0c1afa6246a78f2d2570ef8074344698945"
+  digest: "sha256:b3fc5c414908197ce8da99cf4929ccc1657ab30797d67681e889d165d7daf619"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
