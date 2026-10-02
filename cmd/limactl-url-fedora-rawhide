@@ -21,20 +21,51 @@ fi
 : "${XDG_CACHE_HOME:=${CACHE_HOME_DEFAULT}}"
 CACHE_DIR="${XDG_CACHE_HOME}/lima/limactl-url-fedora-rawhide"
 
-# COMPOSE_ID is like "Fedora-Rawhide-20260316.n.0"
-COMPOSE_ID="$(curl -fsSL https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/COMPOSE_ID)"
-# COMPOSE_ID_TRIMMED is like "20260316.n.0"
-COMPOSE_ID_TRIMMED="${COMPOSE_ID#Fedora-Rawhide-}"
+URL="https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Cloud"
+
+# Print the image entry for the given architecture.
+#
+# The image name and digest are taken from the CHECKSUM file in the images
+# directory, rather than from rawhide/COMPOSE_ID, as the latter is sometimes
+# out of sync with the directory contents, referring to an image that no
+# longer exists.
+image() {
+	arch="$1"
+	dir="${URL}/${arch}/images"
+	# CHECKSUM is like "Fedora-Cloud-images-Rawhide-x86_64-20260316.n.0-CHECKSUM"
+	checksum="$(curl -fsSL --retry 5 "${dir}/" |
+		sed -n 's/.*href="\(Fedora-Cloud-images-Rawhide-'"${arch}"'-[^"]*-CHECKSUM\)".*/\1/p' | head -n 1)"
+	if [ -z "${checksum}" ]; then
+		echo >&2 "No CHECKSUM file found in ${dir}/"
+		return 1
+	fi
+	# line is like "SHA256 (Fedora-Cloud-Base-Generic-Rawhide-20260316.n.0.x86_64.qcow2) = <digest>"
+	line="$(curl -fsSL --retry 5 "${dir}/${checksum}" |
+		grep -E "^SHA256 \(Fedora-Cloud-Base-Generic-Rawhide-[^)]+\.${arch}\.qcow2\) = [0-9a-f]{64}$" | head -n 1)"
+	if [ -z "${line}" ]; then
+		echo >&2 "No image found in ${dir}/${checksum}"
+		return 1
+	fi
+	name="${line#SHA256 (}"
+	name="${name%%)*}"
+	digest="${line##* }"
+	cat <<EOF
+- location: "${dir}/${name}"
+  arch: "${arch}"
+  digest: "sha256:${digest}"
+EOF
+}
+
+IMAGE_X86_64="$(image x86_64)"
+IMAGE_AARCH64="$(image aarch64)"
 
 mkdir -p "${CACHE_DIR}"
 FILE="${CACHE_DIR}/fedora-rawhide.yaml"
 
 cat <<EOF >"${FILE}"
 images:
-- location: "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-Rawhide-${COMPOSE_ID_TRIMMED}.x86_64.qcow2"
-  arch: "x86_64"
-- location: "https://dl.fedoraproject.org/pub/fedora/linux/development/rawhide/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-Rawhide-${COMPOSE_ID_TRIMMED}.aarch64.qcow2"
-  arch: "aarch64"
+${IMAGE_X86_64}
+${IMAGE_AARCH64}
 EOF
 
 echo "$FILE"
