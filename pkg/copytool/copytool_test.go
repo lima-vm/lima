@@ -128,7 +128,20 @@ func TestRsyncCommandPaths(t *testing.T) {
 			// The paths are everything after the "--" separator.
 			sep := slices.Index(cmd.Args, "--")
 			assert.Assert(t, sep != -1, "rsync args must contain the %#q separator: %v", "--", cmd.Args)
-			assert.DeepEqual(t, cmd.Args[sep+1:], tt.expected)
+			// Command converts each local path for the rsync it runs. Convert
+			// without the trailing slash so a conversion that drops it still
+			// fails here.
+			expected := make([]string, len(tt.expected))
+			for i, p := range tt.expected {
+				trimmed := strings.TrimSuffix(p, "/")
+				expected[i], err = tool.pathForRsync(t.Context(), trimmed)
+				assert.NilError(t, err)
+				expected[i] += strings.TrimPrefix(p, trimmed)
+			}
+			assert.DeepEqual(t, cmd.Args[sep+1:], expected)
+			for _, arg := range cmd.Args[sep+1:] {
+				assert.Assert(t, !looksRemoteToRsync(arg), "rsync reads %q as host:path", arg)
+			}
 		})
 	}
 }
