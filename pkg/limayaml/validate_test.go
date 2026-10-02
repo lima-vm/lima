@@ -360,6 +360,43 @@ func TestValidateBlockDevicesRejectsOverlappingStorage(t *testing.T) {
 	}
 }
 
+func TestValidateAdditionalDisksMountPoint(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+
+	validMountPoint := `
+additionalDisks:
+  - name: "disk1"
+    mountPoint: "/data"
+  - name: "disk2"
+    mount: false
+  - name: "disk3"
+    mountPoint: "/var/lib/data"
+`
+	y, err := Load(t.Context(), []byte(validMountPoint+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	assert.NilError(t, Validate(y, false))
+
+	for _, tc := range []struct {
+		mountPoint string
+		expected   string
+	}{
+		{"data", "field `additionalDisks[0].mountPoint` must be an absolute path, got `data`"},
+		{"~/data", "field `additionalDisks[0].mountPoint` must be an absolute path, got `~/data`"},
+		{"/etc", "field `additionalDisks[0].mountPoint` must not be a critical system path such as /etc or /usr"},
+		{"/home", "field `additionalDisks[0].mountPoint` must not be a critical system path such as /etc or /usr"},
+	} {
+		invalid := "additionalDisks:\n  - name: \"disk1\"\n    mountPoint: \"" + tc.mountPoint + "\"\n"
+		y, err = Load(t.Context(), []byte(invalid+"\n"+images), "lima.yaml")
+		assert.NilError(t, err)
+		assert.Error(t, Validate(y, false), tc.expected)
+	}
+
+	reservedHome := "user: {home: \"/home/foo.guest\"}\nadditionalDisks:\n  - name: \"disk1\"\n    mountPoint: \"/home/foo.guest\"\n"
+	y, err = Load(t.Context(), []byte(reservedHome+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	assert.Error(t, Validate(y, false), "field `additionalDisks[0].mountPoint` is the reserved internal home directory `/home/foo.guest`")
+}
+
 func TestValidateParamName(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProvision := `provision: [{"script": "echo $PARAM_name $PARAM_NAME $PARAM_Name_123"}]`
