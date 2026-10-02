@@ -353,6 +353,12 @@ if [[ -n ${CHECKS["systemd"]} ]]; then
 			# grub-editenv, so the loser dies on "invalid environment block". Lima
 			# controls neither unit.
 			grub-initrd-fallback.service | grub2-common.service) ;;
+			# WSL 3.0.1 mounts /proc/sys/fs/binfmt_misc read-only, so systemd-binfmt
+			# cannot flush its rules and exits 1. This is a host-side WSL limitation
+			# that no guest image can work around.
+			systemd-binfmt.service)
+				[[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]] || unexpected+=("${unit}")
+				;;
 			*) unexpected+=("${unit}") ;;
 			esac
 		done
