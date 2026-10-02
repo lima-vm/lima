@@ -1,0 +1,74 @@
+name: 'windows plain templates'
+description: >
+  Resolves Lima's template symlinks and copies templates/ to
+  _output/share/lima/templates/, replicating `make`'s TEMPLATES target without
+  make.
+
+  A checkout writes the git symlinks under templates/ as NTFS symlinks or as
+  plaintext stubs, depending on core.symlinks, so the targets are read from
+  git's object store instead.
+
+  This action MUST run before windows_plain_host (which uninstalls Git for
+  Windows), because it shells out to `git ls-tree` and `git cat-file`.
+runs:
+  using: composite
+  steps:
+  - name: Install templates (replicating make's TEMPLATES target)
+    shell: pwsh
+    run: |
+      $ErrorActionPreference = 'Stop'
+      if (-not (Get-Command git -ErrorAction SilentlyContinue)) {
+        throw "git not found; this action must run before windows_plain_host"
+      }
+      $srcRoot = 'templates'
+      $dstRoot = '_output\share\lima\templates'
+      if (Test-Path $dstRoot) { Remove-Item $dstRoot -Recurse -Force }
+      New-Item -ItemType Directory -Force -Path $dstRoot | Out-Null
+      Copy-Item -Path "$srcRoot\*" -Destination $dstRoot -Recurse -Force
+
+      $linkTargets = @{}
+      # Check ls-tree's exit code before the loop, whose `git cat-file` calls
+      # overwrite $LASTEXITCODE.
+      $lsTreeOutput = git ls-tree -r HEAD $srcRoot
+      if ($LASTEXITCODE -ne 0) { throw "git ls-tree failed: $LASTEXITCODE" }
+      foreach ($line in $lsTreeOutput) {
+        if ($line -notmatch '^120000\s') { continue }
+        $parts = $line -split "`t", 2
+        $sha = ($parts[0] -split '\s+')[2]
+        $posixPath = $parts[1]
+        # A failed cat-file writes only to stderr. Keep the value a string,
+        # since $null.Trim() would throw ahead of the check below.
+        $target = "$(git cat-file blob $sha)".Trim()
+        if ($LASTEXITCODE -ne 0) { throw "git cat-file $sha failed: $LASTEXITCODE" }
+        $linkTargets[$posixPath] = $target
+      }
+
+      foreach ($posixPath in $linkTargets.Keys) {
+        $resolved = $posixPath
+        $depth = 0
+        while ($linkTargets.ContainsKey($resolved)) {
+          if ($depth++ -gt 16) { throw "Symlink chain too deep starting from $posixPath" }
+          $target = $linkTargets[$resolved]
+          $slash = $resolved.LastIndexOf('/')
+          $resolved = if ($slash -ge 0) { "$($resolved.Substring(0, $slash))/$target" } else { $target }
+          $segs = New-Object System.Collections.ArrayList
+          foreach ($s in ($resolved -split '/')) {
+            if ($s -eq '' -or $s -eq '.') { continue }
+            if ($s -eq '..') {
+              if ($segs.Count -gt 0) { $segs.RemoveAt($segs.Count - 1) | Out-Null }
+              continue
+            }
+            $segs.Add($s) | Out-Null
+          }
+          $resolved = $segs -join '/'
+        }
+        # Defensive: the '..' handling above silently underflows. Guard against
+        # a future symlink edit whose chain resolves outside templates/.
+        if (-not $resolved.StartsWith("$srcRoot/")) {
+          throw "Symlink $posixPath resolved to $resolved, which escapes $srcRoot/"
+        }
+        $srcFile = $resolved -replace '/', '\'
+        $dstFile = Join-Path '_output\share\lima' ($posixPath -replace '/', '\')
+        Write-Host "Resolving symlink: $posixPath -> $resolved"
+        Copy-Item -Force -Path $srcFile -Destination $dstFile
+      }
