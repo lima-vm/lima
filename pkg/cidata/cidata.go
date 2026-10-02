@@ -35,6 +35,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
+	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/strutil"
 )
 
@@ -125,10 +126,12 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 	}
 	archive := "nerdctl-full.tgz"
 	var darwinOpts limatype.DarwinOpts
+	var guestOSVersion, guestOSBuildVersion string
 	if *instConfig.OS == limatype.DARWIN {
 		if err := limayaml.Convert(instConfig.OsOpts[limatype.DARWIN], &darwinOpts, "osOpts.Darwin"); err != nil {
 			return nil, err
 		}
+		guestOSVersion, guestOSBuildVersion = store.ReadGuestOSVersion(instDir)
 	}
 	var suppressFirstLoginSetupPlist string
 	if darwinOpts.SuppressFirstLoginSetupPlist != nil {
@@ -166,6 +169,8 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 
 		SuppressFirstLoginSetup:      darwinOpts.SuppressFirstLoginSetup != nil && *darwinOpts.SuppressFirstLoginSetup,
 		SuppressFirstLoginSetupPlist: suppressFirstLoginSetupPlist,
+		GuestOSVersion:               guestOSVersion,
+		GuestOSBuildVersion:          guestOSBuildVersion,
 	}
 
 	firstUsernetIndex := limayaml.FirstUsernetIndex(instConfig)
