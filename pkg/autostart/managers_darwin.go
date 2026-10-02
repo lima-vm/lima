@@ -6,12 +6,12 @@ package autostart
 import "github.com/lima-vm/lima/v2/pkg/autostart/launchd"
 
 // Manager returns the autostart manager for Darwin.
-func Manager() autoStartManager {
+func Manager() AutoStartManager {
 	return ManagerWith(true)
 }
 
 // ManagerWith returns the autostart manager for Darwin with the given options.
-func ManagerWith(keepAlive bool) autoStartManager {
+func ManagerWith(keepAlive bool) AutoStartManager {
 	extra := map[string]string{}
 	if keepAlive {
 		extra["KeepAlive"] = "true"
@@ -32,7 +32,7 @@ func ManagerWith(keepAlive bool) autoStartManager {
 // Note: install/uninstall require privileged operations (writing to /Library/LaunchDaemons/ and
 // interacting with the system launchctl domain) that are handled by the `limactl daemon` CLI
 // command via sudo rather than by this manager directly.
-func DaemonManager(userName string) autoStartManager {
+func DaemonManager(userName string) AutoStartManager {
 	return &TemplateFileBasedManager{
 		filePath:          launchd.GetDaemonPlistPath,
 		template:          launchd.DaemonTemplate,

@@ -20,7 +20,7 @@ import (
 
 type notSupportedManager struct{}
 
-var _ autoStartManager = (*notSupportedManager)(nil)
+var _ AutoStartManager = (*notSupportedManager)(nil)
 
 var ErrNotSupported = fmt.Errorf("autostart is not supported on %s", runtime.GOOS)
 
@@ -59,7 +59,7 @@ type TemplateFileBasedManager struct {
 	requestStop           func(ctx context.Context, inst *limatype.Instance) (bool, error)
 }
 
-var _ autoStartManager = (*TemplateFileBasedManager)(nil)
+var _ AutoStartManager = (*TemplateFileBasedManager)(nil)
 
 func (t *TemplateFileBasedManager) IsRegistered(_ context.Context, inst *limatype.Instance) (bool, error) {
 	if t.filePath == nil {
