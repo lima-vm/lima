@@ -29,6 +29,7 @@ func StartServer(ctx context.Context, lis net.Listener, guest *GuestServer) erro
 		grpc.KeepaliveParams(keepalive.ServerParameters{Time: 0, Timeout: 0, MaxConnectionIdle: 0}),
 	)
 	api.RegisterGuestServiceServer(server, guest)
+	lis = &closeOnWriteErrorListener{Listener: lis}
 	go func() {
 		<-ctx.Done()
 		logrus.Debug("Stopping the gRPC server")
@@ -42,6 +43,39 @@ func StartServer(ctx context.Context, lis net.Listener, guest *GuestServer) erro
 		return nil
 	}
 	return err
+}
+
+// closeOnWriteErrorListener wraps accepted connections with closeOnWriteErrorConn.
+type closeOnWriteErrorListener struct {
+	net.Listener
+}
+
+func (l *closeOnWriteErrorListener) Accept() (net.Conn, error) {
+	conn, err := l.Listener.Accept()
+	if err != nil {
+		return nil, err
+	}
+	return &closeOnWriteErrorConn{Conn: conn}, nil
+}
+
+// closeOnWriteErrorConn closes the connection when a write fails.
+//
+// When the gRPC server fails to write, it stops sending but keeps reading.
+// If the read side still works, the connection stays half-open forever:
+// requests reach the guest, but no response is sent back to the host.
+// Closing the connection makes the reader fail too, so the host agent reconnects.
+// https://github.com/lima-vm/lima/issues/5545
+type closeOnWriteErrorConn struct {
+	net.Conn
+}
+
+func (c *closeOnWriteErrorConn) Write(b []byte) (int, error) {
+	n, err := c.Conn.Write(b)
+	if err != nil {
+		logrus.WithError(err).Warn("Closing the gRPC connection after a write error")
+		_ = c.Conn.Close()
+	}
+	return n, err
 }
 
 type GuestServer struct {
