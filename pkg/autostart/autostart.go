@@ -41,7 +41,8 @@ func RequestStop(ctx context.Context, inst *limatype.Instance) (bool, error) {
 	return manager().RequestStop(ctx, inst)
 }
 
-type autoStartManager interface {
+// AutoStartManager manages registration and lifecycle of auto-started instances.
+type AutoStartManager interface {
 	// Registration
 	IsRegistered(ctx context.Context, inst *limatype.Instance) (bool, error)
 	RegisterToStartAtLogin(ctx context.Context, inst *limatype.Instance) error

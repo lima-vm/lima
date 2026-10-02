@@ -6,18 +6,18 @@ package autostart
 import "github.com/lima-vm/lima/v2/pkg/autostart/systemd"
 
 // DaemonManager is not supported on Linux; use systemd user services instead.
-func DaemonManager(_ string) autoStartManager {
+func DaemonManager(_ string) AutoStartManager {
 	return &notSupportedManager{}
 }
 
 // Manager returns the autostart manager for Linux, with keep-alive enabled by default.
-func Manager() autoStartManager {
+func Manager() AutoStartManager {
 	return ManagerWith(true)
 }
 
 // ManagerWith returns the autostart manager for Linux. keepAlive controls the systemd
 // unit's Restart= directive: on-failure when enabled, no when disabled.
-func ManagerWith(keepAlive bool) autoStartManager {
+func ManagerWith(keepAlive bool) AutoStartManager {
 	if !systemd.IsRunningSystemd() {
 		// TODO: add support for non-systemd Linux distros
 		return &notSupportedManager{}
