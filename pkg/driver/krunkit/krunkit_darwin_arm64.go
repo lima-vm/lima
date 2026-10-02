@@ -65,11 +65,8 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 			if derr != nil {
 				return nil, fmt.Errorf("failed to load disk %#q: %w", d.Name, derr)
 			}
-			if disk.Instance != "" {
-				return nil, fmt.Errorf("failed to run attach disk %#q, in use by instance %#q", disk.Name, disk.Instance)
-			}
-			if lerr := disk.Lock(inst.Dir); lerr != nil {
-				return nil, fmt.Errorf("failed to lock disk %#q: %w", d.Name, lerr)
+			if lerr := disk.LockForInstance(inst.Dir); lerr != nil {
+				return nil, fmt.Errorf("failed to attach disk %#q: %w", d.Name, lerr)
 			}
 			extraDiskPath := filepath.Join(disk.Dir, filenames.DataDisk)
 			logrus.Infof("Mounting disk %#q on %#q", disk.Name, disk.MountPoint)
