@@ -1,8 +1,5 @@
 name: 'windows wsl2 setup'
-description: >
-  Enables WSL2 and imports a dummy distro, because `wsl --list --verbose`
-  (called from Lima) fails when no distro is installed (lima-vm/lima#1826).
-  WSL2 2.5.7.0 and later reject a distro tarball without /bin/sh and /etc.
+description: Enables WSL2.
 runs:
   using: composite
   steps:
@@ -22,34 +19,4 @@ runs:
       wsl --version
       wsl --list --online
       # pwsh would otherwise exit with --list --online's status.
-      exit 0
-  - name: Install dummy WSL2 distro
-    shell: pwsh
-    run: |
-      $ErrorActionPreference = 'Stop'
-      # Keep the scratch tarball and the distro disk under $RUNNER_TEMP so no
-      # untracked files land in the checked-out workspace.
-      $scratch = Join-Path $env:RUNNER_TEMP 'wsl2-dummy'
-      New-Item -ItemType Directory -Force -Path "$scratch\bin","$scratch\etc" | Out-Null
-      Set-Content -Path "$scratch\bin\sh" -Value ''
-      $tarball = Join-Path $env:RUNNER_TEMP 'wsl2-dummy.tar'
-      tar -cf $tarball --format ustar -C $scratch .
-      if ($LASTEXITCODE -ne 0) { throw "tar -cf $tarball failed: $LASTEXITCODE" }
-      # Unchecked, because a fresh runner has nothing to unregister. A second
-      # run on a developer machine needs the unregister before the import.
-      wsl --unregister dummy
-      $distroDir = Join-Path $env:RUNNER_TEMP 'wsl2-dummy-distro'
-      New-Item -ItemType Directory -Force -Path $distroDir | Out-Null
-      # A composite action step cannot set timeout-minutes, so bound the
-      # import here. -ArgumentList joins its elements unquoted, so quote the
-      # two paths.
-      $p = Start-Process -FilePath wsl.exe -PassThru -NoNewWindow `
-        -ArgumentList '--import', 'dummy', "`"$distroDir`"", "`"$tarball`""
-      if (-not $p.WaitForExit(60000)) {
-        $p.Kill()
-        throw "wsl --import dummy timed out after 60s"
-      }
-      if ($p.ExitCode -ne 0) { throw "wsl --import dummy failed: $($p.ExitCode)" }
-      wsl --list --verbose
-      # Informational, like the listings in the step above.
       exit 0
