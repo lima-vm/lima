@@ -4,10 +4,12 @@
 package hostagent
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
 	"fmt"
+	"net"
 	"os/exec"
 	"runtime"
 	"strconv"
@@ -21,7 +23,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
-func (a *HostAgent) waitForRequirements(label string, requirements []requirement) error {
+func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement) error {
 	const (
 		retries       = 200
 		sleepDuration = 3 * time.Second
@@ -37,7 +39,7 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 		logrus.Infof("Waiting for the %s requirement %d of %d: %#q", label, i+1, len(requirements), req.description)
 	retryLoop:
 		for j := range retries {
-			err := fn(req)
+			err := fn(ctx, req)
 			if err == nil {
 				logrus.Infof("The %s requirement %d of %d is satisfied", label, i+1, len(requirements))
 				break retryLoop
@@ -51,7 +53,12 @@ func (a *HostAgent) waitForRequirements(label string, requirements []requirement
 				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %#q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, err))
 				break retryLoop
 			}
-			time.Sleep(sleepDuration)
+			select {
+			case <-ctx.Done():
+				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement %d of %d %q: %s: %w", label, i+1, len(requirements), req.description, req.debugHint, ctx.Err()))
+				return errors.Join(errs...)
+			case <-time.After(sleepDuration):
+			}
 		}
 	}
 	return errors.Join(errs...)
@@ -118,7 +125,11 @@ func (a *HostAgent) bashAvailable() bool {
 	return *a.instConfig.OS != limatype.FREEBSD && *a.instConfig.OS != limatype.WINDOWS
 }
 
-func (a *HostAgent) waitForRequirement(r requirement) error {
+func (a *HostAgent) waitForRequirement(ctx context.Context, r requirement) error {
+	if r.check != nil {
+		logrus.Debugf("checking requirement %#q", r.description)
+		return r.check(ctx)
+	}
 	logrus.Debugf("executing script %#q", r.description)
 	script := r.script
 	if a.bashAvailable() {
@@ -159,7 +170,7 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 // This function is copied from sshocker's ExecuteScript, because
 // the function doesn't support Windows commands.
 // TODO: Support Windows on sshocker, and replace this function.
-func (a *HostAgent) waitForWinRequirement(r requirement) error {
+func (a *HostAgent) waitForWinRequirement(ctx context.Context, r requirement) error {
 	logrus.Debugf("executing script for windows %q", r.description)
 	script := r.script
 	sshConfig := a.sshConfig
@@ -190,7 +201,7 @@ func (a *HostAgent) waitForWinRequirement(r requirement) error {
 		sshArgs = append(sshArgs, "-p", strconv.Itoa(a.sshLocalPort))
 	}
 	sshArgs = append(sshArgs, a.instSSHAddress, "--", script)
-	sshCmd := exec.CommandContext(context.Background(), sshBinary, sshArgs...)
+	sshCmd := exec.CommandContext(ctx, sshBinary, sshArgs...)
 	sshCmd.Stdin = strings.NewReader(script)
 	var stderr bytes.Buffer
 	sshCmd.Stderr = &stderr
@@ -202,9 +213,11 @@ func (a *HostAgent) waitForWinRequirement(r requirement) error {
 	return nil
 }
 
+// requirement is one readiness check; check takes precedence over script.
 type requirement struct {
 	description string
 	script      string
+	check       func(ctx context.Context) error
 	debugHint   string
 	fatal       bool
 	noMaster    bool
@@ -212,6 +225,23 @@ type requirement struct {
 
 func (a *HostAgent) essentialRequirements() []requirement {
 	req := make([]requirement, 0)
+	logLocation := "/var/log/cloud-init-output.log in the guest"
+	if a.instConfig.OS != nil && *a.instConfig.OS == limatype.DARWIN {
+		logLocation = "serialv.log in the host"
+	}
+	addr := a.instSSHAddress
+	port := a.sshLocalPort
+	req = append(req,
+		requirement{
+			description: "sshLocalPort serves an SSH banner",
+			check: func(ctx context.Context) error {
+				return probeSSHBannerOnLocalPort(ctx, addr, port)
+			},
+			debugHint: fmt.Sprintf(`The host agent is listening on %s but the proxied
+connection into the guest is failing. Most commonly this means guest
+sshd has not yet bound :22. Check %s for sshd startup.
+`, net.JoinHostPort(addr, strconv.Itoa(port)), logLocation),
+		})
 	req = append(req,
 		requirement{
 			description: "ssh",
@@ -373,4 +403,38 @@ Check "` + logLocation + `" to see where the process is blocked!
 func (a *HostAgent) finalWinRequirements() []requirement {
 	req := make([]requirement, 0)
 	return req
+}
+
+const (
+	probeSSHBannerTimeout = 5 * time.Second
+	// RFC 4253 §4.2: server may emit lines before the identification string.
+	probeSSHBannerMaxLines = 50
+)
+
+// probeSSHBannerOnLocalPort returns nil when a line starting with "SSH-" is
+// read from address:port within probeSSHBannerMaxLines.
+func probeSSHBannerOnLocalPort(ctx context.Context, address string, port int) error {
+	addr := net.JoinHostPort(address, strconv.Itoa(port))
+	d := net.Dialer{Timeout: probeSSHBannerTimeout}
+	conn, err := d.DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return fmt.Errorf("dial %s: %w", addr, err)
+	}
+	defer conn.Close()
+	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer stop()
+	if err := conn.SetReadDeadline(time.Now().Add(probeSSHBannerTimeout)); err != nil {
+		return fmt.Errorf("set read deadline on %s: %w", addr, err)
+	}
+	r := bufio.NewReader(conn)
+	for range probeSSHBannerMaxLines {
+		line, err := r.ReadString('\n')
+		if err != nil {
+			return fmt.Errorf("read SSH banner from %s: %w", addr, err)
+		}
+		if strings.HasPrefix(line, "SSH-") {
+			return nil
+		}
+	}
+	return fmt.Errorf("no SSH identification line from %s within %d lines", addr, probeSSHBannerMaxLines)
 }
