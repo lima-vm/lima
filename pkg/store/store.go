@@ -16,6 +16,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
 // Directory returns the LimaDir.
@@ -66,7 +67,7 @@ func Instances() ([]string, error) {
 		if strings.HasPrefix(f.Name(), ".") || strings.HasPrefix(f.Name(), "_") {
 			continue
 		}
-		if !f.IsDir() {
+		if !f.IsDir() && !osutil.IsSymlink(filepath.Join(limaDir, f.Name())) {
 			continue
 		}
 		names = append(names, f.Name())
