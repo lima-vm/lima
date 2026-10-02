@@ -2,9 +2,9 @@
 # (macOS users should have already accepted the agreements on their host machines)
 
 images:
-- location: "https://updates.cdn-apple.com/2026SpringFCS/fullrestores/140-24263/B95838F0-6815-4F0B-A039-156526C081AD/UniversalMac_26.5.2_25F84_Restore.ipsw"
+- location: "https://updates.cdn-apple.com/2026SummerFCS/fullrestores/140-75212/A2A24B94-1FC1-45A3-93F7-C51B02AF1F4D/UniversalMac_26.6.2_25G83_Restore.ipsw"
   arch: "aarch64"
-  digest: "sha256:065abd295a1a456a46c1155217eab92ee95816520ec9aeed83f249f074f68a04"
+  digest: "sha256:885503b7f4b06609e9a512f2befd40f59730640a3f1233e3892d60affdd51c95"
 os: Darwin
 arch: aarch64
 # vz is the only supported VM type for macOS guests
