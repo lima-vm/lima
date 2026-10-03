@@ -21,6 +21,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 )
 
@@ -404,21 +405,25 @@ func stopDnsmasq(cmd *exec.Cmd) error {
 
 // tapUp creates the tap device connecting an instance to the bridge, owned by the
 // user who invoked sudo so that QEMU can open it without any privileges.
-func tapUp(ctx context.Context, tap, bridge string) error {
-	if !networks.IsTapName(tap) {
-		return fmt.Errorf("%#q is not a Lima tap device name", tap)
-	}
+func tapUp(ctx context.Context, bridge, network, instance string) error {
 	if !validIfName(bridge) || !isBridge(bridge) {
 		return fmt.Errorf("%#q is not an existing bridge", bridge)
+	}
+	if err := identifiers.Validate(network); err != nil {
+		return fmt.Errorf("invalid network name %#q: %w", network, err)
+	}
+	if err := identifiers.Validate(instance); err != nil {
+		return fmt.Errorf("invalid instance name %#q: %w", instance, err)
 	}
 	// SUDO_UID is set by sudo itself, so the caller cannot forge it.
 	uid, err := strconv.ParseUint(os.Getenv("SUDO_UID"), 10, 32)
 	if err != nil || uid == 0 {
 		return fmt.Errorf("invalid SUDO_UID %#q in the environment", os.Getenv("SUDO_UID"))
 	}
+	tap := networks.TapName(int(uid), instance, network)
 	if interfaceExists(tap) {
-		// Another user may own a device of the same name; never hand it to this
-		// caller, and never take it away from its owner.
+		// The device may predate this helper, or have been created by root; never
+		// hand it to this caller, and never take it away from its owner.
 		owner, err := tapOwner(tap)
 		if err != nil {
 			return err
