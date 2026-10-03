@@ -11,15 +11,24 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strconv"
 	"strings"
+	"unsafe"
 
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sys/windows"
 
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
+	limawindows "github.com/lima-vm/lima/v2/pkg/windows"
+)
+
+var (
+	wslAPI                      = windows.NewLazySystemDLL("api-ms-win-wsl-api-l1-1-0.dll")
+	wslIsDistributionRegistered = wslAPI.NewProc("WslIsDistributionRegistered")
 )
 
 // startVM calls WSL to start a VM.
@@ -196,7 +205,6 @@ func unregisterVM(ctx context.Context, distroName string) error {
 //
 // Distributions can also be installed by visiting the Microsoft Store:
 // https://aka.ms/wslstore
-// Error code: Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND
 //
 // (3) Expected output when no distros are installed, and WSL2 has no kernel installed:
 //
@@ -205,7 +213,39 @@ func unregisterVM(ctx context.Context, distroName string) error {
 // Distributions can be installed by visiting the Microsoft Store:
 // https://aka.ms/wslstore
 func getWslStatus(ctx context.Context, instName string) (string, error) {
+	errWSLNotInstalled := fmt.Errorf(
+		"failed to read instance state for instance %#q because WSL is not installed, "+
+			"try running `wsl --update` and then re-running Lima", instName)
+	// Check whether WSL is installed at all.  If it is not, then the
+	// distribution is considered to be in a broken state.  We do this check
+	// first because wslIsDistributionRegistered will open a command prompt
+	// window requesting the user to install WSL if it is not installed.
+	isWSLInstalled, err := limawindows.IsWSLInstalled()
+	if err != nil {
+		return limatype.StatusBroken, fmt.Errorf("failed to check if WSL is installed: %w", err)
+	}
+	if !isWSLInstalled {
+		return limatype.StatusBroken, errWSLNotInstalled
+	}
+
+	// At this point, WSL is installed; check if the distribution is registered.
 	distroName := "lima-" + instName
+	distroNameUTF16, err := windows.UTF16PtrFromString(distroName)
+	if err != nil {
+		return "", fmt.Errorf("failed to encode distro name to UTF16: %w", err)
+	}
+	if err := wslIsDistributionRegistered.Find(); err != nil {
+		// Given that WSL is installed, this should not happen.
+		return limatype.StatusBroken, fmt.Errorf("failed to load WSL API: %w", err)
+	}
+	isRegistered, _, _ := wslIsDistributionRegistered.Call(uintptr(unsafe.Pointer(distroNameUTF16)))
+	runtime.KeepAlive(distroNameUTF16)
+	if isRegistered == 0 {
+		// WSL distribution is not installed.
+		return limatype.StatusUninitialized, nil
+	}
+
+	// The distribution is registered; check the status, as there is no API for that.
 	out, err := executil.RunUTF16leCommand([]string{
 		"wsl.exe",
 		"--list",
@@ -220,16 +260,13 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 	}
 
 	// Check for edge cases first
-	if strings.Contains(out, "Windows Subsystem for Linux has no installed distributions.") {
-		if strings.Contains(out, "Wsl/WSL_E_DEFAULT_DISTRO_NOT_FOUND") {
-			return limatype.StatusBroken, fmt.Errorf(
-				"failed to read instance state for instance %#q because no distro is installed,"+
-					"try running `wsl --install -d Ubuntu` and then re-running Lima", instName)
-		}
-		return limatype.StatusBroken, fmt.Errorf(
-			"failed to read instance state for instance %#q because there is no WSL kernel installed,"+
-				"this usually happens when WSL was installed for another user, but never for your user."+
-				"Try running `wsl --install -d Ubuntu` and `wsl --update`, and then re-running Lima", instName)
+	if strings.Contains(out, "https://aka.ms/wslinstall") {
+		// Error message about WSL is not installed.
+		return limatype.StatusBroken, errWSLNotInstalled
+	}
+	if strings.Contains(out, "wsl.exe --list --online") {
+		// No WSL distributions are installed.  We should not get here.
+		return limatype.StatusUninitialized, nil
 	}
 
 	var instState string
