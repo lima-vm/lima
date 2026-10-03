@@ -1,6 +1,8 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
+//go:build darwin || linux
+
 package main
 
 import (
@@ -9,7 +11,7 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strings"
+	"runtime"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -36,7 +38,9 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	includeNetwork := true
 	if err := nwCfg.Validate(); err != nil {
 		if len(blockDevices) == 0 {
-			logrus.Infof("Please check %s for more information.", socketVMNetURL)
+			if runtime.GOOS == "darwin" {
+				logrus.Infof("Please check %s for more information.", socketVMNetURL)
+			}
 			return err
 		}
 		if check {
@@ -109,8 +113,8 @@ func verifySudoAccess(ctx context.Context, nwCfg networks.Config, args, blockDev
 }
 
 func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string, blockDevices []string, includeNetwork bool) error {
-	hint := sudoersCheckHint(os.Args[0], file, blockDevices)
-	b, err := os.ReadFile(file)
+	hint := sudoers.RegenerateHint(os.Args[0], file, blockDevices)
+	b, ok, err := sudoers.ReadFile(file)
 	if err != nil {
 		if errors.Is(err, os.ErrNotExist) {
 			if err := nwCfg.VerifySudoAccess(ctx, ""); err == nil {
@@ -121,11 +125,14 @@ func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string, 
 		}
 		return fmt.Errorf("can't read %q: %w: (Hint: %s)", file, err, hint)
 	}
+	if !ok {
+		return nil
+	}
 	content, err := renderSudoers(nwCfg, blockDevices, includeNetwork)
 	if err != nil {
 		return err
 	}
-	if string(b) == content {
+	if b == content {
 		return nil
 	}
 	if len(blockDevices) == 0 {
@@ -133,18 +140,9 @@ func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string, 
 		if err != nil {
 			return err
 		}
-		if sudoers.ContainsActiveFragment(string(b), networkSudoers) {
+		if sudoers.ContainsActiveFragment(b, networkSudoers) {
 			return nil
 		}
 	}
 	return fmt.Errorf("sudoers file %q is out of sync and must be regenerated (Hint: %s)", file, hint)
-}
-
-func sudoersCheckHint(exe, file string, blockDevices []string) string {
-	sudoersArgs := "sudoers"
-	if len(blockDevices) > 0 {
-		sudoersArgs += " --block-device=" + strings.Join(blockDevices, ",")
-	}
-	return fmt.Sprintf("run `%s %s >etc_sudoers.d_lima && sudo install -o root -g wheel -m 0444 etc_sudoers.d_lima %q`; %s",
-		exe, sudoersArgs, file, sudoers.RegenerateGrantWarning)
 }

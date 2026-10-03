@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -41,6 +42,32 @@ func TestNOPASSWD(t *testing.T) {
 
 	assert.Equal(t, NOPASSWD("%everyone", "daemon", "staff", "/bin/start", "/bin/stop"),
 		"%everyone ALL=(daemon:staff) NOPASSWD:NOSETENV: \\\n    /bin/start, \\\n    /bin/stop\n")
+}
+
+func TestReadFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "lima")
+	assert.NilError(t, os.WriteFile(path, []byte("content\n"), 0o600))
+
+	content, ok, err := ReadFile(path)
+	assert.NilError(t, err)
+	assert.Assert(t, ok)
+	assert.Equal(t, content, "content\n")
+
+	_, _, err = ReadFile(filepath.Join(t.TempDir(), "missing"))
+	assert.ErrorIs(t, err, os.ErrNotExist)
+}
+
+func TestReadFileToleratesUnreadableSudoersFile(t *testing.T) {
+	if runtime.GOOS == "windows" || os.Getuid() == 0 {
+		t.Skip("the file mode does not keep the caller out")
+	}
+	path := filepath.Join(t.TempDir(), "lima")
+	assert.NilError(t, os.WriteFile(path, []byte("content\n"), 0o000))
+
+	content, ok, err := ReadFile(path)
+	assert.NilError(t, err)
+	assert.Assert(t, !ok)
+	assert.Equal(t, content, "")
 }
 
 func TestContainsActiveFragmentIgnoresCommentsOnBothSides(t *testing.T) {
