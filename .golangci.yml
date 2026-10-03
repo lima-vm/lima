@@ -134,6 +134,7 @@ linters:
       - -ST1000
       - -ST1001  # duplicates revive.dot-imports
       - -ST1022
+      - -SA4023  # workaround for timing out https://github.com/golangci/golangci-lint/issues/6732
     usestdlibvars:
       http-method: false
       time-date-month: true

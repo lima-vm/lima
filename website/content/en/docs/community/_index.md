@@ -23,7 +23,7 @@ The GitHub repo of Lima can be found at <https://github.com/lima-vm/lima>.
 
 Follow us for project updates, release announcements, and community news:
 
-- https://x.com/@TheLimaProject
+- https://x.com/thelimaproject
 - https://mastodon.social/@TheLimaProject
 
 ## Projects using Lima

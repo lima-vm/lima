@@ -47,17 +47,18 @@ readonly macos_ipsw_me_device_url="https://api.ipsw.me/v4/device/VirtualMac2,1"
 
 # macos_url_spec_from_location prints the URL spec for the given location.
 # If the location is not a macOS IPSW URL from Apple's CDN, it returns 1.
+# The number of the path components varies across the releases, so any depth is accepted.
 # e.g.
 # ```console
 # macos_url_spec_from_location https://updates.cdn-apple.com/2025SummerFCS/fullrestores/082-08674/51294E4D-A273-44BE-A280-A69FC347FB87/UniversalMac_15.6_24G84_Restore.ipsw
 # {"version":"15.6","major_version":"15","build":"24G84"}
-# macos_url_spec_from_location https://updates.cdn-apple.com/2025SummerFCS/fullrestores/093-10809/CFD6DD38-DAF0-40DA-854F-31AAD1294C6F/UniversalMac_15.6.1_24G90_Restore.ipsw
-# {"version":"15.6.1","major_version":"15","build":"24G90"}
+# macos_url_spec_from_location https://updates.cdn-apple.com/2026FallFCS/afcfc88e-bbe6-44bf-a5da-07c56eebc06c/UniversalMac_27.0_26A428_Restore.ipsw
+# {"version":"27.0","major_version":"27","build":"26A428"}
 # ```
 function macos_url_spec_from_location() {
 	local location=$1 jq_filter url_spec
 	jq_filter='capture("
-		^https://updates\\.cdn-apple\\.com/[^/]+/fullrestores/[^/]+/[^/]+/
+		^https://updates\\.cdn-apple\\.com/(?:[^/]+/)+
 		UniversalMac_(?<version>(?<major_version>\\d+)(?:\\.\\d+)+)_(?<build>[^_]+)_Restore\\.ipsw$
 	";"x")
 	'

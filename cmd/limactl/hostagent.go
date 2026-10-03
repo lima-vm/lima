@@ -12,8 +12,9 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strconv"
+	"sync"
 	"syscall"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -52,7 +53,7 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 		} else if err != nil {
 			return fmt.Errorf("failed to determine if another hostagent is running: %w", err)
 		}
-		if err := os.WriteFile(pidfile, []byte(strconv.Itoa(os.Getpid())+"\n"), 0o644); err != nil {
+		if err := store.WritePIDFile(pidfile, os.Getpid()); err != nil {
 			return err
 		}
 		defer os.RemoveAll(pidfile)
@@ -82,6 +83,8 @@ func hostagentAction(cmd *cobra.Command, args []string) error {
 
 	stdout := &syncWriter{w: cmd.OutOrStdout()}
 	stderr := &syncWriter{w: cmd.ErrOrStderr()}
+	defer stdout.flush()
+	defer stderr.flush()
 
 	initLogrus(stderr)
 	var opts []hostagent.Opt
@@ -141,18 +144,55 @@ type syncer interface {
 	Sync() error
 }
 
+// syncInterval is how long syncWriter batches writes before flushing them.
+//
+// Flushing on every write serialised the whole hostagent behind one fsync per
+// record: logrus holds its output mutex across Out.Write, and the port
+// forwarder logs once per tunnel teardown, so a burst of closing connections
+// throttled all logging in the process.
+//
+// The flush cannot be dropped entirely. limactl start follows these files with
+// fsnotify, and on Windows the tailer stops seeing new lines without it.
+const syncInterval = 100 * time.Millisecond
+
 type syncWriter struct {
 	w io.Writer
+
+	mu    sync.Mutex
+	dirty bool
+	timer *time.Timer
 }
 
 func (w *syncWriter) Write(p []byte) (int, error) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
 	written, err := w.w.Write(p)
 	if err == nil {
-		if s, ok := w.w.(syncer); ok {
-			_ = s.Sync()
+		w.dirty = true
+		if w.timer == nil {
+			w.timer = time.AfterFunc(syncInterval, w.flush)
 		}
 	}
 	return written, err
+}
+
+// flush stops the pending timer and syncs any writes in the current batch.
+func (w *syncWriter) flush() {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+
+	if w.timer != nil {
+		w.timer.Stop()
+		w.timer = nil
+	}
+	if !w.dirty {
+		return
+	}
+	if s, ok := w.w.(syncer); ok {
+		_ = s.Sync()
+	}
+	w.dirty = false
 }
 
 func initLogrus(stderr io.Writer) {

@@ -325,9 +325,30 @@ limactl shell "$NAME" bash -c "echo 'foo \"bar\"'"
 if [[ -n ${CHECKS["systemd"]} ]]; then
 	set -x
 	if ! limactl shell "$NAME" systemctl is-system-running --wait; then
-		ERROR '"systemctl is-system-running" failed'
-		diagnose "$NAME"
-		exit 1
+		mapfile -t failed_units < <(limactl shell "$NAME" systemctl list-units --state=failed --plain --no-legend --no-pager | awk '{print $1}')
+		unexpected=()
+		for unit in "${failed_units[@]}"; do
+			case "${unit}" in
+			# Ubuntu's two grub units rewrite /boot/grub/grubenv concurrently through
+			# grub-editenv, so the loser dies on "invalid environment block". Lima
+			# controls neither unit.
+			grub-initrd-fallback.service | grub2-common.service) ;;
+			# WSL 3.0.1 mounts /proc/sys/fs/binfmt_misc read-only, so systemd-binfmt
+			# cannot flush its rules and exits 1. This is a host-side WSL limitation
+			# that no guest image can work around.
+			systemd-binfmt.service)
+				[[ "$(limactl ls "${NAME}" --yq .vmType)" == "wsl2" ]] || unexpected+=("${unit}")
+				;;
+			*) unexpected+=("${unit}") ;;
+			esac
+		done
+		if [[ ${#failed_units[@]} -gt 0 && ${#unexpected[@]} -eq 0 ]]; then
+			WARNING "Ignoring failed units that lima does not control: ${failed_units[*]}"
+		else
+			ERROR '"systemctl is-system-running" failed'
+			diagnose "$NAME"
+			exit 1
+		fi
 	fi
 	set +x
 fi

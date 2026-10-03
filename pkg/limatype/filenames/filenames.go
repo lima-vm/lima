@@ -65,6 +65,7 @@ const (
 	HostAgentStdoutLog      = "ha.stdout.log"
 	HostAgentStderrLog      = "ha.stderr.log"
 	ExternalDriverStderrLog = "driver.stderr.log"
+	BootSession             = "boot-session.tmp" // boot of the host during which the PID files in the same directory were written
 	VzIdentifier            = "vz-identifier"
 	VzHwModel               = "vz-hwmodel"       // macOS guests only
 	VzAux                   = "vz-aux"           // macOS guests only

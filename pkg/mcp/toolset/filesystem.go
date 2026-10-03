@@ -14,7 +14,6 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
 	"github.com/lima-vm/lima/v2/pkg/mcp/msi"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 )
 
 func (ts *ToolSet) ListDirectory(ctx context.Context,
@@ -36,10 +35,10 @@ func (ts *ToolSet) ListDirectory(ctx context.Context,
 	}
 	for i, f := range guestEnts {
 		res.Entries[i].Name = f.Name()
-		res.Entries[i].Size = ptr.Of(f.Size())
-		res.Entries[i].Mode = ptr.Of(f.Mode())
-		res.Entries[i].ModTime = ptr.Of(f.ModTime())
-		res.Entries[i].IsDir = ptr.Of(f.IsDir())
+		res.Entries[i].Size = new(f.Size())
+		res.Entries[i].Mode = new(f.Mode())
+		res.Entries[i].ModTime = new(f.ModTime())
+		res.Entries[i].IsDir = new(f.IsDir())
 	}
 	return &mcp.CallToolResult{
 		StructuredContent: res,

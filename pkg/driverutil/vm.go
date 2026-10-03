@@ -15,7 +15,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
@@ -24,9 +23,9 @@ import (
 // but does NOT require the driver to be available on the current platform.
 func ResolveVMType(y *limatype.LimaYAML) error {
 	if y.VMType == nil {
-		y.VMType = ptr.Of(limatype.DefaultDriver())
+		y.VMType = new(limatype.DefaultDriver())
 		if y.Arch != nil && !limatype.IsNativeArch(*y.Arch) {
-			y.VMType = ptr.Of(limatype.DefaultNonNativeArchDriver())
+			y.VMType = new(limatype.DefaultNonNativeArchDriver())
 		}
 	}
 

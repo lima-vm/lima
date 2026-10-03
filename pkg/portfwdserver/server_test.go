@@ -76,11 +76,13 @@ func TestGRPCServerRWCloseNeverBlocks(t *testing.T) {
 }
 
 // fakeTunnelStream is a minimal bidi stream: Recv returns queued messages
-// and io.EOF once recvCh is closed; Send discards data.
+// and io.EOF once recvCh is closed; Send forwards the payload to sendCh, or
+// discards it when sendCh is nil.
 type fakeTunnelStream struct {
 	api.GuestService_TunnelServer
 	ctx    context.Context
 	recvCh chan *api.TunnelMessage
+	sendCh chan []byte
 }
 
 func (s *fakeTunnelStream) Context() context.Context { return s.ctx }
@@ -93,7 +95,91 @@ func (s *fakeTunnelStream) Recv() (*api.TunnelMessage, error) {
 	return msg, nil
 }
 
-func (s *fakeTunnelStream) Send(*api.TunnelMessage) error { return nil }
+func (s *fakeTunnelStream) Send(msg *api.TunnelMessage) error {
+	if s.sendCh != nil {
+		s.sendCh <- msg.Data
+	}
+	return nil
+}
+
+// TestTunnelServerRelaysHalfClose verifies that a half-close from the host is
+// relayed to the guest service as a FIN without tearing the tunnel down, so a
+// response written after the half-close still reaches the host
+// (https://github.com/lima-vm/lima/issues/5264).
+//
+// A host-side half-close arrives as Recv returning io.EOF while the stream
+// context stays live; only a full close cancels the context as well.
+func TestTunnelServerRelaysHalfClose(t *testing.T) {
+	var lc net.ListenConfig
+	ln, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	assert.NilError(t, err)
+	defer ln.Close()
+
+	// The guest service reads the whole request, which completes only once the
+	// half-close reaches it, and replies after the test releases replyCh. The
+	// handshake stands in for a server that takes time to produce a response.
+	reqCh := make(chan []byte, 1)
+	errCh := make(chan error, 1)
+	replyCh := make(chan struct{})
+	go func() {
+		conn, err := ln.Accept()
+		if err != nil {
+			errCh <- err
+			return
+		}
+		defer conn.Close()
+		req, err := io.ReadAll(conn)
+		if err != nil {
+			errCh <- err
+			return
+		}
+		reqCh <- req
+		<-replyCh
+		_, err = conn.Write([]byte("response"))
+		errCh <- err
+	}()
+
+	recvCh := make(chan *api.TunnelMessage, 2)
+	recvCh <- &api.TunnelMessage{Id: "test", Protocol: "tcp", GuestAddr: ln.Addr().String()}
+	recvCh <- &api.TunnelMessage{Id: "test", Data: []byte("request")}
+	sendCh := make(chan []byte, 1)
+	stream := &fakeTunnelStream{ctx: t.Context(), recvCh: recvCh, sendCh: sendCh}
+
+	startDone := make(chan error, 1)
+	go func() {
+		startDone <- NewTunnelServer().Start(stream)
+	}()
+
+	// Half-close: the host has nothing more to send, but is still waiting for
+	// the response.
+	close(recvCh)
+
+	select {
+	case req := <-reqCh:
+		assert.DeepEqual(t, req, []byte("request"))
+	case err := <-errCh:
+		assert.NilError(t, err)
+	case <-time.After(5 * time.Second):
+		assert.Assert(t, false, "guest service never saw the half-close")
+	}
+
+	close(replyCh)
+	assert.NilError(t, <-errCh)
+
+	select {
+	case data := <-sendCh:
+		assert.DeepEqual(t, data, []byte("response"))
+	case <-time.After(5 * time.Second):
+		assert.Assert(t, false, "response was lost; the half-close tore the tunnel down")
+	}
+
+	select {
+	case err := <-startDone:
+		assert.NilError(t, err)
+	case <-time.After(5 * time.Second):
+		assert.Assert(t, false, "Start did not return after the guest service closed")
+	}
+}
 
 // TestTunnelServerClosesGuestConn verifies that the connection dialed to the
 // guest service is fully closed (not just shut down for writing) when the
@@ -112,9 +198,12 @@ func TestTunnelServerClosesGuestConn(t *testing.T) {
 		}
 	}()
 
-	recvCh := make(chan *api.TunnelMessage, 1)
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	recvCh := make(chan *api.TunnelMessage, 2)
 	recvCh <- &api.TunnelMessage{Id: "test", Protocol: "tcp", GuestAddr: ln.Addr().String()}
-	stream := &fakeTunnelStream{ctx: t.Context(), recvCh: recvCh}
+	recvCh <- &api.TunnelMessage{Id: "test", Data: []byte("x")}
+	stream := &fakeTunnelStream{ctx: ctx, recvCh: recvCh}
 
 	startDone := make(chan error, 1)
 	go func() {
@@ -129,8 +218,21 @@ func TestTunnelServerClosesGuestConn(t *testing.T) {
 	}
 	defer guestConn.Close()
 
-	// Simulate the host closing the tunnel.
+	// Wait for the tunnel to relay a byte before cancelling. Accept returns as
+	// soon as the kernel completes the handshake, which can happen before
+	// DialContext returns inside Start, and cancelling in that window makes the
+	// dial itself fail instead of exercising the teardown.
+	assert.NilError(t, guestConn.SetReadDeadline(time.Now().Add(5*time.Second)))
+	buf := make([]byte, 1)
+	_, err = io.ReadFull(guestConn, buf)
+	assert.NilError(t, err)
+	assert.NilError(t, guestConn.SetReadDeadline(time.Time{}))
+
+	// Simulate the host closing the tunnel: GrpcClientRW.Close both stops
+	// sending and cancels the stream context. Closing recvCh alone would only
+	// be a half-close, which must keep the tunnel up.
 	close(recvCh)
+	cancel()
 
 	select {
 	case err := <-startDone:

@@ -8,6 +8,7 @@ import (
 	"errors"
 	"io"
 	"net"
+	"sync"
 	"testing"
 	"time"
 
@@ -27,7 +28,7 @@ func TestDialContextToGRPCTunnelClosesStreamFromTCPProxy(t *testing.T) {
 	clientConn, proxyConn := net.Pipe()
 	proxyDone := make(chan struct{})
 	go func() {
-		HandleTCPConnection(t.Context(), DialContextToGRPCTunnel(client), proxyConn, "127.0.0.1:80")
+		HandleTCPConnection(t.Context(), DialContextToGRPCTunnel(func() *guestagentclient.GuestAgentClient { return client }), proxyConn, "127.0.0.1:80")
 		close(proxyDone)
 	}()
 
@@ -120,4 +121,31 @@ func (s *testGuestService) Tunnel(stream api.GuestService_TunnelServer) error {
 		s.tunnelDone <- err
 		return err
 	}
+}
+
+func TestDialContextToGRPCTunnelDialsThroughCurrentClient(t *testing.T) {
+	replaced := newTestGuestAgentClient(t, &testGuestService{tunnelDone: make(chan error, 1)})
+	current := newTestGuestAgentClient(t, &testGuestService{tunnelDone: make(chan error, 1)})
+	defer current.Close()
+
+	var mu sync.Mutex
+	client := replaced
+	dial := DialContextToGRPCTunnel(func() *guestagentclient.GuestAgentClient {
+		mu.Lock()
+		defer mu.Unlock()
+		return client
+	})
+
+	conn, err := dial(t.Context(), "tcp", "127.0.0.1:80")
+	assert.NilError(t, err)
+	assert.NilError(t, conn.Close())
+
+	assert.NilError(t, replaced.Close())
+	mu.Lock()
+	client = current
+	mu.Unlock()
+
+	conn, err = dial(t.Context(), "tcp", "127.0.0.1:80")
+	assert.NilError(t, err)
+	assert.NilError(t, conn.Close())
 }

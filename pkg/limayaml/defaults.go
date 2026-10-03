@@ -35,7 +35,6 @@ import (
 	. "github.com/lima-vm/lima/v2/pkg/must"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
@@ -154,7 +153,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if o.OS != nil {
 		y.OS = o.OS
 	}
-	y.OS = ptr.Of(ResolveOS(y.OS))
+	y.OS = new(ResolveOS(y.OS))
 
 	if y.User.Name == nil {
 		y.User.Name = d.User.Name
@@ -193,37 +192,37 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.User.PasswordlessSudo = o.User.PasswordlessSudo
 	}
 	if y.User.Name == nil {
-		y.User.Name = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Username)
+		y.User.Name = new(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Username)
 		warn = false
 	}
 	if y.User.Comment == nil {
-		y.User.Comment = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Name)
+		y.User.Comment = new(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Name)
 		warn = false
 	}
 	if y.User.Home == nil {
-		y.User.Home = ptr.Of(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).HomeDir)
+		y.User.Home = new(osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).HomeDir)
 		warn = false
 	}
 	if y.User.Shell == nil {
 		switch *y.OS {
 		case limatype.FREEBSD:
-			y.User.Shell = ptr.Of("/bin/sh")
+			y.User.Shell = new("/bin/sh")
 		case limatype.DARWIN:
-			y.User.Shell = ptr.Of("/bin/zsh")
+			y.User.Shell = new("/bin/zsh")
 		case limatype.WINDOWS:
-			y.User.Shell = ptr.Of("cmd.exe")
+			y.User.Shell = new("cmd.exe")
 		default:
-			y.User.Shell = ptr.Of("/bin/bash")
+			y.User.Shell = new("/bin/bash")
 		}
 	}
 	if y.User.UID == nil {
 		uidString := osutil.LimaUser(ctx, existingLimaVersion, warn, y.OS).Uid
 		if uid, err := strconv.ParseUint(uidString, 10, 32); err == nil {
-			y.User.UID = ptr.Of(uint32(uid))
+			y.User.UID = new(uint32(uid))
 		} else {
 			// This should never happen; LimaUser() makes sure that .Uid is numeric
 			logrus.WithError(err).Warnf("Can't parse `user.uid` %#q", uidString)
-			y.User.UID = ptr.Of(uint32(1000))
+			y.User.UID = new(uint32(1000))
 		}
 		// warn = false
 	}
@@ -231,13 +230,13 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	// fallback to nopasswd
 	if y.User.PasswordlessSudo == nil {
 		if y.OS != nil && *y.OS == limatype.DARWIN {
-			y.User.PasswordlessSudo = ptr.Of(false)
+			y.User.PasswordlessSudo = new(false)
 		} else {
-			y.User.PasswordlessSudo = ptr.Of(true)
+			y.User.PasswordlessSudo = new(true)
 		}
 	}
 	if out, err := executeGuestTemplate(*y.User.Home, instDir, y.User, y.Param); err == nil {
-		y.User.Home = ptr.Of(out.String())
+		y.User.Home = new(out.String())
 	} else {
 		logrus.WithError(err).Warnf("Couldn't process `user.home` value %#q as a template", *y.User.Home)
 	}
@@ -255,7 +254,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	if o.Arch != nil {
 		y.Arch = o.Arch
 	}
-	y.Arch = ptr.Of(ResolveArch(y.Arch))
+	y.Arch = new(ResolveArch(y.Arch))
 
 	y.Images = slices.Concat(o.Images, y.Images, d.Images)
 	for i := range y.Images {
@@ -278,7 +277,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.CPUs = o.CPUs
 	}
 	if y.CPUs == nil || *y.CPUs == 0 {
-		y.CPUs = ptr.Of(defaultCPUs())
+		y.CPUs = new(defaultCPUs())
 	}
 
 	if y.Memory == nil {
@@ -288,7 +287,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Memory = o.Memory
 	}
 	if y.Memory == nil || *y.Memory == "" {
-		y.Memory = ptr.Of(defaultMemoryAsString())
+		y.Memory = new(defaultMemoryAsString())
 	}
 
 	if y.Disk == nil {
@@ -298,7 +297,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Disk = o.Disk
 	}
 	if y.Disk == nil || *y.Disk == "" {
-		y.Disk = ptr.Of(defaultDiskSizeAsString())
+		y.Disk = new(defaultDiskSizeAsString())
 	}
 
 	y.AdditionalDisks = slices.Concat(o.AdditionalDisks, y.AdditionalDisks, d.AdditionalDisks)
@@ -310,7 +309,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Audio.Device = o.Audio.Device
 	}
 	if y.Audio.Device == nil {
-		y.Audio.Device = ptr.Of("")
+		y.Audio.Device = new("")
 	}
 
 	if y.Audio.Interface == nil {
@@ -320,7 +319,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Audio.Interface = o.Audio.Interface
 	}
 	if y.Audio.Interface == nil {
-		y.Audio.Interface = ptr.Of("")
+		y.Audio.Interface = new("")
 	}
 
 	if y.Video.Display == nil {
@@ -330,7 +329,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Video.Display = o.Video.Display
 	}
 	if y.Video.Display == nil || *y.Video.Display == "" {
-		y.Video.Display = ptr.Of("none")
+		y.Video.Display = new("none")
 	}
 
 	if y.Video.VNC.Display == nil {
@@ -347,7 +346,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Firmware.LegacyBIOS = o.Firmware.LegacyBIOS
 	}
 	if y.Firmware.LegacyBIOS == nil {
-		y.Firmware.LegacyBIOS = ptr.Of(false)
+		y.Firmware.LegacyBIOS = new(false)
 	}
 
 	y.Firmware.Images = slices.Concat(o.Firmware.Images, y.Firmware.Images, d.Firmware.Images)
@@ -365,7 +364,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.TimeZone = o.TimeZone
 	}
 	if y.TimeZone == nil {
-		y.TimeZone = ptr.Of(hostTimeZone())
+		y.TimeZone = new(hostTimeZone())
 	}
 
 	if y.SSH.LocalPort == nil {
@@ -376,7 +375,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if y.SSH.LocalPort == nil {
 		// y.SSH.LocalPort value is not filled here (filled by the hostagent)
-		y.SSH.LocalPort = ptr.Of(0)
+		y.SSH.LocalPort = new(0)
 	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
 		y.SSH.LoadDotSSHPubKeys = d.SSH.LoadDotSSHPubKeys
@@ -385,7 +384,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.SSH.LoadDotSSHPubKeys = o.SSH.LoadDotSSHPubKeys
 	}
 	if y.SSH.LoadDotSSHPubKeys == nil {
-		y.SSH.LoadDotSSHPubKeys = ptr.Of(false) // was true before Lima v1.0
+		y.SSH.LoadDotSSHPubKeys = new(false) // was true before Lima v1.0
 	}
 
 	if y.SSH.ForwardAgent == nil {
@@ -395,7 +394,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.SSH.ForwardAgent = o.SSH.ForwardAgent
 	}
 	if y.SSH.ForwardAgent == nil {
-		y.SSH.ForwardAgent = ptr.Of(false)
+		y.SSH.ForwardAgent = new(false)
 	}
 
 	if y.SSH.ForwardX11 == nil {
@@ -405,7 +404,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.SSH.ForwardX11 = o.SSH.ForwardX11
 	}
 	if y.SSH.ForwardX11 == nil {
-		y.SSH.ForwardX11 = ptr.Of(false)
+		y.SSH.ForwardX11 = new(false)
 	}
 
 	if y.SSH.ForwardX11Trusted == nil {
@@ -415,7 +414,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.SSH.ForwardX11Trusted = o.SSH.ForwardX11Trusted
 	}
 	if y.SSH.ForwardX11Trusted == nil {
-		y.SSH.ForwardX11Trusted = ptr.Of(false)
+		y.SSH.ForwardX11Trusted = new(false)
 	}
 
 	if y.SSH.OverVsock == nil {
@@ -434,7 +433,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			logrus.WithError(err).Warnf("invalid LIMA_SSH_OVER_VSOCK value %#q", envVar)
 		} else {
 			logrus.Debugf("Overriding ssh.overVsock from %v to %v via LIMA_SSH_OVER_VSOCK", y.SSH.OverVsock, &b)
-			y.SSH.OverVsock = ptr.Of(b)
+			y.SSH.OverVsock = new(b)
 		}
 	}
 
@@ -452,45 +451,45 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			provision.Mode = limatype.ProvisionModeSystem
 		}
 		if provision.Mode == limatype.ProvisionModeDependency && provision.SkipDefaultDependencyResolution == nil {
-			provision.SkipDefaultDependencyResolution = ptr.Of(false)
+			provision.SkipDefaultDependencyResolution = new(false)
 		}
 		if provision.Mode == limatype.ProvisionModeData {
 			if provision.Content == nil {
-				provision.Content = ptr.Of("")
+				provision.Content = new("")
 			} else {
 				if out, err := executeGuestTemplate(*provision.Content, instDir, y.User, y.Param); err == nil {
-					provision.Content = ptr.Of(out.String())
+					provision.Content = new(out.String())
 				} else {
 					logrus.WithError(err).Warnf("Couldn't process data content %#q as a template", *provision.Content)
 				}
 			}
 			if provision.Overwrite == nil {
-				provision.Overwrite = ptr.Of(true)
+				provision.Overwrite = new(true)
 			}
 		}
 		if provision.Mode == limatype.ProvisionModeYQ {
 			if provision.Expression != nil {
 				if out, err := executeGuestTemplate(*provision.Expression, instDir, y.User, y.Param); err == nil {
-					provision.Expression = ptr.Of(out.String())
+					provision.Expression = new(out.String())
 				} else {
 					logrus.WithError(err).Warnf("Couldn't process expression %#q as a template", *provision.Expression)
 				}
 			}
 			if provision.Format == nil {
-				provision.Format = ptr.Of("auto")
+				provision.Format = new("auto")
 			}
 		}
 		if provision.Mode == limatype.ProvisionModeData || provision.Mode == limatype.ProvisionModeYQ {
 			if provision.Owner == nil {
 				switch *y.OS {
 				case limatype.DARWIN, limatype.FREEBSD:
-					provision.Owner = ptr.Of("root:wheel")
+					provision.Owner = new("root:wheel")
 				default:
-					provision.Owner = ptr.Of("root:root")
+					provision.Owner = new("root:root")
 				}
 			} else {
 				if out, err := executeGuestTemplate(*provision.Owner, instDir, y.User, y.Param); err == nil {
-					provision.Owner = ptr.Of(out.String())
+					provision.Owner = new(out.String())
 				} else {
 					logrus.WithError(err).Warnf("Couldn't process owner %#q as a template", *provision.Owner)
 				}
@@ -498,17 +497,17 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			// Path is required; validation will throw an error when it is nil
 			if provision.Path != nil {
 				if out, err := executeGuestTemplate(*provision.Path, instDir, y.User, y.Param); err == nil {
-					provision.Path = ptr.Of(out.String())
+					provision.Path = new(out.String())
 				} else {
 					logrus.WithError(err).Warnf("Couldn't process path %#q as a template", *provision.Path)
 				}
 			}
 			if provision.Permissions == nil {
-				provision.Permissions = ptr.Of("644")
+				provision.Permissions = new("644")
 			}
 		}
 		if provision.Script == nil {
-			provision.Script = ptr.Of("")
+			provision.Script = new("")
 		}
 		if *provision.Script != "" {
 			if out, err := executeGuestTemplate(*provision.Script, instDir, y.User, y.Param); err == nil {
@@ -526,7 +525,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.GuestInstallPrefix = o.GuestInstallPrefix
 	}
 	if y.GuestInstallPrefix == nil {
-		y.GuestInstallPrefix = ptr.Of(defaultGuestInstallPrefix())
+		y.GuestInstallPrefix = new(defaultGuestInstallPrefix())
 	}
 
 	if y.UpgradePackages == nil {
@@ -536,7 +535,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.UpgradePackages = o.UpgradePackages
 	}
 	if y.UpgradePackages == nil {
-		y.UpgradePackages = ptr.Of(false)
+		y.UpgradePackages = new(false)
 	}
 
 	if y.Containerd.System == nil {
@@ -546,7 +545,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Containerd.System = o.Containerd.System
 	}
 	if y.Containerd.System == nil {
-		y.Containerd.System = ptr.Of(false)
+		y.Containerd.System = new(false)
 	}
 	if y.Containerd.User == nil {
 		y.Containerd.User = d.Containerd.User
@@ -561,12 +560,12 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		if *y.OS == limatype.LINUX {
 			switch *y.Arch {
 			case limatype.X8664, limatype.AARCH64:
-				y.Containerd.User = ptr.Of(true)
+				y.Containerd.User = new(true)
 			default:
-				y.Containerd.User = ptr.Of(false)
+				y.Containerd.User = new(false)
 			}
 		} else {
-			y.Containerd.User = ptr.Of(false)
+			y.Containerd.User = new(false)
 		}
 	}
 
@@ -591,10 +590,10 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			probe.Description = fmt.Sprintf("user probe %d/%d", i+1, len(y.Probes))
 		}
 		if probe.Script == nil {
-			probe.Script = ptr.Of("")
+			probe.Script = new("")
 		}
 		if out, err := executeGuestTemplate(*probe.Script, instDir, y.User, y.Param); err == nil {
-			probe.Script = ptr.Of(out.String())
+			probe.Script = new(out.String())
 		} else {
 			logrus.WithError(err).Warnf("Couldn't process probing script %#q as a template", *probe.Script)
 		}
@@ -618,7 +617,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.HostResolver.Enabled = o.HostResolver.Enabled
 	}
 	if y.HostResolver.Enabled == nil {
-		y.HostResolver.Enabled = ptr.Of(true)
+		y.HostResolver.Enabled = new(true)
 	}
 
 	if y.HostResolver.IPv6 == nil {
@@ -628,7 +627,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.HostResolver.IPv6 = o.HostResolver.IPv6
 	}
 	if y.HostResolver.IPv6 == nil {
-		y.HostResolver.IPv6 = ptr.Of(false)
+		y.HostResolver.IPv6 = new(false)
 	}
 
 	if y.PropagateProxyEnv == nil {
@@ -638,7 +637,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.PropagateProxyEnv = o.PropagateProxyEnv
 	}
 	if y.PropagateProxyEnv == nil {
-		y.PropagateProxyEnv = ptr.Of(true)
+		y.PropagateProxyEnv = new(true)
 	}
 
 	networks := make([]limatype.Network, 0, len(d.Networks)+len(y.Networks)+len(o.Networks))
@@ -683,7 +682,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			nw.Interface = "lima" + strconv.Itoa(i)
 		}
 		if nw.Metric == nil {
-			nw.Metric = ptr.Of(uint32(100))
+			nw.Metric = new(uint32(100))
 		}
 	}
 
@@ -704,7 +703,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.MountInotify = o.MountInotify
 	}
 	if y.MountInotify == nil {
-		y.MountInotify = ptr.Of(false)
+		y.MountInotify = new(false)
 	}
 
 	// Combine all mounts; highest priority entry determines writable status.
@@ -734,10 +733,10 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 					logrus.WithError(err).Warnf("Couldn't convert location %#q into mount target", mount.Location)
 				}
 			}
-			mount.MountPoint = ptr.Of(mountLocation)
+			mount.MountPoint = new(mountLocation)
 		} else {
 			if out, err := executeGuestTemplate(*mount.MountPoint, instDir, y.User, y.Param); err == nil {
-				mount.MountPoint = ptr.Of(out.String())
+				mount.MountPoint = new(out.String())
 			} else {
 				logrus.WithError(err).Warnf("Couldn't process mount point %#q as a template", *mount.MountPoint)
 			}
@@ -783,31 +782,31 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	for i := range y.Mounts {
 		mount := &y.Mounts[i]
 		if mount.SSHFS.Cache == nil {
-			mount.SSHFS.Cache = ptr.Of(true)
+			mount.SSHFS.Cache = new(true)
 		}
 		if mount.SSHFS.FollowSymlinks == nil {
-			mount.SSHFS.FollowSymlinks = ptr.Of(false)
+			mount.SSHFS.FollowSymlinks = new(false)
 		}
 		if mount.SSHFS.SFTPDriver == nil {
-			mount.SSHFS.SFTPDriver = ptr.Of("")
+			mount.SSHFS.SFTPDriver = new("")
 		}
 		if mount.NineP.SecurityModel == nil {
-			mounts[i].NineP.SecurityModel = ptr.Of(Default9pSecurityModel)
+			mounts[i].NineP.SecurityModel = new(Default9pSecurityModel)
 		}
 		if mount.NineP.ProtocolVersion == nil {
-			mounts[i].NineP.ProtocolVersion = ptr.Of(Default9pProtocolVersion)
+			mounts[i].NineP.ProtocolVersion = new(Default9pProtocolVersion)
 		}
 		if mount.NineP.Msize == nil {
-			mounts[i].NineP.Msize = ptr.Of(Default9pMsize)
+			mounts[i].NineP.Msize = new(Default9pMsize)
 		}
 		if mount.Writable == nil {
-			mount.Writable = ptr.Of(false)
+			mount.Writable = new(false)
 		}
 		if mount.NineP.Cache == nil {
 			if *mount.Writable {
-				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRW)
+				mounts[i].NineP.Cache = new(Default9pCacheForRW)
 			} else {
-				mounts[i].NineP.Cache = ptr.Of(Default9pCacheForRO)
+				mounts[i].NineP.Cache = new(Default9pCacheForRO)
 			}
 		}
 	}
@@ -845,7 +844,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.CACertificates.RemoveDefaults = o.CACertificates.RemoveDefaults
 	}
 	if y.CACertificates.RemoveDefaults == nil {
-		y.CACertificates.RemoveDefaults = ptr.Of(false)
+		y.CACertificates.RemoveDefaults = new(false)
 	}
 
 	y.CACertificates.Files = unique(slices.Concat(d.CACertificates.Files, y.CACertificates.Files, o.CACertificates.Files))
@@ -858,7 +857,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.NestedVirtualization = o.NestedVirtualization
 	}
 	if y.NestedVirtualization == nil {
-		y.NestedVirtualization = ptr.Of(false)
+		y.NestedVirtualization = new(false)
 	}
 
 	if y.Plain == nil {
@@ -868,7 +867,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Plain = o.Plain
 	}
 	if y.Plain == nil {
-		y.Plain = ptr.Of(false)
+		y.Plain = new(false)
 	}
 
 	if y.TPM == nil {
@@ -878,7 +877,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.TPM = o.TPM
 	}
 	if y.TPM == nil {
-		y.TPM = ptr.Of(false)
+		y.TPM = new(false)
 	}
 	osOpts := make(limatype.OsOpts)
 	maps.Copy(osOpts, d.OsOpts)
@@ -918,9 +917,9 @@ func fixUpForPlainMode(y *limatype.LimaYAML) {
 	}
 	deleteNonStaticPortForwards(&y.PortForwards)
 	y.Mounts = nil
-	y.Containerd.System = ptr.Of(false)
-	y.Containerd.User = ptr.Of(false)
-	y.TimeZone = ptr.Of("")
+	y.Containerd.System = new(false)
+	y.Containerd.User = new(false)
+	y.TimeZone = new("")
 }
 
 // deleteNonStaticPortForwards removes all non-static port forwarding rules in case of Plain mode.
@@ -1000,7 +999,7 @@ func FillPortForwardDefaults(rule *limatype.PortForward, instDir string, user li
 		}
 	}
 	if rule.GuestIPMustBeZero == nil {
-		rule.GuestIPMustBeZero = ptr.Of(rule.GuestIP.Equal(net.IPv4zero))
+		rule.GuestIPMustBeZero = new(rule.GuestIP.Equal(net.IPv4zero))
 	}
 	if rule.HostIP == nil {
 		rule.HostIP = IPv4loopback1

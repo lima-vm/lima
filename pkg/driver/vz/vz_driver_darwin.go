@@ -35,7 +35,6 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
 	"github.com/lima-vm/lima/v2/pkg/reflectutil"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
@@ -166,15 +165,15 @@ func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) (*d
 
 func fillConfig(cfg *limatype.LimaYAML) error {
 	if cfg.VMType == nil {
-		cfg.VMType = ptr.Of(limatype.VZ)
+		cfg.VMType = new(limatype.VZ)
 	}
 
 	if cfg.MountType == nil {
-		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
+		cfg.MountType = new(limatype.VIRTIOFS)
 	}
 
 	if cfg.SSH.OverVsock == nil {
-		cfg.SSH.OverVsock = ptr.Of(*cfg.OS == limatype.LINUX)
+		cfg.SSH.OverVsock = new(*cfg.OS == limatype.LINUX)
 	}
 
 	var vzOpts limatype.VZOpts
@@ -193,22 +192,22 @@ func fillConfig(cfg *limatype.LimaYAML) error {
 	}
 
 	if vzOpts.Rosetta.Enabled == nil {
-		vzOpts.Rosetta.Enabled = ptr.Of(false)
+		vzOpts.Rosetta.Enabled = new(false)
 	}
 	if vzOpts.Rosetta.BinFmt == nil {
-		vzOpts.Rosetta.BinFmt = ptr.Of(false)
+		vzOpts.Rosetta.BinFmt = new(false)
 	}
 	if vzOpts.DiskImageFormat == nil {
 		// Default to ASIF for macOS guests on macOS 26+, raw otherwise.
 		if cfg.OS != nil && *cfg.OS == limatype.DARWIN {
 			macOSProductVersion, err := osutil.ProductVersion()
 			if err == nil && !macOSProductVersion.LessThan(*semver.New("26.0.0")) {
-				vzOpts.DiskImageFormat = ptr.Of(asif.Type)
+				vzOpts.DiskImageFormat = new(asif.Type)
 			} else {
-				vzOpts.DiskImageFormat = ptr.Of(raw.Type)
+				vzOpts.DiskImageFormat = new(raw.Type)
 			}
 		} else {
-			vzOpts.DiskImageFormat = ptr.Of(raw.Type)
+			vzOpts.DiskImageFormat = new(raw.Type)
 		}
 	}
 

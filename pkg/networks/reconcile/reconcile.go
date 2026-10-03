@@ -305,12 +305,10 @@ func startDaemonWithRetry(ctx context.Context, cfg *networks.Config, name, daemo
 		}
 		// Only an early exit (the transient XPC race) is retried; everything else
 		// is surfaced immediately.
-		var exited *daemonExitedError
-		if !errors.As(err, &exited) {
+		if _, ok := errors.AsType[*daemonExitedError](err); !ok {
 			// A stuck (still-running) daemon gets its stderr appended; PID-read and
 			// context errors propagate as-is.
-			var stuck *daemonStuckError
-			if errors.As(err, &stuck) {
+			if _, ok := errors.AsType[*daemonStuckError](err); ok {
 				return fmt.Errorf("%s daemon for %#q network %w%s", daemon, name, err, stderrHint(stderrLog))
 			}
 			return err

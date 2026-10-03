@@ -28,7 +28,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/networks/usernet"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
-	"github.com/lima-vm/lima/v2/pkg/ptr"
+	"github.com/lima-vm/lima/v2/pkg/store"
 )
 
 const (
@@ -107,7 +107,7 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	pidPath := filepath.Join(l.Instance.Dir, filenames.PIDFile(*l.Instance.Config.VMType))
-	if err := os.WriteFile(pidPath, fmt.Appendf(nil, "%d\n", krunkitCmd.Process.Pid), 0o644); err != nil {
+	if err := store.WritePIDFile(pidPath, krunkitCmd.Process.Pid); err != nil {
 		logrus.WithError(err).Warn("Failed to write PID file")
 	}
 
@@ -268,16 +268,16 @@ func isFedoraConfigured(cfg *limatype.LimaYAML) bool {
 
 func fillConfig(cfg *limatype.LimaYAML) error {
 	if cfg.MountType == nil {
-		cfg.MountType = ptr.Of(limatype.VIRTIOFS)
+		cfg.MountType = new(limatype.VIRTIOFS)
 	}
 	if cfg.Arch == nil {
-		cfg.Arch = ptr.Of(limatype.AARCH64)
+		cfg.Arch = new(limatype.AARCH64)
 	}
-	cfg.VMType = ptr.Of(vmType)
+	cfg.VMType = new(vmType)
 	if cfg.SSH.OverVsock == nil {
 		// ssh.overVsock is known not to work since Fedora 44: https://github.com/lima-vm/lima/issues/5085
-		// cfg.SSH.OverVsock = ptr.Of(cfg.OS != nil && *cfg.OS == limatype.LINUX)
-		cfg.SSH.OverVsock = ptr.Of(false)
+		// cfg.SSH.OverVsock = new(cfg.OS != nil && *cfg.OS == limatype.LINUX)
+		cfg.SSH.OverVsock = new(false)
 	} else if *cfg.SSH.OverVsock {
 		logrus.Warn("ssh.overVsock is known not to work since Fedora 44: https://github.com/lima-vm/lima/issues/5085")
 	}
