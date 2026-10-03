@@ -13,17 +13,12 @@ import (
 	"net"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/Microsoft/hcsshim/hcn"
-	"github.com/lima-vm/go-qcow2reader/image/qcow2"
-	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"github.com/sirupsen/logrus"
 
-	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
-	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
 )
 
@@ -259,58 +254,6 @@ func serveSerial(ln net.Listener, logPath string) {
 		}
 		conn.Close()
 	}
-}
-
-// mayConvertQcow2ToVHDX checks `disk` and converts it to .vhdx if it is qcow2.
-func mayConvertQcow2ToVHDX(ctx context.Context, instDir string) error {
-	disk := filepath.Join(instDir, filenames.Disk)
-	_, err := os.Stat(disk)
-	if err == nil {
-		return nil
-	}
-	if !os.IsNotExist(err) {
-		return err
-	}
-
-	imagePath := filepath.Join(instDir, filenames.Image)
-	format, err := nativeimgutil.DetectFormat(imagePath)
-	if err != nil {
-		return err
-	}
-
-	switch format {
-	case string(vhdx.Type):
-		logrus.Debug("disk is already .vhdx")
-		if err = os.Rename(imagePath, disk); err != nil {
-			return fmt.Errorf("failed to rename %#q to %#q: %w", imagePath, disk, err)
-		}
-		if err := os.Chmod(disk, 0o644); err != nil {
-			return fmt.Errorf("failed to chmod %#q: %w", disk, err)
-		}
-		return nil
-	case qcow2.Type, "raw":
-		if err := execQemuImgConvert(ctx, imagePath, disk); err != nil {
-			return fmt.Errorf("failed to convert to vhdx: %w", err)
-		}
-		if err := execFsutil(ctx, disk); err != nil {
-			return fmt.Errorf("failed to set disk flag: %w", err)
-		}
-		return nil
-	default:
-		return fmt.Errorf("disk type %s is not supported", format)
-	}
-}
-
-func execQemuImgConvert(ctx context.Context, source, dist string) error {
-	var stdout, stderr bytes.Buffer
-	cmd := exec.CommandContext(ctx, "qemu-img", "convert", "-O", "vhdx", source, dist)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w",
-			cmd.Args, stdout.String(), stderr.String(), err)
-	}
-	return nil
 }
 
 func execFsutil(ctx context.Context, disk string) error {

@@ -4,6 +4,7 @@
 package nativeimgutil
 
 import (
+	"bytes"
 	"context"
 	"os"
 	"os/exec"
@@ -12,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/lima-vm/go-qcow2reader/image/raw"
+	"github.com/lima-vm/go-qcow2reader/image/vhdx"
 	"gotest.tools/v3/assert"
 )
 
@@ -94,6 +96,55 @@ func TestConvertToRaw(t *testing.T) {
 		err = convertTo(raw.Type, rawImage.Name(), resultImage, nil, false)
 		assert.NilError(t, err)
 		assertFileEquals(t, rawImage.Name(), resultImage)
+	})
+}
+
+func TestConvertToVHDX(t *testing.T) {
+	const size = int64(2 * 1024 * 1024)
+
+	t.Run("raw", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "source.raw")
+		// A zero-filled source would be skipped by the VHDX writer, so a dropped
+		// data copy would still produce a well-formed image.
+		payload := bytes.Repeat([]byte("lima"), 1024*1024/4)
+		assert.NilError(t, os.WriteFile(source, payload, 0o644))
+		dest := filepath.Join(tmpDir, "dest.vhdx")
+
+		newSize := size
+		assert.NilError(t, convertTo(vhdx.Type, source, dest, &newSize, false))
+
+		format, err := DetectFormat(dest)
+		assert.NilError(t, err)
+		assert.Equal(t, format, string(vhdx.Type))
+
+		converted, err := os.ReadFile(dest)
+		assert.NilError(t, err)
+		assert.Assert(t, bytes.Contains(converted, payload), "the payload block was not written to the VHDX image")
+	})
+
+	// driverutil.EnsureDisk converts an ISO-based disk in place.
+	t.Run("in place", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		disk := filepath.Join(tmpDir, "disk")
+		assert.NilError(t, os.WriteFile(disk, nil, 0o644))
+
+		newSize := size
+		assert.NilError(t, convertTo(vhdx.Type, disk, disk, &newSize, false))
+
+		format, err := DetectFormat(disk)
+		assert.NilError(t, err)
+		assert.Equal(t, format, string(vhdx.Type))
+	})
+
+	t.Run("size smaller than the source is rejected", func(t *testing.T) {
+		tmpDir := t.TempDir()
+		source := filepath.Join(tmpDir, "source.raw")
+		assert.NilError(t, os.WriteFile(source, make([]byte, 1024*1024), 0o644))
+
+		newSize := int64(512)
+		err := convertTo(vhdx.Type, source, filepath.Join(tmpDir, "dest.vhdx"), &newSize, false)
+		assert.ErrorContains(t, err, "smaller than the original image size")
 	})
 }
 
