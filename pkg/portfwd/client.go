@@ -44,13 +44,21 @@ func HandleUDPConnection(ctx context.Context, dialContext func(ctx context.Conte
 	logrus.Debugf("udp proxy for guestAddr: %s closed", guestAddr)
 }
 
-func DialContextToGRPCTunnel(client *guestagentclient.GuestAgentClient) func(ctx context.Context, network, addr string) (net.Conn, error) {
+// DialContextToGRPCTunnel returns a dialer that opens a new gRPC tunnel stream per connection.
+// The guest agent client is resolved through getClient on every dial, not captured here,
+// because the host agent replaces the client when the guest agent reconnects and a
+// listener created for an earlier client outlives it.
+func DialContextToGRPCTunnel(getClient func() *guestagentclient.GuestAgentClient) func(ctx context.Context, network, addr string) (net.Conn, error) {
 	// gvisor-tap-vsock's UDPProxy demultiplexes client connections internally based on their source address.
 	// It calls this dialer function only when it receives a datagram from a new, unrecognized client.
 	// For each new client, we must return a new net.Conn, which in our case is a new gRPC stream.
 	// The atomic counter ensures that each stream has a unique ID to distinguish them on the server side.
 	var connectionCounter atomic.Uint32
 	return func(_ context.Context, network, addr string) (net.Conn, error) {
+		client := getClient()
+		if client == nil {
+			return nil, fmt.Errorf("could not open tunnel for addr: %s: guest agent client is not available", addr)
+		}
 		// Passed context.Context is used for timeout on initiate connection, not for the lifetime of the connection.
 		// Use a dedicated context so CloseRead can unblock a goroutine waiting in stream.Recv().
 		streamCtx, cancel := context.WithCancel(context.Background())
