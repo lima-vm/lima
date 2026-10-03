@@ -119,7 +119,7 @@ type DriverClient interface {
 	ApplySnapshot(ctx context.Context, in *ApplySnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 	// DeleteSnapshot removes the snapshot identified by the given tag.
 	DeleteSnapshot(ctx context.Context, in *DeleteSnapshotRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
-	// ListSnapshots returns the driver-formatted list of existing snapshots.
+	// ListSnapshots returns the existing snapshots.
 	ListSnapshots(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListSnapshotsResponse, error)
 	// ForwardGuestAgent reports whether the host agent must forward the guest
 	// agent socket over SSH. When false, the driver provides a direct guest agent
@@ -441,7 +441,7 @@ type DriverServer interface {
 	ApplySnapshot(context.Context, *ApplySnapshotRequest) (*emptypb.Empty, error)
 	// DeleteSnapshot removes the snapshot identified by the given tag.
 	DeleteSnapshot(context.Context, *DeleteSnapshotRequest) (*emptypb.Empty, error)
-	// ListSnapshots returns the driver-formatted list of existing snapshots.
+	// ListSnapshots returns the existing snapshots.
 	ListSnapshots(context.Context, *emptypb.Empty) (*ListSnapshotsResponse, error)
 	// ForwardGuestAgent reports whether the host agent must forward the guest
 	// agent socket over SSH. When false, the driver provides a direct guest agent
