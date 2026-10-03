@@ -46,7 +46,7 @@ local_setup() {
                 # kubeadm join ADDRESS --token TOKEN --discovery-token-ca-cert-hash DISCOVERY_TOKEN_CA_CERT_HASH
                 read -ra words <<< "$join_command"
                 assert_equal "${words[1]} ${words[3]} ${words[5]}" "join --token --discovery-token-ca-cert-hash"
-                params=".param.url=\"${words[2]}\"|.param.token=\"${words[4]}\"|.param.discoveryTokenCaCertHash=\"${words[6]}\""
+                params=".param.url=\"https://${words[2]}\"|.param.token=\"${words[4]}\"|.param.discoveryTokenCaCertHash=\"${words[6]}\""
             elif [[ $i -eq 0 && "${TEMPLATE}" == "k3s" ]]; then
                 url=$(printf "https://lima-%s.internal:6443\n" "${NAME}-0")
                 token=$(limactl shell "${NAME}-0" sudo cat /var/lib/rancher/k3s/server/node-token)
