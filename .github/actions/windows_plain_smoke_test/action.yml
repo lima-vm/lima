@@ -17,6 +17,17 @@ inputs:
       the template or Lima's default decides.
     required: false
     default: ''
+  launch-default-distro-during-stop:
+    description: >
+      When 'true', test that `limactl stop` completes even if the instance's
+      distro restarts during it. GitHub's runner agent sometimes runs
+      `wsl -u root -e ls`, which starts the default distro, and that is the
+      instance's when no other is installed. The step runs the same command
+      while the stop terminates the instance. If the stop's status checks then
+      keep the restarted distro running, the stop times out. Only for the WSL2
+      driver.
+    required: false
+    default: 'false'
 runs:
   using: composite
   steps:
@@ -27,6 +38,7 @@ runs:
       INSTANCE: ${{ inputs.instance-name }}
       TEMPLATE: ${{ inputs.template }}
       VM_TYPE: ${{ inputs.vm-type }}
+      LAUNCH_DEFAULT_DISTRO_DURING_STOP: ${{ inputs.launch-default-distro-during-stop }}
     run: |
       $ErrorActionPreference = 'Stop'
       # $ErrorActionPreference does not stop on a native command's exit code.
@@ -53,7 +65,25 @@ runs:
       if ($back -ne 'roundtrip') {
         throw "round-trip mismatch: expected 'roundtrip', got '$back'"
       }
+      if ($env:LAUNCH_DEFAULT_DISTRO_DURING_STOP -eq 'true') {
+        $launcher = Start-Job -ScriptBlock {
+          while (-not (Get-CimInstance Win32_Process -Filter "Name='wsl.exe'" |
+              Where-Object { $_.CommandLine -like '*--terminate*' })) {
+            Start-Sleep -Milliseconds 100
+          }
+          # Give the terminate time to begin, so the launch starts the distro again.
+          Start-Sleep -Milliseconds 200
+          wsl.exe -u root -e ls *> $null
+          if ($LASTEXITCODE -ne 0) { throw "wsl.exe -u root -e ls exited $LASTEXITCODE" }
+          'launched'
+        }
+      }
       Invoke-Limactl stop $env:INSTANCE
+      if ($launcher) {
+        $launched = Wait-Job $launcher -Timeout 30 | Receive-Job
+        Remove-Job $launcher -Force
+        if ($launched -ne 'launched') { throw 'default-distro launch during limactl stop did not complete' }
+      }
       Invoke-Limactl delete --force $env:INSTANCE
 
   - name: Dump Lima logs on failure

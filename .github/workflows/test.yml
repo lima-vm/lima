@@ -250,6 +250,7 @@ jobs:
     - uses: $/.github/actions/windows_plain_smoke_test
       with:
         template: .\templates\experimental\wsl2.yaml
+        launch-default-distro-during-stop: 'true'
 
   windows-plain-qemu:
     # Like windows-plain-wsl2, for the QEMU driver. The reverse-sshfs mount
