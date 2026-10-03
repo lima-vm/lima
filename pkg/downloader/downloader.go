@@ -864,7 +864,7 @@ func matchLastModified(ctx context.Context, lastModifiedPath, url string) (match
 	if lmCached == "" {
 		return false, "<not cached>", "<not checked>", nil
 	}
-	resp, err := httpclientutil.Head(ctx, http.DefaultClient, url)
+	resp, err := httpclientutil.Head(ctx, httpclientutil.RedirectSafeClient(), url)
 	if err != nil {
 		return false, lmCached, "<failed to fetch remote>", err
 	}
@@ -892,7 +892,7 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 	}
 	logrus.Debugf("downloading %#q into %#q", url, localPath)
 
-	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
+	resp, err := httpclientutil.Get(ctx, httpclientutil.RedirectSafeClient(), url)
 	if err != nil {
 		return err
 	}
