@@ -6,7 +6,7 @@ weight: 2
 
 [bypass4netns](https://github.com/rootless-containers/bypass4netns) is an experimental accelerator for rootless networking.
 
-On macOS hosts, it is highly recommended to use the [vzNAT](../../../../config/network/vmnet.md#vznat) networking in conjunction
+On macOS hosts, it is highly recommended to use the [vzNAT]({{< ref "/docs/config/network/vmnet#vznat" >}}) networking in conjunction
 to reduce the overhead of Lima's user-mode networking:
 
 ```bash

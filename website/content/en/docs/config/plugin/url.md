@@ -15,7 +15,7 @@ Lima's template locator supports custom URL schemes through plugins. A plugin na
 
 When Lima encounters a URL with an unrecognized scheme (e.g. `dev:webapp`), it:
 
-1. Searches for an executable named `limactl-url-dev` using the standard [plugin discovery](../cli/#plugin-discovery) mechanism
+1. Searches for an executable named `limactl-url-dev` using the standard [plugin discovery]({{< ref "/docs/config/plugin/cli#plugin-discovery" >}}) mechanism
 2. Calls the plugin with the part after the colon as its sole argument (in this case, `webapp`)
 3. Reads the plugin's stdout, which must be either a URL (with any supported scheme) or a local file path
 
@@ -118,7 +118,7 @@ base:
 
 ## Composing schemes
 
-Handlers can call `limactl template url` to resolve other schemes, including [`github:`](../../templates/github/). This lets a handler build on existing schemes rather than constructing raw URLs itself.
+Handlers can call `limactl template url` to resolve other schemes, including [`github:`]({{< ref "/docs/templates/github" >}}). This lets a handler build on existing schemes rather than constructing raw URLs itself.
 
 ### Track the latest release
 

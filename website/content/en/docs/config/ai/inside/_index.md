@@ -7,5 +7,5 @@ Lima is useful for running AI agents (e.g., Claude Code, Codex, Gemini)
 inside a VM, so as to prevent agents from directly reading, writing, or executing the host files.
 
 See also:
-- [Examples » AI](../../../examples/ai.md).
-- [Config » GPU](../../gpu.md)
+- [Examples » AI]({{< ref "/docs/examples/ai" >}}).
+- [Config » GPU]({{< ref "/docs/config/gpu" >}})

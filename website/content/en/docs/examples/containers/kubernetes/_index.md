@@ -64,7 +64,7 @@ See also <https://github.com/rootless-containers/usernetes>.
 
 ## Multi-node
 
-A multi-node cluster can be created by creating multiple VMs connected via the [`lima:user-v2`](../../../config/network/user-v2.md) network.
+A multi-node cluster can be created by creating multiple VMs connected via the [`lima:user-v2`]({{< ref "/docs/config/network/user-v2" >}}) network.
 
 The following templates are designed to support multi-node mode:
 - `k8s` (since Lima v2.0)

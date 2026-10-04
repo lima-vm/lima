@@ -39,5 +39,5 @@ Prerequisites:
 
 ## Plain mode
 The guest agent, containerd, and automatic port forwarding are not available on
-FreeBSD guests regardless of the mode, so [plain mode](../../config/plain.md)
+FreeBSD guests regardless of the mode, so [plain mode]({{< ref "/docs/config/plain" >}})
 additionally disables only the host directory mounts (on FreeBSD 15.1 and later).

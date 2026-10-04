@@ -50,7 +50,7 @@ make ADDITIONAL_DRIVERS=krunkit additional-drivers
 cp -a _output/libexec/lima/lima-driver-krunkit /usr/local/libexec/lima/
 ```
 
-See also [Developers' guide » Virtual Machine Drivers](../../dev/drivers.md).
+See also [Developers' guide » Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}).
 
 ## Quick start
 
@@ -100,7 +100,7 @@ You can now chat with the model.
 
 ### 2) Run models without containers (hard way)
 
-This path builds and installs dependencies (which can take some time. For faster builds, allocate more CPUs and memory to the VM. See [`options`](../../reference/limactl_start/#options)). Use Fedora as the image.
+This path builds and installs dependencies (which can take some time. For faster builds, allocate more CPUs and memory to the VM. See [`options`](/docs/reference/limactl_start/#options)). Use Fedora as the image.
 
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
@@ -211,4 +211,4 @@ and enjoy chatting with the AI model.
 - To verify GPU/Vulkan in the guest container or VM, use tools like `vulkaninfo --summary`.
 - AI models on containers can run on any Linux distribution but without containers Fedora is required.
 - For more information about usage of `llama-cli`. See [llama.cpp](https://github.com/ggml-org/llama.cpp) `README.md`.
-- Driver architecture details: see [Virtual Machine Drivers](../../dev/drivers).
+- Driver architecture details: see [Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}).

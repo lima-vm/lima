@@ -57,7 +57,7 @@ to execute tests, with a virtual machine template file, e.g.,:
 ## CI
 
 [`.github/workflows/test.yml`](https://github.com/lima-vm/lima/blob/master/.github/workflows/test.yml)
-executes the tests on the GitHub Actions with the ["Tier 1"](../../templates/) templates.
+executes the tests on the GitHub Actions with the ["Tier 1"]({{< ref "/docs/templates" >}}) templates.
 
 Most tests are executed on Linux runners, as macOS runners are slow and flaky.
 

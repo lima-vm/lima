@@ -120,10 +120,10 @@ target OS release if needed.
 - No support for turning off the video display.
 - No support for automatic port forwarding.
   Use `ssh -L` to manually set up port forwarding, or,
-  use the [`vzNAT`](../../config/network/vmnet.md#vznat) network to access the guest by its IP.
+  use the [`vzNAT`]({{< ref "/docs/config/network/vmnet#vznat" >}}) network to access the guest by its IP.
 - No support for installing custom `caCerts`
 
 ## Plain mode
 containerd and automatic port forwarding are not available on macOS guests regardless
-of the mode, so [plain mode](../../config/plain.md) additionally disables only the
+of the mode, so [plain mode]({{< ref "/docs/config/plain" >}}) additionally disables only the
 host directory mounts.

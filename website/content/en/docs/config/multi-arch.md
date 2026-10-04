@@ -13,9 +13,9 @@ Lima supports several modes for running Intel-on-ARM and ARM-on-Intel:
 | ⚡ Requirement | QEMU, lima-additional-guestagents |
 |---------------|-----------------------------------|
 
-Lima can run a VM with a foreign architecture, using [QEMU](./vmtype/qemu.md).
+Lima can run a VM with a foreign architecture, using [QEMU]({{< ref "/docs/config/vmtype/qemu" >}}).
 
-For [port forwarding](./port.md), the [`lima-additional-guestagents`](../installation/) package has to be installed on the host.
+For [port forwarding]({{< ref "/docs/config/port" >}}), the [`lima-additional-guestagents`]({{< ref "/docs/installation" >}}) package has to be installed on the host.
 
 An example configuration:
 {{< tabpane text=true >}}
@@ -84,7 +84,7 @@ See also https://github.com/containerd/nerdctl/blob/main/docs/multi-platform.md
 |-------------------|----------------------------------|
 
 [Rosetta](https://developer.apple.com/documentation/virtualization/running_intel_binaries_in_linux_vms_with_rosetta) is known to be much faster than QEMU User Mode Emulation.
-Rosetta is available for [VZ](../vmtype/#vz) instances on ARM hosts.
+Rosetta is available for [VZ]({{< ref "/docs/config/vmtype#vz" >}}) instances on ARM hosts.
 
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}

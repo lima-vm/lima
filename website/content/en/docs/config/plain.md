@@ -9,7 +9,7 @@ forwarding, and the built-in containerd.
 
 It is useful when you want to provision the guest with plain old `ssh` and `rsync`,
 without relying on Lima-specific integrations. See the
-[GitHub Actions example](../examples/gha.md#plain-mode) for a typical use case.
+[GitHub Actions example]({{< ref "/docs/examples/gha#plain-mode" >}}) for a typical use case.
 
 ## Enabling plain mode
 
@@ -60,16 +60,16 @@ Dependency packages such as `sshfs` are not installed into the VM either.
 
 `limactl shell <instance>` and `ssh` both work, as in a non-plain instance.
 In plain mode, plain `ssh` is often preferred to keep the guest free of
-Lima-specific conventions. See [SSH](../usage/ssh.md) for details.
+Lima-specific conventions. See [SSH]({{< ref "/docs/usage/ssh" >}}) for details.
 
 ## See also
 
 This page assumes Linux as the guest OS.
 
-For OS-specific differences, see the [Guest OS](../usage/guests/_index.md) pages:
+For OS-specific differences, see the [Guest OS]({{< ref "/docs/usage/guests" >}}) pages:
 
-- [FreeBSD](../usage/guests/freebsd.md#plain-mode)
-- [macOS](../usage/guests/macos.md#plain-mode)
+- [FreeBSD]({{< ref "/docs/usage/guests/freebsd#plain-mode" >}})
+- [macOS]({{< ref "/docs/usage/guests/macos#plain-mode" >}})
 
 For the underlying mechanics (boot scripts, `LIMA_CIDATA_PLAIN`, guest agent
-injection), see the [internals reference](../dev/internals.md).
+injection), see the [internals reference]({{< ref "/docs/dev/internals" >}}).

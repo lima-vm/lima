@@ -13,14 +13,14 @@ The following features are experimental and subject to change:
 - `audio.device`, `audio.interface`, and `audio.microphone`
 - `mountInotify: true`
 - `tpm: true`
-- `user.passwordlessSudo` (See [Sudo](../config/sudo))
-- `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers](../dev/drivers))
-- [`vmType: krunkit`](../config/vmtype/krunkit.md)
-- [`vmType:hcs`]((../config/vmtype/hcs.md))
-- [`github` URL scheme](../templates/github.md): referencing templates on GitHub with `github:` URLs
-- [macOS guests](../usage/guests/macos.md)
-- [FreeBSD guests](../usage/guests/freebsd.md)
-- [Windows guests](../usage/guests/windows.md)
+- `user.passwordlessSudo` (See [Sudo]({{< ref "/docs/config/sudo" >}}))
+- `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}))
+- [`vmType: krunkit`]({{< ref "/docs/config/vmtype/krunkit" >}})
+- [`vmType:hcs`]({{< ref "/docs/config/vmtype/hcs" >}})
+- [`github` URL scheme]({{< ref "/docs/templates/github" >}}): referencing templates on GitHub with `github:` URLs
+- [macOS guests]({{< ref "/docs/usage/guests/macos" >}})
+- [FreeBSD guests]({{< ref "/docs/usage/guests/freebsd" >}})
+- [Windows guests]({{< ref "/docs/usage/guests/windows" >}})
 
 The following commands are experimental and subject to change:
 

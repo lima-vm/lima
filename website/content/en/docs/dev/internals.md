@@ -173,11 +173,11 @@ See [Building Ansible inventories](https://docs.ansible.com/ansible/latest/inven
 - `network-config`: [Cloud-init Networking Config Version 2](https://docs.cloud-init.io/en/latest/reference/network-config-format-v2.html)
 - `lima.env`: The `LIMA_CIDATA_*` environment variables (see below) available during `boot.sh` processing
 - `param.env`: The `PARAM_*` environment variables corresponding to the `param` settings from `lima.yaml`
-- `lima-guestagent`: Lima guest agent binary. On Linux, omitted in [plain mode](../config/plain.md) (the guest agent daemon does not run). On macOS, always injected, as it is required for fake-cloud-init.
+- `lima-guestagent`: Lima guest agent binary. On Linux, omitted in [plain mode]({{< ref "/docs/config/plain" >}}) (the guest agent daemon does not run). On macOS, always injected, as it is required for fake-cloud-init.
 - `nerdctl-full.tgz`: [`nerdctl-full-<VERSION>-<OS>-<ARCH>.tar.gz`](https://github.com/containerd/nerdctl/releases)
 - `boot.sh`: Boot script
 - `boot.<OS>/*`: Boot script modules
-- `boot.essential.<OS>/*`: Essential boot script modules, executed in [plain mode](../config/plain.md) too (unlike `boot.<OS>/*`, which is skipped in plain mode).
+- `boot.essential.<OS>/*`: Essential boot script modules, executed in [plain mode]({{< ref "/docs/config/plain" >}}) too (unlike `boot.<OS>/*`, which is skipped in plain mode).
 - `util/*`: Utility command scripts, executed in the boot script modules
 - `provision.data/*`: Custom provision files (data)
 - `provision.dependency/*`: Custom provision scripts (dependency)
@@ -239,7 +239,7 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_VIRTIO_PORT`: the virtio-serial port name used by the guest agent (empty when virtio-serial is not used).
 - `LIMA_CIDATA_GUEST_OS_VERSION`: for macOS guests on the `vz` driver, the macOS version of the restore image the instance was created from, e.g. `27.0.0`. Empty for other guests and for instances created before this was recorded.
 - `LIMA_CIDATA_GUEST_OS_BUILD_VERSION`: the corresponding build number, e.g. `26A428`. Empty in the same cases.
-- `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in [plain mode](../config/plain.md) (no mounts, port forwarding, or containerd), empty otherwise.
+- `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in [plain mode]({{< ref "/docs/config/plain" >}}) (no mounts, port forwarding, or containerd), empty otherwise.
 - `LIMA_CIDATA_NO_CLOUD_INIT`: set to "1" if cloud-init should be skipped on this boot, empty otherwise.
 
 
