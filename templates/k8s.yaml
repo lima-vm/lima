@@ -18,7 +18,7 @@
 # (The parameters for the start command printed here)
 #
 # $ limactl start --name k8s-1 --network lima:user-v2 template:k8s \
-#                 --param url="<ADDRESS_FROM_ABOVE>" --param token="<TOKEN_FROM_ABOVE>" \
+#                 --param url="https://<ADDRESS_FROM_ABOVE>" --param token="<TOKEN_FROM_ABOVE>" \
 #                 --param discoveryTokenCaCertHash="<DISCOVERY_TOKEN_CA_CERT_HASH_FROM_ABOVE>"
 
 minimumLimaVersion: 2.0.0
@@ -139,6 +139,7 @@ provision:
     EOF
     kubeadm init --config /etc/kubeadm-config.yaml
     {{else}}
+    API_SERVER_ENDPOINT=$(echo "{{.Param.url}}" | sed -e "s|https://||")
     cat <<EOF >/etc/kubeadm-config.yaml
     kind: JoinConfiguration
     apiVersion: kubeadm.k8s.io/v1beta4
@@ -146,7 +147,7 @@ provision:
       criSocket: unix:///run/containerd/containerd.sock
     discovery:
       bootstrapToken:
-        apiServerEndpoint: "{{.Param.url}}"
+        apiServerEndpoint: "${API_SERVER_ENDPOINT}"
         token: "{{.Param.token}}"
         caCertHashes:
         - "{{.Param.discoveryTokenCaCertHash}}"
@@ -261,6 +262,8 @@ param:
   version: "stable"
   # The flannel version is either "latest" or "v0.xx.y"
   flannelVersion: "v0.28.9"
+  # The control plane to join, as printed by `kubeadm token create --print-join-command`:
+  # url ("https://<ADDRESS>:6443"), token ("..."), discoveryTokenCaCertHash ("sha256:...")
   url: ""
   token: ""
   discoveryTokenCaCertHash: ""
