@@ -196,9 +196,11 @@ func (x *IPPort) GetPort() int32 {
 }
 
 type Inotify struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	MountPath     string                 `protobuf:"bytes,1,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
-	Time          *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"`
+	state     protoimpl.MessageState `protogen:"open.v1"`
+	MountPath string                 `protobuf:"bytes,1,opt,name=mount_path,json=mountPath,proto3" json:"mount_path,omitempty"`
+	Time      *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=time,proto3" json:"time,omitempty"`
+	// removed is set when mount_path was removed on the host.
+	Removed       bool `protobuf:"varint,3,opt,name=removed,proto3" json:"removed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -245,6 +247,13 @@ func (x *Inotify) GetTime() *timestamppb.Timestamp {
 		return x.Time
 	}
 	return nil
+}
+
+func (x *Inotify) GetRemoved() bool {
+	if x != nil {
+		return x.Removed
+	}
+	return false
 }
 
 type TunnelMessage struct {
@@ -443,11 +452,12 @@ const file_guestservice_proto_rawDesc = "" +
 	"\x06IPPort\x12\x1a\n" +
 	"\bprotocol\x18\x01 \x01(\tR\bprotocol\x12\x0e\n" +
 	"\x02ip\x18\x02 \x01(\tR\x02ip\x12\x12\n" +
-	"\x04port\x18\x03 \x01(\x05R\x04port\"X\n" +
+	"\x04port\x18\x03 \x01(\x05R\x04port\"r\n" +
 	"\aInotify\x12\x1d\n" +
 	"\n" +
 	"mount_path\x18\x01 \x01(\tR\tmountPath\x12.\n" +
-	"\x04time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x04time\"\x96\x01\n" +
+	"\x04time\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampR\x04time\x12\x18\n" +
+	"\aremoved\x18\x03 \x01(\bR\aremoved\"\x96\x01\n" +
 	"\rTunnelMessage\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1a\n" +
 	"\bprotocol\x18\x02 \x01(\tR\bprotocol\x12\x12\n" +

@@ -621,6 +621,7 @@ func TestFillDefault(t *testing.T) {
 				SSHFS: limatype.SSHFS{
 					Cache:          new(false),
 					FollowSymlinks: new(true),
+					ReadonlyNames:  []string{".git"},
 				},
 				NineP: limatype.NineP{
 					SecurityModel:   new("mapped-file"),
@@ -724,6 +725,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Mounts[0].Writable = new(true)
 	expect.Mounts[0].SSHFS.Cache = new(false)
 	expect.Mounts[0].SSHFS.FollowSymlinks = new(true)
+	expect.Mounts[0].SSHFS.ReadonlyNames = []string{".git"}
 	expect.Mounts[0].NineP.SecurityModel = new("mapped-file")
 	expect.Mounts[0].NineP.ProtocolVersion = new("9p2000")
 	expect.Mounts[0].NineP.Msize = new("8KiB")
