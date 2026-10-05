@@ -25,9 +25,12 @@ import (
 	"github.com/digitalocean/go-qemu/qmp"
 	"github.com/digitalocean/go-qemu/qmp/raw"
 	"github.com/docker/go-units"
+	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/mattn/go-shellwords"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -180,7 +183,11 @@ func execImgCommand(ctx context.Context, cfg Config, args ...string) (string, er
 	return string(b), err
 }
 
-func Del(ctx context.Context, cfg Config, run bool, tag string) error {
+func Del(ctx context.Context, cfg Config, run bool, id string) error {
+	tag, err := snapshotTagForID(ctx, cfg, run, id)
+	if err != nil {
+		return err
+	}
 	if run {
 		out, err := sendHmpCommand(cfg, "delvm", tag)
 		// there can still be output, even if no error!
@@ -190,7 +197,7 @@ func Del(ctx context.Context, cfg Config, run bool, tag string) error {
 		return err
 	}
 	// -d  deletes a snapshot
-	_, err := execImgCommand(ctx, cfg, "snapshot", "-d", tag)
+	_, err = execImgCommand(ctx, cfg, "snapshot", "-d", tag)
 	return err
 }
 
@@ -208,7 +215,11 @@ func Save(ctx context.Context, cfg Config, run bool, tag string) error {
 	return err
 }
 
-func Load(ctx context.Context, cfg Config, run bool, tag string) error {
+func Load(ctx context.Context, cfg Config, run bool, id string) error {
+	tag, err := snapshotTagForID(ctx, cfg, run, id)
+	if err != nil {
+		return err
+	}
 	if run {
 		out, err := sendHmpCommand(cfg, "loadvm", tag)
 		// there can still be output, even if no error!
@@ -218,29 +229,71 @@ func Load(ctx context.Context, cfg Config, run bool, tag string) error {
 		return err
 	}
 	// -a  applies a snapshot
-	_, err := execImgCommand(ctx, cfg, "snapshot", "-a", tag)
+	_, err = execImgCommand(ctx, cfg, "snapshot", "-a", tag)
 	return err
 }
 
-// List returns a space-separated list of all snapshots, with header and newlines.
-func List(ctx context.Context, cfg Config, run bool) (string, error) {
-	if run {
-		out, err := sendHmpCommand(cfg, "info", "snapshots")
-		if err == nil {
-			out = strings.ReplaceAll(out, "\r", "")
-			out = strings.Replace(out, "List of snapshots present on all disks:\n", "", 1)
-			out = strings.Replace(out, "There is no snapshot available.\n", "", 1)
+// List returns all snapshots stored in the instance disk.
+func List(_ context.Context, cfg Config, _ bool) ([]driver.Snapshot, error) {
+	diskPath := filepath.Join(cfg.InstanceDir, filenames.Disk)
+	disk, err := os.Open(diskPath)
+	if err != nil {
+		return nil, err
+	}
+	defer disk.Close()
+
+	img, err := qcow2reader.Open(disk)
+	if err != nil {
+		return nil, err
+	}
+	defer img.Close()
+
+	snapshotReader, ok := img.(image.SnapshotReader)
+	if !ok {
+		return nil, fmt.Errorf("image type %q does not support snapshots", img.Type())
+	}
+	imageSnapshots, err := snapshotReader.Snapshots()
+	if err != nil {
+		return nil, err
+	}
+
+	snapshots := make([]driver.Snapshot, len(imageSnapshots))
+	for i, snapshot := range imageSnapshots {
+		snapshots[i] = driver.Snapshot{
+			ID:        snapshot.ID,
+			Tag:       snapshot.Name,
+			CreatedAt: snapshot.CreatedAt,
 		}
-		return out, err
 	}
-	// -l  lists all snapshots
-	args := []string{"snapshot", "-l"}
-	out, err := execImgCommand(ctx, cfg, args...)
-	if err == nil {
-		// remove the redundant heading, result is not machine-parseable
-		out = strings.Replace(out, "Snapshot list:\n", "", 1)
+	return snapshots, nil
+}
+
+func snapshotTagForID(ctx context.Context, cfg Config, run bool, id string) (string, error) {
+	snapshots, err := List(ctx, cfg, run)
+	if err != nil {
+		return "", err
 	}
-	return out, err
+	return findSnapshotTagByID(snapshots, id)
+}
+
+func findSnapshotTagByID(snapshots []driver.Snapshot, id string) (string, error) {
+	var tag string
+	for _, snapshot := range snapshots {
+		if snapshot.ID == id {
+			tag = snapshot.Tag
+			break
+		}
+	}
+	if tag == "" {
+		return "", fmt.Errorf("snapshot ID %q not found", id)
+	}
+
+	for _, snapshot := range snapshots {
+		if snapshot.ID != id && snapshot.Tag == tag {
+			return "", fmt.Errorf("snapshot ID %q has non-unique tag %q; QEMU cannot target it unambiguously", id, tag)
+		}
+	}
+	return tag, nil
 }
 
 func argValue(args []string, key string) (string, bool) {

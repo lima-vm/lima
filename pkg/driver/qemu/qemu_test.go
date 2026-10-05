@@ -12,10 +12,29 @@ import (
 	"github.com/coreos/go-semver/semver"
 	"gotest.tools/v3/assert"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
+
+func TestFindSnapshotTagByID(t *testing.T) {
+	snapshots := []driver.Snapshot{
+		{ID: "1", Tag: "initial"},
+		{ID: "2", Tag: "duplicate"},
+		{ID: "3", Tag: "duplicate"},
+	}
+
+	tag, err := findSnapshotTagByID(snapshots, "1")
+	assert.NilError(t, err)
+	assert.Equal(t, tag, "initial")
+
+	_, err = findSnapshotTagByID(snapshots, "2")
+	assert.ErrorContains(t, err, `snapshot ID "2" has non-unique tag "duplicate"`)
+
+	_, err = findSnapshotTagByID(snapshots, "missing")
+	assert.ErrorContains(t, err, `snapshot ID "missing" not found`)
+}
 
 func TestArgValue(t *testing.T) {
 	type testCase struct {

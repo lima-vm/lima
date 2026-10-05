@@ -796,13 +796,13 @@ func logPipeRoutine(r io.Reader, header string) {
 	}
 }
 
-func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, tag string) error {
+func (l *LimaQemuDriver) DeleteSnapshot(ctx context.Context, id string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Del(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
+	return Del(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, id)
 }
 
 func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
@@ -814,16 +814,16 @@ func (l *LimaQemuDriver) CreateSnapshot(ctx context.Context, tag string) error {
 	return Save(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
 }
 
-func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, tag string) error {
+func (l *LimaQemuDriver) ApplySnapshot(ctx context.Context, id string) error {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,
 		LimaYAML:    l.Instance.Config,
 	}
-	return Load(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, tag)
+	return Load(ctx, qCfg, l.Instance.Status == limatype.StatusRunning, id)
 }
 
-func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) (string, error) {
+func (l *LimaQemuDriver) ListSnapshots(ctx context.Context) ([]driver.Snapshot, error) {
 	qCfg := Config{
 		Name:        l.Instance.Name,
 		InstanceDir: l.Instance.Dir,

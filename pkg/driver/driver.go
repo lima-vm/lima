@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"time"
 
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -73,12 +74,22 @@ type GUI interface {
 	DisplayConnection(ctx context.Context) (string, error)
 }
 
+// Snapshot describes a VM snapshot.
+type Snapshot struct {
+	// ID is the primary driver-specific identifier and is unique when available.
+	ID string `json:"id,omitempty"`
+	// Tag is the human-readable snapshot name and is not necessarily unique.
+	Tag string `json:"tag"`
+	// CreatedAt is the time at which the snapshot was created, when available.
+	CreatedAt *time.Time `json:"createdAt,omitempty"`
+}
+
 // SnapshotManager defines operations for managing snapshots.
 type SnapshotManager interface {
 	CreateSnapshot(ctx context.Context, tag string) error
-	ApplySnapshot(ctx context.Context, tag string) error
-	DeleteSnapshot(ctx context.Context, tag string) error
-	ListSnapshots(ctx context.Context) (string, error)
+	ApplySnapshot(ctx context.Context, id string) error
+	DeleteSnapshot(ctx context.Context, id string) error
+	ListSnapshots(ctx context.Context) ([]Snapshot, error)
 }
 
 // GuestAgent defines operations for the guest agent.
