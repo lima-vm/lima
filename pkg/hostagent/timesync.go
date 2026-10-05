@@ -55,8 +55,7 @@ func (a *HostAgent) syncTimeOnce(ctx context.Context, prev, last time.Duration) 
 		logrus.WithError(err).Debug("Time sync: failed to get client")
 		return prev, last
 	}
-	prevRTT, lastRTT = syncGuestClock(ctx, client.SyncTime, prev, last, time.Now)
-	return prevRTT, lastRTT
+	return syncGuestClock(ctx, client.SyncTime, prev, last, time.Now)
 }
 
 // syncGuestClock sends the predicted guest receipt time and shifts the RTT window
@@ -65,7 +64,10 @@ func syncGuestClock(ctx context.Context, doSync func(context.Context, time.Time)
 	prev, last = prevIn, lastIn
 	sentAt := now()
 	// host_time is the predicted receipt time (issue 5543).
-	hostTime := compensatedHostTime(sentAt, oneWayDelay(prev, last))
+	// The delay comes from earlier round trips. Capping it at the guest's
+	// threshold stops an overestimate from stepping the guest ahead of the host.
+	delay := min(oneWayDelay(prev, last), guestagentapi.TimeSyncDriftThreshold)
+	hostTime := compensatedHostTime(sentAt, delay)
 	resp, err := doSync(ctx, hostTime)
 	if err != nil {
 		logrus.WithError(err).Debug("Time sync: RPC failed")
@@ -73,7 +75,7 @@ func syncGuestClock(ctx context.Context, doSync func(context.Context, time.Time)
 	}
 
 	// A response Error string still counts: the round trip completed.
-	prev, last = last, max(now().Sub(sentAt), 0)
+	prev, last = last, now().Sub(sentAt)
 
 	if resp.Error != "" {
 		logrus.Warnf("Time sync: guest failed to set time: %#q (drift was %dms)", resp.Error, resp.DriftMs)
@@ -89,16 +91,13 @@ func syncGuestClock(ctx context.Context, doSync func(context.Context, time.Time)
 }
 
 // oneWayDelay estimates host-to-guest delay as half the lesser of the two most
-// recent round trips. It is 0 when the latest sample is not positive, so the
-// first send is uncompensated and a single stall cannot aim the next tick ahead.
+// recent round trips. It is 0 until both samples are positive, so a single
+// slow round trip, the first one included, cannot aim the next tick ahead.
 func oneWayDelay(prev, last time.Duration) time.Duration {
-	if last <= 0 {
+	if prev <= 0 || last <= 0 {
 		return 0
 	}
-	if prev > 0 && prev < last {
-		return prev / 2
-	}
-	return last / 2
+	return min(prev, last) / 2
 }
 
 // compensatedHostTime is the predicted guest receipt time sent as host_time.
