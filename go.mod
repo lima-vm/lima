@@ -49,7 +49,7 @@ require (
 	github.com/modelcontextprotocol/go-sdk v1.8.0 // gomodjail:unconfined
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
-	github.com/pb33f/ordered-map/v2 v2.3.1
+	github.com/pb33f/ordered-map/v2 v2.3.2
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // gomodjail:unconfined
 	github.com/pkg/sftp v1.13.11 // gomodjail:unconfined
 	github.com/rjeczalik/notify v0.9.3 // gomodjail:unconfined
@@ -155,4 +155,5 @@ require (
 require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
+	github.com/pb33f/go-yaml v0.1.0 // indirect
 )
