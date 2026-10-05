@@ -157,3 +157,5 @@ require (
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/pb33f/go-yaml v0.1.0 // indirect
 )
+
+replace github.com/lima-vm/sshocker => github.com/sylvinus/sshocker v0.0.0-20260930083359-7234d0452e01
