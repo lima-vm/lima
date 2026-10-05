@@ -73,7 +73,22 @@ If you use AI-generated code, you must:
 
 #### Mention AI usage
 
-If you used AI tools while preparing your pull request, disclose that in the pull request description using an `Assisted-by: AI_TOOL_NAME` trailer (see [Linux kernel coding assistants policy](https://docs.kernel.org/process/coding-assistants.html)). `Co-Authored-By` trailers added by AI tools are also acceptable and will not block a pull request from being merged.
+If you used an AI coding assistant while preparing a change, disclose it with an `Assisted-by:` tag:
+
+- `Assisted-by: LLM` is the standard form; any free-form variant naming the assistant and/or model
+  (e.g. `Assisted-by: Claude Opus`) is equally acceptable. The tag is a free-form, self-asserted
+  disclosure - it just needs to make visible to reviewers that an LLM helped.
+- Put it where it is most visible for the change: in the squashed commit message (the durable place,
+  as in the Linux kernel) or in the pull request "AI Usage" section - both are accepted.
+- If your assistant added a `Co-Authored-By` trailer, that is also accepted as a disclosure, even
+  though an assistant cannot be an author in the legal or copyright sense.
+- The exception is `Signed-off-by`: that must always be you. See
+  [Developer Certificate of Origin](#developer-certificate-of-origin-dco) above.
+
+(For context, this policy is modeled on the [Linux kernel's AI coding assistants
+policy](https://docs.kernel.org/process/coding-assistants.html), without the
+optional analysis-tool entries, which do not apply to Lima's Go and shell
+tooling.)
 
 #### Enforcement
 
