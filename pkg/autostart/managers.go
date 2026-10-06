@@ -133,7 +133,11 @@ func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getE
 		"Binary":   selfExeAbs,
 		"Instance": instName,
 		"LimaHome": limaHome,
-		"WorkDir":  workDir,
+		// launchd starts agents with a minimal PATH, so carry the registering shell's
+		// PATH to let limactl find tools such as qemu-system-* installed by Homebrew.
+		// The systemd template does not use it.
+		"Path":    os.Getenv("PATH"),
+		"WorkDir": workDir,
 	}
 	maps.Copy(data, t.extraTemplateVars)
 	return textutil.ExecuteTemplate(t.template, data)
