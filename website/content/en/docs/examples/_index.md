@@ -63,7 +63,7 @@ kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
 
 - <http://127.0.0.1:8080> is accessible from the host, as well as from the VM.
 
-- See more [examples](./containers/).
+- See more [examples]({{< ref "/docs/examples/containers" >}}).
 
 ## Advanced configuration
 

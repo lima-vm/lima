@@ -42,9 +42,9 @@ weight: 6
 ### Generic
 #### "How does Lima work?"
 
-- Hypervisor: [QEMU (default on Linux), or Virtualization.framework (default on macOS)](../config/vmtype/)
-- Filesystem sharing: [Reverse SSHFS, virtio-9p-pci aka virtfs (default for QEMU), or virtiofs (default for Virtualization.framework)](../config/mount/)
-- Port forwarding: [`ssh -L`](../config/port), automated by watching `/proc/net/tcp` and `iptables` events in the guest
+- Hypervisor: [QEMU (default on Linux), or Virtualization.framework (default on macOS)]({{< ref "/docs/config/vmtype" >}})
+- Filesystem sharing: [Reverse SSHFS, virtio-9p-pci aka virtfs (default for QEMU), or virtiofs (default for Virtualization.framework)]({{< ref "/docs/config/mount" >}})
+- Port forwarding: [`ssh -L`]({{< ref "/docs/config/port" >}}), automated by watching `/proc/net/tcp` and `iptables` events in the guest
 
 #### "What's my login password?"
 For Linux and FreeBSD guests, the password is disabled and locked by default.
@@ -65,7 +65,7 @@ AlmaLinux, Alpine, Arch Linux, Debian, Fedora, openSUSE, Oracle Linux, and Rocky
 See [`./templates/`](./templates/).
 {{% /fixlinks %}}
 
-Starting with Lima v2.1, non-Linux guests such as [macOS guests](../usage/guests/macos.md) are experimentally supported too.
+Starting with Lima v2.1, non-Linux guests such as [macOS guests]({{< ref "/docs/usage/guests/macos" >}}) are experimentally supported too.
 
 An image for Linux guests has to satisfy the following requirements:
 - systemd or OpenRC
@@ -176,7 +176,7 @@ Note: **Only** on macOS versions **before** 10.15.7 you might need to add this e
 
 #### error "killed -9"
 - make sure qemu is codesigned, See ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error).
-- if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over](../installation/).
+- if you are on macOS 10.15.7 or 11.0 or later make sure the entitlement `com.apple.vm.hypervisor` is **not** added. It only works on older macOS versions. You can clear the codesigning with `codesign --remove-signature /usr/local/bin/qemu-system-x86_64` and [start over]({{< ref "/docs/installation" >}}).
 
 #### "QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"
 This error is known to happen when running an image of RHEL8-compatible distribution such as Rocky Linux 8.x on Intel Mac.

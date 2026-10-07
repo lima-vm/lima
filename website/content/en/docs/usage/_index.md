@@ -31,9 +31,9 @@ limactl start default
 ```
 
 See also the command reference:
-- [`limactl create`](../reference/limactl_create/)
-- [`limactl start`](../reference/limactl_start/)
-- [`limactl edit`](../reference/limactl_edit/)
+- [`limactl create`](/docs/reference/limactl_create/)
+- [`limactl start`](/docs/reference/limactl_start/)
+- [`limactl edit`](/docs/reference/limactl_edit/)
 
 ### Executing Linux commands
 Run `limactl shell <INSTANCE> <COMMAND>` to launch `<COMMAND>` on the VM:
@@ -42,7 +42,7 @@ limactl shell default uname -a
 ```
 
 See also the command reference:
-- [`limactl shell`](../reference/limactl_shell/)
+- [`limactl shell`](/docs/reference/limactl_shell/)
 
 For the "default" instance, this command can be shortened as `lima <COMMAND>`.
 ```bash

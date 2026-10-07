@@ -5,7 +5,7 @@ weight: 50
 
 Lima supports several methods for mounting the host filesystem into the guest.
 
-> **See also:** In [plain mode](./plain.md), all filesystem mounts are disabled.
+> **See also:** In [plain mode]({{< ref "/docs/config/plain" >}}), all filesystem mounts are disabled.
 
 The default mount type is shown in the following table:
 
@@ -140,7 +140,7 @@ mounts:
 {{< /tabpane >}}
 
 #### Caveats
-- For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype`](../vmtype/).
+- For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype`]({{< ref "/docs/config/vmtype" >}}).
 - For Linux, the "virtiofs" mount type requires the [Rust version of virtiofsd](https://gitlab.com/virtio-fs/virtiofsd).
   Using the version from QEMU (usually packaged as `qemu-virtiofsd`) will *not* work, as it requires root access to run.
 

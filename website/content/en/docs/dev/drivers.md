@@ -8,7 +8,7 @@ weight: 15
 
 Lima supports two types of drivers: **internal** and **external**. This architecture allows for extensibility and platform-specific implementations. Drivers are unware whether they are internal or external.
 
-> **💡 See also**: [VM Types](../../config/vmtype) for user configuration of different virtualization backends.
+> **💡 See also**: [VM Types]({{< ref "/docs/config/vmtype" >}}) for user configuration of different virtualization backends.
 
 
 ## Internal vs External Drivers

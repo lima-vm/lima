@@ -4,7 +4,7 @@ weight: 90
 ---
 
 Lima VM supports GPU acceleration for the following VM types:
-- [krunkit](./vmtype/krunkit.md).
+- [krunkit]({{< ref "/docs/config/vmtype/krunkit" >}}).
 
 {{% alert title="Note" color=success %}}
 "Lima" in this web site refers to [the Lima VM project](https://lima-vm.io).

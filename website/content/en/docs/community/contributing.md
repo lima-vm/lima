@@ -48,11 +48,11 @@ Before opening a pull request, open an issue first and explain your idea. Approv
 #### One fix per pull request
 Each pull request should fix one specific thing. Do not mix unrelated changes in one pull request. For large, ground-breaking work that needs many changes to test CI or integration, a draft pull request is okay first. After that, split the work into smaller pull requests that depend on each other.
 
-It is highly suggested to add [tests](../../dev/testing/) for every non-trivial pull requests.
+It is highly suggested to add [tests]({{< ref "/docs/dev/testing" >}}) for every non-trivial pull requests.
 A test can be implemented as a unit test rather than an integration test when it is possible,
 to avoid slowing the integration test CI.
 
-Usually, all commits in a PR need to be squashed to a single commit before it can be merged. Rebase on the latest `master` branch in case GitHub shows that there are merge conflicts! For tips on squashing commits and rebasing before submitting your pull request, see [Git Tips](../dev/git.md).
+Usually, all commits in a PR need to be squashed to a single commit before it can be merged. Rebase on the latest `master` branch in case GitHub shows that there are merge conflicts! For tips on squashing commits and rebasing before submitting your pull request, see [Git Tips]({{< ref "/docs/dev/git" >}}).
 
 ### AI Contribution Rules
 
@@ -130,8 +130,8 @@ See also <https://github.com/cncf/foundation/blob/main/policies-guidance/dco-gui
 
 ### Merging pull requests
 
-[Committers](../governance) can merge pull requests.
-[Reviewers](../governance) can approve, but cannot merge, pull requests.
+[Committers]({{< ref "/docs/community/governance" >}}) can merge pull requests.
+[Reviewers]({{< ref "/docs/community/governance" >}}) can approve, but cannot merge, pull requests.
 
 A Committer shouldn't merge their own pull requests without approval by at least one other Maintainer (Committer or Reviewer).
 

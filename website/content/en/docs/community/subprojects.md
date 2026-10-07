@@ -14,4 +14,4 @@ Some portions of Lima are useful for other projects too and split out to separat
 
 See also <https://github.com/lima-vm> for other subprojects.
 
-The maintainership of the subprojects corresponds to the [maintainership](../governance) of Lima itself.
+The maintainership of the subprojects corresponds to the [maintainership]({{< ref "/docs/community/governance" >}}) of Lima itself.

@@ -37,7 +37,7 @@ export PATH=$HOME/.local/bin:$PATH
 
 > **⚠️ Building drivers as external mode is experimental**
 
-Lima supports building drivers as external executables. For detailed information on creating and building external drivers, see the [Virtual Machine Drivers](../../dev/drivers) guide.
+Lima supports building drivers as external executables. For detailed information on creating and building external drivers, see the [Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}) guide.
 
 ## Packaging Lima for Distribution
 After building Lima from source, you may want to package it for installation on other machines:

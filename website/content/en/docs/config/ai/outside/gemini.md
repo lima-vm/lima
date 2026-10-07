@@ -18,7 +18,7 @@ limactl-mcp version 2.0.0-alpha.1
 ```
 
 The `limactl mcp` plugin is bundled in Lima since v2.0, however, it may not be installed
-depending on the method of the [installation](../../../installation/).
+depending on the method of the [installation]({{< ref "/docs/installation" >}}).
 
 ## Configuration
 1. Run the default Lima instance, with a mount of your project directory:

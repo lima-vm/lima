@@ -18,8 +18,8 @@ or
 nerdctl.lima run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 ```
 
-- If you have installed Lima by [`make install`](../../../installation/source.md), the `nerdctl.lima` command is also available as `nerdctl`.
-- If you have installed Lima by [`brew install lima`](../../../installation/_index.md), you may make an alias (or a symlink) by yourself:
+- If you have installed Lima by [`make install`]({{< ref "/docs/installation/source" >}}), the `nerdctl.lima` command is also available as `nerdctl`.
+- If you have installed Lima by [`brew install lima`]({{< ref "/docs/installation" >}}), you may make an alias (or a symlink) by yourself:
   `alias nerdctl=nerdctl.lima`
 {{% /tab %}}
 {{% tab header="Rootful" %}}

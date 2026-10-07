@@ -5,7 +5,7 @@ weight: 31
 
 Lima supports automatic port-forwarding of localhost ports from guest to host.
 
-> **See also:** In [plain mode](./plain.md), dynamic port forwarding is disabled and only rules with `static: true` are forwarded.
+> **See also:** In [plain mode]({{< ref "/docs/config/plain" >}}), dynamic port forwarding is disabled and only rules with `static: true` are forwarded.
 
 ## Port forwarding types
 
@@ -81,14 +81,14 @@ LIMA_SSH_PORT_FORWARDER=false limactl start
 
 To access a guest's ports by its IP address, connect the guest to the `vzNAT` or the `lima:shared` network.
 
-The `vzNAT` network is extremely faster and easier to use, however, `vzNAT` is only available for [VZ](./vmtype/vz.md) guests.
+The `vzNAT` network is extremely faster and easier to use, however, `vzNAT` is only available for [VZ]({{< ref "/docs/config/vmtype/vz" >}}) guests.
 
 ```bash
 limactl start --network vzNAT
 lima ip addr show lima0
 ```
 
-See [Config » Network » VMNet networks](./network/vmnet.md) for the further information.
+See [Config » Network » VMNet networks]({{< ref "/docs/config/network/vmnet" >}}) for the further information.
 
 ## Benchmarks
 

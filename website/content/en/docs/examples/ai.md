@@ -136,7 +136,7 @@ See also <https://github.com/anomalyco/opencode>.
  | ⚡ Requirement | Lima >= 2.1 |
  |----------------|-------------|
 
-The `--sync` flag for [`limactl shell`](../reference/limactl_shell) enables bidirectional synchronization of your host working directory with the guest VM. This is particularly useful when running AI agents (like Claude, Copilot, or Gemini) inside VMs to prevent them from accidentally modifying or breaking files on your host system.
+The `--sync` flag for [`limactl shell`](/docs/reference/limactl_shell/) enables bidirectional synchronization of your host working directory with the guest VM. This is particularly useful when running AI agents (like Claude, Copilot, or Gemini) inside VMs to prevent them from accidentally modifying or breaking files on your host system.
 
 ### Comparison with `mount`
 
@@ -194,5 +194,5 @@ limactl shell --sync . default
 
 ## See also
 
-- [Config » AI](../config/ai/)
-- [Config » GPU](../config/gpu.md)
+- [Config » AI]({{< ref "/docs/config/ai" >}})
+- [Config » GPU]({{< ref "/docs/config/gpu" >}})

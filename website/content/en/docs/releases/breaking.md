@@ -12,7 +12,7 @@ weight: 20
   update their snapshot implementations and regenerate their protobuf bindings.
 
 ## v2.2.0
-- The default [`socket_vmnet` group](../config/network/vmnet.md) in `networks.yaml` was changed from `everyone` to
+- The default [`socket_vmnet` group]({{< ref "/docs/config/network/vmnet" >}}) in `networks.yaml` was changed from `everyone` to
   `admin`. A non-admin user must set `group` to a group they belong to (e.g. `staff`).
 - The default VM driver on Windows hosts was changed from `wsl2` to `qemu`,
   as `wsl2` is not compatible with most templates.
@@ -33,8 +33,8 @@ weight: 20
 - The `lima-additional-guestagent` package was split from the main `lima` package.
 
 ## [v1.0.0](https://github.com/lima-vm/lima/releases/tag/v1.0.0)
-- The default [VM type](../config/vmtype/_index.md) was changed from `qemu` to `vz` on macOS hosts with the support for `vz`.
-- The default [mount type](../config/mount.md) was changed from `reverse-sshfs` to `virtiofs` for `vz`, `9p` for `qemu`.
+- The default [VM type]({{< ref "/docs/config/vmtype" >}}) was changed from `qemu` to `vz` on macOS hosts with the support for `vz`.
+- The default [mount type]({{< ref "/docs/config/mount" >}}) was changed from `reverse-sshfs` to `virtiofs` for `vz`, `9p` for `qemu`.
 - `socket_vmnet` binary has to be strictly owned by root.
 - The default value of `ssh.loadDotSSHPubKeys` was changed from `true` to `false`.
 - Several templates were removed or renamed.

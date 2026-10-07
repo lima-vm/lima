@@ -27,7 +27,7 @@ Then you can connect directly without specifying `-F`:
 ssh lima-default
 ```
 
-This configuration is notably useful for the Remote Development mode of [Visual Studio Code](../examples/vscode.md).
+This configuration is notably useful for the Remote Development mode of [Visual Studio Code]({{< ref "/docs/examples/vscode" >}}).
 
 ## Using SSH without a config file
 

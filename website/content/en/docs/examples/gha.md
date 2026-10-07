@@ -59,7 +59,7 @@ See also <https://github.com/lima-vm/lima-actions>.
 ### Plain mode
 
 The `--plain` mode is useful when you want the VM instance to be as close as possible to a physical host.
-See [Config » Plain mode](../config/plain.md) for the full behavior:
+See [Config » Plain mode]({{< ref "/docs/config/plain" >}}) for the full behavior:
 
 ```yaml
     - name: "Start Fedora"
