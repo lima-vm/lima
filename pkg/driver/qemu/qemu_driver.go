@@ -92,6 +92,10 @@ func (l *LimaQemuDriver) Configure(_ context.Context, inst *limatype.Instance) (
 }
 
 func (l *LimaQemuDriver) Validate(ctx context.Context) error {
+	// Configure, which deletion also uses, runs validateConfig, so this start-time check is here.
+	if !limayaml.HostLoopbackEnabled(l.Instance.Config) {
+		return fmt.Errorf("field `networkOpts.hostLoopback: false` is not supported for vmType: %s", limatype.QEMU)
+	}
 	if err := validateArch(ctx, l.Instance.Config); err != nil {
 		return err
 	}

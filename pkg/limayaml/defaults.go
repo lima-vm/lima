@@ -86,6 +86,12 @@ func HostResolverEnabled(l *limatype.LimaYAML) bool {
 	return l.HostResolver.Enabled == nil || *l.HostResolver.Enabled
 }
 
+// HostLoopbackEnabled returns whether the guest may reach the host's loopback services via `host.lima.internal`.
+// A nil value is treated as true, which is the builtin default.
+func HostLoopbackEnabled(l *limatype.LimaYAML) bool {
+	return l.NetworkOpts.HostLoopback == nil || *l.NetworkOpts.HostLoopback
+}
+
 func MACAddress(uniqueID string) string {
 	sha := sha256.Sum256([]byte(osutil.MachineID() + uniqueID))
 	// "5" is the magic number in the Lima ecosystem.
@@ -875,6 +881,16 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	}
 	if y.NestedVirtualization == nil {
 		y.NestedVirtualization = new(false)
+	}
+
+	if y.NetworkOpts.HostLoopback == nil {
+		y.NetworkOpts.HostLoopback = d.NetworkOpts.HostLoopback
+	}
+	if o.NetworkOpts.HostLoopback != nil {
+		y.NetworkOpts.HostLoopback = o.NetworkOpts.HostLoopback
+	}
+	if y.NetworkOpts.HostLoopback == nil {
+		y.NetworkOpts.HostLoopback = new(true)
 	}
 
 	if y.Plain == nil {

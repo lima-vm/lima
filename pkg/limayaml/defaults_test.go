@@ -335,6 +335,7 @@ func TestFillDefault(t *testing.T) {
 	}
 
 	expect.NestedVirtualization = new(false)
+	expect.NetworkOpts.HostLoopback = new(true)
 	expect.TPM = new(false)
 
 	FillDefault(t.Context(), &y, &limatype.LimaYAML{}, &limatype.LimaYAML{}, filePath, false)
@@ -453,6 +454,7 @@ func TestFillDefault(t *testing.T) {
 			},
 		},
 		NestedVirtualization: new(true),
+		NetworkOpts:          limatype.NetworkOpts{HostLoopback: new(false)},
 		User: limatype.User{
 			Name:             new("xxx"),
 			Comment:          new("Foo Bar"),
@@ -685,6 +687,7 @@ func TestFillDefault(t *testing.T) {
 			RemoveDefaults: new(true),
 		},
 		NestedVirtualization: new(false),
+		NetworkOpts:          limatype.NetworkOpts{HostLoopback: new(true)},
 		User: limatype.User{
 			Name:             new("foo"),
 			Comment:          new("foo bar baz"),
@@ -768,6 +771,33 @@ func TestFillDefault(t *testing.T) {
 
 	FillDefault(t.Context(), &y, &d, &o, filePath, false)
 	assert.DeepEqual(t, &y, &expect, opts...)
+}
+
+func TestFillDefaultHostLoopback(t *testing.T) {
+	tests := []struct {
+		name     string
+		d, y, o  *bool
+		expected bool
+	}{
+		{name: "unset defaults to true", expected: true},
+		{name: "default template false", d: new(false), expected: false},
+		{name: "instance false", y: new(false), expected: false},
+		{name: "instance overrides default template", d: new(false), y: new(true), expected: true},
+		{name: "override.yaml wins", y: new(true), o: new(false), expected: false},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			y := limatype.LimaYAML{NetworkOpts: limatype.NetworkOpts{HostLoopback: tc.y}}
+			d := limatype.LimaYAML{NetworkOpts: limatype.NetworkOpts{HostLoopback: tc.d}}
+			o := limatype.LimaYAML{NetworkOpts: limatype.NetworkOpts{HostLoopback: tc.o}}
+			FillDefault(t.Context(), &y, &d, &o, "test.yaml", false)
+			assert.Assert(t, y.NetworkOpts.HostLoopback != nil)
+			assert.Equal(t, *y.NetworkOpts.HostLoopback, tc.expected)
+			assert.Equal(t, HostLoopbackEnabled(&y), tc.expected)
+		})
+	}
+	// A config that was never filled counts as the builtin default.
+	assert.Assert(t, HostLoopbackEnabled(&limatype.LimaYAML{}))
 }
 
 func TestContainerdDefault(t *testing.T) {
