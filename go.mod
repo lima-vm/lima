@@ -45,7 +45,7 @@ require (
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
 	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
-	github.com/mikefarah/yq/v4 v4.53.6 // gomodjail:unconfined
+	github.com/mikefarah/yq/v4 v4.54.1 // gomodjail:unconfined
 	github.com/modelcontextprotocol/go-sdk v1.8.0 // gomodjail:unconfined
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
@@ -111,7 +111,7 @@ require (
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
-	github.com/hashicorp/hcl/v2 v2.24.0 // indirect
+	github.com/hashicorp/hcl/v2 v2.25.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	// gomodjail:unconfined
 	github.com/insomniacslk/dhcp v0.0.0-20240710054256-ddd8a41251c9 // indirect
@@ -121,7 +121,7 @@ require (
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/linuxkit/virtsock v0.0.0-20220523201153-1a23e78aa7a2 // indirect
 	// gomodjail:unconfined
-	github.com/magiconair/properties v1.18.11 // indirect
+	github.com/magiconair/properties v1.18.12 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	// gomodjail:unconfined
