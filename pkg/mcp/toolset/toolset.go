@@ -11,6 +11,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"slices"
+	"sync"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/pkg/sftp"
@@ -37,6 +38,10 @@ type ToolSet struct {
 	inst    *limatype.Instance
 	sftp    *sftp.Client
 	sftpCmd *exec.Cmd
+
+	// writeMu serializes WriteFile and Replace, as the MCP server handles calls concurrently.
+	// It does not cover run_shell_command or writers outside this server.
+	writeMu sync.Mutex
 }
 
 func newSFTPClient(ctx context.Context, inst *limatype.Instance) (*sftp.Client, *exec.Cmd, error) {
@@ -85,6 +90,7 @@ func (ts *ToolSet) RegisterServer(server *mcp.Server) error {
 	mcp.AddTool(server, msi.ListDirectory, ts.ListDirectory)
 	mcp.AddTool(server, msi.ReadFile, ts.ReadFile)
 	mcp.AddTool(server, msi.WriteFile, ts.WriteFile)
+	mcp.AddTool(server, msi.Replace, ts.Replace)
 	mcp.AddTool(server, msi.Glob, ts.Glob)
 	mcp.AddTool(server, msi.SearchFileContent, ts.SearchFileContent)
 	mcp.AddTool(server, msi.RunShellCommand, ts.RunShellCommand)
