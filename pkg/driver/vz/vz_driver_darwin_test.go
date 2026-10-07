@@ -53,3 +53,21 @@ func TestRemovePIDFile(t *testing.T) {
 	// Removing a PID file that does not exist is not an error.
 	l.removePIDFile()
 }
+
+func TestGVisorNetstackOptsHostLoopback(t *testing.T) {
+	for _, enabled := range []bool{true, false} {
+		inst := &limatype.Instance{Dir: t.TempDir(), Config: &limatype.LimaYAML{NetworkOpts: limatype.NetworkOpts{HostLoopback: new(enabled)}}}
+		assert.Equal(t, gvisorNetstackOpts(inst, "", "").DisableHostLoopback, !enabled)
+	}
+}
+
+func TestValidateRejectsHostLoopbackFalseWithUserV2(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	cfg := &limatype.LimaYAML{
+		Firmware:    limatype.Firmware{LegacyBIOS: new(false)},
+		NetworkOpts: limatype.NetworkOpts{HostLoopback: new(false)},
+		Networks:    []limatype.Network{{Lima: "user-v2"}},
+	}
+	l := &LimaVzDriver{Instance: &limatype.Instance{Config: cfg}}
+	assert.ErrorContains(t, l.Validate(t.Context()), "not supported with a `user-v2` network")
+}

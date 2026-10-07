@@ -65,6 +65,7 @@ var knownYamlProperties = []string{
 	"MountTypesUnsupported",
 	"MountInotify",
 	"NestedVirtualization",
+	"NetworkOpts",
 	"Networks",
 	"OS",
 	"OsOpts",
@@ -257,6 +258,10 @@ func (l *LimaVzDriver) BootScripts(_ context.Context) (map[string][]byte, error)
 }
 
 func (l *LimaVzDriver) Validate(_ context.Context) error {
+	// Configure, which deletion also uses, runs validateConfig, so this start-time check is here.
+	if cfg := l.Instance.Config; cfg != nil && !limayaml.HostLoopbackEnabled(cfg) && limayaml.FirstUsernetIndex(cfg) != -1 {
+		return errors.New("`networkOpts.hostLoopback: false` is not supported with a `user-v2` network, which is shared by instances")
+	}
 	if err := validateConfig(l.Instance.Config); err != nil {
 		return err
 	}

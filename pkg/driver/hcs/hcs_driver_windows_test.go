@@ -184,6 +184,12 @@ func TestValidate(t *testing.T) {
 
 	l.Instance.Config.TPM = new(true)
 	assert.ErrorContains(t, l.Validate(t.Context()), "field `tpm` is not supported")
+
+	l.Instance.Config.TPM = nil
+	l.Instance.Config.NetworkOpts.HostLoopback = new(false)
+	// validateConfig also runs on deletion, which must keep working.
+	assert.NilError(t, validateConfig(t.Context(), l.Instance.Config))
+	assert.ErrorContains(t, l.Validate(t.Context()), "field `networkOpts.hostLoopback: false` is not supported for vmType: hcs")
 }
 
 func TestInfo(t *testing.T) {
