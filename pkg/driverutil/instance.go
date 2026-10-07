@@ -27,7 +27,7 @@ func CreateConfiguredDriver(ctx context.Context, inst *limatype.Instance, sshLoc
 	var driverInfo driver.Info
 	if extDriver != nil {
 		extDriver.Logger.Debugf("Connecting to external driver %#q for %#q", extDriver.Name, inst.Name)
-		if err := server.Start(ctx, extDriver, inst.Name); err != nil {
+		if err := server.Start(ctx, extDriver, inst.Dir); err != nil {
 			extDriver.Logger.Errorf("Failed to start external driver %#q: %v", extDriver.Name, err)
 			return nil, err
 		}

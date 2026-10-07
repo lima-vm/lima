@@ -24,11 +24,10 @@ const (
 )
 
 type ExternalDriver struct {
-	Name         string
-	InstanceName string
-	Client       *client.DriverClient // Client is the gRPC client for the external driver
-	Path         string
-	Logger       *logrus.Logger
+	Name   string
+	Client *client.DriverClient // Client is the gRPC client for the external driver
+	Path   string
+	Logger *logrus.Logger
 }
 
 var (
