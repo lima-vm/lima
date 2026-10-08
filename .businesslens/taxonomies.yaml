@@ -1,0 +1,17 @@
+scenarioKinds:
+- id: primary
+  name: Primary
+  description: The usual successful path.
+  colorSlot: 1
+- id: alternative
+  name: Alternative
+  description: Another successful path, chosen by the Actor or by the thing acted on.
+  colorSlot: 2
+- id: validation
+  name: Validation
+  description: The Product refuses the request because of its input or the state of what it acts on.
+  colorSlot: 3
+- id: edge
+  name: Edge
+  description: A failure, conflict, recovery or unavailable dependency the Product distinguishes.
+  colorSlot: 4

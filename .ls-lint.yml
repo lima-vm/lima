@@ -25,6 +25,7 @@ ls:
 
 ignore:
 - .git
+- .businesslens
 - .golangci.yml
 - .ls-lint.yml
 - '_output'

@@ -1,0 +1,31 @@
+---
+kind: validation
+routes:
+  cli: Command line
+steps:
+  - text: The User asks to copy a path of a stopped instance
+    kind: actor
+    actor: user
+    entities:
+      - {entity: instance, effect: reads, facts: [Name]}
+    contexts:
+      cli:
+        place: limactl
+  - text: The Product refuses, suggesting `limactl start`
+    kind: condition
+    entities:
+      - {entity: instance, effect: reads, facts: [Name]}
+    contexts:
+      cli:
+        place: limactl
+---
+
+# Refuse to copy to or from a stopped instance
+
+## Trigger
+
+An instance named in a path is stopped.
+
+## Outcome
+
+Nothing is copied.
