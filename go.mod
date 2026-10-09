@@ -34,6 +34,7 @@ require (
 	github.com/diskfs/go-diskfs v1.9.4 // gomodjail:unconfined
 	github.com/docker/go-units v0.5.0
 	github.com/foxcpp/go-mockdns v1.3.0
+	github.com/gdamore/tcell/v2 v2.13.10 // gomodjail:unconfined
 	github.com/goccy/go-yaml v1.19.2 // gomodjail:unconfined
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.21.0 // gomodjail:unconfined
@@ -52,6 +53,7 @@ require (
 	github.com/pb33f/ordered-map/v2 v2.3.2
 	github.com/pbnjay/memory v0.0.0-20210728143218-7b4eea64cf58 // gomodjail:unconfined
 	github.com/pkg/sftp v1.13.11 // gomodjail:unconfined
+	github.com/rivo/tview v0.42.0 // gomodjail:unconfined
 	github.com/rjeczalik/notify v0.9.3 // gomodjail:unconfined
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // gomodjail:unconfined
 	github.com/sethvargo/go-password v0.4.0
@@ -104,6 +106,7 @@ require (
 	github.com/fatih/color v1.19.0 // indirect
 	// gomodjail:unconfined
 	github.com/fsnotify/fsnotify v1.8.0 // indirect
+	github.com/gdamore/encoding v1.0.1 // indirect
 	// gomodjail:unconfined
 	github.com/go-ini/ini v1.67.0 // indirect
 	github.com/goccy/go-json v0.10.6 // indirect
@@ -120,6 +123,7 @@ require (
 	// gomodjail:unconfined
 	github.com/kr/fs v0.1.0 // indirect
 	github.com/linuxkit/virtsock v0.0.0-20220523201153-1a23e78aa7a2 // indirect
+	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	// gomodjail:unconfined
 	github.com/magiconair/properties v1.18.12 // indirect
 	github.com/mattn/go-colorable v0.1.15 // indirect
@@ -132,6 +136,7 @@ require (
 	github.com/pelletier/go-toml/v2 v2.4.3 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/pkg/errors v0.9.1 // indirect
+	github.com/rivo/uniseg v0.4.7 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	// gomodjail:unconfined
 	github.com/sabhiram/go-gitignore v0.0.0-20210923224102-525f6e181f06 // indirect
