@@ -217,3 +217,54 @@ EOF
 
     run -0 bash -c "limactl shell '$INSTANCE' test -d ${guest_pwd%/*}"
 }
+
+@test 'shell --sync-exclude keeps excluded files out of the round trip' {
+    cd "$TEST_SYNC_DIR"
+
+    echo "host foo" > foo.txt
+    echo "host bar" > bar.txt
+
+    run -0 bash -c "limactl shell --tty=false --sync . --sync-exclude=foo.txt '$INSTANCE' -- ./modify.sh"
+
+    run cat "$TEST_SYNC_DIR/foo.txt"
+    assert_output "host foo"
+
+    run cat "$TEST_SYNC_DIR/bar.txt"
+    assert_output "modified bar"
+}
+
+@test 'shell --sync-exclude repeats patterns and keeps both files unchanged' {
+    cd "$TEST_SYNC_DIR"
+
+    echo "host foo" > foo.txt
+    echo "host bar" > bar.txt
+
+    run -0 bash -c "limactl shell --tty=false --sync . --sync-exclude=foo.txt --sync-exclude=bar.txt '$INSTANCE' -- ./modify.sh"
+
+    run cat "$TEST_SYNC_DIR/foo.txt"
+    assert_output "host foo"
+
+    run cat "$TEST_SYNC_DIR/bar.txt"
+    assert_output "host bar"
+}
+
+@test 'shell --sync respects .limasyncignore entries' {
+    cd "$TEST_SYNC_DIR"
+
+    echo "host foo" > foo.txt
+    echo "host bar" > bar.txt
+    cat > "$TEST_SYNC_DIR/.limasyncignore" <<'EOF'
+foo.txt
+EOF
+
+    run -0 bash -c "limactl shell --tty=false --sync . '$INSTANCE' -- ./modify.sh"
+
+    run cat "$TEST_SYNC_DIR/foo.txt"
+    assert_output "host foo"
+
+    run cat "$TEST_SYNC_DIR/bar.txt"
+    assert_output "modified bar"
+
+    # Cleanup
+    rm -f "$TEST_SYNC_DIR/.limasyncignore"
+}
