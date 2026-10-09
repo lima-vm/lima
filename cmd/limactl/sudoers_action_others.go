@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin && !linux
 
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
@@ -12,5 +12,5 @@ import (
 )
 
 func sudoersAction(_ *cobra.Command, _ []string) error {
-	return errors.New("sudoers command is only supported on macOS right now")
+	return errors.New("sudoers command is only supported on macOS and Linux right now")
 }
