@@ -12,6 +12,9 @@ elif [ "$(limactl ls -f '{{ .Status }}' "$LIMA_INSTANCE" 2>/dev/null)" != "Runni
 fi
 PODMAN=$(command -v "$PODMAN" || true)
 if [ -n "$PODMAN" ]; then
+    [ "$(readlink -f -- "$PODMAN")" = "$(readlink -f -- "$0")" ] && PODMAN=""
+fi
+if [ -n "$PODMAN" ]; then
   CONTAINER_HOST=$(limactl list "$LIMA_INSTANCE" --format 'unix://{{.Dir}}/sock/podman.sock')
   export CONTAINER_HOST
   exec "$PODMAN" --remote "$@"
