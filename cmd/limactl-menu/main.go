@@ -12,6 +12,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/docker/go-units"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"github.com/sirupsen/logrus"
@@ -141,8 +142,7 @@ func fmtInst(in *limatype.Instance) string {
 		name = name[:13] + "..."
 	}
 
-	mem := float64(in.Memory) / 1e9
-	cpusMem := fmt.Sprintf("%dCPU/%.1fGB", in.CPUs, mem)
+	cpusMem := fmt.Sprintf("%dCPU/%s", in.CPUs, units.BytesSize(float64(in.Memory)))
 
 	sshAddr := fmt.Sprintf("%s:%d", in.SSHAddress, in.SSHLocalPort)
 	if in.SSHAddress == "" || in.SSHLocalPort == 0 {
