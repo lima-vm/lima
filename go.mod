@@ -9,7 +9,7 @@ require (
 	github.com/lima-vm/go-qcow2reader v0.8.0 // gomodjail:unconfined
 	github.com/lima-vm/sshocker v0.3.11 // gomodjail:unconfined
 	golang.org/x/image v0.46.0
-	golang.org/x/net v0.59.0 // gomodjail:unconfined
+	golang.org/x/net v0.60.0 // gomodjail:unconfined
 	golang.org/x/sync v0.23.0
 	golang.org/x/sys v0.48.0 // gomodjail:unconfined
 	golang.org/x/text v0.42.0
