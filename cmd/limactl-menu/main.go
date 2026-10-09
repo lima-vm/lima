@@ -392,17 +392,29 @@ func (s *State) confirm(text string, onYes func()) {
 	s.app.SetRoot(m, false).SetFocus(m)
 }
 
+// execCmd runs "limactl <action> <name>" on the terminal, then returns to the menu.
 func (s *State) execCmd(action, name string) {
-	//revive:disable:deep-exit
-	s.app.Stop()
-	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, s.limactl, action, name)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "limactl %s %s failed: %v\n", action, name, err)
-		os.Exit(1)
+	s.app.Suspend(func() {
+		cmd := exec.CommandContext(s.ctx, s.limactl, action, name)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			// The menu redraws as soon as this returns, so wait to keep the error readable.
+			fmt.Fprintf(os.Stderr, "limactl %s %s failed: %v\nPress Enter to return to the menu.", action, name, err)
+			_, _ = fmt.Fscanln(os.Stdin)
+		}
+	})
+	s.refreshList()
+	s.selectInstance(name)
+}
+
+// selectInstance moves the list cursor to the named instance, if it still exists.
+func (s *State) selectInstance(name string) {
+	for i, in := range s.insts {
+		if in.Name == name {
+			s.list.SetCurrentItem(i)
+			return
+		}
 	}
-	os.Exit(cmd.ProcessState.ExitCode())
 }
 
 func showEmptyState(ctx context.Context, limactl string) error {
