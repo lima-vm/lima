@@ -144,9 +144,9 @@ func fmtInst(in *limatype.Instance) string {
 
 	cpusMem := fmt.Sprintf("%dCPU/%s", in.CPUs, units.BytesSize(float64(in.Memory)))
 
-	sshAddr := fmt.Sprintf("%s:%d", in.SSHAddress, in.SSHLocalPort)
-	if in.SSHAddress == "" || in.SSHLocalPort == 0 {
-		sshAddr = "-"
+	vmType := in.VMType
+	if vmType == "" {
+		vmType = "-"
 	}
 
 	prot := ""
@@ -154,7 +154,7 @@ func fmtInst(in *limatype.Instance) string {
 		prot = " [LOCKED]"
 	}
 
-	return fmt.Sprintf("%s  %-16s  %-10s  %-8s  %-12s  %s%s", icon, name, in.Status, in.Arch, cpusMem, sshAddr, prot)
+	return fmt.Sprintf("%s  %-16s  %-10s  %-8s  %-12s  %s%s", icon, name, in.Status, in.Arch, cpusMem, vmType, prot)
 }
 
 func (s *State) currentInst() *limatype.Instance {
