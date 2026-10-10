@@ -22,7 +22,10 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
-func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*limatype.Instance, error) {
+// Create creates an instance named instName from instConfig bytes.
+// The instance directory defaults to`$LIMA_HOME/instName`.
+// When instDirOverride is non-empty, it is used as the instance directory, and symlinked to `$LIME_HOME/instName`.
+func Create(ctx context.Context, instName, instDirOverride string, instConfig []byte, saveBrokenYAML bool) (_ *limatype.Instance, ret error) {
 	if instName == "" {
 		return nil, errors.New("got empty instName")
 	}
@@ -64,8 +67,24 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 		}
 		return nil, fmt.Errorf("the YAML is invalid, saved the buffer as %#q: %w", rejectedYAML, err)
 	}
-	if err := os.MkdirAll(instDir, 0o700); err != nil {
-		return nil, err
+	if instDirOverride != "" {
+		newInstName := filepath.Join(instDirOverride, instName)
+		if err := os.MkdirAll(newInstName, 0o700); err != nil {
+			return nil, err
+		}
+		if err := os.Symlink(newInstName, instDir); err != nil {
+			return nil, err
+		}
+		defer func() {
+			if ret != nil {
+				os.RemoveAll(instDir)
+				os.RemoveAll(newInstName)
+			}
+		}()
+	} else {
+		if err := os.MkdirAll(instDir, 0o700); err != nil {
+			return nil, err
+		}
 	}
 	var createSucceeded bool
 	defer func() {
