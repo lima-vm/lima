@@ -5,8 +5,10 @@ package sudoers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
+	"os"
 	"os/exec"
 	"strings"
 
@@ -79,6 +81,23 @@ func AssembleSudoersFragments(fragments ...string) string {
 // RegenerateGrantWarning applies even to network-only callers: they may be
 // replacing a file that also contains block-device grants.
 const RegenerateGrantWarning = "regeneration emits only the current user's --block-device entries; include every entry you still need and preserve other users' entries manually; regenerating the file revokes omitted grants"
+
+// ReadFile returns the contents of a sudoers file. It reports ok=false without
+// an error when the file exists but is not readable: /etc/sudoers.d is
+// typically 0750 root:root, so a correctly installed file cannot be verified
+// from an unprivileged process. A wrong one would still make the sudo
+// invocation fail loudly later.
+func ReadFile(path string) (content string, ok bool, err error) {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		if errors.Is(err, os.ErrPermission) {
+			logrus.Debugf("can't read %#q to verify its contents: %s", path, err)
+			return "", false, nil
+		}
+		return "", false, err
+	}
+	return string(b), true, nil
+}
 
 func ContainsActiveFragment(file, fragment string) bool {
 	// Sudo joins continued physical lines. A grant spliced into a preceding
