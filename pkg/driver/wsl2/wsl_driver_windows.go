@@ -116,7 +116,7 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 		return errors.New("currently Windows guest OS is only supported on QEMU")
 	}
 
-	if !limatype.IsNativeArch(*cfg.Arch) {
+	if cfg.Arch != nil && !limatype.IsNativeArch(*cfg.Arch) {
 		return fmt.Errorf("unsupported arch: %#q", *cfg.Arch)
 	}
 
@@ -151,7 +151,12 @@ func validateConfig(_ context.Context, cfg *limatype.LimaYAML) error {
 
 		if cfg.Mounts != nil {
 			for i, mount := range cfg.Mounts {
-				if unknown := reflectutil.UnknownNonEmptyFields(mount); len(unknown) > 0 {
+				if unknown := reflectutil.UnknownNonEmptyFields(mount, "Location",
+					"MountPoint",
+					"Writable",
+					"SSHFS",
+					"NineP",
+				); len(unknown) > 0 {
 					logrus.Warnf("Ignoring: vmType %s: mounts[%d]: %+v", *cfg.VMType, i, unknown)
 				}
 			}
