@@ -4,7 +4,12 @@
 package autostart
 
 import (
+	"bytes"
+	"encoding/xml"
+	"errors"
+	"io"
 	"runtime"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -87,6 +92,8 @@ func TestRenderTemplate(t *testing.T) {
 	<dict>
 		<key>LIMA_HOME</key>
 		<string>/some/lima/home</string>
+		<key>PATH</key>
+		<string>/some/bin:/usr/bin:/bin</string>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
@@ -129,6 +136,8 @@ func TestRenderTemplate(t *testing.T) {
 	<dict>
 		<key>LIMA_HOME</key>
 		<string>/some/lima/home</string>
+		<key>PATH</key>
+		<string>/some/bin:/usr/bin:/bin</string>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
@@ -169,6 +178,8 @@ func TestRenderTemplate(t *testing.T) {
 	<dict>
 		<key>LIMA_HOME</key>
 		<string>/some/lima/home</string>
+		<key>PATH</key>
+		<string>/some/bin:/usr/bin:/bin</string>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
@@ -216,6 +227,8 @@ func TestRenderTemplate(t *testing.T) {
 	<dict>
 		<key>LIMA_HOME</key>
 		<string>/some/lima/home</string>
+		<key>PATH</key>
+		<string>/some/bin:/usr/bin:/bin</string>
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
@@ -301,9 +314,34 @@ WantedBy=default.target
 			// Pin LIMA_HOME so the rendered unit does not depend on the host running the test.
 			// The directory does not exist, so LimaDir() returns it without resolving symlinks.
 			t.Setenv("LIMA_HOME", "/some/lima/home")
+			t.Setenv("PATH", "/some/bin:/usr/bin:/bin")
 			tmpl, err := tt.Manager.renderTemplate(tt.InstanceName, tt.WorkDir, tt.GetExecutable)
 			assert.NilError(t, err)
 			assert.Equal(t, string(tmpl), tt.Expected)
 		})
+	}
+}
+
+func TestRenderTemplateEscapesPath(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("skipping testing on windows host")
+	}
+	for _, manager := range []*TemplateFileBasedManager{Launchd, LaunchdDaemon} {
+		t.Setenv("LIMA_HOME", "/some/lima/home")
+		t.Setenv("PATH", "/Users/alice/R&D/bin:/usr/bin:/bin")
+		tmpl, err := manager.renderTemplate("default", "/some/path", func() (string, error) {
+			return "/limactl", nil
+		})
+		assert.NilError(t, err)
+		assert.Assert(t, strings.Contains(string(tmpl), "<string>/Users/alice/R&amp;D/bin:/usr/bin:/bin</string>"))
+		// The plist must stay well-formed XML so launchd can load it.
+		dec := xml.NewDecoder(bytes.NewReader(tmpl))
+		for {
+			_, err := dec.Token()
+			if errors.Is(err, io.EOF) {
+				break
+			}
+			assert.NilError(t, err)
+		}
 	}
 }
