@@ -15,6 +15,6 @@ func FuzzSetupEnv(f *testing.F) {
 		if localhost {
 			prefix = "http://localhost:8080/"
 		}
-		_, _ = setupEnv(map[string]string{"http_proxy": prefix + suffix}, false, networks.SlirpGateway)
+		_, _ = setupEnv(map[string]string{"http_proxy": prefix + suffix}, false, true, networks.SlirpGateway)
 	})
 }

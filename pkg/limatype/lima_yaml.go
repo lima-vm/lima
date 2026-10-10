@@ -45,6 +45,7 @@ type LimaYAML struct {
 	CopyToHost            []CopyToHost  `yaml:"copyToHost,omitempty" json:"copyToHost,omitempty"`
 	Message               string        `yaml:"message,omitempty" json:"message,omitempty"`
 	Networks              []Network     `yaml:"networks,omitempty" json:"networks,omitempty" jsonschema:"nullable"`
+	NetworkOpts           NetworkOpts   `yaml:"networkOpts,omitempty" json:"networkOpts,omitempty"`
 	// `network` was deprecated in Lima v0.7.0, removed in Lima v0.14.0. Use `networks` instead.
 	Env          map[string]string `yaml:"env,omitempty" json:"env,omitempty"`
 	Param        map[string]string `yaml:"param,omitempty" json:"param,omitempty"`
@@ -346,6 +347,10 @@ type HostResolver struct {
 	Enabled *bool             `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"nullable"`
 	IPv6    *bool             `yaml:"ipv6,omitempty" json:"ipv6,omitempty" jsonschema:"nullable"`
 	Hosts   map[string]string `yaml:"hosts,omitempty" json:"hosts,omitempty" jsonschema:"nullable"`
+}
+
+type NetworkOpts struct {
+	HostLoopback *bool `yaml:"hostLoopback,omitempty" json:"hostLoopback,omitempty" jsonschema:"nullable"`
 }
 
 type CACertificates struct {

@@ -36,6 +36,7 @@ var knownYamlProperties = []string{
 	"Message",
 	"Mounts",
 	"MountType",
+	"NetworkOpts",
 	"Param",
 	"Plain",
 	"PortForwards",
@@ -92,6 +93,10 @@ func (l *LimaWslDriver) Configure(ctx context.Context, inst *limatype.Instance) 
 }
 
 func (l *LimaWslDriver) Validate(ctx context.Context) error {
+	// Configure, which deletion also uses, runs validateConfig, so this start-time check is here.
+	if cfg := l.Instance.Config; cfg != nil && cfg.NetworkOpts.HostLoopback != nil && !*cfg.NetworkOpts.HostLoopback {
+		return fmt.Errorf("field `networkOpts.hostLoopback: false` is not supported for vmType: %s", limatype.WSL2)
+	}
 	return validateConfig(ctx, l.Instance.Config)
 }
 

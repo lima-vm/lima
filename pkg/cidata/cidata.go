@@ -49,7 +49,7 @@ var netLookupIP = func(host string) []net.IP {
 	return ips
 }
 
-func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGateway string) (map[string]string, error) {
+func setupEnv(instConfigEnv map[string]string, propagateProxyEnv, hostLoopback bool, slirpGateway string) (map[string]string, error) {
 	// Start with the proxy variables from the system settings.
 	env, err := osutil.ProxySettings()
 	if err != nil {
@@ -88,14 +88,20 @@ func setupEnv(instConfigEnv map[string]string, propagateProxyEnv bool, slirpGate
 			}
 
 			for _, ip := range netLookupIP(u.Hostname()) {
-				if ip.IsLoopback() {
-					newHost := slirpGateway
-					if u.Port() != "" {
-						newHost = net.JoinHostPort(newHost, u.Port())
-					}
-					u.Host = newHost
-					value = u.String()
+				if !ip.IsLoopback() {
+					continue
 				}
+				if !hostLoopback {
+					logrus.Warnf("%#q value %#q points at the host's loopback, which the guest cannot reach with `networkOpts.hostLoopback: false`", name, value)
+				}
+				newHost := slirpGateway
+				if u.Port() != "" {
+					newHost = net.JoinHostPort(newHost, u.Port())
+				}
+				u.Host = newHost
+				value = u.String()
+				// Every loopback address gives the same rewrite.
+				break
 			}
 			if value != env[name] {
 				logrus.Infof("Replacing %#q value %#q with %#q", name, env[name], value)
@@ -310,7 +316,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface, Metric: *nw.Metric})
 	}
 
-	args.Env, err = setupEnv(instConfig.Env, *instConfig.PropagateProxyEnv, args.SlirpGateway)
+	args.Env, err = setupEnv(instConfig.Env, *instConfig.PropagateProxyEnv, limayaml.HostLoopbackEnabled(instConfig), args.SlirpGateway)
 	if err != nil {
 		return nil, err
 	}

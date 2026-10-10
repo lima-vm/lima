@@ -17,6 +17,15 @@ func TestValidateConfigRejectsBlockDevices(t *testing.T) {
 	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: wsl2")
 }
 
+func TestValidateRejectsHostLoopbackFalse(t *testing.T) {
+	arch := limatype.NewArch(runtime.GOARCH)
+	cfg := &limatype.LimaYAML{Arch: &arch, NetworkOpts: limatype.NetworkOpts{HostLoopback: new(false)}}
+	// validateConfig also runs on deletion, which must keep working.
+	assert.NilError(t, validateConfig(t.Context(), cfg))
+	l := &LimaWslDriver{Instance: &limatype.Instance{Config: cfg}}
+	assert.ErrorContains(t, l.Validate(t.Context()), "field `networkOpts.hostLoopback: false` is not supported for vmType: wsl2")
+}
+
 func TestValidateConfigImages(t *testing.T) {
 	var arch limatype.Arch
 	switch runtime.GOARCH {
