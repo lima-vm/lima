@@ -903,6 +903,7 @@ func (l *LimaQemuDriver) Info(_ context.Context) driver.Info {
 		DynamicSSHAddress:     false,
 		SkipSocketForwarding:  false,
 		CanRunGUI:             false,
+		CanSnapshot:           true,
 		SupportedImageFormats: []string{string(qcow2.Type), string(rawImage.Type), string(vmdk.Type), string(vhdx.Type)}, // Not a comprehensive list of supported formats
 	}
 	return info
