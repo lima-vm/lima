@@ -125,8 +125,7 @@ func (s *GuestServer) SyncTime(_ context.Context, req *api.TimeSyncRequest) (*ap
 		DriftMs:  drift.Milliseconds(),
 	}
 
-	const driftThreshold = 100 * time.Millisecond
-	if drift > driftThreshold || drift < -driftThreshold {
+	if drift > api.TimeSyncDriftThreshold || drift < -api.TimeSyncDriftThreshold {
 		if err := timesync.SetSystemTime(hostTime); err != nil {
 			logrus.WithError(err).Warn("SyncTime: failed to set system time")
 			resp.Error = err.Error()
