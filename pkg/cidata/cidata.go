@@ -156,6 +156,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		SlirpNICName:       networks.SlirpNICName,
 
 		VMType:         *instConfig.VMType,
+		SSHOverVsock:   instConfig.SSH.OverVsock != nil && *instConfig.SSH.OverVsock,
 		VSockPort:      vsockPort,
 		VirtioPort:     virtioPort,
 		RosettaEnabled: rosettaEnabled,

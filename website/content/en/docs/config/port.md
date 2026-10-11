@@ -47,7 +47,7 @@ LIMA_SSH_PORT_FORWARDER=true limactl start
 | ⚡ Requirement | Lima >= 2.0 |
 |---------------|-------------|
 
-If VM is VZ based and systemd is v256 or later (e.g. Ubuntu 24.10+), Lima uses AF_VSOCK for communication between host and guest.
+If VM is VZ or krunkit based and systemd is v256 or later (e.g. Ubuntu 24.10+), Lima uses AF_VSOCK for communication between host and guest.
 SSH based port forwarding is much faster when using AF_VSOCK compared to traditional virtual network based port forwarding.
 
 To disable this feature, set `.ssh.overVsock` to `false`:
