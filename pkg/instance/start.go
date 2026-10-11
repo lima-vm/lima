@@ -9,9 +9,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
+	"sync"
 	"text/template"
 	"time"
 
@@ -373,10 +376,22 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 		err                  error
 	)
 
-	// progressTTY is true when stderr is a real terminal, so we can render
+	// progressLine is non-nil when stderr is a real terminal, so we can render
 	// requirement progress with an in-place 🕐 -> ✅ flip; otherwise we
 	// fall back to two log lines per step.
-	progressTTY := isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd())
+	var progressLine *requirementProgressLine
+	if isatty.IsTerminal(os.Stderr.Fd()) || isatty.IsCygwinTerminal(os.Stderr.Fd()) {
+		progressLine = &requirementProgressLine{w: os.Stderr}
+		// Log entries (including the propagated hostagent logs) are written to
+		// the same stderr, so they must not be appended to a pending 🕐 line.
+		logger := logrus.StandardLogger()
+		formatter := logger.Formatter
+		logger.SetFormatter(&progressLogFormatter{Formatter: formatter, line: progressLine})
+		defer func() {
+			logger.SetFormatter(formatter)
+			progressLine.end()
+		}()
+	}
 	// lastProgressKey is the "step/total:done:failed" of the most recently
 	// rendered RequirementProgress, used to suppress duplicate renders
 	// when the same event is observed more than once.
@@ -384,7 +399,7 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 
 	onEvent := func(ev hostagentevents.Event) bool {
 		if p := ev.Status.RequirementProgress; p != nil {
-			renderRequirementProgress(p, progressTTY, &lastProgressKey)
+			renderRequirementProgress(p, progressLine, &lastProgressKey)
 			return false
 		}
 		if !printedSSHLocalPort && ev.Status.SSHLocalPort != 0 {
@@ -462,15 +477,15 @@ func watchHostAgentEvents(ctx context.Context, inst *limatype.Instance, haStdout
 	return nil
 }
 
-// renderRequirementProgress prints a RequirementProgress event. On a TTY it
-// keeps the pending "🕐" line on the current row and overwrites it in place
-// with "✅" (or "❌") when the step completes, so each step occupies a single
-// line. On a non-TTY (piped output, log file) each transition becomes a
-// regular log line via logrus.
+// renderRequirementProgress prints a RequirementProgress event. On a TTY
+// (line != nil) it keeps the pending "🕐" line on the current row and
+// overwrites it in place with "✅" (or "❌") when the step completes, so each
+// step occupies a single line. On a non-TTY (piped output, log file) each
+// transition becomes a regular log line via logrus.
 //
 // `lastKey` holds the "step/total:done:failed" key of the previously rendered
 // event so identical consecutive renders can be deduplicated.
-func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool, lastKey *string) {
+func renderRequirementProgress(p *hostagentevents.RequirementProgress, line *requirementProgressLine, lastKey *string) {
 	// Dedup identical consecutive renders. The hostagent should only emit
 	// one event per state transition, but if the same RequirementProgress
 	// gets replayed (e.g. carried along on an unrelated status event) we
@@ -483,27 +498,80 @@ func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool,
 	}
 	*lastKey = key
 
-	if !tty {
-		switch {
-		case p.Failed:
-			logrus.Infof("(%2d/%d) ❌ %s", p.Step, p.Total, p.Description)
-		case p.Done:
-			logrus.Infof("(%2d/%d) ✅ %s", p.Step, p.Total, p.Description)
-		default:
-			logrus.Infof("(%2d/%d) 🕐 %s%s", p.Step, p.Total, p.Description, p.Suffix)
-		}
+	var s string
+	switch {
+	case p.Failed:
+		s = fmt.Sprintf("(%2d/%d) ❌ %s", p.Step, p.Total, p.Description)
+	case p.Done:
+		s = fmt.Sprintf("(%2d/%d) ✅ %s", p.Step, p.Total, p.Description)
+	default:
+		s = fmt.Sprintf("(%2d/%d) 🕐 %s%s", p.Step, p.Total, p.Description, p.Suffix)
+	}
+	if line == nil {
+		logrus.Info(s)
 		return
 	}
-	const clearEOL = "\033[K"
-	if p.Failed {
-		fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) ❌ %s\n", clearEOL, p.Step, p.Total, p.Description)
+	line.draw(s, p.Done || p.Failed)
+}
+
+const clearEOL = "\033[K"
+
+// requirementProgressLine draws requirement progress on a TTY. A pending
+// "🕐" line is drawn without a trailing newline, so that it can be
+// overwritten in place when the step completes.
+type requirementProgressLine struct {
+	mu      sync.Mutex
+	w       io.Writer
+	pending string // the pending line currently drawn, if any
+}
+
+// draw overwrites the current row with s. A completed line ends with a
+// newline; a pending one does not, and is remembered so that it can be
+// redrawn after log entries.
+func (l *requirementProgressLine) draw(s string, completed bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if completed {
+		l.pending = ""
+		fmt.Fprintf(l.w, "\r%s%s\n", clearEOL, s)
 		return
 	}
-	if p.Done {
-		fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) ✅ %s\n", clearEOL, p.Step, p.Total, p.Description)
-		return
+	l.pending = s
+	fmt.Fprintf(l.w, "\r%s%s", clearEOL, s)
+}
+
+// end terminates the pending line, if any, so that whatever is printed next
+// (e.g. an error) starts on a new row.
+func (l *requirementProgressLine) end() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.pending != "" {
+		fmt.Fprintln(l.w)
+		l.pending = ""
 	}
-	fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) 🕐 %s%s", clearEOL, p.Step, p.Total, p.Description, p.Suffix)
+}
+
+// progressLogFormatter wraps a logrus formatter so that a log entry written
+// while a "🕐" line is pending clears that line first, and then redraws it
+// below the entry. Wrapping the formatter rather than the logger output keeps
+// the terminal detection of logrus.TextFormatter working on the real stderr.
+type progressLogFormatter struct {
+	logrus.Formatter
+	line *requirementProgressLine
+}
+
+func (f *progressLogFormatter) Format(entry *logrus.Entry) ([]byte, error) {
+	b, err := f.Formatter.Format(entry)
+	if err != nil {
+		return nil, err
+	}
+	f.line.mu.Lock()
+	pending := f.line.pending
+	f.line.mu.Unlock()
+	if pending == "" {
+		return b, nil
+	}
+	return slices.Concat([]byte("\r"+clearEOL), b, []byte(pending)), nil
 }
 
 type watchHostAgentEventsTimeoutKey = struct{}
