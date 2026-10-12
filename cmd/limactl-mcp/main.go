@@ -16,6 +16,7 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/cobra/doc"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
@@ -37,6 +38,10 @@ func newApp() *cobra.Command {
 		Version:       strings.TrimPrefix(version.Version, "v"),
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Annotations: map[string]string{
+			// Show "limactl mcp" rather than "limactl-mcp" in the usage and in the docs
+			cobra.CommandDisplayNameAnnotation: "limactl mcp",
+		},
 	}
 	cmd.AddCommand(
 		newMcpInfoCommand(),
@@ -187,13 +192,23 @@ func newMcpGenDocCommand() *cobra.Command {
 		RunE:   mcpGenDocAction,
 		Hidden: true,
 	}
+	cmd.Flags().String("cli-dir", "", "Output directory for the cli-reference pages (docsy)")
 	return cmd
 }
 
 func mcpGenDocAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	cliDir, err := cmd.Flags().GetString("cli-dir")
+	if err != nil {
+		return err
+	}
+	if cliDir != "" {
+		if err = genCLIDocsy(cmd.Root(), cliDir); err != nil {
+			return err
+		}
+	}
 	dir := args[0]
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err = os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	fName := filepath.Join(dir, "mcp.md")
@@ -250,4 +265,26 @@ MCP Sandbox Interface was inspired by
 		}
 	}
 	return f.Close()
+}
+
+// genCLIDocsy generates the cli-reference pages for `limactl mcp`, in the same format as `limactl generate-doc --type docsy`.
+func genCLIDocsy(root *cobra.Command, dir string) error {
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		return err
+	}
+	return doc.GenMarkdownTreeCustom(root, dir, func(s string) string {
+		// Replace limactl_mcp_serve to mcp serve for docsy title
+		name := filepath.Base(s)
+		name = strings.ReplaceAll(name, "limactl_", "")
+		name = strings.ReplaceAll(name, "_", " ")
+		name = strings.TrimSuffix(name, filepath.Ext(name))
+		return fmt.Sprintf(`---
+title: %s
+weight: 3
+---
+`, name)
+	}, func(s string) string {
+		// Use ../ for move one folder up for docsy
+		return "../" + strings.TrimSuffix(s, filepath.Ext(s))
+	})
 }

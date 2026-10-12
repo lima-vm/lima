@@ -578,7 +578,7 @@ endif
 website/_output/docsy-mcp/mcp.md: _output/libexec/lima/limactl-mcp$(exe)
 	@mkdir -p website/_output/docsy-mcp
 ifeq ($(native_compiling),true)
-	$< generate-doc website/_output/docsy-mcp
+	$< generate-doc website/_output/docsy-mcp --cli-dir website/_output/docsy
 endif
 
 ################################################################################
