@@ -35,6 +35,8 @@ Alternatively , you can set the [`upgradePackages`](https://github.com/lima-vm/l
 
 See <https://github.com/cncf/tag-security/blob/main/community/assessments/projects/lima/self-assessment.md>.
 
+See also <https://github.com/lima-vm/lima/blob/master/.oss-scanner/threat_model.md>, which states what we treat as attacker-controlled, what we leave out of scope, and how we rate severity.
+
 ## Reporting vulnerabilities
 
 See <https://github.com/lima-vm/.github/blob/main/SECURITY.md>.
