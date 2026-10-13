@@ -186,9 +186,9 @@ func mcpServeAction(cmd *cobra.Command, args []string) error {
 
 func newMcpGenDocCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "generate-doc DIR",
+		Use:    "generate-doc [DIR]",
 		Short:  "Generate documentation pages",
-		Args:   cobra.MinimumNArgs(1),
+		Args:   cobra.MaximumNArgs(1),
 		RunE:   mcpGenDocAction,
 		Hidden: true,
 	}
@@ -206,6 +206,9 @@ func mcpGenDocAction(cmd *cobra.Command, args []string) error {
 		if err = genCLIDocsy(cmd.Root(), cliDir); err != nil {
 			return err
 		}
+	}
+	if len(args) == 0 {
+		return nil
 	}
 	dir := args[0]
 	if err = os.MkdirAll(dir, 0o755); err != nil {

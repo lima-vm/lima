@@ -5,16 +5,23 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
+	"time"
 
 	"github.com/cpuguy83/go-md2man/v2/md2man"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+
+	"github.com/lima-vm/lima/v2/pkg/plugins"
+	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 func newGenDocCommand() *cobra.Command {
@@ -60,6 +67,9 @@ func gendocAction(cmd *cobra.Command, args []string) error {
 		}
 	case "docsy":
 		if err := genDocsy(cmd, dir); err != nil {
+			return err
+		}
+		if err := genPluginsDocsy(cmd.Context(), bundledPlugins(), dir); err != nil {
 			return err
 		}
 	}
@@ -136,6 +146,55 @@ weight: 3
 		// Use ../ for move one folder up for docsy
 		return "../" + strings.TrimSuffix(s, filepath.Ext(s))
 	})
+}
+
+// bundledPlugins returns the plugins installed next to limactl.
+// Plugins found only in $PATH are skipped, as they are not part of Lima.
+func bundledPlugins() []plugins.Plugin {
+	allPlugins, err := plugins.Discover()
+	if err != nil {
+		logrus.WithError(err).Warn("Failed to discover plugins")
+		return nil
+	}
+	dirs := usrlocal.SelfDirs()
+	if libexecDirs, err := usrlocal.LibexecLima(); err == nil {
+		dirs = append(dirs, libexecDirs...)
+	}
+	var res []plugins.Plugin
+	for _, plugin := range allPlugins {
+		if slices.Contains(dirs, filepath.Dir(plugin.Path)) {
+			res = append(res, plugin)
+		}
+	}
+	return res
+}
+
+// genPluginsDocsy generates the cli-reference pages of the plugins that support `generate-doc --cli-dir DIR`.
+func genPluginsDocsy(ctx context.Context, allPlugins []plugins.Plugin, dir string) error {
+	for _, plugin := range allPlugins {
+		if !supportsGenDocsy(ctx, plugin.Path) {
+			continue
+		}
+		logrus.Infof("Generating docsy for plugin %#q", plugin.Name)
+		cmd := exec.CommandContext(ctx, plugin.Path, "generate-doc", "--cli-dir", dir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to generate docsy for plugin %#q: %w", plugin.Name, err)
+		}
+	}
+	return nil
+}
+
+// supportsGenDocsy checks whether the plugin has the `generate-doc --cli-dir` flag.
+func supportsGenDocsy(ctx context.Context, path string) bool {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "generate-doc", "--help").Output()
+	if err != nil {
+		return false
+	}
+	return bytes.Contains(out, []byte("--cli-dir"))
 }
 
 // replaceAll replaces all occurrences of text with replacement, for all files in dir.
