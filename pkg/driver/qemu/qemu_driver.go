@@ -132,6 +132,18 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		logrus.Warnf("vmType %s: ignoring audio: %+v", *cfg.VMType, unknown)
 	}
 
+	// The VNC password is only enforced when `video.display` is exactly "vnc":
+	// Cmdline() appends ",password=on" and the host agent generates and sets the
+	// password solely under that equality check. Any other VNC form (e.g.
+	// "vnc=0.0.0.0:0") is passed verbatim to `-display`, so QEMU starts an
+	// unauthenticated VNC server. Reject those so the supported `video.display:
+	// vnc` + `video.vnc.display` form (which keeps the password) must be used.
+	if cfg.Video.Display != nil {
+		if display := *cfg.Video.Display; strings.HasPrefix(display, "vnc") && display != "vnc" {
+			return fmt.Errorf("field `video.display` %#q is not supported; set `video.display` to %#q and configure the address with `video.vnc.display` so the VNC password stays enabled", display, "vnc")
+		}
+	}
+
 	var qemuOpts limatype.QEMUOpts
 	if err := limayaml.Convert(cfg.VMOpts[limatype.QEMU], &qemuOpts, "vmOpts.qemu"); err != nil {
 		return err

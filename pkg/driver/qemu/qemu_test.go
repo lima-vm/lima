@@ -245,3 +245,18 @@ func TestValidateConfigRejectsBlockDevices(t *testing.T) {
 	})
 	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: qemu")
 }
+
+func TestValidateConfigVNCDisplay(t *testing.T) {
+	display := func(s string) *limatype.LimaYAML {
+		return &limatype.LimaYAML{Video: limatype.Video{Display: &s}}
+	}
+	// "vnc=..." bypasses the ",password=on" enforcement, exposing a passwordless VNC server.
+	for _, bad := range []string{"vnc=0.0.0.0:0", "vnc=:0", "vnc,password=off"} {
+		err := validateConfig(display(bad))
+		assert.ErrorContains(t, err, "field `video.display`")
+	}
+	// The supported "vnc" value and non-VNC displays stay valid.
+	for _, ok := range []string{"vnc", "none", "default", "gtk", "sdl", "cocoa"} {
+		assert.NilError(t, validateConfig(display(ok)))
+	}
+}
