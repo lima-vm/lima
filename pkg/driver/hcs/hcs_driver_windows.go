@@ -179,7 +179,7 @@ func (l *LimaHcsDriver) BootScripts(_ context.Context) (map[string][]byte, error
 	return nil, nil
 }
 
-func (l *LimaHcsDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) string {
+func (l *LimaHcsDriver) InspectStatus(ctx context.Context, inst *limatype.Instance) limatype.Status {
 	inst.SSHLocalPort = 22
 	state, err := getComputeSystemState(ctx, "lima-"+inst.Name)
 	if err != nil {

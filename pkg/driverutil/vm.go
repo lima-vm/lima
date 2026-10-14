@@ -43,7 +43,7 @@ func ResolveVMType(y *limatype.LimaYAML) error {
 	return nil
 }
 
-func InspectStatus(ctx context.Context, inst *limatype.Instance) (string, error) {
+func InspectStatus(ctx context.Context, inst *limatype.Instance) (limatype.Status, error) {
 	if inst == nil || inst.Config == nil || inst.Config.VMType == nil {
 		return "", errors.New("instance or its configuration is not properly initialized")
 	}
@@ -66,7 +66,7 @@ func InspectStatus(ctx context.Context, inst *limatype.Instance) (string, error)
 	return intDriver.InspectStatus(ctx, inst), nil
 }
 
-func handleInspectStatusAction(ctx context.Context, inst *limatype.Instance, extDriverPath string) (string, error) {
+func handleInspectStatusAction(ctx context.Context, inst *limatype.Instance, extDriverPath string) (limatype.Status, error) {
 	cmd := exec.CommandContext(ctx, extDriverPath, "--inspect-status")
 
 	var stderrBuf bytes.Buffer

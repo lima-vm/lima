@@ -102,7 +102,7 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 	// agent only ever reports tcp or udp. Without this check any other value would
 	// match none of the rules that name a protocol, so it would skip an `ignore` rule
 	// and then be forwarded by the catch-all rule the caller appends last.
-	if guest.Protocol != limatype.ProtoTCP && guest.Protocol != limatype.ProtoUDP {
+	if guest.Protocol != string(limatype.ProtoTCP) && guest.Protocol != string(limatype.ProtoUDP) {
 		logrus.Debugf("Not forwarding %s: unsupported protocol %#q", guest.HostString(), guest.Protocol)
 		return "", guest.HostString()
 	}
@@ -111,7 +111,7 @@ func (fw *Forwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guestAddr
 		if rule.GuestSocket != "" {
 			continue
 		}
-		if rule.Proto != limatype.ProtoAny && rule.Proto != guest.Protocol {
+		if rule.Proto != limatype.ProtoAny && string(rule.Proto) != guest.Protocol {
 			continue
 		}
 		if guest.Port < int32(rule.GuestPortRange[0]) || guest.Port > int32(rule.GuestPortRange[1]) {

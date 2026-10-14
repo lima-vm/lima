@@ -805,7 +805,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			mount.SSHFS.FollowSymlinks = new(false)
 		}
 		if mount.SSHFS.SFTPDriver == nil {
-			mount.SSHFS.SFTPDriver = new("")
+			mount.SSHFS.SFTPDriver = new(limatype.SFTPDriver(""))
 		}
 		if mount.NineP.SecurityModel == nil {
 			mounts[i].NineP.SecurityModel = new(Default9pSecurityModel)

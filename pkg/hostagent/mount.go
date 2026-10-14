@@ -75,7 +75,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	resolvedLocation := m.Location
 	var sftpServerBinary string
 	if runtime.GOOS == "windows" {
-		resolvedLocation, sftpServerBinary = mountPathAndSftpServer(ctx, a.sshExe, *m.SSHFS.SFTPDriver, m.Location)
+		resolvedLocation, sftpServerBinary = mountPathAndSftpServer(ctx, a.sshExe, string(*m.SSHFS.SFTPDriver), m.Location)
 	}
 
 	sshAddress, sshPort := a.sshAddressPort()
@@ -83,7 +83,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 	// modifying HostAgent's sshConfig in case of Windows
 	sshConfig := *a.sshConfig
 	rsf := &reversesshfs.ReverseSSHFS{
-		Driver:                  *m.SSHFS.SFTPDriver,
+		Driver:                  string(*m.SSHFS.SFTPDriver),
 		OpensshSftpServerBinary: sftpServerBinary,
 		SSHConfig:               &sshConfig,
 		LocalPath:               resolvedLocation,

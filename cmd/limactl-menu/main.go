@@ -132,7 +132,7 @@ func fmtInst(in *limatype.Instance) string {
 		"Stopped":    "[red]●[white]",
 		"Broken":     "[yellow]●[white]",
 		"Installing": "[blue]◐[white]",
-	}[in.Status]
+	}[string(in.Status)]
 	if icon == "" {
 		icon = "[gray]○[white]"
 	}
@@ -326,7 +326,7 @@ Disk:         %.1f GB
 SSH Port:     %d
 SSH Address:  %s
 Protected:    %s
-Lima Version: %s`, statusTag(in.Status), in.Hostname, in.VMType, in.Arch, in.CPUs, float64(in.Memory)/1e9, float64(in.Disk)/1e9, in.SSHLocalPort, in.SSHAddress, prot, in.LimaVersion)
+Lima Version: %s`, statusTag(string(in.Status)), in.Hostname, in.VMType, in.Arch, in.CPUs, float64(in.Memory)/1e9, float64(in.Disk)/1e9, in.SSHLocalPort, in.SSHAddress, prot, in.LimaVersion)
 
 	if len(in.Errors) > 0 {
 		b.WriteString("\n\nErrors:\n")

@@ -212,7 +212,7 @@ func unregisterVM(ctx context.Context, distroName string) error {
 // Windows Subsystem for Linux has no installed distributions.
 // Distributions can be installed by visiting the Microsoft Store:
 // https://aka.ms/wslstore
-func getWslStatus(ctx context.Context, instName string) (string, error) {
+func getWslStatus(ctx context.Context, instName string) (limatype.Status, error) {
 	errWSLNotInstalled := fmt.Errorf(
 		"failed to read instance state for instance %#q because WSL is not installed, "+
 			"try running `wsl --update` and then re-running Lima", instName)
@@ -289,7 +289,7 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 		return limatype.StatusUninitialized, nil
 	}
 
-	return instState, nil
+	return limatype.Status(instState), nil
 }
 
 // GetSSHAddress runs a hostname command to get the IP from inside of a wsl2 VM.

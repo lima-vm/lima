@@ -87,10 +87,10 @@ func parseMessages(msgs []netlink.Message, proto int) ([]Socket, error) {
 		}
 
 		newSocket := Socket{
-			Kind:  pname,
+			Kind:  Kind(pname),
 			IP:    localIP,
 			Port:  sport,
-			State: state,
+			State: State(state),
 		}
 		sockets = append(sockets, newSocket)
 	}
