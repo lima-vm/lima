@@ -242,7 +242,8 @@ func httpServe(ctx context.Context, g *errgroup.Group, ln net.Listener, mux http
 }
 
 func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
-	m := n.Mux()
+	m := http.NewServeMux()
+	m.Handle("/", n.Mux())
 	m.HandleFunc("/extension/wait_port", func(w http.ResponseWriter, r *http.Request) {
 		ip := r.URL.Query().Get("ip")
 		if net.ParseIP(ip) == nil {
