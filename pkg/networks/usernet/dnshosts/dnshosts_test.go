@@ -107,6 +107,9 @@ func TestExtractZones(t *testing.T) {
 			if !a.DefaultIP.Equal(b.DefaultIP) {
 				return false
 			}
+			if len(a.Records) != len(b.Records) {
+				return false
+			}
 			for i := range a.Records {
 				a, b := a.Records[i], b.Records[i]
 				if !a.IP.Equal(b.IP) {
@@ -120,6 +123,9 @@ func TestExtractZones(t *testing.T) {
 			return true
 		}
 
+		if len(za) != len(zb) {
+			return false
+		}
 		for _, a := range za {
 			ib := slices.IndexFunc(zb, func(z types.Zone) bool { return z.Name == a.Name })
 			if ib < 0 {
@@ -140,6 +146,10 @@ func TestExtractZones(t *testing.T) {
 		"localhost":            "127.0.0.1",
 		"host.lima.internal":   "192.168.5.2",
 		"host.docker.internal": "host.lima.internal",
+		"unresolved.internal":  "nowhere.internal",
+		"fqdn.internal.":       "10.0.0.1",
+		"*.wildcard.internal":  "10.0.0.2",
+		".unspecified":         "0.0.0.0",
 	}
 
 	tests := []struct {
@@ -166,10 +176,6 @@ func TestExtractZones(t *testing.T) {
 						{Name: "host.docker", IP: net.ParseIP("192.168.5.2")},
 						{Name: "host.lima", IP: net.ParseIP("192.168.5.2")},
 					},
-				},
-				{
-					Name:      "localhost",
-					DefaultIP: net.ParseIP("127.0.0.1"),
 				},
 			},
 		},
