@@ -19,7 +19,7 @@ require (
 	al.essio.dev/pkg/shellescape v1.6.1
 	github.com/AlecAivazis/survey/v2 v2.3.7 // gomodjail:unconfined
 	github.com/Code-Hex/vz/v3 v3.8.0 // gomodjail:unconfined
-	github.com/Microsoft/go-winio v0.6.3-0.20251027160822-ad3df93bed29 // gomodjail:unconfined
+	github.com/Microsoft/go-winio v0.6.3 // gomodjail:unconfined
 	github.com/Microsoft/hcsshim v0.14.1
 	github.com/apparentlymart/go-cidr v1.1.1
 	github.com/balajiv113/fd v0.0.0-20230330094840-143eec500f3e // gomodjail:unconfined
@@ -77,7 +77,7 @@ require (
 	// gomodjail:unconfined
 	golang.org/x/term v0.46.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.49.0 // indirect
+	golang.org/x/tools v0.50.0 // indirect
 )
 
 require (
