@@ -12,9 +12,11 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-func TestGenCLIDocsy(t *testing.T) {
+func TestGenDocContentModeCLI(t *testing.T) {
 	dir := t.TempDir()
-	assert.NilError(t, genCLIDocsy(newApp(), dir))
+	app := newApp()
+	app.SetArgs([]string{"generate-doc", "--content-mode=cli", dir})
+	assert.NilError(t, app.Execute())
 
 	for file, title := range map[string]string{
 		"limactl_mcp.md":       "title: mcp\n",
@@ -28,4 +30,6 @@ func TestGenCLIDocsy(t *testing.T) {
 	}
 	_, err := os.Stat(filepath.Join(dir, "limactl_mcp_generate-doc.md"))
 	assert.Assert(t, os.IsNotExist(err), "hidden command should not be documented")
+	_, err = os.Stat(filepath.Join(dir, "mcp.md"))
+	assert.Assert(t, os.IsNotExist(err), "mcp.md should only be generated in the mcp content mode")
 }

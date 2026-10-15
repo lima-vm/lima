@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/gendoc"
 	"github.com/lima-vm/lima/v2/pkg/limactlutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/version"
@@ -47,14 +48,45 @@ func main() {
 }
 
 func newApp() *cobra.Command {
-	return &cobra.Command{
+	cmd := &cobra.Command{
 		Use:           "limactl-menu",
 		Short:         "TUI menu for Lima instances (EXPERIMENTAL)",
 		Version:       strings.TrimPrefix(version.Version, "v"),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 		RunE:          runMenu,
+		// The hidden generate-doc command must not add a completion command.
+		CompletionOptions: cobra.CompletionOptions{DisableDefaultCmd: true},
+		Annotations: map[string]string{
+			// Show "limactl menu" rather than "limactl-menu" in the usage and in the docs
+			cobra.CommandDisplayNameAnnotation: "limactl menu",
+		},
 	}
+	cmd.AddCommand(newGenDocCommand())
+	return cmd
+}
+
+func newGenDocCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:    "generate-doc DIR",
+		Short:  "Generate documentation pages",
+		Args:   cobra.ExactArgs(1),
+		RunE:   genDocAction,
+		Hidden: true,
+	}
+	cmd.Flags().String("content-mode", gendoc.ContentModeCLI, "Content to generate (cli: the cli-reference pages for docsy)")
+	return cmd
+}
+
+func genDocAction(cmd *cobra.Command, args []string) error {
+	contentMode, err := cmd.Flags().GetString("content-mode")
+	if err != nil {
+		return err
+	}
+	if contentMode != gendoc.ContentModeCLI {
+		return fmt.Errorf("unknown content mode %q", contentMode)
+	}
+	return gendoc.Docsy(cmd.Root(), args[0])
 }
 
 func runMenu(cmd *cobra.Command, _ []string) error {

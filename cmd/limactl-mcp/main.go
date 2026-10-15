@@ -16,10 +16,10 @@ import (
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
-	"github.com/spf13/cobra/doc"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/lima-vm/lima/v2/pkg/gendoc"
 	"github.com/lima-vm/lima/v2/pkg/limactlutil"
 	"github.com/lima-vm/lima/v2/pkg/mcp/toolset"
 	"github.com/lima-vm/lima/v2/pkg/version"
@@ -186,31 +186,29 @@ func mcpServeAction(cmd *cobra.Command, args []string) error {
 
 func newMcpGenDocCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:    "generate-doc [DIR]",
+		Use:    "generate-doc DIR",
 		Short:  "Generate documentation pages",
-		Args:   cobra.MaximumNArgs(1),
+		Args:   cobra.MinimumNArgs(1),
 		RunE:   mcpGenDocAction,
 		Hidden: true,
 	}
-	cmd.Flags().String("cli-dir", "", "Output directory for the cli-reference pages (docsy)")
+	cmd.Flags().String("content-mode", "mcp", "Content to generate (mcp: the MCP page, cli: the cli-reference pages for docsy)")
 	return cmd
 }
 
 func mcpGenDocAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
-	cliDir, err := cmd.Flags().GetString("cli-dir")
+	contentMode, err := cmd.Flags().GetString("content-mode")
 	if err != nil {
 		return err
 	}
-	if cliDir != "" {
-		if err = genCLIDocsy(cmd.Root(), cliDir); err != nil {
-			return err
-		}
-	}
-	if len(args) == 0 {
-		return nil
-	}
 	dir := args[0]
+	if contentMode == gendoc.ContentModeCLI {
+		return gendoc.Docsy(cmd.Root(), dir)
+	}
+	if contentMode != "mcp" {
+		return fmt.Errorf("unknown content mode %q", contentMode)
+	}
 	if err = os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
@@ -268,26 +266,4 @@ MCP Sandbox Interface was inspired by
 		}
 	}
 	return f.Close()
-}
-
-// genCLIDocsy generates the cli-reference pages for `limactl mcp`, in the same format as `limactl generate-doc --type docsy`.
-func genCLIDocsy(root *cobra.Command, dir string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
-		return err
-	}
-	return doc.GenMarkdownTreeCustom(root, dir, func(s string) string {
-		// Replace limactl_mcp_serve to mcp serve for docsy title
-		name := filepath.Base(s)
-		name = strings.ReplaceAll(name, "limactl_", "")
-		name = strings.ReplaceAll(name, "_", " ")
-		name = strings.TrimSuffix(name, filepath.Ext(name))
-		return fmt.Sprintf(`---
-title: %s
-weight: 3
----
-`, name)
-	}, func(s string) string {
-		// Use ../ for move one folder up for docsy
-		return "../" + strings.TrimSuffix(s, filepath.Ext(s))
-	})
 }
