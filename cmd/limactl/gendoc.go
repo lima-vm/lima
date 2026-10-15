@@ -11,7 +11,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"slices"
 	"time"
 
 	"github.com/cpuguy83/go-md2man/v2/md2man"
@@ -21,7 +20,6 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/gendoc"
 	"github.com/lima-vm/lima/v2/pkg/plugins"
-	"github.com/lima-vm/lima/v2/pkg/usrlocal"
 )
 
 func newGenDocCommand() *cobra.Command {
@@ -69,7 +67,7 @@ func gendocAction(cmd *cobra.Command, args []string) error {
 		if err := genDocsy(cmd, dir); err != nil {
 			return err
 		}
-		if err := genPluginsDocsy(cmd.Context(), bundledPlugins(), dir); err != nil {
+		if err := genPluginsDocsy(cmd.Context(), plugins.DiscoverBundled(), dir); err != nil {
 			return err
 		}
 	}
@@ -113,27 +111,6 @@ and $LIMA_WORKDIR.
 
 func genDocsy(cmd *cobra.Command, dir string) error {
 	return gendoc.Docsy(cmd.Root(), dir)
-}
-
-// bundledPlugins returns the plugins installed next to limactl.
-// Plugins found only in $PATH are skipped, as they are not part of Lima.
-func bundledPlugins() []plugins.Plugin {
-	allPlugins, err := plugins.Discover()
-	if err != nil {
-		logrus.WithError(err).Warn("Failed to discover plugins")
-		return nil
-	}
-	dirs := usrlocal.SelfDirs()
-	if libexecDirs, err := usrlocal.LibexecLima(); err == nil {
-		dirs = append(dirs, libexecDirs...)
-	}
-	var res []plugins.Plugin
-	for _, plugin := range allPlugins {
-		if slices.Contains(dirs, filepath.Dir(plugin.Path)) {
-			res = append(res, plugin)
-		}
-	}
-	return res
 }
 
 // genPluginsDocsy generates the cli-reference pages of the plugins that support `generate-doc --content-mode=cli DIR`.
