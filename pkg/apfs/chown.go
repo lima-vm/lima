@@ -316,41 +316,32 @@ func (c *container) omapLookup(omapTreeAddr, oid, maxXID uint64) (uint64, error)
 		if verifyChecksum(blk) != nil {
 			return 0, errors.New("omap node checksum failed")
 		}
-		if err := verifyBTreeNodeType(blk); err != nil {
+		node, err := c.parseBTreeNode(blk)
+		if err != nil {
 			return 0, fmt.Errorf("omap node: %w", err)
 		}
-		flags := le.Uint16(blk[btnFlagsOff:])
-		nkeys := le.Uint32(blk[btnNKeysOff:])
-		tspOff := le.Uint16(blk[btnTableSpaceOff:])
-		tspLen := le.Uint16(blk[btnTableSpaceOff+2:])
 
-		tocStart := btnDataOff + uint32(tspOff)
-		keyAreaStart := tocStart + uint32(tspLen)
-
-		isLeaf := flags&btnodeLeaf != 0
-		isFixedKV := flags&btnodeFixedKVSize != 0
-		isRoot := flags&btnodeRoot != 0
-
-		valueAreaEnd := c.blockSize
-		if isRoot {
-			valueAreaEnd -= btreeInfoSize
-		}
-
-		if isLeaf {
+		if node.leaf {
 			// Search for matching oid with highest xid <= maxXID.
 			var bestPhysAddr uint64
 			var bestXID uint64
 			found := false
 
-			for i := range nkeys {
-				kOff, vOff := c.readTocEntry(blk, tocStart, i, isFixedKV)
-				keyStart := keyAreaStart + kOff
+			for i := range node.nkeys {
+				kOff, vOff := node.tocEntry(i)
+				keyStart, ok := node.keyOffset(kOff, 16) // ov_key: oid(8) + xid(8)
+				if !ok {
+					return 0, errors.New("omap leaf key out of range")
+				}
 				entryOID := le.Uint64(blk[keyStart:])
 				entryXID := le.Uint64(blk[keyStart+8:])
 
 				if entryOID == oid && entryXID <= maxXID {
 					// Value: ov_flags(4) + ov_size(4) + ov_paddr(8).
-					valStart := valueAreaEnd - vOff
+					valStart, ok := node.valueOffset(vOff, 16)
+					if !ok {
+						return 0, errors.New("omap leaf value out of range")
+					}
 					physAddr := le.Uint64(blk[valStart+8:])
 					if !found || entryXID > bestXID {
 						bestPhysAddr = physAddr
@@ -367,9 +358,12 @@ func (c *container) omapLookup(omapTreeAddr, oid, maxXID uint64) (uint64, error)
 
 		// Internal node: find the last key <= (oid, maxXID) and descend.
 		childIdx := uint32(0)
-		for i := range nkeys {
-			kOff, _ := c.readTocEntry(blk, tocStart, i, isFixedKV)
-			keyStart := keyAreaStart + kOff
+		for i := range node.nkeys {
+			kOff, _ := node.tocEntry(i)
+			keyStart, ok := node.keyOffset(kOff, 16)
+			if !ok {
+				return 0, errors.New("omap internal key out of range")
+			}
 			entryOID := le.Uint64(blk[keyStart:])
 			entryXID := le.Uint64(blk[keyStart+8:])
 
@@ -382,8 +376,12 @@ func (c *container) omapLookup(omapTreeAddr, oid, maxXID uint64) (uint64, error)
 		}
 
 		// Read child pointer (physical address, 8 bytes).
-		_, vOff := c.readTocEntry(blk, tocStart, childIdx, isFixedKV)
-		childAddr := le.Uint64(blk[valueAreaEnd-vOff:])
+		_, vOff := node.tocEntry(childIdx)
+		valStart, ok := node.valueOffset(vOff, 8)
+		if !ok {
+			return 0, errors.New("omap child pointer out of range")
+		}
+		childAddr := le.Uint64(blk[valStart:])
 
 		blk, err = c.readBlock(childAddr)
 		if err != nil {
@@ -392,17 +390,103 @@ func (c *container) omapLookup(omapTreeAddr, oid, maxXID uint64) (uint64, error)
 	}
 }
 
-// readTocEntry reads the key and value offsets from a ToC entry.
+// btreeNode is a bounds-checked view over a B-tree node block. Every count and
+// offset it exposes is read from the (untrusted) block and validated against
+// the block size, so a crafted image cannot make the key/value accessors index
+// past the block regardless of what it stores in the node header or table of
+// contents.
+type btreeNode struct {
+	blk          []byte
+	nkeys        uint32
+	tocStart     uint32 // start of the table of contents
+	keyAreaStart uint32 // start of the key area (keys grow up from here)
+	valueAreaEnd uint32 // end of the value area (values grow down from here)
+	leaf         bool
+	fixedKV      bool
+}
+
+// parseBTreeNode validates a B-tree node header and returns a view whose
+// accessors stay within the block. The GPT header parser already rejects a
+// crafted table rather than panicking (see findAPFSPartitionGPT); this does
+// the same for the node fields that the omap and filesystem walks read.
+func (c *container) parseBTreeNode(blk []byte) (*btreeNode, error) {
+	if err := verifyBTreeNodeType(blk); err != nil {
+		return nil, err
+	}
+	flags := le.Uint16(blk[btnFlagsOff:])
+	n := &btreeNode{
+		blk:          blk,
+		nkeys:        le.Uint32(blk[btnNKeysOff:]),
+		leaf:         flags&btnodeLeaf != 0,
+		fixedKV:      flags&btnodeFixedKVSize != 0,
+		valueAreaEnd: c.blockSize,
+	}
+	if flags&btnodeRoot != 0 {
+		if n.valueAreaEnd < btreeInfoSize {
+			return nil, errors.New("b-tree node is smaller than btree_info_t")
+		}
+		n.valueAreaEnd -= btreeInfoSize
+	}
+	tspOff := uint32(le.Uint16(blk[btnTableSpaceOff:]))
+	tspLen := uint32(le.Uint16(blk[btnTableSpaceOff+2:]))
+	n.tocStart = btnDataOff + tspOff
+	n.keyAreaStart = n.tocStart + tspLen
+	entrySize := uint32(8) // kvloc_t
+	if n.fixedKV {
+		entrySize = 4 // kvoff_t
+	}
+	// The table of contents is tspLen bytes starting at tocStart and must sit
+	// below the value area while holding all nkeys entries; otherwise the
+	// per-entry offsets read below could index out of bounds.
+	if n.keyAreaStart > n.valueAreaEnd || n.nkeys > tspLen/entrySize {
+		return nil, errors.New("b-tree node table space is out of range")
+	}
+	// An internal node has no child to descend into when it holds no keys, but
+	// each walk still reads child entry 0; reject it here so that read cannot
+	// run past an empty table of contents.
+	if !n.leaf && n.nkeys == 0 {
+		return nil, errors.New("b-tree internal node has no keys")
+	}
+	return n, nil
+}
+
+// tocEntry returns the key and value offsets stored in table-of-contents entry
+// i. parseBTreeNode verified that all nkeys entries fit, so i must be < nkeys.
 // For fixed-KV nodes (kvoff_t): 4 bytes per entry (k_off u16, v_off u16).
 // For variable-KV nodes (kvloc_t): 8 bytes per entry (k.off u16, k.len u16, v.off u16, v.len u16).
-// Returns keyOffset and valueOffset (both relative to their respective areas).
-func (c *container) readTocEntry(blk []byte, tocStart, index uint32, fixedKV bool) (keyOff, valOff uint32) {
-	if fixedKV {
-		off := tocStart + index*4
-		return uint32(le.Uint16(blk[off:])), uint32(le.Uint16(blk[off+2:]))
+func (n *btreeNode) tocEntry(i uint32) (keyOff, valOff uint32) {
+	if n.fixedKV {
+		off := n.tocStart + i*4
+		return uint32(le.Uint16(n.blk[off:])), uint32(le.Uint16(n.blk[off+2:]))
 	}
-	off := tocStart + index*8
-	return uint32(le.Uint16(blk[off:])), uint32(le.Uint16(blk[off+4:]))
+	off := n.tocStart + i*8
+	return uint32(le.Uint16(n.blk[off:])), uint32(le.Uint16(n.blk[off+4:]))
+}
+
+// keyOffset returns the absolute block offset of a size-byte key stored at
+// table-of-contents key offset kOff, or false if it would fall outside the
+// key/value area.
+func (n *btreeNode) keyOffset(kOff, size uint32) (uint32, bool) {
+	start := n.keyAreaStart + kOff
+	if start < n.keyAreaStart || start+size < start || start+size > n.valueAreaEnd {
+		return 0, false
+	}
+	return start, true
+}
+
+// valueOffset returns the absolute block offset of a size-byte value stored at
+// table-of-contents value offset vOff. Values grow down from the end of the
+// value area, so vOff is subtracted; an out-of-range vOff (including one that
+// would underflow the subtraction) returns false.
+func (n *btreeNode) valueOffset(vOff, size uint32) (uint32, bool) {
+	if vOff > n.valueAreaEnd {
+		return 0, false
+	}
+	start := n.valueAreaEnd - vOff
+	if start < n.keyAreaStart || start+size < start || start+size > n.valueAreaEnd {
+		return 0, false
+	}
+	return start, true
 }
 
 // verifyBTreeNodeType checks that a block's object type indicates a
@@ -472,33 +556,38 @@ func drecNameHash(name string) uint32 {
 	return ^crc32.Checksum(buf, crc32cTable) & 0x3FFFFF
 }
 
-// compareDrecKey compares a directory record key from a B-tree node
-// against a target (parentCNID, name). Returns <0, 0, or >0.
-func (c *container) compareDrecKey(blk []byte, keyStart uint32, targetKeyHeader uint64, targetName string, targetHash uint32) int {
-	keyHeader := le.Uint64(blk[keyStart:])
+// compareDrecKey compares the directory record key at table-of-contents key
+// offset kOff against a target (parentCNID, name). Returns <0, 0, or >0, and
+// false if the key falls outside the node.
+func (n *btreeNode) compareDrecKey(kOff uint32, targetKeyHeader uint64, targetName string, targetHash uint32) (int, bool) {
+	keyStart, ok := n.keyOffset(kOff, 12) // key header(8) + name_len_and_hash(4)
+	if !ok {
+		return 0, false
+	}
+	keyHeader := le.Uint64(n.blk[keyStart:])
 	cmp := compareFSKeyHeader(keyHeader, targetKeyHeader)
 	if cmp != 0 {
-		return cmp
+		return cmp, true
 	}
 	// Headers match (same parent CNID and type DIR_REC).
 	// Compare name hash for hashed keys, or name directly for non-hashed.
-	val32 := le.Uint32(blk[keyStart+8:])
+	val32 := le.Uint32(n.blk[keyStart+8:])
 	if val32&0xFFFFFC00 != 0 {
 		// Hashed key: compare hash values (upper 22 bits).
 		entryHash := (val32 >> 10) & 0x3FFFFF
 		if entryHash < targetHash {
-			return -1
+			return -1, true
 		}
 		if entryHash > targetHash {
-			return 1
+			return 1, true
 		}
 		// Hash collision: compare actual names.
-		entryName := c.readDrecName(blk, keyStart+8)
-		return strings.Compare(strings.ToLower(entryName), strings.ToLower(targetName))
+		entryName := n.drecName(keyStart + 8)
+		return strings.Compare(strings.ToLower(entryName), strings.ToLower(targetName)), true
 	}
 	// Non-hashed key: compare names directly.
-	entryName := c.readDrecName(blk, keyStart+8)
-	return strings.Compare(entryName, targetName)
+	entryName := n.drecName(keyStart + 8)
+	return strings.Compare(entryName, targetName), true
 }
 
 // resolvePath walks path components from the volume root, returning
@@ -535,30 +624,18 @@ func (c *container) lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, parentCNID 
 		if verifyChecksum(blk) != nil {
 			return 0, errors.New("filesystem B-tree node checksum failed")
 		}
-		if err := verifyBTreeNodeType(blk); err != nil {
+		node, err := c.parseBTreeNode(blk)
+		if err != nil {
 			return 0, fmt.Errorf("filesystem B-tree node: %w", err)
 		}
-		flags := le.Uint16(blk[btnFlagsOff:])
-		nkeys := le.Uint32(blk[btnNKeysOff:])
-		tspOff := le.Uint16(blk[btnTableSpaceOff:])
-		tspLen := le.Uint16(blk[btnTableSpaceOff+2:])
 
-		tocStart := btnDataOff + uint32(tspOff)
-		keyAreaStart := tocStart + uint32(tspLen)
-
-		isLeaf := flags&btnodeLeaf != 0
-		isFixedKV := flags&btnodeFixedKVSize != 0
-		isRoot := flags&btnodeRoot != 0
-
-		valueAreaEnd := c.blockSize
-		if isRoot {
-			valueAreaEnd -= btreeInfoSize
-		}
-
-		if isLeaf {
-			for i := range nkeys {
-				kOff, vOff := c.readTocEntry(blk, tocStart, i, isFixedKV)
-				keyStart := keyAreaStart + kOff
+		if node.leaf {
+			for i := range node.nkeys {
+				kOff, vOff := node.tocEntry(i)
+				keyStart, ok := node.keyOffset(kOff, 8) // j_key_t header
+				if !ok {
+					return 0, errors.New("filesystem leaf key out of range")
+				}
 				keyHeader := le.Uint64(blk[keyStart:])
 
 				if keyHeader != targetKeyHeader {
@@ -566,13 +643,16 @@ func (c *container) lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, parentCNID 
 				}
 
 				// Parse the directory record key name.
-				entryName := c.readDrecName(blk, keyStart+8)
+				entryName := node.drecName(keyStart + 8)
 				if entryName != name {
 					continue
 				}
 
 				// Read file_id from j_drec_val_t (first 8 bytes of value).
-				valStart := valueAreaEnd - vOff
+				valStart, ok := node.valueOffset(vOff, 8)
+				if !ok {
+					return 0, errors.New("filesystem leaf value out of range")
+				}
 				return le.Uint64(blk[valStart:]), nil
 			}
 			return 0, fmt.Errorf("directory entry %#q not found", name)
@@ -583,10 +663,12 @@ func (c *container) lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, parentCNID 
 		// For DIR_REC keys with matching headers, we also compare the
 		// name hash to find the correct subtree.
 		childIdx := uint32(0)
-		for i := range nkeys {
-			kOff, _ := c.readTocEntry(blk, tocStart, i, isFixedKV)
-			keyStart := keyAreaStart + kOff
-			cmp := c.compareDrecKey(blk, keyStart, targetKeyHeader, name, targetHash)
+		for i := range node.nkeys {
+			kOff, _ := node.tocEntry(i)
+			cmp, ok := node.compareDrecKey(kOff, targetKeyHeader, name, targetHash)
+			if !ok {
+				return 0, errors.New("filesystem internal key out of range")
+			}
 			if cmp <= 0 {
 				childIdx = i
 			} else {
@@ -595,8 +677,12 @@ func (c *container) lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, parentCNID 
 		}
 
 		// Read child OID (virtual) and resolve through omap.
-		_, vOff := c.readTocEntry(blk, tocStart, childIdx, isFixedKV)
-		childOID := le.Uint64(blk[valueAreaEnd-vOff:])
+		_, vOff := node.tocEntry(childIdx)
+		valStart, ok := node.valueOffset(vOff, 8)
+		if !ok {
+			return 0, errors.New("filesystem child pointer out of range")
+		}
+		childOID := le.Uint64(blk[valStart:])
 		childPhys, err := c.omapLookup(omapTreeAddr, childOID, maxXID)
 		if err != nil {
 			return 0, fmt.Errorf("resolving child OID %d: %w", childOID, err)
@@ -608,11 +694,16 @@ func (c *container) lookupDirEntry(fsRootPhys, omapTreeAddr, maxXID, parentCNID 
 	}
 }
 
-// readDrecName reads a directory record name from the key data
-// starting at nameFieldOff. Handles both hashed (j_drec_hashed_key_t,
-// 4-byte name_len_and_hash) and non-hashed (j_drec_key_t, 2-byte
-// name_len) formats.
-func (c *container) readDrecName(blk []byte, nameFieldOff uint32) string {
+// drecName reads a directory record name from the key data starting at the
+// absolute block offset nameFieldOff. Handles both hashed (j_drec_hashed_key_t,
+// 4-byte name_len_and_hash) and non-hashed (j_drec_key_t, 2-byte name_len)
+// formats. A length or offset that would run past the node returns "".
+func (n *btreeNode) drecName(nameFieldOff uint32) string {
+	// The length field is a uint32 (hashed) or uint16 (non-hashed); either way
+	// four bytes must be readable before interpreting it.
+	if nameFieldOff+4 < nameFieldOff || nameFieldOff+4 > n.valueAreaEnd {
+		return ""
+	}
 	// Heuristic: if the 4-byte field at nameFieldOff has its upper
 	// bits set (hash), it's a hashed key. For non-hashed keys, the
 	// 2-byte name_len is followed by the name bytes.
@@ -624,23 +715,25 @@ func (c *container) readDrecName(blk []byte, nameFieldOff uint32) string {
 	//
 	// We distinguish them by checking: if the upper 22 bits of the
 	// first uint32 are nonzero, it's hashed.
-	val32 := le.Uint32(blk[nameFieldOff:])
+	val32 := le.Uint32(n.blk[nameFieldOff:])
+	var nameLen, nameStart uint32
 	if val32&0xFFFFFC00 != 0 {
 		// Hashed: lower 10 bits = length (including null terminator).
-		nameLen := int(val32 & 0x3FF)
-		nameStart := nameFieldOff + 4
-		if nameLen > 1 {
-			return string(blk[nameStart : nameStart+uint32(nameLen-1)])
-		}
+		nameLen = val32 & 0x3FF
+		nameStart = nameFieldOff + 4
+	} else {
+		// Non-hashed: 2-byte name_len.
+		nameLen = uint32(le.Uint16(n.blk[nameFieldOff:]))
+		nameStart = nameFieldOff + 2
+	}
+	if nameLen <= 1 {
 		return ""
 	}
-	// Non-hashed: 2-byte name_len.
-	nameLen := int(le.Uint16(blk[nameFieldOff:]))
-	nameStart := nameFieldOff + 2
-	if nameLen > 1 {
-		return string(blk[nameStart : nameStart+uint32(nameLen-1)])
+	nameEnd := nameStart + nameLen - 1
+	if nameEnd < nameStart || nameEnd > n.valueAreaEnd {
+		return ""
 	}
-	return ""
+	return string(n.blk[nameStart:nameEnd])
 }
 
 // chownInode finds an inode in the filesystem B-tree and modifies
@@ -659,40 +752,30 @@ func (c *container) chownInode(fsRootPhys, omapTreeAddr, maxXID, inodeNum uint64
 		if verifyChecksum(blk) != nil {
 			return errors.New("filesystem B-tree node checksum failed")
 		}
-		if err := verifyBTreeNodeType(blk); err != nil {
+		node, err := c.parseBTreeNode(blk)
+		if err != nil {
 			return fmt.Errorf("filesystem B-tree node: %w", err)
 		}
-		flags := le.Uint16(blk[btnFlagsOff:])
-		nkeys := le.Uint32(blk[btnNKeysOff:])
-		tspOff := le.Uint16(blk[btnTableSpaceOff:])
-		tspLen := le.Uint16(blk[btnTableSpaceOff+2:])
 
-		tocStart := btnDataOff + uint32(tspOff)
-		keyAreaStart := tocStart + uint32(tspLen)
-
-		isLeaf := flags&btnodeLeaf != 0
-		isFixedKV := flags&btnodeFixedKVSize != 0
-		isRoot := flags&btnodeRoot != 0
-
-		valueAreaEnd := c.blockSize
-		if isRoot {
-			valueAreaEnd -= btreeInfoSize
-		}
-
-		if isLeaf {
-			for i := range nkeys {
-				kOff, vOff := c.readTocEntry(blk, tocStart, i, isFixedKV)
-				keyStart := keyAreaStart + kOff
+		if node.leaf {
+			for i := range node.nkeys {
+				kOff, vOff := node.tocEntry(i)
+				keyStart, ok := node.keyOffset(kOff, 8) // j_key_t header
+				if !ok {
+					return errors.New("filesystem leaf key out of range")
+				}
 				keyHeader := le.Uint64(blk[keyStart:])
 
 				if keyHeader != targetKeyHeader {
 					continue
 				}
 
-				// Found the inode. Validate before writing.
-				valStart := valueAreaEnd - vOff
-
-				if valStart+inodeGroupOff+4 > c.blockSize {
+				// Found the inode. Validate before writing. valueOffset also
+				// rejects a vOff that would underflow valueAreaEnd-vOff, which
+				// the old c.blockSize check (computed in wrapping uint32
+				// arithmetic) could let through.
+				valStart, ok := node.valueOffset(vOff, inodeGroupOff+4)
+				if !ok {
 					return fmt.Errorf("inode %d value exceeds block boundary", inodeNum)
 				}
 
@@ -717,9 +800,12 @@ func (c *container) chownInode(fsRootPhys, omapTreeAddr, maxXID, inodeNum uint64
 
 		// Internal node: descend.
 		childIdx := uint32(0)
-		for i := range nkeys {
-			kOff, _ := c.readTocEntry(blk, tocStart, i, isFixedKV)
-			keyStart := keyAreaStart + kOff
+		for i := range node.nkeys {
+			kOff, _ := node.tocEntry(i)
+			keyStart, ok := node.keyOffset(kOff, 8)
+			if !ok {
+				return errors.New("filesystem internal key out of range")
+			}
 			keyHeader := le.Uint64(blk[keyStart:])
 
 			if compareFSKeyHeader(keyHeader, targetKeyHeader) <= 0 {
@@ -729,8 +815,12 @@ func (c *container) chownInode(fsRootPhys, omapTreeAddr, maxXID, inodeNum uint64
 			}
 		}
 
-		_, vOff := c.readTocEntry(blk, tocStart, childIdx, isFixedKV)
-		childOID := le.Uint64(blk[valueAreaEnd-vOff:])
+		_, vOff := node.tocEntry(childIdx)
+		valStart, ok := node.valueOffset(vOff, 8)
+		if !ok {
+			return errors.New("filesystem child pointer out of range")
+		}
+		childOID := le.Uint64(blk[valStart:])
 		childPhys, err := c.omapLookup(omapTreeAddr, childOID, maxXID)
 		if err != nil {
 			return fmt.Errorf("resolving child OID %d: %w", childOID, err)

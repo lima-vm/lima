@@ -124,3 +124,131 @@ func TestOpenContainerBlockSize(t *testing.T) {
 		})
 	}
 }
+
+// TestParseBTreeNodeRejectsBadHeader checks that a B-tree node header whose
+// table of contents does not fit in the block is rejected rather than letting
+// the per-entry offset reads index out of bounds.
+func TestParseBTreeNodeRejectsBadHeader(t *testing.T) {
+	c := &container{blockSize: 4096}
+	node := func(flags uint16, nkeys uint32, tspOff, tspLen uint16) []byte {
+		blk := make([]byte, c.blockSize)
+		le.PutUint32(blk[objTypeOff:], objectTypeBTreeNode)
+		le.PutUint16(blk[btnFlagsOff:], flags)
+		le.PutUint32(blk[btnNKeysOff:], nkeys)
+		le.PutUint16(blk[btnTableSpaceOff:], tspOff)
+		le.PutUint16(blk[btnTableSpaceOff+2:], tspLen)
+		return blk
+	}
+	for _, tc := range []struct {
+		name   string
+		flags  uint16
+		nkeys  uint32
+		tspOff uint16
+		tspLen uint16
+		ok     bool
+	}{
+		{"valid-fixed-kv", btnodeLeaf | btnodeFixedKVSize, 2, 0, 8, true},
+		{"toc-past-block", btnodeLeaf | btnodeFixedKVSize, 1, 5000, 8, false},
+		{"key-area-past-block", btnodeLeaf | btnodeFixedKVSize, 1, 0, 5000, false},
+		{"nkeys-exceed-toc-fixed", btnodeLeaf | btnodeFixedKVSize, 1000, 0, 8, false},
+		{"nkeys-exceed-toc-var", btnodeLeaf, 1000, 0, 8, false},
+		{"root-smaller-than-info", btnodeRoot | btnodeLeaf | btnodeFixedKVSize, 0, 0, 0, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := c.parseBTreeNode(node(tc.flags, tc.nkeys, tc.tspOff, tc.tspLen))
+			if tc.ok {
+				assert.NilError(t, err)
+				return
+			}
+			assert.ErrorContains(t, err, "out of range")
+		})
+	}
+}
+
+// TestBTreeNodeOffsetsRejectOutOfRange checks the key/value accessors refuse
+// offsets that fall outside the node, including a value offset large enough to
+// underflow valueAreaEnd-vOff (the case the old chownInode guard, computed in
+// wrapping uint32 arithmetic, could let slip through).
+func TestBTreeNodeOffsetsRejectOutOfRange(t *testing.T) {
+	n := &btreeNode{blk: make([]byte, 4096), keyAreaStart: 100, valueAreaEnd: 200}
+
+	if _, ok := n.keyOffset(10, 8); !ok {
+		t.Error("keyOffset rejected an in-range key")
+	}
+	if _, ok := n.keyOffset(500, 8); ok {
+		t.Error("keyOffset accepted a key past the value area")
+	}
+	if off, ok := n.valueOffset(50, 8); !ok || off != 150 {
+		t.Errorf("valueOffset(50,8) = %d, %v; want 150, true", off, ok)
+	}
+	if _, ok := n.valueOffset(5000, 8); ok {
+		t.Error("valueOffset accepted a value offset that underflows valueAreaEnd-vOff")
+	}
+	if _, ok := n.valueOffset(150, 8); ok {
+		t.Error("valueOffset accepted a value that overlaps the key area")
+	}
+}
+
+// TestOmapLookupRejectsCraftedNode drives a crafted omap leaf (whose checksum
+// is valid, so the parser reaches the entry reads) through omapLookup and
+// asserts it returns an error instead of panicking on an out-of-range value
+// offset.
+func TestOmapLookupRejectsCraftedNode(t *testing.T) {
+	const (
+		blockSize = 4096
+		oid       = uint64(0x1234)
+	)
+	blk := make([]byte, blockSize)
+	le.PutUint32(blk[objTypeOff:], objectTypeBTreeNode) // non-root B-tree node
+	le.PutUint16(blk[btnFlagsOff:], btnodeLeaf|btnodeFixedKVSize)
+	le.PutUint32(blk[btnNKeysOff:], 1)
+	le.PutUint16(blk[btnTableSpaceOff:], 0)
+	le.PutUint16(blk[btnTableSpaceOff+2:], 8) // toc: room for two kvoff_t entries
+
+	tocStart := uint32(btnDataOff)
+	keyAreaStart := tocStart + 8
+	le.PutUint16(blk[tocStart:], 0)       // entry0 k_off -> keyStart == keyAreaStart
+	le.PutUint16(blk[tocStart+2:], 60000) // entry0 v_off: valueAreaEnd(4096) - 60000 underflows
+	le.PutUint64(blk[keyAreaStart:], oid) // ov_key.oid
+	le.PutUint64(blk[keyAreaStart+8:], 0) // ov_key.xid (<= maxXID)
+	updateChecksum(blk)
+
+	path := filepath.Join(t.TempDir(), "omap.img")
+	assert.NilError(t, os.WriteFile(path, blk, 0o600))
+	f, err := os.Open(path)
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = f.Close() })
+
+	c := &container{f: f, blockSize: blockSize}
+	_, err = c.omapLookup(0, oid, 100)
+	assert.ErrorContains(t, err, "out of range")
+}
+
+// TestOmapLookupRejectsEmptyInternalNode drives an internal (non-leaf) node
+// with no keys through omapLookup. Each walk's internal-node branch reads child
+// entry 0 even when the key loop never runs, so an empty table of contents sat
+// at the end of the block would index past it; parseBTreeNode must reject the
+// node instead.
+func TestOmapLookupRejectsEmptyInternalNode(t *testing.T) {
+	const (
+		blockSize = 4096
+		oid       = uint64(0x1234)
+	)
+	blk := make([]byte, blockSize)
+	le.PutUint32(blk[objTypeOff:], objectTypeBTreeNode) // non-root B-tree node
+	le.PutUint16(blk[btnFlagsOff:], btnodeFixedKVSize)  // internal (no btnodeLeaf)
+	le.PutUint32(blk[btnNKeysOff:], 0)
+	le.PutUint16(blk[btnTableSpaceOff:], blockSize-btnDataOff) // tocStart at end of block
+	le.PutUint16(blk[btnTableSpaceOff+2:], 0)
+	updateChecksum(blk)
+
+	path := filepath.Join(t.TempDir(), "omap.img")
+	assert.NilError(t, os.WriteFile(path, blk, 0o600))
+	f, err := os.Open(path)
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = f.Close() })
+
+	c := &container{f: f, blockSize: blockSize}
+	_, err = c.omapLookup(0, oid, 100)
+	assert.ErrorContains(t, err, "internal node has no keys")
+}
