@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/exec"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/docker/go-units"
@@ -37,6 +38,8 @@ type State struct {
 	ctx     context.Context
 	app     *tview.Application
 	list    *tview.List
+	header  *tview.TextView
+	panel   *tview.Flex
 	flex    *tview.Flex
 }
 
@@ -84,7 +87,7 @@ func (s *State) run() error {
 		SetText(" [yellow]F1[white] Help  [yellow]F2[white] Start/Stop  [yellow]F3[white] Info  [yellow]F5[white] Refresh  [yellow]F8[white] Delete  [yellow]F10[white] Quit")
 
 	s.flex = tview.NewFlex().SetDirection(tview.FlexRow).
-		AddItem(s.list, 0, 1, true).
+		AddItem(s.panel, 0, 1, true).
 		AddItem(footer, 1, 1, false)
 
 	s.app.SetRoot(s.flex, true).SetFocus(s.list)
@@ -108,13 +111,25 @@ func (s *State) buildUI() {
 		SetMainTextColor(cTxt).
 		SetSelectedTextColor(tcell.ColorBlack).
 		SetSelectedBackgroundColor(cPrim)
-	s.list.SetBorder(true).
+
+	s.header = tview.NewTextView().SetTextColor(cDim)
+
+	s.panel = tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(s.header, 1, 0, false).
+		AddItem(s.list, 0, 1, true)
+	s.panel.SetBorder(true).
 		SetBorderColor(cBord).
 		SetTitle(" Lima Instances ").
 		SetTitleAlign(tview.AlignLeft).
 		SetTitleColor(cPrim).
 		SetBorderPadding(1, 1, 1, 1)
 
+	s.populateList()
+}
+
+func (s *State) populateList() {
+	s.header.SetText(fmtHeader())
+	s.list.Clear()
 	for _, in := range s.insts {
 		inst := in
 		s.list.AddItem(fmtInst(inst), "", 0, func() {
@@ -124,6 +139,22 @@ func (s *State) buildUI() {
 	if len(s.insts) > 0 {
 		s.list.SetCurrentItem(0)
 	}
+}
+
+const (
+	// rowFormat lays out the columns of a menu row: NAME, STATUS, ARCH, CPUS,
+	// MEMORY and VMTYPE. fmtHeader uses the same format, so that the column
+	// titles stay aligned with the values.
+	rowFormat = "%-16s  %-10s  %-8s  %-4s  %-8s  %s"
+
+	// statusIconWidth is the display width of the status icon plus the two
+	// spaces after it. The header is indented by the same amount.
+	statusIconWidth = 3
+)
+
+func fmtHeader() string {
+	return strings.Repeat(" ", statusIconWidth) +
+		fmt.Sprintf(rowFormat, "NAME", "STATUS", "ARCH", "CPUS", "MEMORY", "VMTYPE")
 }
 
 func fmtInst(in *limatype.Instance) string {
@@ -142,7 +173,8 @@ func fmtInst(in *limatype.Instance) string {
 		name = name[:13] + "..."
 	}
 
-	cpusMem := fmt.Sprintf("%dCPU/%s", in.CPUs, units.BytesSize(float64(in.Memory)))
+	cpus := strconv.Itoa(in.CPUs)
+	memory := units.BytesSize(float64(in.Memory))
 
 	vmType := in.VMType
 	if vmType == "" {
@@ -151,10 +183,10 @@ func fmtInst(in *limatype.Instance) string {
 
 	prot := ""
 	if in.Protected {
-		prot = " [LOCKED]"
+		prot = " " + tview.Escape("[LOCKED]")
 	}
 
-	return fmt.Sprintf("%s  %-16s  %-10s  %-8s  %-12s  %s%s", icon, name, in.Status, in.Arch, cpusMem, vmType, prot)
+	return fmt.Sprintf("%s  "+rowFormat+"%s", icon, name, in.Status, in.Arch, cpus, memory, vmType, prot)
 }
 
 func (s *State) currentInst() *limatype.Instance {
@@ -251,16 +283,7 @@ func (s *State) refreshList() {
 		return
 	}
 	s.insts = insts
-	s.list.Clear()
-	for _, in := range s.insts {
-		inst := in
-		s.list.AddItem(fmtInst(inst), "", 0, func() {
-			s.showActions(inst)
-		})
-	}
-	if len(s.insts) > 0 {
-		s.list.SetCurrentItem(0)
-	}
+	s.populateList()
 }
 
 func (s *State) showActions(in *limatype.Instance) {
