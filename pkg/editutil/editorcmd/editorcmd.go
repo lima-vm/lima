@@ -23,11 +23,20 @@ package editorcmd
 import (
 	"os"
 	"os/exec"
+	"runtime"
+	"strings"
 )
 
+// shellChars are the characters that make Detect hand $VISUAL or $EDITOR to the shell,
+// like git does. Whitespace alone is not included, so a value like "code -w" is split
+// into fields and run directly, which also works on Windows.
+const shellChars = "|&;<>()$`\\\"'*?[#~=%"
+
 // Detect detects a text editor command.
-// Returns an empty string when no editor is found.
-func Detect() string {
+// The returned slice is the command and its arguments, to which the caller appends
+// the file to edit.
+// Returns nil when no editor is found.
+func Detect() []string {
 	candidates := []string{
 		os.Getenv("VISUAL"),
 		os.Getenv("EDITOR"),
@@ -37,13 +46,33 @@ func Detect() string {
 		"emacs",
 	}
 	for _, f := range candidates {
-		if f == "" {
-			continue
-		}
-		x, err := exec.LookPath(f)
-		if err == nil {
-			return x
+		if args := resolve(f); args != nil {
+			return args
 		}
 	}
-	return ""
+	return nil
+}
+
+// resolve returns the command for the editor string, or nil if it cannot be run.
+func resolve(editor string) []string {
+	if strings.TrimSpace(editor) == "" {
+		return nil
+	}
+	// A plain executable name or path, which may itself contain whitespace.
+	if x, err := exec.LookPath(editor); err == nil {
+		return []string{x}
+	}
+	if runtime.GOOS != "windows" && strings.ContainsAny(editor, shellChars) {
+		// Let the shell parse the quoting. "$@" expands to the file to edit.
+		return []string{"/bin/sh", "-c", editor + ` "$@"`, editor}
+	}
+	fields := strings.Fields(editor)
+	if len(fields) < 2 {
+		return nil
+	}
+	x, err := exec.LookPath(fields[0])
+	if err != nil {
+		return nil
+	}
+	return append([]string{x}, fields[1:]...)
 }
