@@ -183,7 +183,7 @@ func fmtInst(in *limatype.Instance) string {
 
 	prot := ""
 	if in.Protected {
-		prot = " " + tview.Escape("[LOCKED]")
+		prot = " " + tview.Escape("[PROTECTED]")
 	}
 
 	return fmt.Sprintf("%s  "+rowFormat+"%s", icon, name, in.Status, in.Arch, cpus, memory, vmType, prot)

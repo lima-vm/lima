@@ -61,12 +61,12 @@ func fieldStarts(s string) []int {
 	return starts
 }
 
-func TestFmtInstEscapesLockedMarker(t *testing.T) {
+func TestFmtInstEscapesProtectedMarker(t *testing.T) {
 	inst := &limatype.Instance{
 		Name: "default", Status: limatype.StatusRunning, CPUs: 4, Memory: 4 << 30,
 		VMType: limatype.VZ, Protected: true,
 	}
-	assert.Assert(t, strings.HasSuffix(fmtInst(inst), " [LOCKED[]"), fmtInst(inst))
+	assert.Assert(t, strings.HasSuffix(fmtInst(inst), " [PROTECTED[]"), fmtInst(inst))
 }
 
 func TestFmtInstShowsVMType(t *testing.T) {
