@@ -26,7 +26,7 @@ func HandleTCPConnection(_ context.Context, dialContext func(ctx context.Context
 }
 
 func HandleUDPConnection(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), conn net.PacketConn, guestAddr string) {
-	proxy, err := forwarder.NewUDPProxy(conn, func() (net.Conn, error) {
+	proxy, err := forwarder.NewUDPProxy(conn, func(net.Addr) (net.Conn, error) {
 		return dialContext(ctx, "udp", guestAddr)
 	})
 	if err != nil {

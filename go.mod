@@ -26,7 +26,7 @@ require (
 	github.com/cheggaaa/pb/v3 v3.2.1 // gomodjail:unconfined
 	github.com/cilium/ebpf v0.22.0 // gomodjail:unconfined
 	github.com/containerd/continuity v0.5.0 // gomodjail:unconfined
-	github.com/containers/gvisor-tap-vsock v0.8.9 // gomodjail:unconfined
+	github.com/containers/gvisor-tap-vsock v0.9.0 // gomodjail:unconfined
 	github.com/coreos/go-semver v0.3.1
 	github.com/coreos/go-systemd/v22 v22.7.0 // gomodjail:unconfined
 	github.com/cpuguy83/go-md2man/v2 v2.0.7
@@ -38,7 +38,7 @@ require (
 	github.com/goccy/go-yaml v1.19.2 // gomodjail:unconfined
 	github.com/google/go-cmp v0.7.0
 	github.com/google/yamlfmt v0.21.0 // gomodjail:unconfined
-	github.com/inetaf/tcpproxy v0.0.0-20250222171855-c4b9df066048 // gomodjail:unconfined
+	github.com/inetaf/tcpproxy v0.0.0-20260515195445-c159a6051109 // gomodjail:unconfined
 	github.com/invopop/jsonschema v0.14.0 // gomodjail:unconfined
 	github.com/klauspost/compress v1.20.1
 	github.com/mattn/go-isatty v0.0.24 // gomodjail:unconfined
@@ -154,11 +154,12 @@ require (
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260706201446-f0a921348800 // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	// gomodjail:unconfined
-	gvisor.dev/gvisor v0.0.0-20240916094835-a174eb65023f // indirect
+	gvisor.dev/gvisor v0.0.0-20260413194555-9680d69bf798 // indirect
 )
 
 require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
 	github.com/pb33f/go-yaml v0.1.0 // indirect
+	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
 )
