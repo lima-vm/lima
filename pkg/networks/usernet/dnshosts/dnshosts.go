@@ -30,16 +30,35 @@ package dnshosts
 
 import (
 	"net"
+	"regexp"
 	"strings"
 
 	"github.com/containers/gvisor-tap-vsock/pkg/types"
 )
+
+// validDNSName allows only the characters that gvproxy accepts in zone
+// and record names.
+var validDNSName = regexp.MustCompile(`^[a-zA-Z0-9._-]+$`)
 
 func ExtractZones(hosts hostMap) []types.Zone {
 	list := make(map[string]types.Zone)
 
 	for host := range hosts {
 		h := zoneHost(host)
+		// gvproxy answers only names below a zone and rejects the root zone,
+		// which a host without a dot would need. A host ending in a dot splits
+		// into the root zone too.
+		if h.dotIndex() < 0 || strings.HasSuffix(host, ".") {
+			continue
+		}
+		if !validDNSName.MatchString(host) {
+			continue
+		}
+		ip := hosts.hostIP(host)
+		// gvproxy rejects a record without an IP.
+		if ip == nil {
+			continue
+		}
 
 		zone := types.Zone{Name: h.name()}
 		if existingZone, ok := list[h.name()]; ok {
@@ -48,12 +67,12 @@ func ExtractZones(hosts hostMap) []types.Zone {
 
 		if h.recordName() == "" {
 			if zone.DefaultIP == nil {
-				zone.DefaultIP = hosts.hostIP(host)
+				zone.DefaultIP = ip
 			}
 		} else {
 			zone.Records = append(zone.Records, types.Record{
 				Name: h.recordName(),
-				IP:   hosts.hostIP(host),
+				IP:   ip,
 			})
 		}
 
@@ -62,6 +81,10 @@ func ExtractZones(hosts hostMap) []types.Zone {
 
 	zones := make([]types.Zone, 0, len(list))
 	for _, zone := range list {
+		// gvproxy rejects a zone with only an unspecified default IP.
+		if len(zone.Records) == 0 && zone.DefaultIP.IsUnspecified() {
+			continue
+		}
 		zones = append(zones, zone)
 	}
 	return zones
