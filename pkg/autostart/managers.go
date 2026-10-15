@@ -113,14 +113,9 @@ func (t *TemplateFileBasedManager) UnregisterFromStartAtLogin(ctx context.Contex
 	return nil
 }
 
-func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getExecutable func() (string, error)) ([]byte, error) {
-	if t.template == "" {
-		return nil, errors.New("no template available")
-	}
-	selfExeAbs, err := getExecutable()
-	if err != nil {
-		return nil, err
-	}
+// EnvTemplateVars returns the "LimaHome" and "Path" template variables. Every renderer of
+// a launchd plist or systemd unit must use it so they all carry the same environment.
+func EnvTemplateVars() (map[string]string, error) {
 	// The generated unit must carry LIMA_HOME explicitly: neither launchd nor systemd
 	// inherits the environment of the shell that registered the instance, so without it
 	// the autostarted `limactl start` would look for the instance under the default
@@ -129,12 +124,30 @@ func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getE
 	if err != nil {
 		return nil, err
 	}
-	data := map[string]string{
-		"Binary":   selfExeAbs,
-		"Instance": instName,
+	return map[string]string{
 		"LimaHome": limaHome,
-		"WorkDir":  workDir,
+		// launchd starts jobs with a minimal PATH, so carry the registering shell's
+		// PATH to let limactl find tools such as qemu-system-* installed by Homebrew.
+		// The systemd template does not use it.
+		"Path": os.Getenv("PATH"),
+	}, nil
+}
+
+func (t *TemplateFileBasedManager) renderTemplate(instName, workDir string, getExecutable func() (string, error)) ([]byte, error) {
+	if t.template == "" {
+		return nil, errors.New("no template available")
 	}
+	selfExeAbs, err := getExecutable()
+	if err != nil {
+		return nil, err
+	}
+	data, err := EnvTemplateVars()
+	if err != nil {
+		return nil, err
+	}
+	data["Binary"] = selfExeAbs
+	data["Instance"] = instName
+	data["WorkDir"] = workDir
 	maps.Copy(data, t.extraTemplateVars)
 	return textutil.ExecuteTemplate(t.template, data)
 }
