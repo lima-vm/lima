@@ -640,7 +640,7 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 set -eux -o pipefail
 ln -sf "${SSH_AUTH_SOCK}" /run/host-services/ssh-auth.sock`
 			faDesc := "linking ssh auth socket to static location /run/host-services/ssh-auth.sock"
-			stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, a.sshConfig, faScript, faDesc)
+			stdout, stderr, err := a.executeUnixScript(a.sshConfig, faScript, faDesc)
 			logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 			if err != nil {
 				errs = append(errs, fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err))
@@ -1036,7 +1036,7 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 		"--",
 	)
 	args = append(args, command...)
-	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
+	cmd := sshCommand(ctx, sshConfig.Binary(), args...)
 	if out, err := cmd.Output(); err != nil {
 		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 	}
@@ -1145,7 +1145,7 @@ var forwardSSH = func(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress 
 			panic(fmt.Errorf("invalid verb %#q", verb))
 		}
 	}
-	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
+	cmd := sshCommand(ctx, sshConfig.Binary(), args...)
 	logrus.Debugf("Running %#q", cmd)
 	if out, err := cmd.Output(); err != nil {
 		if verb == verbForward && strings.HasPrefix(local, "/") {
@@ -1203,7 +1203,7 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 		fi"`,
 	)
 
-	cmd = exec.CommandContext(ctx, a.sshConfig.Binary(), args...)
+	cmd = sshCommand(ctx, a.sshConfig.Binary(), args...)
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		logrus.WithError(err).Warn("Failed to create stdout pipe for cloud-init monitoring")
@@ -1279,7 +1279,7 @@ func (a *HostAgent) watchCloudInitProgress(ctx context.Context) {
 			"sudo", "tail", "-n", "20", "/var/log/cloud-init-output.log",
 		)
 
-		finalCmd := exec.CommandContext(ctx, a.sshConfig.Binary(), finalArgs...)
+		finalCmd := sshCommand(ctx, a.sshConfig.Binary(), finalArgs...)
 		if finalOutput, err := finalCmd.Output(); err == nil {
 			for line := range strings.SplitSeq(string(finalOutput), "\n") {
 				if strings.TrimSpace(line) != "" {
@@ -1327,7 +1327,7 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	if err := os.MkdirAll(filepath.Dir(local), 0o700); err != nil {
 		return fmt.Errorf("can't create directory for local file %#q: %w", local, err)
 	}
-	cmd := exec.CommandContext(ctx, sshConfig.Binary(), args...)
+	cmd := sshCommand(ctx, sshConfig.Binary(), args...)
 	out, err := cmd.Output()
 	if err != nil {
 		var exitErr *exec.ExitError
@@ -1341,7 +1341,7 @@ func copyToHost(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 				"sudo", "cat",
 				remote,
 			)
-			cmd = exec.CommandContext(ctx, sshConfig.Binary(), sudoArgs...)
+			cmd = sshCommand(ctx, sshConfig.Binary(), sudoArgs...)
 			out, err = cmd.Output()
 		}
 		if errors.As(err, &exitErr) && strings.Contains(string(exitErr.Stderr), "No such file or directory") {

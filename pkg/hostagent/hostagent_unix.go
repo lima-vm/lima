@@ -14,7 +14,9 @@ import (
 // Default nofile limit is too low on some system.
 // For example in the macOS standard terminal is 256.
 // It means that there are only ~240 connections available from the host to the vm.
-// That function increases the nofile limit for child processes, especially the ssh process
+// That function increases the nofile limit for child processes, especially the ssh process.
+// On macOS, sshCommand then lowers the soft limit of each ssh it starts to 1024
+// when the limit is higher.
 //
 // More about limits in go: https://go.dev/issue/46279
 func adjustNofileRlimit() {
