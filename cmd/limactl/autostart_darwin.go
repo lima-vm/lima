@@ -15,7 +15,6 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/autostart"
 	"github.com/lima-vm/lima/v2/pkg/autostart/launchd"
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/store"
 	"github.com/lima-vm/lima/v2/pkg/textutil"
 )
@@ -101,18 +100,15 @@ func autostartDisableAction(cmd *cobra.Command, args []string) error {
 // "<no value>" rather than failing, which would be written into the installed plist.
 func renderDaemonPlist(binary, instName, workDir, userName string, keepAlive bool) ([]byte, error) {
 	// The daemon inherits no environment from the shell that registers it, so LIMA_HOME
-	// has to be recorded in the plist for the instance to be found at boot.
-	limaHome, err := dirnames.LimaDir()
+	// and PATH have to be recorded in the plist.
+	vars, err := autostart.EnvTemplateVars()
 	if err != nil {
 		return nil, err
 	}
-	vars := map[string]string{
-		"Binary":   binary,
-		"Instance": instName,
-		"LimaHome": limaHome,
-		"WorkDir":  workDir,
-		"UserName": userName,
-	}
+	vars["Binary"] = binary
+	vars["Instance"] = instName
+	vars["WorkDir"] = workDir
+	vars["UserName"] = userName
 	if keepAlive {
 		vars["KeepAlive"] = "true"
 	}

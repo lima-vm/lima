@@ -8,6 +8,10 @@
 	<dict>
 		<key>LIMA_HOME</key>
 		<string>{{ .LimaHome }}</string>
+{{- if .Path }}
+		<key>PATH</key>
+		<string>{{ .Path | html }}</string>
+{{- end }}
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
