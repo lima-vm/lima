@@ -35,6 +35,23 @@ func TestWaitForStopped(t *testing.T) {
 	})
 }
 
+func TestStartSignalsFailReleasesSSHWait(t *testing.T) {
+	signals := newStartSignals()
+	l := &LimaVzDriver{waitSSHLocalPortAccessible: signals.sshPortAccessible}
+	driverErr := errors.New("driver failed")
+	go signals.fail(driverErr)
+
+	setupDone := make(chan error, 1)
+	go func() { setupDone <- l.AdditionalSetupForSSH(t.Context()) }()
+	select {
+	case err := <-setupDone:
+		assert.NilError(t, err)
+	case <-time.After(10 * time.Second):
+		assert.Assert(t, false, "AdditionalSetupForSSH still waits after the driver failed")
+	}
+	assert.Equal(t, <-signals.errCh, driverErr)
+}
+
 func TestRemovePIDFile(t *testing.T) {
 	dir := t.TempDir()
 	l := &LimaVzDriver{
