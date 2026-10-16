@@ -97,6 +97,13 @@ endif
 # `-w`: Disable DWARF generation according to the KEEP_DWARF config
 # `-X`: Embed version information.
 GO_BUILD_LDFLAGS := -ldflags="-s=$(GO_BUILD_LDFLAGS_S) -w=$(GO_BUILD_LDFLAGS_W) -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+# limactl build flags. When CC is musl-gcc, STATIC_BUILD is set to
+# statically link limactl. These are recursive because STATIC_BUILD
+# is defined later (in the GOOS=linux block) after CC is determined.
+# The other binaries (e.g. lima-guestagent) use the plain GO_BUILD, since they
+# are built with CGO_ENABLED=0 and cannot use the external linker.
+GO_BUILD_LDFLAGS_LIMACTL = -ldflags="-s=$(GO_BUILD_LDFLAGS_S) -w=$(GO_BUILD_LDFLAGS_W) $(STATIC_BUILD) -X $(PACKAGE)/pkg/version.Version=$(VERSION)"
+GO_BUILD_LIMACTL = $(strip $(GO) build $(GO_BUILD_GCFLAGS) $(GO_BUILD_LDFLAGS_LIMACTL) $(GO_BUILD_FLAG_TAGS))
 # `go -version -m` returns -tags with comma-separated list, because space-separated list is deprecated in go1.13.
 # converting to comma-separated list is useful for comparing with the output of `go version -m`.
 GO_BUILD_FLAG_TAGS := $(addprefix -tags=,$(shell echo "$(GO_BUILDTAGS)"|tr " " "\n"|paste -sd "," -))
@@ -313,7 +320,7 @@ ifneq ($(GOOS),windows) #
 else
 	@rm -rf _output/bin/limactl
 endif
-	$(ENVS_$@) $(GO_BUILD) -tags '$(GO_BUILDTAGS_LIMACTL)' -o $@ ./cmd/limactl
+	$(ENVS_$@) $(GO_BUILD_LIMACTL) -tags '$(GO_BUILDTAGS_LIMACTL)' -o $@ ./cmd/limactl
 ifeq ($(GOOS),darwin)
 	codesign -f -v --entitlements vz.entitlements -s - $@
 endif
@@ -804,17 +811,29 @@ to_uname_m = $(foreach arch,$(1),$(shell echo $(arch) | sed 's/amd64/AMD64/' | s
 ARTIFACT_FILE_EXTENSIONS := .zip
 else ifeq ($(GOOS),linux)
 # CC is required for cross-compiling on Linux.
-# On Debian, Ubuntu, and related distributions, compilers are named like x86_64-linux-gnu-gcc
-# On Fedora, RHEL, and related distributions, the equivalent is x86_64-redhat-linux-gcc
-# On openSUSE and as a generic fallback, gcc is used
+# musl-gcc is preferred (for static linking), then the architecture-prefixed
+# musl-gcc (e.g. x86_64-linux-musl-gcc), then the distribution-specific
+# compilers (e.g. x86_64-redhat-linux-gcc, x86_64-linux-gnu-gcc), and finally
+# gcc is used as a generic fallback.
 CC := $(shell \
-	if command -v $(call to_uname_m,$(GOARCH))-redhat-linux-gcc >/dev/null 2>&1; then \
+	if command -v musl-gcc >/dev/null 2>&1; then \
+		echo musl-gcc; \
+	elif command -v $(call to_uname_m,$(GOARCH))-linux-musl-gcc >/dev/null 2>&1; then \
+		echo $(call to_uname_m,$(GOARCH))-linux-musl-gcc; \
+	elif command -v $(call to_uname_m,$(GOARCH))-redhat-linux-gcc >/dev/null 2>&1; then \
 		echo $(call to_uname_m,$(GOARCH))-redhat-linux-gcc; \
 	elif command -v $(call to_uname_m,$(GOARCH))-linux-gnu-gcc >/dev/null 2>&1; then \
 		echo $(call to_uname_m,$(GOARCH))-linux-gnu-gcc; \
 	else \
 		echo gcc; \
 	fi)
+# When CC is musl-gcc, limactl is statically linked.
+# Add these flags to the limactl build only (the other binaries are built with
+# CGO_ENABLED=0 and do not use the external linker).
+STATIC_BUILD :=
+ifneq (,$(findstring musl-gcc,$(CC)))
+STATIC_BUILD := -linkmode external -extldflags '-static'
+endif
 endif
 
 # artifacts: artifacts-$(GOOS)
