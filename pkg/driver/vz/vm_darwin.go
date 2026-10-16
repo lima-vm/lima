@@ -243,6 +243,21 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	return wrapper, signals.sshPortAccessible, signals.errCh, err
 }
 
+// gvisorNetstackOpts returns the options of the instance's in-process gvisor-tap-vsock network.
+func gvisorNetstackOpts(inst *limatype.Instance, endpointSock, fdSock string) *usernet.GVisorNetstackOpts {
+	return &usernet.GVisorNetstackOpts{
+		MTU:      1500,
+		Endpoint: endpointSock,
+		FdSocket: fdSock,
+		Async:    true,
+		DefaultLeases: map[string]string{
+			networks.SlirpIPAddress: limayaml.MACAddress(inst.Dir),
+		},
+		Subnet:              networks.SlirpNetwork,
+		DisableHostLoopback: !limayaml.HostLoopbackEnabled(inst.Config),
+	}
+}
+
 func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client, context.CancelFunc, error) {
 	if firstUsernetIndex := limayaml.FirstUsernetIndex(inst.Config); firstUsernetIndex != -1 {
 		nwName := inst.Config.Networks[firstUsernetIndex].Lima
@@ -260,16 +275,7 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 	os.RemoveAll(endpointSock)
 	os.RemoveAll(vzSock)
 	ctx, cancel := context.WithCancel(ctx)
-	err = usernet.StartGVisorNetstack(ctx, &usernet.GVisorNetstackOpts{
-		MTU:      1500,
-		Endpoint: endpointSock,
-		FdSocket: vzSock,
-		Async:    true,
-		DefaultLeases: map[string]string{
-			networks.SlirpIPAddress: limayaml.MACAddress(inst.Dir),
-		},
-		Subnet: networks.SlirpNetwork,
-	})
+	err = usernet.StartGVisorNetstack(ctx, gvisorNetstackOpts(inst, endpointSock, vzSock))
 	if err != nil {
 		defer cancel()
 		return nil, nil, err

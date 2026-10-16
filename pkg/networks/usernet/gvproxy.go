@@ -36,6 +36,9 @@ type GVisorNetstackOpts struct {
 	Async bool
 
 	DefaultLeases map[string]string
+
+	// DisableHostLoopback stops the guest from reaching the host's loopback services via the gateway IP.
+	DisableHostLoopback bool
 }
 
 var opts *GVisorNetstackOpts
@@ -45,9 +48,27 @@ const gatewayMacAddr = "5a:94:ef:e4:0c:dd"
 func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) error {
 	opts = gVisorOpts
 
-	ip, ipNet, err := net.ParseCIDR(opts.Subnet)
+	config, err := netstackConfiguration(opts)
 	if err != nil {
 		return err
+	}
+
+	groupErrs, ctx := errgroup.WithContext(ctx)
+	err = run(ctx, groupErrs, config)
+	if err != nil {
+		return err
+	}
+	if opts.Async {
+		return err
+	}
+	return groupErrs.Wait()
+}
+
+// netstackConfiguration returns the gvisor-tap-vsock configuration for opts.
+func netstackConfiguration(opts *GVisorNetstackOpts) (*types.Configuration, error) {
+	ip, ipNet, err := net.ParseCIDR(opts.Subnet)
+	if err != nil {
+		return nil, err
 	}
 	gatewayIP := GatewayIP(ip)
 
@@ -67,7 +88,7 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 	// Comparing this with QEMU SLIRP,
 	// - DNS is equivalent to GatewayIP
 	// - GatewayIP is equivalent to NAT configuration
-	config := types.Configuration{
+	return &types.Configuration{
 		Debug:             false,
 		MTU:               opts.MTU,
 		Subnet:            opts.Subnet,
@@ -77,21 +98,22 @@ func StartGVisorNetstack(ctx context.Context, gVisorOpts *GVisorNetstackOpts) er
 		Forwards:          map[string]string{},
 		DNS:               []types.Zone{},
 		DNSSearchDomains:  searchDomains(),
-		NAT: map[string]string{
-			gatewayIP: "127.0.0.1",
-		},
+		NAT:               natTable(gatewayIP, opts.DisableHostLoopback),
 		GatewayVirtualIPs: []string{gatewayIP},
-	}
+	}, nil
+}
 
-	groupErrs, ctx := errgroup.WithContext(ctx)
-	err = run(ctx, groupErrs, &config)
-	if err != nil {
-		return err
+// natTable returns the gateway's NAT table. By default the gateway IP maps to the host's loopback,
+// so that the guest can reach host services (including ones bound to 127.0.0.1) as `host.lima.internal`.
+// The gateway answers DNS itself either way.
+func natTable(gatewayIP string, disableHostLoopback bool) map[string]string {
+	if disableHostLoopback {
+		// The forwarder dials the guest's destination from the host. Without an entry, the host would
+		// dial the gateway IP on its own network, and it treats a dial to 0.0.0.0 as one to its loopback.
+		// The host has no route to 0.0.0.1, so both dials fail at once and the guest gets a refusal.
+		return map[string]string{gatewayIP: "0.0.0.1", "0.0.0.0": "0.0.0.1"}
 	}
-	if opts.Async {
-		return err
-	}
-	return groupErrs.Wait()
+	return map[string]string{gatewayIP: "127.0.0.1"}
 }
 
 func run(ctx context.Context, g *errgroup.Group, configuration *types.Configuration) error {

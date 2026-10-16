@@ -692,6 +692,19 @@ plain: null
 # 🟢 Builtin default: false
 nestedVirtualization: null
 
+networkOpts:
+  # When false, the guest cannot reach the host's loopback services (those bound to 127.0.0.1 or
+  # to all interfaces) via "host.lima.internal" (192.168.5.2) on the default user-mode network.
+  # DNS, outbound access to other hosts and `limactl shell` keep working.
+  # Set this to false for a guest that runs untrusted code, such as a CI runner.
+  # - Only supported with `vmType: vz`. Not supported with a `user-v2` network, which is shared by instances.
+  # - Does not restrict the host's other addresses: a host service bound to all interfaces is still
+  #   reachable through the host's LAN IP.
+  # - A proxy on the host's loopback (e.g. `http_proxy=http://127.0.0.1:3128`), whether it comes from
+  #   the host's network settings, `env`, or `propagateProxyEnv`, becomes unreachable from the guest.
+  # 🟢 Builtin default: true (since Lima v2.3)
+  hostLoopback: null
+
 # EXPERIMENTAL
 # When enabled, an emulated TPM 2.0 device is provided to the guest via swtpm.
 # Requires swtpm to be installed on the host. Only supported with vmType: qemu.

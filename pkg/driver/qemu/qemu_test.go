@@ -306,3 +306,11 @@ func TestValidate9pMountOptions(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateRejectsHostLoopbackFalse(t *testing.T) {
+	cfg := &limatype.LimaYAML{NetworkOpts: limatype.NetworkOpts{HostLoopback: new(false)}}
+	// validateConfig also runs on deletion, which must keep working.
+	assert.NilError(t, validateConfig(cfg))
+	l := &LimaQemuDriver{Instance: &limatype.Instance{Config: cfg}}
+	assert.ErrorContains(t, l.Validate(t.Context()), "field `networkOpts.hostLoopback: false` is not supported for vmType: qemu")
+}

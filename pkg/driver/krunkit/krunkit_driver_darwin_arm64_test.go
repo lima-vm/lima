@@ -17,6 +17,12 @@ func TestValidateConfigRejectsBlockDevices(t *testing.T) {
 	assert.ErrorContains(t, err, "field `blockDevices` is not supported for vmType: krunkit")
 }
 
+func TestValidateRejectsHostLoopbackFalse(t *testing.T) {
+	// krunkit's netstack does not honor the option, so the refusal is all that stops a silent no-op.
+	l := &LimaKrunkitDriver{Instance: &limatype.Instance{Config: &limatype.LimaYAML{NetworkOpts: limatype.NetworkOpts{HostLoopback: new(false)}}}}
+	assert.ErrorContains(t, l.Validate(t.Context()), "`networkOpts.hostLoopback: false` is not supported in krunkit driver")
+}
+
 func TestValidateSnapshotTag(t *testing.T) {
 	tests := []struct {
 		tag     string

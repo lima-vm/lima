@@ -36,6 +36,24 @@ nameserver 8.8.8.8`)
 	})
 }
 
+func TestNATTable(t *testing.T) {
+	t.Run("host loopback reachable by default", func(t *testing.T) {
+		assert.DeepEqual(t, natTable("192.168.5.2", false), map[string]string{"192.168.5.2": "127.0.0.1"})
+	})
+
+	t.Run("host loopback disabled", func(t *testing.T) {
+		assert.DeepEqual(t, natTable("192.168.5.2", true), map[string]string{"192.168.5.2": "0.0.0.1", "0.0.0.0": "0.0.0.1"})
+	})
+}
+
+func TestNetstackConfigurationNAT(t *testing.T) {
+	for _, disable := range []bool{false, true} {
+		config, err := netstackConfiguration(&GVisorNetstackOpts{Subnet: "192.168.5.0/24", DisableHostLoopback: disable})
+		assert.NilError(t, err)
+		assert.DeepEqual(t, config.NAT, natTable("192.168.5.2", disable))
+	}
+}
+
 func createResolveFile(t *testing.T, file, content string) {
 	f, err := os.Create(file)
 	assert.NilError(t, err)

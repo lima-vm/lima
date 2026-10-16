@@ -21,6 +21,19 @@ Use [VMNet]({{< ref "/docs/config/network/vmnet" >}}) to allow accessing the gue
 
 The loopback addresses of the host is `192.168.5.2` and is accessible from the guest as `host.lima.internal`.
 
+This includes services that listen only on the host's `127.0.0.1`. To block this, for example for a guest that runs untrusted code, set `networkOpts.hostLoopback: false` (available since Lima v2.3) in `lima.yaml`:
+
+```yaml
+networkOpts:
+  hostLoopback: false
+```
+
+DNS, outbound connections to other hosts and `limactl shell` keep working. Connections to `host.lima.internal` are refused instead.
+A host service that listens on all interfaces is still reachable through the host's LAN address.
+A proxy on the host's loopback (for example `http_proxy=http://127.0.0.1:3128`), whether it comes from the host's network settings, `env`, or `propagateProxyEnv`, becomes unreachable from the guest.
+
+`networkOpts.hostLoopback: false` is only supported with `vmType: vz`, and not with a [`user-v2`]({{< ref "/docs/config/network/user-v2" >}}) network.
+
 ## DNS (192.168.5.3)
 
 If `hostResolver.enabled` in `lima.yaml` is true, then the hostagent is going to run a DNS server over tcp and udp - each on a separate randomly selected free port. This server does a local lookup using the native host resolver, so it will deal correctly with VPN configurations and split-DNS setups, as well as mDNS, local `/etc/hosts` etc. For this the hostagent has to be compiled with `CGO_ENABLED=1` as default Go resolver is [broken](https://github.com/golang/go/issues/12524).

@@ -50,7 +50,7 @@ func TestSetupEnv(t *testing.T) {
 		t.Run(httpProxy.Host, func(t *testing.T) {
 			envKey := "http_proxy"
 			envValue := httpProxy.String()
-			envs, err := setupEnv(map[string]string{envKey: envValue}, false, networks.SlirpGateway)
+			envs, err := setupEnv(map[string]string{envKey: envValue}, false, true, networks.SlirpGateway)
 			assert.NilError(t, err)
 			assert.Equal(t, envs[envKey], strings.ReplaceAll(envValue, httpProxy.Hostname(), networks.SlirpGateway))
 		})
@@ -60,7 +60,7 @@ func TestSetupEnv(t *testing.T) {
 func TestSetupInvalidEnv(t *testing.T) {
 	envKey := "http_proxy"
 	envValue := "://localhost:8080"
-	envs, err := setupEnv(map[string]string{envKey: envValue}, false, networks.SlirpGateway)
+	envs, err := setupEnv(map[string]string{envKey: envValue}, false, true, networks.SlirpGateway)
 	assert.NilError(t, err)
 	assert.Equal(t, envs[envKey], envValue)
 }
