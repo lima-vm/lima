@@ -153,6 +153,12 @@ mounts:
 
 The "wsl2" mount type relies on using WSL2's native disk sharing, where the root disk is available by default at `/mnt/$DISK_LETTER` (e.g. `/mnt/c/`).
 
+When using `vmType: wsl2`, entries in `mounts` are supported:
+- A drive-letter `location` (e.g. `C:\Users\...`) automatically defaults its `mountPoint` to the corresponding `/mnt/<drive>/...` path.
+- Locations without a drive letter (such as UNC network paths) cannot be automatically translated and require an explicit `mountPoint`.
+- Custom `mountPoint` paths are bind-mounted to the destination inside the guest at boot.
+- When `writable: false` is configured, the mount is remounted read-only to prevent accidental modifications at that path. Note that the underlying host files may still be accessible and writable through WSL2's native drive automounts unless configured otherwise.
+
 An example configuration:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
@@ -164,6 +170,11 @@ limactl start --vm-type=wsl2 --mount-type=wsl2
 ```yaml
 vmType: "wsl2"
 mountType: "wsl2"
+mounts:
+  - location: "~"
+    writable: false
+  - location: "~/projects"
+    writable: true
 ```
 {{% /tab %}}
 {{< /tabpane >}}
