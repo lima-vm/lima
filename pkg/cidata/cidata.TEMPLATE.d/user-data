@@ -184,7 +184,8 @@ ca_certs:
 {{- end }}
 
 {{- $nicHeal := and (eq .OS "Linux") .Networks }}
-{{- if or .BootCmds $nicHeal }}
+{{- $sshVsock := and (eq .OS "Linux") (eq .VMType "krunkit") .SSHOverVsock }}
+{{- if or .BootCmds $nicHeal $sshVsock }}
 bootcmd:
 {{- if $nicHeal }}
 - |
@@ -206,6 +207,23 @@ bootcmd:
   until ip -4 addr show dev {{.SlirpNICName}} 2>/dev/null | grep -q inet || [ $((i += 1)) -gt 30 ]; do
     sleep 1
   done
+{{- end }}
+{{- if $sshVsock }}
+- |
+  # krunkit's virtio-mmio vsock transport loads after systemd-ssh-generator runs, so the generator
+  # sees CID 1, which systemd >= 259 ignores (systemd/systemd#39578) and skips sshd-vsock.socket.
+  # Re-run the generator here, before sshd.service, so the host needs to probe vsock only once.
+  # https://github.com/lima-vm/lima/issues/5085
+  if command -v systemctl >/dev/null 2>&1 \
+    && [ -x /usr/lib/systemd/system-generators/systemd-ssh-generator ] \
+    && [ ! -e /run/systemd/generator/sshd-vsock.socket ]; then
+    modprobe vmw_vsock_virtio_transport 2>/dev/null || true
+    systemctl daemon-reload
+    if [ -e /run/systemd/generator/sshd-vsock.socket ]; then
+      # --no-block: on Debian and Ubuntu cloud-init runs before sysinit.target, which the socket is ordered after.
+      systemctl start --no-block sshd-vsock.socket
+    fi
+  fi
 {{- end }}
   {{- range $cmd := $.BootCmds }}
 - |

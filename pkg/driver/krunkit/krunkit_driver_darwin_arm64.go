@@ -294,11 +294,7 @@ func fillConfig(cfg *limatype.LimaYAML) error {
 	}
 	cfg.VMType = new(vmType)
 	if cfg.SSH.OverVsock == nil {
-		// ssh.overVsock is known not to work since Fedora 44: https://github.com/lima-vm/lima/issues/5085
-		// cfg.SSH.OverVsock = new(cfg.OS != nil && *cfg.OS == limatype.LINUX)
-		cfg.SSH.OverVsock = new(false)
-	} else if *cfg.SSH.OverVsock {
-		logrus.Warn("ssh.overVsock is known not to work since Fedora 44: https://github.com/lima-vm/lima/issues/5085")
+		cfg.SSH.OverVsock = new(cfg.OS != nil && *cfg.OS == limatype.LINUX)
 	}
 
 	return validateConfig(cfg)

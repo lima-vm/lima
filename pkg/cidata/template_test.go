@@ -10,8 +10,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/goccy/go-yaml"
 	"gotest.tools/v3/assert"
 
+	"github.com/lima-vm/lima/v2/pkg/cidata/cloudinittypes"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
@@ -287,6 +289,41 @@ func TestTemplateNICRename(t *testing.T) {
 		assert.Assert(t, strings.Contains(files["user-data"], "52:55:55:ab:cd:ef=lima0"))
 		assert.Assert(t, strings.Contains(files["network-config"], "set-name: eth0"))
 		assert.Equal(t, strings.Contains(files["network-config"], "optional: true"), optional)
+	}
+}
+
+func TestTemplateSSHOverVsock(t *testing.T) {
+	for _, tc := range []struct {
+		vmType    string
+		overVsock bool
+		want      bool
+	}{
+		{vmType: "krunkit", overVsock: true, want: true},
+		{vmType: "krunkit", overVsock: false, want: false},
+		{vmType: "vz", overVsock: true, want: false},
+	} {
+		t.Run(fmt.Sprintf("%s/overVsock=%v", tc.vmType, tc.overVsock), func(t *testing.T) {
+			args := &TemplateArgs{
+				Name:         "default",
+				User:         "foo",
+				UID:          501,
+				Home:         "/home/foo.guest",
+				Shell:        "/bin/bash",
+				SSHPubKeys:   []string{"ssh-rsa dummy foo@example.com"},
+				MountType:    "virtiofs",
+				OS:           "Linux",
+				VMType:       tc.vmType,
+				SSHOverVsock: tc.overVsock,
+			}
+			config, err := ExecuteTemplateCloudConfig(args)
+			assert.NilError(t, err)
+			var userData cloudinittypes.UserData
+			assert.NilError(t, yaml.Unmarshal(config, &userData))
+			hasCmd := slices.ContainsFunc(userData.BootCmd, func(cmd string) bool {
+				return strings.Contains(cmd, "systemctl start --no-block sshd-vsock.socket")
+			})
+			assert.Equal(t, hasCmd, tc.want)
+		})
 	}
 }
 

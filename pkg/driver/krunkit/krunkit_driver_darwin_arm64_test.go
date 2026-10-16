@@ -5,6 +5,8 @@ package krunkit
 
 import (
 	"fmt"
+	"io"
+	"net"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -44,4 +46,41 @@ func TestValidateSnapshotTag(t *testing.T) {
 			assert.NilError(t, err)
 		})
 	}
+}
+
+func serveUnix(t *testing.T, reply string) string {
+	t.Helper()
+	t.Chdir(t.TempDir())
+	sock := "s.sock"
+	var lc net.ListenConfig
+	l, err := lc.Listen(t.Context(), "unix", sock)
+	assert.NilError(t, err)
+	t.Cleanup(func() { l.Close() })
+	go func() {
+		for {
+			conn, err := l.Accept()
+			if err != nil {
+				return
+			}
+			_, _ = conn.Write([]byte(reply))
+			conn.Close()
+		}
+	}()
+	return sock
+}
+
+func TestReadVsockSSHBanner(t *testing.T) {
+	sock := serveUnix(t, "SSH-2.0-OpenSSH_10.0\r\n")
+	assert.NilError(t, readVsockSSHBanner(t.Context(), sock))
+}
+
+func TestReadVsockSSHBannerAfterPreamble(t *testing.T) {
+	sock := serveUnix(t, "Welcome\r\nAuthorized use only\r\nSSH-2.0-OpenSSH_10.0\r\n")
+	assert.NilError(t, readVsockSSHBanner(t.Context(), sock))
+}
+
+func TestReadVsockSSHBannerClosedWithoutBanner(t *testing.T) {
+	// krunkit accepts the host socket and then closes it when nothing listens in the guest.
+	sock := serveUnix(t, "")
+	assert.ErrorIs(t, readVsockSSHBanner(t.Context(), sock), io.EOF)
 }
