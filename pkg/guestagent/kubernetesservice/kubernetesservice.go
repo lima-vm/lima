@@ -73,6 +73,10 @@ func (s *ServiceWatcher) attemptToStartKubectl(ctx context.Context) {
 		return
 	}
 	kubeconfig := chooseKubeconfig()
+	if kubeconfig == "" {
+		logrus.Debug("No kubeconfig found; skipping kubernetes service watcher")
+		return
+	}
 	// TODO: ensure that kubeconfig points to a local cluster
 	if err := canGetServices(ctx, kubectl, kubeconfig); err != nil {
 		logrus.WithError(err).Debugf("kubectl auth can-i ... failed; will retry")
