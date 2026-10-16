@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -31,6 +32,11 @@ var (
 	cBord = tcell.NewRGBColor(0x55, 0x55, 0x55)
 	cTxt  = tcell.ColorDefault
 	cDim  = tcell.ColorDarkCyan
+
+	// sActive is the style of the activated buttons and the selected dropdown options.
+	sActive = tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(cPrim)
+	// sField is the style of the form fields, readable on both dark and light terminal themes.
+	sField = tcell.StyleDefault.Foreground(tcell.ColorBlack).Background(tcell.ColorLightGray)
 )
 
 type State struct {
@@ -42,6 +48,8 @@ type State struct {
 	header  *tview.TextView
 	panel   *tview.Flex
 	flex    *tview.Flex
+	// createView is the root of the create form, restored after an error message.
+	createView *tview.Flex
 }
 
 func main() {
@@ -71,9 +79,6 @@ func runMenu(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	if len(insts) == 0 {
-		return showEmptyState(ctx, limactl)
-	}
 	s := &State{insts: insts, limactl: limactl, ctx: ctx}
 	return s.run()
 }
@@ -85,7 +90,7 @@ func (s *State) run() error {
 
 	footer := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(" [::r]F1[::-] Help  [::r]F2[::-] Start/Stop  [::r]F3[::-] Info  [::r]F5[::-] Refresh  [::r]F8[::-] Delete  [::r]F10[::-] Quit")
+		SetText(" [::r]F1[::-] Help  [::r]F2[::-] Start/Stop  [::r]F3[::-] Info  [::r]F5[::-] Refresh  [::r]F7[::-] Create  [::r]F8[::-] Delete  [::r]F10[::-] Quit")
 
 	s.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(s.panel, 0, 1, true).
@@ -93,6 +98,9 @@ func (s *State) run() error {
 
 	s.app.SetRoot(s.flex, true).SetFocus(s.list)
 	s.app.SetInputCapture(s.handleGlobalKey)
+	if len(s.insts) == 0 {
+		s.showEmptyState()
+	}
 	return s.app.Run()
 }
 
@@ -203,35 +211,44 @@ func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
+	// The shortcuts below are only for the instance list; other views
+	// (e.g., the input fields of the create form) receive the keys as is.
+	if s.app.GetFocus() != s.list {
+		return e
+	}
+
+	switch {
+	case e.Key() == tcell.KeyF1, e.Rune() == 'h', e.Rune() == '?':
+		s.showHelp()
+		return nil
+	case e.Key() == tcell.KeyF5:
+		s.refreshList()
+		return nil
+	case e.Key() == tcell.KeyF7, e.Rune() == 'c', e.Rune() == 'C':
+		s.showCreateForm()
+		return nil
+	case e.Rune() == 'q', e.Rune() == 'Q':
+		s.app.Stop()
+		return nil
+	}
+
 	in := s.currentInst()
 	if in == nil {
 		return e
 	}
 
 	switch e.Key() {
-	case tcell.KeyF1:
-		s.showHelp()
-		return nil
 	case tcell.KeyF2:
 		s.toggleStartStop(in)
 		return nil
 	case tcell.KeyF3:
 		s.showInfo(in)
 		return nil
-	case tcell.KeyF5:
-		s.refreshList()
-		return nil
 	case tcell.KeyF8:
 		s.confirm(fmt.Sprintf("DELETE instance '%s'?\nThis cannot be undone.", in.Name), func() { s.execCmd("delete", in.Name) })
 		return nil
 	case tcell.KeyRune:
 		switch e.Rune() {
-		case 'q', 'Q':
-			s.app.Stop()
-			return nil
-		case 'h', '?':
-			s.showHelp()
-			return nil
 		case 's', 'S':
 			s.execCmd("shell", in.Name)
 			return nil
@@ -267,6 +284,7 @@ func (s *State) showHelp() {
   [green]F2[-] / [green]t[-]       Start / Stop toggle
   [green]F3[-] / [green]i[-]       Show instance info
   [green]F5[-]           Refresh instance list
+  [green]F7[-] / [green]c[-]       Create a new instance
   [green]F8[-] / [green]d[-]       Delete instance
   [green]F10[-] / [green]q[-]      Quit
 
@@ -411,7 +429,12 @@ func (s *State) confirm(text string, onYes func()) {
 				onYes()
 			}
 		})
+	styleModal(m)
+	s.app.SetRoot(m, false).SetFocus(m)
+}
 
+// styleModal sets the border and button styles of the modal.
+func styleModal(m *tview.Modal) {
 	m.SetBorderColor(cBord)
 
 	m.SetButtonStyle(
@@ -420,21 +443,21 @@ func (s *State) confirm(text string, onYes func()) {
 			Background(tcell.ColorDefault),
 	)
 
-	m.SetButtonActivatedStyle(
-		tcell.StyleDefault.
-			Foreground(tcell.ColorBlack).
-			Background(cPrim),
-	)
-	s.app.SetRoot(m, false).SetFocus(m)
+	m.SetButtonActivatedStyle(sActive)
 }
 
 func (s *State) execCmd(action, name string) {
-	ctx := context.Background()
+	s.runSuspended(name, func() error {
+		return s.runLimactl(nil, action, name)
+	})
+}
+
+// runSuspended suspends the menu while running fn, and then refreshes the instance list
+// and selects the instance with the given name.
+func (s *State) runSuspended(name string, fn func() error) {
 	suspend := s.app.Suspend(func() {
-		cmd := exec.CommandContext(ctx, s.limactl, action, name)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "limactl %s %s failed: %v\nPress Enter to go back to the menu.\n", action, name, err)
+		if err := fn(); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\nPress Enter to go back to the menu.\n", err)
 			if _, err = bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
 				fmt.Fprintf(os.Stderr, "couldn't read enter input: %v\n", err)
 				return
@@ -452,6 +475,19 @@ func (s *State) execCmd(action, name string) {
 	}
 }
 
+// runLimactl runs limactl on the terminal. When stdin is nil, os.Stdin is used.
+func (s *State) runLimactl(stdin io.Reader, args ...string) error {
+	cmd := exec.CommandContext(context.Background(), s.limactl, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("limactl %s failed: %w", strings.Join(args, " "), err)
+	}
+	return nil
+}
+
 func (s *State) selectInstance(name string) {
 	for i, inst := range s.insts {
 		if inst.Name == name {
@@ -461,19 +497,19 @@ func (s *State) selectInstance(name string) {
 	}
 }
 
-func showEmptyState(ctx context.Context, limactl string) error {
-	app := tview.NewApplication()
+func (s *State) showEmptyState() {
 	m := tview.NewModal().
-		SetText("No Lima instances found.\n\nCreate one with:\n  limactl create").
+		SetText("No Lima instances found.").
 		AddButtons([]string{"Create Instance", "Quit"}).
 		SetDoneFunc(func(i int, _ string) {
-			app.Stop()
 			if i == 0 {
-				_ = exec.CommandContext(ctx, limactl, "create").Run()
+				s.showCreateForm()
+			} else {
+				s.app.Stop()
 			}
 		})
-	app.SetRoot(m, true).SetFocus(m)
-	return app.Run()
+	styleModal(m)
+	s.app.SetRoot(m, false).SetFocus(m)
 }
 
 func listInstances(ctx context.Context, limactl string) ([]*limatype.Instance, error) {
