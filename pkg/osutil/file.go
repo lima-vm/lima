@@ -10,6 +10,29 @@ import (
 	"path/filepath"
 )
 
+func IsSymlink(path string) bool {
+	info, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+	return info.Mode()&os.ModeSymlink != 0
+}
+
+// ResolveSymlink returns the resolved path of the symlink at path, so that
+// operations like renaming onto path replace the target file instead of the
+// symlink itself. The original path is returned when it is not an existing
+// symlink, or when it cannot be resolved.
+func ResolveSymlink(path string) string {
+	if !IsSymlink(path) {
+		return path
+	}
+	resolved, err := filepath.EvalSymlinks(path)
+	if err != nil {
+		return path
+	}
+	return resolved
+}
+
 // FileExists reports whether path exists and is accessible.
 // It returns true for any non-ErrNotExist stat result, including permission errors.
 func FileExists(path string) bool {
