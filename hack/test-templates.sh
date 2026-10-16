@@ -591,6 +591,14 @@ if [[ -n ${CHECKS["disk"]} ]]; then
 	set +x
 fi
 
+# `limactl shell --reconnect` ends the ssh ControlMaster, and with it every port
+# forward that the master holds, so this runs after the port forwarding checks.
+if [[ -n ${CHECKS["mount-home"]} ]] && limactl shell "$NAME" grep -qs ' fuse.sshfs ' /proc/mounts; then
+	INFO "Testing that the reverse-sshfs home mount keeps working after the ssh ControlMaster exits"
+	limactl shell --reconnect "$NAME" true
+	"${scriptdir}"/test-mount-home.sh "$NAME"
+fi
+
 if [[ -n ${CHECKS["restart"]} ]]; then
 	INFO "Create file in the guest home directory and verify that it still exists after a restart"
 	# shellcheck disable=SC2016
