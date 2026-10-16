@@ -123,9 +123,11 @@ EOF
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" systemctl --user enable --now dbus.socket
 		fi
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" containerd-rootless-setuptool.sh install
+		set +e
 		sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" "TERM=${TERM}" \
 			"CONTAINERD_NAMESPACE=${CONTAINERD_NAMESPACE}" "CONTAINERD_SNAPSHOTTER=${CONTAINERD_SNAPSHOTTER}" \
-			containerd-rootless-setuptool.sh install-buildkit-containerd
+			containerd-rootless-setuptool.sh install-buildkit-containerd || echo >&2 "WARNING: Failed to install buildkitd"
+		set -e
 
 		# $CONTAINERD_SNAPSHOTTER is configured in 20-rootless-base.sh, when the guest kernel is < 5.13, or the instance was created with Lima < 0.9.0.
 		if [ "$(sudo -iu "${LIMA_CIDATA_USER}" sh -ec 'echo $CONTAINERD_SNAPSHOTTER')" = "fuse-overlayfs" ]; then
