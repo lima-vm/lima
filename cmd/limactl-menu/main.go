@@ -8,6 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"slices"
@@ -42,6 +43,8 @@ type State struct {
 	header  *tview.TextView
 	panel   *tview.Flex
 	flex    *tview.Flex
+	// createView is the root of the create form, restored after an error message.
+	createView *tview.Flex
 }
 
 func main() {
@@ -71,9 +74,6 @@ func runMenu(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
-	if len(insts) == 0 {
-		return showEmptyState(ctx, limactl)
-	}
 	s := &State{insts: insts, limactl: limactl, ctx: ctx}
 	return s.run()
 }
@@ -85,7 +85,7 @@ func (s *State) run() error {
 
 	footer := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(" [yellow]F1[white] Help  [yellow]F2[white] Start/Stop  [yellow]F3[white] Info  [yellow]F5[white] Refresh  [yellow]F8[white] Delete  [yellow]F10[white] Quit")
+		SetText(" [yellow]F1[white] Help  [yellow]F2[white] Start/Stop  [yellow]F3[white] Info  [yellow]F5[white] Refresh  [yellow]F7[white] Create  [yellow]F8[white] Delete  [yellow]F10[white] Quit")
 
 	s.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(s.panel, 0, 1, true).
@@ -93,6 +93,9 @@ func (s *State) run() error {
 
 	s.app.SetRoot(s.flex, true).SetFocus(s.list)
 	s.app.SetInputCapture(s.handleGlobalKey)
+	if len(s.insts) == 0 {
+		s.showEmptyState()
+	}
 	return s.app.Run()
 }
 
@@ -204,35 +207,44 @@ func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 
+	// The shortcuts below are only for the instance list; other views
+	// (e.g., the input fields of the create form) receive the keys as is.
+	if s.app.GetFocus() != s.list {
+		return e
+	}
+
+	switch {
+	case e.Key() == tcell.KeyF1, e.Rune() == 'h', e.Rune() == '?':
+		s.showHelp()
+		return nil
+	case e.Key() == tcell.KeyF5:
+		s.refreshList()
+		return nil
+	case e.Key() == tcell.KeyF7, e.Rune() == 'c', e.Rune() == 'C':
+		s.showCreateForm()
+		return nil
+	case e.Rune() == 'q', e.Rune() == 'Q':
+		s.app.Stop()
+		return nil
+	}
+
 	in := s.currentInst()
 	if in == nil {
 		return e
 	}
 
 	switch e.Key() {
-	case tcell.KeyF1:
-		s.showHelp()
-		return nil
 	case tcell.KeyF2:
 		s.toggleStartStop(in)
 		return nil
 	case tcell.KeyF3:
 		s.showInfo(in)
 		return nil
-	case tcell.KeyF5:
-		s.refreshList()
-		return nil
 	case tcell.KeyF8:
 		s.confirm(fmt.Sprintf("DELETE instance '%s'?\nThis cannot be undone.", in.Name), func() { s.execCmd("delete", in.Name) })
 		return nil
 	case tcell.KeyRune:
 		switch e.Rune() {
-		case 'q', 'Q':
-			s.app.Stop()
-			return nil
-		case 'h', '?':
-			s.showHelp()
-			return nil
 		case 's', 'S':
 			s.execCmd("shell", in.Name)
 			return nil
@@ -268,6 +280,7 @@ func (s *State) showHelp() {
   [green]F2[white] / [green]t[white]       Start / Stop toggle
   [green]F3[white] / [green]i[white]       Show instance info
   [green]F5[white]           Refresh instance list
+  [green]F7[white] / [green]c[white]       Create a new instance
   [green]F8[white] / [green]d[white]       Delete instance
   [green]F10[white] / [green]q[white]      Quit
 
@@ -417,12 +430,17 @@ func (s *State) confirm(text string, onYes func()) {
 }
 
 func (s *State) execCmd(action, name string) {
-	ctx := context.Background()
+	s.runSuspended(name, func() error {
+		return s.runLimactl(nil, action, name)
+	})
+}
+
+// runSuspended suspends the menu while running fn, and then refreshes the instance list
+// and selects the instance with the given name.
+func (s *State) runSuspended(name string, fn func() error) {
 	suspend := s.app.Suspend(func() {
-		cmd := exec.CommandContext(ctx, s.limactl, action, name)
-		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-		if err := cmd.Run(); err != nil {
-			fmt.Fprintf(os.Stderr, "limactl %s %s failed: %v\nPress Enter to go back to the menu.\n", action, name, err)
+		if err := fn(); err != nil {
+			fmt.Fprintf(os.Stderr, "%v\nPress Enter to go back to the menu.\n", err)
 			if _, err = bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
 				fmt.Fprintf(os.Stderr, "couldn't read enter input: %v\n", err)
 				return
@@ -440,6 +458,19 @@ func (s *State) execCmd(action, name string) {
 	}
 }
 
+// runLimactl runs limactl on the terminal. When stdin is nil, os.Stdin is used.
+func (s *State) runLimactl(stdin io.Reader, args ...string) error {
+	cmd := exec.CommandContext(context.Background(), s.limactl, args...)
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+	if stdin != nil {
+		cmd.Stdin = stdin
+	}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("limactl %s failed: %w", strings.Join(args, " "), err)
+	}
+	return nil
+}
+
 func (s *State) selectInstance(name string) {
 	for i, inst := range s.insts {
 		if inst.Name == name {
@@ -449,19 +480,18 @@ func (s *State) selectInstance(name string) {
 	}
 }
 
-func showEmptyState(ctx context.Context, limactl string) error {
-	app := tview.NewApplication()
+func (s *State) showEmptyState() {
 	m := tview.NewModal().
-		SetText("No Lima instances found.\n\nCreate one with:\n  limactl create").
+		SetText("No Lima instances found.").
 		AddButtons([]string{"Create Instance", "Quit"}).
 		SetDoneFunc(func(i int, _ string) {
-			app.Stop()
 			if i == 0 {
-				_ = exec.CommandContext(ctx, limactl, "create").Run()
+				s.showCreateForm()
+			} else {
+				s.app.Stop()
 			}
 		})
-	app.SetRoot(m, true).SetFocus(m)
-	return app.Run()
+	s.app.SetRoot(m, false).SetFocus(m)
 }
 
 func listInstances(ctx context.Context, limactl string) ([]*limatype.Instance, error) {
