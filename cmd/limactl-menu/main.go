@@ -345,12 +345,12 @@ Hostname:     %s
 VM Type:      %s
 Architecture: %s
 CPUs:         %d
-Memory:       %.1f GB
-Disk:         %.1f GB
+Memory:       %s
+Disk:         %s
 SSH Port:     %d
 SSH Address:  %s
 Protected:    %s
-Lima Version: %s`, statusTag(in.Status), in.Hostname, in.VMType, in.Arch, in.CPUs, float64(in.Memory)/1e9, float64(in.Disk)/1e9, in.SSHLocalPort, in.SSHAddress, prot, in.LimaVersion)
+Lima Version: %s`, statusTag(in.Status), in.Hostname, in.VMType, in.Arch, in.CPUs, units.BytesSize(float64(in.Memory)), units.BytesSize(float64(in.Disk)), in.SSHLocalPort, in.SSHAddress, prot, in.LimaVersion)
 
 	if len(in.Errors) > 0 {
 		b.WriteString("\n\nErrors:\n")
