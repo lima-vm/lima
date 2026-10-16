@@ -20,10 +20,10 @@ import (
 //	byte 1: state
 //	bytes 4-6: sport (big-endian)
 //	bytes 8-24: source address (16 bytes, IPv4 in first 4 if AF_INET)
-func diagMsg(family int, state byte, port uint16, ip net.IP) netlink.Message {
+func diagMsg(family int, state State, port uint16, ip net.IP) netlink.Message {
 	data := make([]byte, 72) // minimum size accepted
 	data[0] = byte(family)
-	data[1] = state
+	data[1] = byte(state)
 	// sport
 	binary.BigEndian.PutUint16(data[4:6], port)
 	src := data[8:24]

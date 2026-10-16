@@ -506,7 +506,7 @@ func renderRequirementProgress(p *hostagentevents.RequirementProgress, tty bool,
 	fmt.Fprintf(os.Stderr, "\r%s(%2d/%d) 🕐 %s%s", clearEOL, p.Step, p.Total, p.Description, p.Suffix)
 }
 
-type watchHostAgentEventsTimeoutKey = struct{}
+type watchHostAgentEventsTimeoutKey struct{}
 
 // WithWatchHostAgentTimeout sets the value of the timeout to use for
 // watchHostAgentEvents in the given Context.

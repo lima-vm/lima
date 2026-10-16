@@ -12,7 +12,7 @@ import (
 )
 
 // FormatT specifies the format type.
-type FormatT = string
+type FormatT string
 
 const (
 	// FormatCmd prints the full ssh command line.
@@ -51,6 +51,16 @@ const (
 
 // Formats is the list of the supported formats.
 var Formats = []FormatT{FormatCmd, FormatArgs, FormatOptions, FormatConfig}
+
+// FormatsStrings returns the supported formats as plain strings,
+// for use with APIs that expect []string (e.g. cobra flag completion).
+func FormatsStrings() []string {
+	out := make([]string, len(Formats))
+	for i, f := range Formats {
+		out[i] = string(f)
+	}
+	return out
+}
 
 func quoteOption(o string) string {
 	// make sure the shell doesn't swallow quotes in option values

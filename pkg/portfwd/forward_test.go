@@ -36,8 +36,8 @@ func TestForwardingAddressesRejectsUnknownProto(t *testing.T) {
 
 func TestForwardingAddressesHonorsIgnoredProto(t *testing.T) {
 	fw := testForwarder()
-	tcpAddr, _ := fw.forwardingAddresses(&api.IPPort{Ip: "127.0.0.1", Port: 8080, Protocol: limatype.ProtoTCP})
+	tcpAddr, _ := fw.forwardingAddresses(&api.IPPort{Ip: "127.0.0.1", Port: 8080, Protocol: string(limatype.ProtoTCP)})
 	assert.Equal(t, tcpAddr, "")
-	udpAddr, _ := fw.forwardingAddresses(&api.IPPort{Ip: "127.0.0.1", Port: 8080, Protocol: limatype.ProtoUDP})
+	udpAddr, _ := fw.forwardingAddresses(&api.IPPort{Ip: "127.0.0.1", Port: 8080, Protocol: string(limatype.ProtoUDP)})
 	assert.Equal(t, udpAddr, "127.0.0.1:8080")
 }

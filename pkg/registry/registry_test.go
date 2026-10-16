@@ -52,8 +52,11 @@ func (m *mockDriver) Info(_ context.Context) driver.Info {
 func (m *mockDriver) Configure(_ context.Context, _ *limatype.Instance) (*driver.ConfiguredDriver, error) {
 	return nil, nil
 }
-func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) string { return "" }
-func (m *mockDriver) SSHAddress(_ context.Context) (string, error)                 { return "", nil }
+
+func (m *mockDriver) InspectStatus(_ context.Context, _ *limatype.Instance) limatype.Status {
+	return ""
+}
+func (m *mockDriver) SSHAddress(_ context.Context) (string, error) { return "", nil }
 
 func (m *mockDriver) BootScripts(_ context.Context) (map[string][]byte, error) { return nil, nil }
 func (m *mockDriver) AdditionalSetupForSSH(_ context.Context) error            { return nil }
