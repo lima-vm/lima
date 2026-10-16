@@ -61,6 +61,17 @@ func fieldStarts(s string) []int {
 	return starts
 }
 
+func TestInfoBodyUsesBinaryUnits(t *testing.T) {
+	inst := &limatype.Instance{
+		Name: "default", Status: limatype.StatusRunning, CPUs: 4,
+		Memory: 4 << 30, Disk: 100 << 30, SSHLocalPort: 22,
+	}
+	body := infoBody(inst)
+	assert.Assert(t, strings.Contains(body, "Memory:       4GiB"), body)
+	assert.Assert(t, strings.Contains(body, "Disk:         100GiB"), body)
+	assert.Assert(t, !strings.Contains(body, " GB"), body)
+}
+
 func TestFmtInstEscapesProtectedMarker(t *testing.T) {
 	inst := &limatype.Instance{
 		Name: "default", Status: limatype.StatusRunning, CPUs: 4, Memory: 4 << 30,

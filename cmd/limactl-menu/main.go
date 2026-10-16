@@ -333,7 +333,7 @@ func (s *State) showActions(in *limatype.Instance) {
 	s.app.SetRoot(modal, true).SetFocus(modal)
 }
 
-func (s *State) showInfo(in *limatype.Instance) {
+func infoBody(in *limatype.Instance) string {
 	prot := "No"
 	if in.Protected {
 		prot = "Yes"
@@ -344,12 +344,12 @@ Hostname:     %s
 VM Type:      %s
 Architecture: %s
 CPUs:         %d
-Memory:       %.1f GB
-Disk:         %.1f GB
+Memory:       %s
+Disk:         %s
 SSH Port:     %d
 SSH Address:  %s
 Protected:    %s
-Lima Version: %s`, statusTag(in.Status), in.Hostname, in.VMType, in.Arch, in.CPUs, float64(in.Memory)/1e9, float64(in.Disk)/1e9, in.SSHLocalPort, in.SSHAddress, prot, in.LimaVersion)
+Lima Version: %s`, statusTag(in.Status), in.Hostname, in.VMType, in.Arch, in.CPUs, units.BytesSize(float64(in.Memory)), units.BytesSize(float64(in.Disk)), in.SSHLocalPort, in.SSHAddress, prot, in.LimaVersion)
 
 	if len(in.Errors) > 0 {
 		b.WriteString("\n\nErrors:\n")
@@ -361,7 +361,11 @@ Lima Version: %s`, statusTag(in.Status), in.Hostname, in.VMType, in.Arch, in.CPU
 		fmt.Fprintf(&b, "\n\nMessage:\n  %s", in.Message)
 	}
 
-	s.showTextView(" Info ", b.String())
+	return b.String()
+}
+
+func (s *State) showInfo(in *limatype.Instance) {
+	s.showTextView(" Info ", infoBody(in))
 }
 
 func (s *State) showPorts(in *limatype.Instance) {
