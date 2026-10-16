@@ -4,6 +4,8 @@
 package main
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -80,4 +82,18 @@ func TestFmtInstShowsVMType(t *testing.T) {
 
 	inst.VMType = ""
 	assert.Assert(t, strings.HasSuffix(fmtInst(inst), "  -"), fmtInst(inst))
+}
+
+func TestGenDocContentModeCLI(t *testing.T) {
+	dir := t.TempDir()
+	app := newApp()
+	app.SetArgs([]string{"generate-doc", "--content-mode=cli", dir})
+	assert.NilError(t, app.Execute())
+
+	b, err := os.ReadFile(filepath.Join(dir, "limactl_menu.md"))
+	assert.NilError(t, err)
+	assert.Assert(t, strings.Contains(string(b), "title: menu\n"), string(b))
+	assert.Assert(t, strings.Contains(string(b), "limactl menu"), string(b))
+	_, err = os.Stat(filepath.Join(dir, "limactl_menu_generate-doc.md"))
+	assert.Assert(t, os.IsNotExist(err), "hidden command should not be documented")
 }

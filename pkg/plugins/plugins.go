@@ -30,10 +30,26 @@ type Plugin struct {
 }
 
 var Discover = sync.OnceValues(func() ([]Plugin, error) {
+	return pluginsInDirs(getPluginDirectories()), nil
+})
+
+// DiscoverBundled returns the plugins installed with limactl, next to it or in libexec/lima.
+// Unlike Discover, it ignores $PATH, so a plugin of the same name there cannot shadow a bundled one.
+func DiscoverBundled() []Plugin {
+	dirs := usrlocal.SelfDirs()
+	if libexecDirs, err := usrlocal.LibexecLima(); err == nil {
+		dirs = append(dirs, libexecDirs...)
+	}
+	return pluginsInDirs(dirs)
+}
+
+// pluginsInDirs returns the plugins found in dirs, sorted by name.
+// When several directories have a plugin of the same name, the first one wins.
+func pluginsInDirs(dirs []string) []Plugin {
 	var plugins []Plugin
 	seen := make(map[string]bool)
 
-	for _, dir := range getPluginDirectories() {
+	for _, dir := range dirs {
 		for _, plugin := range scanDirectory(dir) {
 			if !seen[plugin.Name] {
 				plugins = append(plugins, plugin)
@@ -47,8 +63,8 @@ var Discover = sync.OnceValues(func() ([]Plugin, error) {
 			return cmp.Compare(i.Name, j.Name)
 		})
 
-	return plugins, nil
-})
+	return plugins
+}
 
 var getPluginDirectories = sync.OnceValue(func() []string {
 	dirs := usrlocal.SelfDirs()
