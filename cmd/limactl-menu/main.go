@@ -4,6 +4,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -416,16 +417,36 @@ func (s *State) confirm(text string, onYes func()) {
 }
 
 func (s *State) execCmd(action, name string) {
-	//revive:disable:deep-exit
-	s.app.Stop()
 	ctx := context.Background()
-	cmd := exec.CommandContext(ctx, s.limactl, action, name)
-	cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
-	if err := cmd.Run(); err != nil {
-		fmt.Fprintf(os.Stderr, "limactl %s %s failed: %v\n", action, name, err)
-		os.Exit(1)
+	suspend := s.app.Suspend(func() {
+		cmd := exec.CommandContext(ctx, s.limactl, action, name)
+		cmd.Stdin, cmd.Stdout, cmd.Stderr = os.Stdin, os.Stdout, os.Stderr
+		if err := cmd.Run(); err != nil {
+			fmt.Fprintf(os.Stderr, "limactl %s %s failed: %v\nPress Enter to go back to the menu.\n", action, name, err)
+			if _, err = bufio.NewReader(os.Stdin).ReadString('\n'); err != nil {
+				fmt.Fprintf(os.Stderr, "couldn't read enter input: %v\n", err)
+				return
+			}
+		}
+
+		s.refreshList()
+	})
+
+	s.selectInstance(name)
+
+	if !suspend {
+		s.showTextView(" ERROR ", "Unable to suspend the menu")
+		return
 	}
-	os.Exit(cmd.ProcessState.ExitCode())
+}
+
+func (s *State) selectInstance(name string) {
+	for i, inst := range s.insts {
+		if inst.Name == name {
+			s.list.SetCurrentItem(i)
+			return
+		}
+	}
 }
 
 func showEmptyState(ctx context.Context, limactl string) error {
