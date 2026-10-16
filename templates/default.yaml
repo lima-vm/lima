@@ -81,6 +81,10 @@ mounts: []
 #    # SFTP driver, "builtin" or "openssh-sftp-server". "openssh-sftp-server" is recommended.
 #    # 🟢 Builtin default: "openssh-sftp-server" if OpenSSH SFTP Server binary is found, otherwise "builtin"
 #    sftpDriver: null
+#    # File names that are read-only at any depth, enforced by the host even against a compromised guest.
+#    # Requires `sftpDriver: builtin` on every mount. Not supported on Windows hosts.
+#    # 🟢 Builtin default: []
+#    readonlyNames: []
 #  9p:
 #    # Supported security models are "passthrough", "mapped-xattr", "mapped-file" and "none".
 #    # "mapped-xattr" and "mapped-file" are useful for persistent chown but incompatible with symlinks.

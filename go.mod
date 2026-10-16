@@ -163,3 +163,5 @@ require (
 	github.com/pb33f/go-yaml v0.1.0 // indirect
 	golang.org/x/exp v0.0.0-20241108190413-2d47ceb2692f // indirect
 )
+
+replace github.com/lima-vm/sshocker => github.com/sylvinus/sshocker v0.0.0-20260930083359-3f1a12816251

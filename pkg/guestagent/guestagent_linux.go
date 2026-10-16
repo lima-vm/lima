@@ -211,6 +211,13 @@ func (a *agent) Info(ctx context.Context) (*api.Info, error) {
 
 func (a *agent) HandleInotify(event *api.Inotify) {
 	location := event.MountPath
+	if event.Removed {
+		// The host agent only sends this for mounts where the removal is a no-op on the host.
+		if err := os.Remove(location); err != nil && !errors.Is(err, os.ErrNotExist) {
+			logrus.Errorf("error in inotify handle. Event: %s, Error: %s", event, err)
+		}
+		return
+	}
 	if _, err := os.Stat(location); err == nil {
 		local := event.Time.AsTime().Local()
 		err := os.Chtimes(location, local, local)

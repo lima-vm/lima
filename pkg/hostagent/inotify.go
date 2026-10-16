@@ -5,6 +5,7 @@ package hostagent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path"
@@ -63,6 +64,19 @@ func (a *HostAgent) startInotify(ctx context.Context) error {
 			watchPath := watchEvent.Path()
 			stat, err := os.Stat(watchPath)
 			if err != nil {
+				if !errors.Is(err, os.ErrNotExist) {
+					continue
+				}
+				if guestPath, ok := a.expectRemove(watchPath); ok {
+					event := &guestagentapi.Inotify{
+						MountPath: guestPath,
+						Time:      timestamppb.Now(),
+						Removed:   true,
+					}
+					if err := inotifyClient.Send(event); err != nil {
+						return fmt.Errorf("inotify stream closed: %w", err)
+					}
+				}
 				continue
 			}
 
@@ -107,6 +121,51 @@ func (a *HostAgent) setupWatchers(events chan notify.EventInfo) error {
 		}
 	}
 	return nil
+}
+
+// expectRemove prepares the relay of the removal of hostPath: the guest agent removes the path in the guest,
+// so that the guest emits an inotify event, and the mount must make that removal a no-op on the host,
+// as the path may have been created again on the host since.
+// It returns the path to remove in the guest, or false when the mount serving hostPath cannot
+// make the removal a no-op, e.g., for 9p and virtiofs.
+func (a *HostAgent) expectRemove(hostPath string) (string, bool) {
+	for symlink, original := range mountSymlinks {
+		if isUnder(hostPath, symlink, filepath.Separator) {
+			hostPath = original + strings.TrimPrefix(hostPath, symlink)
+			break
+		}
+	}
+	// The innermost mount serves the path.
+	var served *mount
+	for _, m := range a.mounts {
+		if isUnder(hostPath, filepath.Clean(m.location), filepath.Separator) &&
+			(served == nil || len(filepath.Clean(m.location)) > len(filepath.Clean(served.location))) {
+			served = m
+		}
+	}
+	if served == nil || served.expectRemove == nil {
+		return "", false
+	}
+	rel, err := filepath.Rel(filepath.Clean(served.location), hostPath)
+	if err != nil {
+		return "", false
+	}
+	guestPath := path.Join(served.mountPoint, filepath.ToSlash(rel))
+	// A mount nested in the guest at guestPath would receive the removal, without making it a no-op.
+	for _, m := range a.mounts {
+		if m != served && isUnder(m.mountPoint, served.mountPoint, '/') && (guestPath == m.mountPoint || isUnder(guestPath, m.mountPoint, '/')) {
+			return "", false
+		}
+	}
+	if !served.expectRemove(hostPath) {
+		return "", false
+	}
+	return guestPath, true
+}
+
+// isUnder reports whether p is strictly under dir.
+func isUnder(p, dir string, sep byte) bool {
+	return len(p) > len(dir) && strings.HasPrefix(p, dir) && (p[len(dir)] == sep || strings.HasSuffix(dir, string(sep)))
 }
 
 func translateToGuestPath(hostPath string, symlinks, locations map[string]string) string {
