@@ -11,6 +11,7 @@ ethernets:
     {{- end }}
     dhcp4-overrides:
       route-metric: {{$nw.Metric}}
+      use-domains: false
     dhcp-identifier: mac
     {{- if and (eq $nw.Interface $.SlirpNICName) (gt (len $.DNSAddresses) 0) }}
     nameservers:
