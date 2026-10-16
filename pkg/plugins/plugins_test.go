@@ -28,7 +28,7 @@ func TestDiscoverInFirstDirectoryWins(t *testing.T) {
 	writePlugin(t, second, "foo")
 	bar := writePlugin(t, second, "bar")
 
-	got := discoverIn([]string{first, second})
+	got := pluginsInDirs([]string{first, second})
 	assert.DeepEqual(t, got, []Plugin{
 		{Name: "bar", Path: bar},
 		{Name: "foo", Path: want},

@@ -30,7 +30,7 @@ type Plugin struct {
 }
 
 var Discover = sync.OnceValues(func() ([]Plugin, error) {
-	return discoverIn(getPluginDirectories()), nil
+	return pluginsInDirs(getPluginDirectories()), nil
 })
 
 // DiscoverBundled returns the plugins installed with limactl, next to it or in libexec/lima.
@@ -40,12 +40,12 @@ func DiscoverBundled() []Plugin {
 	if libexecDirs, err := usrlocal.LibexecLima(); err == nil {
 		dirs = append(dirs, libexecDirs...)
 	}
-	return discoverIn(dirs)
+	return pluginsInDirs(dirs)
 }
 
-// discoverIn returns the plugins found in dirs, sorted by name.
+// pluginsInDirs returns the plugins found in dirs, sorted by name.
 // When several directories have a plugin of the same name, the first one wins.
-func discoverIn(dirs []string) []Plugin {
+func pluginsInDirs(dirs []string) []Plugin {
 	var plugins []Plugin
 	seen := make(map[string]bool)
 
