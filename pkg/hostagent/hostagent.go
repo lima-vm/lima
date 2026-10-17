@@ -62,11 +62,17 @@ type HostAgent struct {
 	instSSHAddress    string
 	sshExe            sshutil.SSHExe
 	sshConfig         *ssh.SSHConfig
+	master            *sshMaster     // nil on Windows hosts
 	portForwarder     *portForwarder // legacy SSH port forwarder
 	grpcPortForwarder *portfwd.Forwarder
 
 	onClose   []func() error // LIFO
 	onCloseMu sync.Mutex
+
+	// guestSocketMu serializes the guestSocket forwards, their replay and their
+	// cancellation, and guards guestSockets.
+	guestSocketMu sync.Mutex
+	guestSockets  []guestSocketForward
 
 	driver   driver.Driver
 	signalCh chan os.Signal
@@ -269,12 +275,18 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		guestAgentAliveCh: make(chan struct{}),
 		showProgress:      o.showProgress,
 	}
+	if runtime.GOOS != "windows" {
+		a.master = newSSHMaster(sshConfig, inst.Dir, a.sshAddressPort)
+	}
 	a.grpcPortForwarder = portfwd.NewPortForwarder(rules, ignoreTCP, ignoreUDP, func(ev *events.PortForwardEvent) {
 		a.emitPortForwardEvent(context.Background(), ev)
 	})
-	a.portForwarder = newPortForwarder(sshConfig, a.sshAddressPort, rules, ignoreTCP, inst.VMType, func(ev *events.PortForwardEvent) {
+	a.portForwarder = newPortForwarder(sshConfig, a.sshAddressPort, rules, ignoreTCP, inst.VMType, a.master, func(ev *events.PortForwardEvent) {
 		a.emitPortForwardEvent(context.Background(), ev)
 	})
+	if a.master != nil {
+		a.master.replay = a.replayForwards
+	}
 
 	// Set up vsock event callback if the driver supports it
 	if vsockEmitter, ok := limaDriver.Driver.(driver.VsockEventEmitter); ok {
@@ -291,7 +303,7 @@ func writeSSHConfigFile(sshPath, instName, instDir, instSSHAddress string, sshLo
 		return fmt.Errorf("directory is unknown for the instance %#q", instName)
 	}
 	b := bytes.NewBufferString(`# This SSH config file can be passed to 'ssh -F'.
-# This file is created by Lima, but not used by Lima itself currently.
+# This file is created by Lima.
 # Modifications to this file will be lost on restarting the Lima instance.
 `)
 	if runtime.GOOS == "windows" {
@@ -594,24 +606,29 @@ func (a *HostAgent) startHostAgentRoutines(ctx context.Context) error {
 		}
 		logrus.Info(msg)
 	}
-	a.cleanUp(func() error {
-		// Skip ExitMaster when the control socket does not exist.
-		if !sshutil.IsControlMasterExisting(a.instDir) {
+	if a.master != nil {
+		// Registered first, so it runs after every other cleanup.
+		a.cleanUp(a.master.terminate)
+	} else {
+		a.cleanUp(func() error {
+			// Skip ExitMaster when the control socket does not exist.
+			if !sshutil.IsControlMasterExisting(a.instDir) {
+				return nil
+			}
+			logrus.Debugf("shutting down the SSH master")
+			if exitMasterErr := ssh.ExitMaster(a.instSSHAddress, a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
+				logrus.WithError(exitMasterErr).Warn("failed to exit SSH master")
+			}
 			return nil
-		}
-		logrus.Debugf("shutting down the SSH master")
-		if exitMasterErr := ssh.ExitMaster(a.instSSHAddress, a.sshLocalPort, a.sshConfig); exitMasterErr != nil {
-			logrus.WithError(exitMasterErr).Warn("failed to exit SSH master")
-		}
-		return nil
-	})
+		})
+	}
 	var errs []error
 	hasGuestAgentDaemon := !*a.instConfig.Plain && *a.instConfig.OS == limatype.LINUX
-	essentialReqs := a.essentialRequirements()
+	essentialReqs := a.essentialRequirements(ctx)
 	optionalReqs := a.optionalRequirements()
 	finalReqs := a.finalRequirements()
 	if *a.instConfig.OS == limatype.WINDOWS {
-		essentialReqs = a.essentialWinRequirements()
+		essentialReqs = a.essentialWinRequirements(ctx)
 		optionalReqs = a.optionalWinRequirements()
 		finalReqs = a.finalWinRequirements()
 	}
@@ -767,6 +784,11 @@ func (a *HostAgent) close() error {
 	a.onCloseMu.Lock()
 	defer a.onCloseMu.Unlock()
 	logrus.Infof("Shutting down the host agent")
+	if a.master != nil {
+		// Before the cleanups, so that a master death while they cancel forwards
+		// does not start a new master.
+		a.master.stopRestarting()
+	}
 	var errs []error
 	for _, f := range slices.Backward(a.onClose) {
 		if err := f(); err != nil {
@@ -781,14 +803,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	// Setup all socket forwards and defer their teardown
 	if !a.driver.Info(ctx).Features.SkipSocketForwarding {
-		logrus.Debugf("Forwarding unix sockets")
-		sshAddress, sshPort := a.sshAddressPort()
-		for _, rule := range a.instConfig.PortForwards {
-			if rule.GuestSocket != "" {
-				local := hostAddress(rule, &guestagentapi.IPPort{})
-				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse)
-			}
-		}
+		a.forwardGuestSockets(ctx)
 	}
 
 	localUnix := filepath.Join(a.instDir, filenames.GuestAgentSock)
@@ -796,16 +811,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 
 	a.cleanUp(func() error {
 		logrus.Debugf("Stop forwarding unix sockets")
-		var errs []error
-		sshAddress, sshPort := a.sshAddressPort()
-		for _, rule := range a.instConfig.PortForwards {
-			if rule.GuestSocket != "" {
-				local := hostAddress(rule, &guestagentapi.IPPort{})
-				if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
-					errs = append(errs, err)
-				}
-			}
-		}
+		errs := []error{a.cancelGuestSockets(ctx)}
 		if a.driver.ForwardGuestAgent(ctx) {
 			if err := a.cancelGuestAgentSockForward(ctx, localUnix, remoteUnix); err != nil {
 				errs = append(errs, err)
@@ -879,8 +885,85 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	}
 }
 
-func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPortForwards []limatype.PortForward) {
+// guestSocketForward is a guestSocket rule and generation() read before the
+// last attempt to forward it, which may have failed.
+type guestSocketForward struct {
+	rule limatype.PortForward
+	gen  uint64
+}
+
+// forwardGuestSockets forwards the guestSocket rules and stamps each one with
+// generation().
+func (a *HostAgent) forwardGuestSockets(ctx context.Context) {
+	a.guestSocketMu.Lock()
+	defer a.guestSocketMu.Unlock()
+	logrus.Debugf("Forwarding unix sockets")
+	gen := a.master.generation()
 	sshAddress, sshPort := a.sshAddressPort()
+	for _, rule := range a.instConfig.PortForwards {
+		if rule.GuestSocket != "" {
+			local := hostAddress(rule, &guestagentapi.IPPort{})
+			a.guestSockets = append(a.guestSockets, guestSocketForward{rule: rule, gen: gen})
+			_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse)
+		}
+	}
+}
+
+// replayGuestSockets re-forwards the guestSocket rules stamped with a
+// generation older than gen. Each forward is cancelled first, because forwardSSH
+// removes the socket file before it forwards, and a forward that the fresh
+// master already holds would lose its socket file. It does nothing once the
+// host agent is closing, so it cannot re-create a forward that
+// cancelGuestSockets has cancelled.
+func (a *HostAgent) replayGuestSockets(ctx context.Context, gen uint64) {
+	a.guestSocketMu.Lock()
+	defer a.guestSocketMu.Unlock()
+	if a.master.hasStopped() {
+		return
+	}
+	sshAddress, sshPort := a.sshAddressPort()
+	for i := range a.guestSockets {
+		if a.guestSockets[i].gen >= gen {
+			continue
+		}
+		rule := a.guestSockets[i].rule
+		local := hostAddress(rule, &guestagentapi.IPPort{})
+		logrus.Infof("Restoring forwarding of %s to %s", rule.GuestSocket, local)
+		_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse)
+		if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse); err != nil {
+			logrus.WithError(err).Warnf("failed to restore forwarding of %s to %s", rule.GuestSocket, local)
+		}
+		a.guestSockets[i].gen = gen
+	}
+}
+
+// cancelGuestSockets cancels the guestSocket forwards.
+func (a *HostAgent) cancelGuestSockets(ctx context.Context) error {
+	a.guestSocketMu.Lock()
+	defer a.guestSocketMu.Unlock()
+	var errs []error
+	sshAddress, sshPort := a.sshAddressPort()
+	for _, rule := range a.instConfig.PortForwards {
+		if rule.GuestSocket != "" {
+			local := hostAddress(rule, &guestagentapi.IPPort{})
+			if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
+				errs = append(errs, err)
+			}
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// replayForwards re-forwards the guestSocket and TCP forwards stamped with a
+// generation older than gen, once the master of generation gen is ready (see
+// sshMaster.replay). ga.sock is left to the reconnect loop in
+// watchGuestAgentEvents.
+func (a *HostAgent) replayForwards(ctx context.Context, gen uint64) {
+	a.replayGuestSockets(ctx, gen)
+	a.portForwarder.replay(ctx, gen)
+}
+
+func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPortForwards []limatype.PortForward) {
 	for _, rule := range staticPortForwards {
 		if rule.GuestSocket == "" {
 			guest := &guestagentapi.IPPort{
@@ -890,10 +973,7 @@ func (a *HostAgent) addStaticPortForwardsFromList(ctx context.Context, staticPor
 			}
 			local, remote := a.portForwarder.forwardingAddresses(guest)
 			if local != "" {
-				logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
-				if err := forwardTCP(ctx, a.sshConfig, sshAddress, sshPort, local, remote, verbForward); err != nil {
-					logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
-				}
+				a.portForwarder.forwardStatic(ctx, local, remote)
 			}
 		}
 	}

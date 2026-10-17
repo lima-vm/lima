@@ -157,7 +157,7 @@ local_setup_file() {
 
     # The listeners for the tests run inside the guest, but the guest image may
     # not include socat.
-    install_socat_in_guest
+    install_socat_in_guest "$NAME"
     # Kill listeners left over from a previous run (only relevant with LIMA_BATS_REUSE_INSTANCE).
     limactl shell "$NAME" -- sh -c 'sudo pkill -x socat; rm -f /tmp/port-forwarding.*.out; true'
     # The guestagent polls every 3s and only reports the difference between two
@@ -215,18 +215,6 @@ reusing_running_instance() {
     [[ -n ${LIMA_BATS_REUSE_INSTANCE:-} ]] || return 1
     run limactl list --format '{{.Status}}' "$NAME"
     [[ $status == 0 && $output == "Running" ]]
-}
-
-install_socat_in_guest() {
-    limactl shell "$NAME" -- sh -c '
-        command -v socat >/dev/null && exit 0
-        if command -v apt-get >/dev/null; then sudo apt-get install -y socat
-        elif command -v dnf >/dev/null; then sudo dnf install -y socat
-        elif command -v apk >/dev/null; then sudo apk add socat
-        elif command -v pacman >/dev/null; then sudo pacman -Sy --noconfirm socat
-        elif command -v zypper >/dev/null; then sudo zypper in -y socat
-        else echo "do not know how to install socat in the guest" >&2; exit 1
-        fi'
 }
 
 # Returns the IPv4 address of the host LAN interface.

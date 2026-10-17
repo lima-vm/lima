@@ -369,6 +369,7 @@ func TestSSHOptsForInstanceMultiplexing(t *testing.T) {
 		// Native OpenSSH cannot multiplex, and Cygwin ssh's is unreliable.
 		assert.Equal(t, len(mux), 0, "Windows must not multiplex: %v", mux)
 	} else {
-		assert.Equal(t, len(mux), 3, "other platforms multiplex: %v", opts)
+		// Multiplex over the host agent's master without ever becoming one.
+		assert.DeepEqual(t, mux, []string{"ControlMaster=no", `ControlPath="/tmp/test-instance/ssh.sock"`})
 	}
 }

@@ -6,6 +6,7 @@ package hostagent
 import (
 	"context"
 	"net"
+	"sync"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
@@ -23,6 +24,19 @@ type portForwarder struct {
 	ignore         bool
 	vmType         limatype.VMType
 	onEvent        func(*events.PortForwardEvent)
+	master         *sshMaster // nil on Windows hosts
+
+	// mu serializes forwardTCP calls and guards intents.
+	mu sync.Mutex
+	// intents holds every TCP forward that should exist, keyed by the local
+	// address, whether or not forwarding it succeeded, so a replay on a fresh
+	// master restores it.
+	intents map[string]tcpForwardIntent
+}
+
+type tcpForwardIntent struct {
+	remote string
+	gen    uint64 // generation() read before the last forward attempt, which may have failed
 }
 
 const sshGuestPort = 22
@@ -49,14 +63,50 @@ func portForwardRules(instDir string, user limatype.User, param map[string]strin
 	return append(rules, rule)
 }
 
-func newPortForwarder(sshConfig *ssh.SSHConfig, sshAddressPort func() (string, int), rules []limatype.PortForward, ignore bool, vmType limatype.VMType, onEvent func(*events.PortForwardEvent)) *portForwarder {
+func newPortForwarder(sshConfig *ssh.SSHConfig, sshAddressPort func() (string, int), rules []limatype.PortForward, ignore bool, vmType limatype.VMType, master *sshMaster, onEvent func(*events.PortForwardEvent)) *portForwarder {
 	return &portForwarder{
 		sshConfig:      sshConfig,
 		sshAddressPort: sshAddressPort,
 		rules:          rules,
 		ignore:         ignore,
 		vmType:         vmType,
+		master:         master,
 		onEvent:        onEvent,
+		intents:        make(map[string]tcpForwardIntent),
+	}
+}
+
+// forwardStatic sets up a static TCP forward and records its intent.
+func (pf *portForwarder) forwardStatic(ctx context.Context, local, remote string) {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+	sshAddress, sshPort := pf.sshAddressPort()
+	logrus.Infof("Setting up static TCP forwarding from %s to %s", remote, local)
+	pf.intents[local] = tcpForwardIntent{remote: remote, gen: pf.master.generation()}
+	if err := forwardTCP(ctx, pf.sshConfig, sshAddress, sshPort, local, remote, verbForward); err != nil {
+		logrus.WithError(err).Warnf("failed to set up static TCP forwarding %s -> %s", remote, local)
+	}
+}
+
+// replay re-forwards every TCP forward intent stamped with a generation older
+// than gen. It does nothing once the host agent is closing.
+func (pf *portForwarder) replay(ctx context.Context, gen uint64) {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
+	if pf.master.hasStopped() {
+		return
+	}
+	sshAddress, sshPort := pf.sshAddressPort()
+	for local, intent := range pf.intents {
+		if intent.gen >= gen {
+			continue
+		}
+		logrus.Infof("Restoring TCP forwarding from %s to %s", intent.remote, local)
+		if err := replayForwardTCP(ctx, pf.sshConfig, sshAddress, sshPort, local, intent.remote); err != nil {
+			logrus.WithError(err).Warnf("failed to restore TCP forwarding %s -> %s", intent.remote, local)
+		}
+		intent.gen = gen
+		pf.intents[local] = intent
 	}
 }
 
@@ -116,6 +166,8 @@ func (pf *portForwarder) forwardingAddresses(guest *api.IPPort) (hostAddr, guest
 }
 
 func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
+	pf.mu.Lock()
+	defer pf.mu.Unlock()
 	sshAddress, sshPort := pf.sshAddressPort()
 	for _, f := range ev.RemovedLocalPorts {
 		if f.Protocol != "tcp" {
@@ -132,6 +184,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 			GuestAddr: remote,
 			HostAddr:  local,
 		})
+		delete(pf.intents, local)
 		if err := forwardTCP(ctx, pf.sshConfig, sshAddress, sshPort, local, remote, verbCancel); err != nil {
 			logrus.WithError(err).Warnf("failed to stop forwarding tcp port %d", f.Port)
 		}
@@ -159,6 +212,7 @@ func (pf *portForwarder) OnEvent(ctx context.Context, ev *api.Event) {
 			GuestAddr: remote,
 			HostAddr:  local,
 		})
+		pf.intents[local] = tcpForwardIntent{remote: remote, gen: pf.master.generation()}
 		if err := forwardTCP(ctx, pf.sshConfig, sshAddress, sshPort, local, remote, verbForward); err != nil {
 			logrus.WithError(err).Warnf("failed to set up forwarding tcp port %d (negligible if already forwarded)", f.Port)
 		}

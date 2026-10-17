@@ -525,10 +525,12 @@ func DisableControlMasterOptsFromSSHArgs(sshArgs []string) []string {
 		"-o", "ControlPath=none",
 		"-o", "ControlPersist=no",
 	}
-	return slices.Concat(argsForOverridingConfigFile, removeOptsFromSSHArgs(sshArgs, "ControlMaster", "ControlPath", "ControlPersist"))
+	return slices.Concat(argsForOverridingConfigFile, RemoveOptsFromSSHArgs(sshArgs, "ControlMaster", "ControlPath", "ControlPersist"))
 }
 
-func removeOptsFromSSHArgs(sshArgs []string, removeOpts ...string) []string {
+// RemoveOptsFromSSHArgs returns sshArgs without the "-o" options whose
+// "KEY=VALUE" starts with one of removeOpts.
+func RemoveOptsFromSSHArgs(sshArgs []string, removeOpts ...string) []string {
 	res := make([]string, 0, len(sshArgs))
 	isOpt := false
 	for _, arg := range sshArgs {
@@ -591,8 +593,8 @@ func RemoveStaleControlMaster(ctx context.Context, instDir string) (bool, error)
 	return existed, nil
 }
 
-// SSHOpts adds the following options to CommonOpts: User, ControlMaster,
-// ControlPath, ControlPersist, and whichever of ForwardAgent, ForwardX11, and
+// SSHOpts adds the following options to CommonOpts: User, the control options
+// from controlOpts, and whichever of ForwardAgent, ForwardX11, and
 // ForwardX11Trusted the caller asks for.
 func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDotSSH, forwardAgent, forwardX11, forwardX11Trusted bool) ([]string, error) {
 	controlSock := filepath.Join(instDir, filenames.SSHSock)
@@ -611,11 +613,7 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 		}
 		controlPath = fmt.Sprintf(`ControlPath='%s'`, controlSock)
 	}
-	opts = append(opts,
-		"ControlMaster=auto",
-		controlPath,
-		"ControlPersist=yes",
-	)
+	opts = append(opts, controlOpts(runtime.GOOS, controlPath)...)
 	if forwardAgent {
 		opts = append(opts, "ForwardAgent=yes")
 	}
@@ -626,6 +624,18 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 		opts = append(opts, "ForwardX11Trusted=yes")
 	}
 	return opts, nil
+}
+
+// controlOpts returns the multiplexing options for a host running goos.
+// On hosts other than Windows the host agent owns the ControlMaster, so a client
+// with these options multiplexes over it when it is up, and connects directly
+// otherwise, without ever becoming a master itself. On Windows hosts the host agent does
+// not supervise a master, so clients there create one on demand.
+func controlOpts(goos, controlPath string) []string {
+	if goos == "windows" {
+		return []string{"ControlMaster=auto", controlPath, "ControlPersist=yes"}
+	}
+	return []string{"ControlMaster=no", controlPath}
 }
 
 // SSHOptsWithoutMultiplexing returns CommonOpts plus an explicit User, adding
