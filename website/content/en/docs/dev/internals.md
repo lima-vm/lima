@@ -88,7 +88,7 @@ Serial:
 
 SSH:
 - `ssh.sock`: SSH control master socket
-- `ssh.config`: SSH config file for `ssh -F`. Not consumed by Lima itself.
+- `ssh.config`: SSH config file for `ssh -F`
 
 VNC:
 - `vncdisplay`: VNC display host/port

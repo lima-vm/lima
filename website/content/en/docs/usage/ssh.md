@@ -14,6 +14,13 @@ $ ssh -F /Users/example/.lima/default/ssh.config lima-default
 
 This is useful for interoperability with other software that expects the SSH connectivity.
 
+## The SSH ControlMaster
+
+On macOS and Linux hosts, the host agent runs the instance's SSH ControlMaster.
+Clients that use `ssh.config` share its connection, but never start a master of their own.
+When the master exits, the host agent starts a new one and restores the port forwards that Lima manages.
+But a forward that Lima did not create, such as the `-D` forward of `limactl tunnel` or one you added with `ssh -O forward`, is lost when the master restarts.
+
 ## Using SSH without additional options
 
 Add the following line to your `~/.ssh/config`:

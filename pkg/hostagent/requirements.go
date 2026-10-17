@@ -69,7 +69,12 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 		})
 	retryLoop:
 		for j := range retries {
-			err := fn(req)
+			var err error
+			if req.check != nil {
+				err = req.check()
+			} else {
+				err = fn(req)
+			}
 			if err == nil {
 				a.emitRequirementProgress(ctx, &events.RequirementProgress{
 					Step:        stepNum,
@@ -267,9 +272,28 @@ type requirement struct {
 	debugHint   string
 	fatal       bool
 	noMaster    bool
+	// check, when set, runs on the host in place of script.
+	check func() error
 }
 
-func (a *HostAgent) essentialRequirements() []requirement {
+// sshMasterRequirement starts the persistent SSH ControlMaster that the host
+// agent supervises on macOS and Linux hosts, and waits until it is ready. On
+// Windows hosts it runs its script.
+func (a *HostAgent) sshMasterRequirement(ctx context.Context) requirement {
+	req := requirement{
+		description: "Persistent SSH ControlMaster",
+		script: `#!/bin/sh
+true
+`,
+		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
+	}
+	if runtime.GOOS != "windows" {
+		req.check = func() error { return a.master.start(ctx) }
+	}
+	return req
+}
+
+func (a *HostAgent) essentialRequirements(ctx context.Context) []requirement {
 	req := make([]requirement, 0)
 	req = append(req,
 		requirement{
@@ -283,13 +307,7 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 `,
 			noMaster: true,
 		})
-	startControlMasterReq := requirement{
-		description: "Persistent SSH ControlMaster",
-		script: `#!/bin/sh
-true
-`,
-		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
-	}
+	startControlMasterReq := a.sshMasterRequirement(ctx)
 	if *a.instConfig.Plain || *a.instConfig.OS != limatype.LINUX {
 		req = append(req, startControlMasterReq)
 		return req
@@ -330,13 +348,16 @@ set -eux
 `, a.iid),
 			debugHint: `Waiting for /run/lima-fuse-ready to be created by the boot scripts.`,
 		})
+		if runtime.GOOS != "windows" {
+			req = append(req, startControlMasterReq)
+		}
 	} else {
 		req = append(req, startControlMasterReq)
 	}
 	return req
 }
 
-func (a *HostAgent) essentialWinRequirements() []requirement {
+func (a *HostAgent) essentialWinRequirements(ctx context.Context) []requirement {
 	req := make([]requirement, 0)
 	req = append(req,
 		requirement{
@@ -349,7 +370,9 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 			noMaster: true,
 		},
 	)
-
+	if runtime.GOOS != "windows" {
+		req = append(req, a.sshMasterRequirement(ctx))
+	}
 	return req
 }
 
