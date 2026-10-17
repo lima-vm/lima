@@ -6,17 +6,20 @@ package textutil
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 )
 
-// ExecuteTemplate executes a text/template template.
+// ExecuteTemplate executes a text/template template with TemplateFuncMap registered,
+// so templates such as the launchd plists can escape dynamic values with the "xml" function.
 func ExecuteTemplate(tmpl string, args any) ([]byte, error) {
-	x, err := template.New("").Parse(tmpl)
+	x, err := template.New("").Funcs(TemplateFuncMap).Parse(tmpl)
 	if err != nil {
 		return nil, err
 	}
@@ -110,6 +113,20 @@ var TemplateFuncMap = template.FuncMap{
 			return "", errors.New("last argument must be a string")
 		}
 		return MissingString(message, text), nil
+	},
+	"xml": func(s string) (string, error) {
+		// Escape a value for inclusion in an XML document such as a launchd plist.
+		// Rejecting invalid UTF-8 avoids silently substituting U+FFFD and thereby changing
+		// a value such as a filesystem path; EscapeText handles '&', '<', '>', quotes and
+		// carriage returns.
+		if !utf8.ValidString(s) {
+			return "", fmt.Errorf("value is not valid UTF-8: %q", s)
+		}
+		var b bytes.Buffer
+		if err := xml.EscapeText(&b, []byte(s)); err != nil {
+			return "", err
+		}
+		return b.String(), nil
 	},
 }
 
