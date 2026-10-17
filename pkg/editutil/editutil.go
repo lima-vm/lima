@@ -58,7 +58,7 @@ func GenerateEditorWarningHeader() string {
 //
 // OpenEditor returns nil when the file was saved as an empty file, optionally with whitespaces.
 func OpenEditor(ctx context.Context, content []byte, hdr string) ([]byte, error) {
-	editor := editorcmd.Detect()
+	editor, args := editorcmd.Detect()
 	if editor == "" {
 		return nil, errors.New("could not detect a text editor binary, try setting $EDITOR")
 	}
@@ -76,7 +76,7 @@ func OpenEditor(ctx context.Context, content []byte, hdr string) ([]byte, error)
 		return nil, err
 	}
 
-	editorCmd := exec.CommandContext(ctx, editor, tmpYAMLPath)
+	editorCmd := exec.CommandContext(ctx, editor, append(args, tmpYAMLPath)...)
 	editorCmd.Env = os.Environ()
 	editorCmd.Stdin = os.Stdin
 	editorCmd.Stdout = os.Stdout
