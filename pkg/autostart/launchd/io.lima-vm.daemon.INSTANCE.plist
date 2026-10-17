@@ -3,23 +3,23 @@
 <plist version="1.0">
 <dict>
 	<key>Label</key>
-	<string>io.lima-vm.daemon.{{ .Instance }}</string>
+	<string>io.lima-vm.daemon.{{ .Instance | xml }}</string>
 	<key>UserName</key>
-	<string>{{ .UserName }}</string>
+	<string>{{ .UserName | xml }}</string>
 	<key>EnvironmentVariables</key>
 	<dict>
 		<key>LIMA_HOME</key>
-		<string>{{ .LimaHome }}</string>
+		<string>{{ .LimaHome | xml }}</string>
 {{- if .Path }}
 		<key>PATH</key>
-		<string>{{ .Path | html }}</string>
+		<string>{{ .Path | xml }}</string>
 {{- end }}
 	</dict>
 	<key>ProgramArguments</key>
 	<array>
-		<string>{{ .Binary }}</string>
+		<string>{{ .Binary | xml }}</string>
 		<string>start</string>
-		<string>{{ .Instance }}</string>
+		<string>{{ .Instance | xml }}</string>
 		<string>--foreground</string>
 	</array>
 	<key>RunAtLoad</key>
@@ -36,7 +36,7 @@
 	<key>StandardOutPath</key>
 	<string>launchd.stdout.log</string>
 	<key>WorkingDirectory</key>
-	<string>{{ .WorkDir }}</string>
+	<string>{{ .WorkDir | xml }}</string>
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
