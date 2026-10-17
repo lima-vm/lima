@@ -87,6 +87,38 @@ func forwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 	return nil
 }
 
+// replayForwardTCP restores a TCP forward on a fresh master. It cancels first,
+// since the fresh master may already hold the forward. A pseudoloopback
+// forwarder keeps its TCP listener, which a second listen on the port could not
+// replace, and only its Unix socket is forwarded again.
+func replayForwardTCP(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, local, remote string) error {
+	if plf, ok := pseudoLoopbackForwarders[local]; ok {
+		localUnix := plf.unixAddr.Name
+		_ = forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verbCancel, false)
+		return forwardSSH(ctx, sshConfig, sshAddress, sshPort, localUnix, remote, verbForward, false)
+	}
+	if !usesPseudoLoopback(local) {
+		_ = forwardTCP(ctx, sshConfig, sshAddress, sshPort, local, remote, verbCancel)
+	}
+	// A pseudoloopback forward without a forwarder never got set up, so there
+	// is nothing to cancel.
+	return forwardTCP(ctx, sshConfig, sshAddress, sshPort, local, remote, verbForward)
+}
+
+// usesPseudoLoopback reports whether forwardTCP forwards local through a
+// pseudoloopback forwarder.
+func usesPseudoLoopback(local string) bool {
+	localIPStr, localPortStr, err := net.SplitHostPort(local)
+	if err != nil {
+		return false
+	}
+	localPort, err := strconv.Atoi(localPortStr)
+	if err != nil {
+		return false
+	}
+	return net.ParseIP(localIPStr).Equal(IPv4loopback1) && localPort < 1024
+}
+
 var pseudoLoopbackForwarders = make(map[string]*pseudoLoopbackForwarder)
 
 type pseudoLoopbackForwarder struct {

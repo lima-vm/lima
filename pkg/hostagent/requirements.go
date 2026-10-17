@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -70,7 +69,12 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 		})
 	retryLoop:
 		for j := range retries {
-			err := fn(req)
+			var err error
+			if req.check != nil {
+				err = req.check()
+			} else {
+				err = fn(req)
+			}
 			if err == nil {
 				a.emitRequirementProgress(ctx, &events.RequirementProgress{
 					Step:        stepNum,
@@ -103,7 +107,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	return errors.Join(errs...)
 }
 
-// prefixExportParam will modify a script to be executed by ssh.ExecuteScript so that it exports
+// prefixExportParam will modify a script to be executed by waitForRequirement so that it exports
 // all the variables from /mnt/lima-cidata/param.env before invoking the actual interpreter.
 //
 //   - The script is executed in user mode, so needs to read the file using `sudo`.
@@ -123,7 +127,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 //	EOF
 //	/usr/bin/env ruby
 //
-// ssh.ExecuteScript will strip the `#!` prefix from the first line and invoke the
+// executeUnixScript will strip the `#!` prefix from the first line and invoke the
 // rest of the line as the command. The full script is then passed via STDIN. We use
 // "$(printf '…')" to be able to use \n as newline escapes, to fit everything on a
 // single line:
@@ -194,7 +198,7 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
+	stdout, stderr, err := a.executeUnixScript(sshConfig, script, r.description)
 	logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err)
@@ -202,9 +206,6 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	return nil
 }
 
-// This function is copied from sshocker's ExecuteScript, because
-// the function doesn't support Windows commands.
-// TODO: Support Windows on sshocker, and replace this function.
 func (a *HostAgent) waitForWinRequirement(r requirement) error {
 	logrus.Debugf("executing script for windows %q", r.description)
 	script := r.script
@@ -227,25 +228,42 @@ func (a *HostAgent) waitForWinRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	if sshConfig == nil {
-		return errors.New("got nil SSHConfig")
+	_, _, err := a.executeScript(sshConfig, script, script, r.description)
+	return err
+}
+
+// executeUnixScript runs script on the guest with the interpreter named on its #! line.
+func (a *HostAgent) executeUnixScript(sshConfig *ssh.SSHConfig, script, scriptName string) (stdout, stderr string, err error) {
+	interpreter, err := ssh.ParseScriptInterpreter(script)
+	if err != nil {
+		return "", "", err
 	}
-	sshBinary := sshConfig.Binary()
+	return a.executeScript(sshConfig, interpreter, script, scriptName)
+}
+
+// executeScript runs remoteCommand on the guest with script as its stdin,
+// and returns stdout and stderr.
+//
+// scriptName is used only for readability of error strings.
+func (a *HostAgent) executeScript(sshConfig *ssh.SSHConfig, remoteCommand, script, scriptName string) (stdout, stderr string, err error) {
+	if sshConfig == nil {
+		return "", "", errors.New("got nil SSHConfig")
+	}
 	sshArgs := sshConfig.Args()
 	if a.sshLocalPort != 0 {
 		sshArgs = append(sshArgs, "-p", strconv.Itoa(a.sshLocalPort))
 	}
-	sshArgs = append(sshArgs, a.instSSHAddress, "--", script)
-	sshCmd := exec.CommandContext(context.Background(), sshBinary, sshArgs...)
+	sshArgs = append(sshArgs, a.instSSHAddress, "--", remoteCommand)
+	sshCmd := sshCommand(context.Background(), sshConfig.Binary(), sshArgs...)
 	sshCmd.Stdin = strings.NewReader(script)
-	var stderr bytes.Buffer
-	sshCmd.Stderr = &stderr
-	logrus.Debugf("executing ssh for script :%s %v", sshCmd.Path, sshCmd.Args)
+	var stderrBuf bytes.Buffer
+	sshCmd.Stderr = &stderrBuf
+	logrus.Debugf("executing ssh for script %q: %s %v", scriptName, sshCmd.Path, sshCmd.Args)
 	out, err := sshCmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to execute script: stdout=%q, stderr=%q: %w", string(out), stderr.String(), err)
+		return string(out), stderrBuf.String(), fmt.Errorf("failed to execute script %q: stdout=%q, stderr=%q: %w", scriptName, string(out), stderrBuf.String(), err)
 	}
-	return nil
+	return string(out), stderrBuf.String(), nil
 }
 
 type requirement struct {
@@ -254,9 +272,28 @@ type requirement struct {
 	debugHint   string
 	fatal       bool
 	noMaster    bool
+	// check, when set, runs on the host in place of script.
+	check func() error
 }
 
-func (a *HostAgent) essentialRequirements() []requirement {
+// sshMasterRequirement starts the persistent SSH ControlMaster that the host
+// agent supervises on macOS and Linux hosts, and waits until it is ready. On
+// Windows hosts it runs its script.
+func (a *HostAgent) sshMasterRequirement(ctx context.Context) requirement {
+	req := requirement{
+		description: "Persistent SSH ControlMaster",
+		script: `#!/bin/sh
+true
+`,
+		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
+	}
+	if runtime.GOOS != "windows" {
+		req.check = func() error { return a.master.start(ctx) }
+	}
+	return req
+}
+
+func (a *HostAgent) essentialRequirements(ctx context.Context) []requirement {
 	req := make([]requirement, 0)
 	req = append(req,
 		requirement{
@@ -270,13 +307,7 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 `,
 			noMaster: true,
 		})
-	startControlMasterReq := requirement{
-		description: "Persistent SSH ControlMaster",
-		script: `#!/bin/sh
-true
-`,
-		debugHint: `The persistent ssh ControlMaster should be started immediately.`,
-	}
+	startControlMasterReq := a.sshMasterRequirement(ctx)
 	if *a.instConfig.Plain || *a.instConfig.OS != limatype.LINUX {
 		req = append(req, startControlMasterReq)
 		return req
@@ -317,13 +348,16 @@ set -eux
 `, a.iid),
 			debugHint: `Waiting for /run/lima-fuse-ready to be created by the boot scripts.`,
 		})
+		if runtime.GOOS != "windows" {
+			req = append(req, startControlMasterReq)
+		}
 	} else {
 		req = append(req, startControlMasterReq)
 	}
 	return req
 }
 
-func (a *HostAgent) essentialWinRequirements() []requirement {
+func (a *HostAgent) essentialWinRequirements(ctx context.Context) []requirement {
 	req := make([]requirement, 0)
 	req = append(req,
 		requirement{
@@ -336,7 +370,9 @@ If any private key under ~/.ssh is protected with a passphrase, you need to have
 			noMaster: true,
 		},
 	)
-
+	if runtime.GOOS != "windows" {
+		req = append(req, a.sshMasterRequirement(ctx))
+	}
 	return req
 }
 

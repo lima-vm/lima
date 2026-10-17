@@ -46,3 +46,17 @@ delete_instance() {
         limactl delete --force "$instance" || :
     fi
 }
+
+# Install socat inside the guest of a running instance, unless it is already there.
+install_socat_in_guest() {
+    local instance=$1
+    limactl shell "$instance" -- sh -c '
+        command -v socat >/dev/null && exit 0
+        if command -v apt-get >/dev/null; then sudo apt-get install -y socat
+        elif command -v dnf >/dev/null; then sudo dnf install -y socat
+        elif command -v apk >/dev/null; then sudo apk add socat
+        elif command -v pacman >/dev/null; then sudo pacman -Sy --noconfirm socat
+        elif command -v zypper >/dev/null; then sudo zypper in -y socat
+        else echo "do not know how to install socat in the guest" >&2; exit 1
+        fi'
+}

@@ -222,3 +222,20 @@ func Test_DisableControlMasterOptsFromSSHArgs(t *testing.T) {
 		})
 	}
 }
+
+func Test_controlOpts(t *testing.T) {
+	const controlPath = `ControlPath="/lima/default/ssh.sock"`
+	tests := []struct {
+		goos string
+		want []string
+	}{
+		{goos: "darwin", want: []string{"ControlMaster=no", controlPath}},
+		{goos: "linux", want: []string{"ControlMaster=no", controlPath}},
+		{goos: "windows", want: []string{"ControlMaster=auto", controlPath, "ControlPersist=yes"}},
+	}
+	for _, tt := range tests {
+		t.Run(tt.goos, func(t *testing.T) {
+			assert.DeepEqual(t, controlOpts(tt.goos, controlPath), tt.want)
+		})
+	}
+}
