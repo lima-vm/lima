@@ -95,9 +95,8 @@ func autostartDisableAction(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-// renderDaemonPlist renders the system LaunchDaemon plist for an instance. Every key the
-// template references must be supplied here: a missing one renders as the literal string
-// "<no value>" rather than failing, which would be written into the installed plist.
+// renderDaemonPlist renders the system LaunchDaemon plist for an instance. The render fails
+// if a value that the template always prints is not supplied.
 func renderDaemonPlist(binary, instName, workDir, userName string, keepAlive bool) ([]byte, error) {
 	// The daemon inherits no environment from the shell that registers it, so LIMA_HOME
 	// and PATH have to be recorded in the plist.

@@ -6,17 +6,19 @@ package textutil
 import (
 	"bytes"
 	"encoding/json"
+	"encoding/xml"
 	"errors"
 	"fmt"
 	"strings"
 	"text/template"
+	"unicode/utf8"
 
 	"github.com/goccy/go-yaml"
 )
 
-// ExecuteTemplate executes a text/template template.
+// ExecuteTemplate executes a text/template template with the functions in TemplateFuncMap.
 func ExecuteTemplate(tmpl string, args any) ([]byte, error) {
-	x, err := template.New("").Parse(tmpl)
+	x, err := template.New("").Funcs(TemplateFuncMap).Parse(tmpl)
 	if err != nil {
 		return nil, err
 	}
@@ -111,10 +113,33 @@ var TemplateFuncMap = template.FuncMap{
 		}
 		return MissingString(message, text), nil
 	},
+	"xml": func(s string) (string, error) {
+		// xml.EscapeText silently replaces invalid UTF-8 and characters that XML 1.0 cannot
+		// represent with U+FFFD. Reject them instead, so a value such as a path is never altered.
+		if !utf8.ValidString(s) {
+			return "", fmt.Errorf("value is not valid UTF-8: %q", s)
+		}
+		for _, r := range s {
+			switch {
+			case r == '\t' || r == '\n' || r == '\r':
+			case r >= 0x20 && r <= 0xD7FF:
+			case r >= 0xE000 && r <= 0xFFFD:
+			case r >= 0x10000 && r <= 0x10FFFF:
+			default:
+				return "", fmt.Errorf("value contains character %U not allowed in XML 1.0: %q", r, s)
+			}
+		}
+		var b bytes.Buffer
+		if err := xml.EscapeText(&b, []byte(s)); err != nil {
+			return "", err
+		}
+		return b.String(), nil
+	},
 }
 
 // FuncHelp is help for TemplateFuncMap.
 var FuncHelp = []string{
 	"indent <size>: add spaces to beginning of each line",
 	"missing <message>: return message if the text is empty",
+	"xml: escape the text for XML, rejecting characters XML 1.0 cannot represent",
 }

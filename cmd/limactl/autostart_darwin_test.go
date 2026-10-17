@@ -10,10 +10,9 @@ import (
 	"gotest.tools/v3/assert"
 )
 
-// The daemon plist is rendered from a map, and text/template turns a key the template
-// references but the map omits into the literal string "<no value>" instead of failing.
-// That would be written into /Library/LaunchDaemons verbatim, so assert that the rendered
-// plist carries the real LIMA_HOME and PATH and no placeholder.
+// TestRenderDaemonPlist checks that the plist carries the real LIMA_HOME and PATH. A missing
+// key fails the render only where the template always prints it, and PATH is printed only
+// when it is set, so the test looks for PATH itself.
 func TestRenderDaemonPlist(t *testing.T) {
 	t.Setenv("LIMA_HOME", "/some/lima/home")
 	t.Setenv("PATH", "/Users/alice/R&D/bin:/usr/bin:/bin")
