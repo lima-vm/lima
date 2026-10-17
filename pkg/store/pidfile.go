@@ -106,7 +106,29 @@ func staleBootSession(dir, current string) (bool, error) {
 }
 
 func writeBootSessionMarker(dir, id string) error {
-	return os.WriteFile(filepath.Join(dir, filenames.BootSession), []byte(id+"\n"), 0o644)
+	// Publish the marker atomically. os.WriteFile truncates the existing file before writing
+	// its new contents, so a concurrent staleBootSession could read an empty marker, find it
+	// does not equal the current boot ID, and wrongly report the PID files as stale. Writing
+	// to a uniquely named temporary file and renaming it into place closes that window: a
+	// reader sees either the old marker or the new one, never a truncated one.
+	f, err := os.CreateTemp(dir, "boot-session-*.tmp")
+	if err != nil {
+		return err
+	}
+	tmp := f.Name()
+	defer func() { _ = os.Remove(tmp) }()
+	if err := f.Chmod(0o644); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if _, err := f.WriteString(id + "\n"); err != nil {
+		_ = f.Close()
+		return err
+	}
+	if err := f.Close(); err != nil {
+		return err
+	}
+	return os.Rename(tmp, filepath.Join(dir, filenames.BootSession))
 }
 
 func removePIDFiles(dir string) error {
