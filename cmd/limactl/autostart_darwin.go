@@ -85,10 +85,15 @@ func autostartDisableAction(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	// Check for a LaunchDaemon (boot) installation.
+	// Check for a LaunchDaemon (boot) installation. A Stat error other than "not found" (for
+	// example a permission error) is reported, not read as "not registered".
 	daemonPath := launchd.GetDaemonPlistPath(inst.Name)
-	if _, err := os.Stat(daemonPath); err == nil {
+	_, statErr := os.Stat(daemonPath)
+	if statErr == nil {
 		return daemonUninstall(ctx, inst.Name)
+	}
+	if !errors.Is(statErr, os.ErrNotExist) {
+		return fmt.Errorf("failed to stat LaunchDaemon plist %s: %w", daemonPath, statErr)
 	}
 
 	logrus.Infof("Instance %#q is not registered for automatic startup", inst.Name)
@@ -159,8 +164,15 @@ func daemonUninstall(ctx context.Context, instName string) error {
 	svcTarget := "system/" + launchd.DaemonServiceNameFrom(instName)
 	destPath := launchd.GetDaemonPlistPath(instName)
 
-	_ = runSudo(ctx, "launchctl", "bootout", svcTarget)
-	_ = runSudo(ctx, "launchctl", "disable", svcTarget)
+	// bootout/disable error out when the job was never loaded or is already unloaded (normal here:
+	// launchctl says "No such process"), and its exit status does not reliably tell that from a real
+	// failure. Surface them instead of discarding them, but do not fail the uninstall on them.
+	if err := runSudo(ctx, "launchctl", "bootout", svcTarget); err != nil {
+		logrus.Warnf("launchctl bootout %q reported an error (continuing): %v", svcTarget, err)
+	}
+	if err := runSudo(ctx, "launchctl", "disable", svcTarget); err != nil {
+		logrus.Warnf("launchctl disable %q reported an error (continuing): %v", svcTarget, err)
+	}
 	if err := runSudo(ctx, "rm", "-f", destPath); err != nil {
 		return fmt.Errorf("failed to remove %s: %w", destPath, err)
 	}
