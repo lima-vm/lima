@@ -40,7 +40,7 @@ require (
 	github.com/google/yamlfmt v0.21.0 // gomodjail:unconfined
 	github.com/inetaf/tcpproxy v0.0.0-20260515195445-c159a6051109 // gomodjail:unconfined
 	github.com/invopop/jsonschema v0.14.0 // gomodjail:unconfined
-	github.com/klauspost/compress v1.20.1
+	github.com/klauspost/compress v1.20.3
 	github.com/mattn/go-isatty v0.0.24 // gomodjail:unconfined
 	github.com/mattn/go-shellwords v1.0.16 // gomodjail:unconfined
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
