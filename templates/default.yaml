@@ -576,8 +576,9 @@ networks:
 # # "reverse" can only be used for unix sockets right now, not for tcp sockets.
 # # Put sockets into "{{.Dir}}/sock" to avoid collision with Lima internal sockets!
 # # Sockets can also be forwarded to ports and vice versa, but not to/from a range of ports.
-# # Forwarding requires the lima user to have rw access to the "guestsocket",
-# # and the local user rwx access to the directory of the "hostsocket".
+# # Forwarding requires the local user rwx access to the directory of the "hostsocket".
+# # Reverse forwards, and all forwards when LIMA_SSH_PORT_FORWARDER=true, also require the lima user
+# # to have rw access to the "guestsocket"; otherwise the guest agent connects to it as root.
 #
 # # Lima internally appends this fallback rule at the end:
 # - guestIP: "127.0.0.1"
