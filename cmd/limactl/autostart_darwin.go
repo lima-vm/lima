@@ -164,9 +164,8 @@ func daemonUninstall(ctx context.Context, instName string) error {
 	svcTarget := "system/" + launchd.DaemonServiceNameFrom(instName)
 	destPath := launchd.GetDaemonPlistPath(instName)
 
-	// bootout/disable error out when the job was never loaded or is already unloaded (normal here:
-	// launchctl says "No such process"), and its exit status does not reliably tell that from a real
-	// failure. Surface them instead of discarding them, but do not fail the uninstall on them.
+	// Log launchctl failures and continue with plist removal, preserving the
+	// existing best-effort cleanup behavior.
 	if err := runSudo(ctx, "launchctl", "bootout", svcTarget); err != nil {
 		logrus.Warnf("launchctl bootout %q reported an error (continuing): %v", svcTarget, err)
 	}
