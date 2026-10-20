@@ -12,6 +12,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
@@ -70,15 +71,7 @@ func WritePIDFile(path string, pid int) error {
 // writePIDFileAtomically renames the PID file into place, so that a reader never sees a partially
 // written one.
 func writePIDFileAtomically(path string, pid int) error {
-	tmpPath := path + ".tmp"
-	if err := os.WriteFile(tmpPath, fmt.Appendf(nil, "%d\n", pid), 0o644); err != nil {
-		return err
-	}
-	if err := os.Rename(tmpPath, path); err != nil {
-		_ = os.Remove(tmpPath)
-		return err
-	}
-	return nil
+	return fsutil.WriteFileAtomic(path, fmt.Appendf(nil, "%d\n", pid))
 }
 
 // pidFileFromPreviousBoot returns true when the PID file at path was written during a
@@ -105,8 +98,9 @@ func staleBootSession(dir, current string) (bool, error) {
 	return strings.TrimSpace(string(b)) != current, nil
 }
 
+// writeBootSessionMarker writes the boot session marker atomically.
 func writeBootSessionMarker(dir, id string) error {
-	return os.WriteFile(filepath.Join(dir, filenames.BootSession), []byte(id+"\n"), 0o644)
+	return fsutil.WriteFileAtomic(filepath.Join(dir, filenames.BootSession), []byte(id+"\n"))
 }
 
 func removePIDFiles(dir string) error {
