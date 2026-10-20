@@ -23,11 +23,15 @@ package editorcmd
 import (
 	"os"
 	"os/exec"
+
+	"github.com/mattn/go-shellwords"
 )
 
 // Detect detects a text editor command.
+// Returns the editor exec path with arguments if provided.
+//
 // Returns an empty string when no editor is found.
-func Detect() string {
+func Detect() (editor string, args []string) {
 	candidates := []string{
 		os.Getenv("VISUAL"),
 		os.Getenv("EDITOR"),
@@ -40,10 +44,23 @@ func Detect() string {
 		if f == "" {
 			continue
 		}
-		x, err := exec.LookPath(f)
-		if err == nil {
-			return x
+
+		if path, err := exec.LookPath(f); err == nil {
+			return path, nil
 		}
+
+		parsedArgs, err := shellwords.Parse(f)
+		if err != nil || len(parsedArgs) == 0 {
+			continue
+		}
+
+		path, err := exec.LookPath(parsedArgs[0])
+		if err != nil {
+			continue
+		}
+
+		return path, parsedArgs[1:]
 	}
-	return ""
+
+	return "", nil
 }
