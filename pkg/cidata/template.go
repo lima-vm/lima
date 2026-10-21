@@ -130,6 +130,7 @@ type TemplateArgs struct {
 	RosettaBinFmt                   bool
 	SkipDefaultDependencyResolution bool
 	VMType                          string
+	SSHOverVsock                    bool
 	VSockPort                       int
 	VirtioPort                      string
 	Plain                           bool

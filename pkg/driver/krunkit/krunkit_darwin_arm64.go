@@ -4,14 +4,18 @@
 package krunkit
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strconv"
+	"strings"
+	"time"
 
 	"github.com/docker/go-units"
 	"github.com/inetaf/tcpproxy"
@@ -210,14 +214,40 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 	return usernet.NewClient(endpointSock, subnetIP), cancel, err
 }
 
-func startVsockForwarder(ctx context.Context, unixSockPath, hostAddress string) error {
-	// Test if the vsock port is open
+// readVsockSSHBanner checks that the guest sshd answers over vsock.
+// krunkit accepts the host-side unix socket even when nothing listens on the guest vsock port,
+// so a successful dial alone does not prove that sshd is reachable.
+func readVsockSSHBanner(ctx context.Context, unixSockPath string) error {
 	var d net.Dialer
 	conn, err := d.DialContext(ctx, "unix", unixSockPath)
 	if err != nil {
 		return err
 	}
-	conn.Close()
+	defer conn.Close()
+	readDeadline := time.Now().Add(3 * time.Second)
+	if deadline, ok := ctx.Deadline(); ok && deadline.Before(readDeadline) {
+		readDeadline = deadline
+	}
+	if err := conn.SetReadDeadline(readDeadline); err != nil {
+		return err
+	}
+	r := bufio.NewReader(io.LimitReader(conn, 8192))
+	for {
+		line, err := r.ReadString('\n')
+		if strings.HasPrefix(line, "SSH-") {
+			return nil
+		}
+		if err != nil {
+			return err
+		}
+	}
+}
+
+func startVsockForwarder(ctx context.Context, unixSockPath, hostAddress string) error {
+	// The cloud-init bootcmd starts sshd-vsock.socket before sshd.service, so no retry is needed.
+	if err := readVsockSSHBanner(ctx, unixSockPath); err != nil {
+		return fmt.Errorf("no SSH banner on %q: %w", unixSockPath, err)
+	}
 
 	var lc net.ListenConfig
 	l, err := lc.Listen(ctx, "tcp", hostAddress)
@@ -241,6 +271,7 @@ func startVsockForwarder(ctx context.Context, unixSockPath, hostAddress string) 
 			} else {
 				p := tcpproxy.DialProxy{
 					DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+						var d net.Dialer
 						return d.DialContext(ctx, "unix", unixSockPath)
 					},
 				}
