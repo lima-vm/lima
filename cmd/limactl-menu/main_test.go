@@ -40,7 +40,7 @@ func TestFmtHeaderIsAlignedWithRow(t *testing.T) {
 		Name: "default", Status: limatype.StatusRunning, Arch: limatype.AARCH64,
 		CPUs: 4, Memory: 4 << 30, VMType: limatype.VZ,
 	}
-	_, row, found := strings.Cut(fmtInst(inst), "[white]  ")
+	_, row, found := strings.Cut(fmtInst(inst), "  ")
 	assert.Assert(t, found, fmtInst(inst))
 	header := strings.TrimPrefix(fmtHeader(), strings.Repeat(" ", statusIconWidth))
 	assert.DeepEqual(t, fieldStarts(header), fieldStarts(row))
