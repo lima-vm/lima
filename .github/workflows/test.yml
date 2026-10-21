@@ -221,14 +221,34 @@ jobs:
         $env:LIMACTL_CREATE_ARGS = '--vm-type=qemu'
         bash.exe -c "./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/tests/port-forwarding.bats"
 
-  windows-plain-wsl2:
-    # Smoke test of Lima's WSL2 driver on a host with only what a default
+  windows-plain-smoke:
+    # Smoke test of Lima's drivers on a host with only what a default
     # Windows 10/11 install ships (native OpenSSH, wsl.exe, tar). If a step
     # ever needs MSYS2 or Git for Windows back to pass, Lima has gained a new
     # external-binary dependency, and that needs review first.
-    name: "Windows tests (WSL2, plain Windows host)"
+    name: "Windows smoke tests (plain, ${{ matrix.name }})"
     runs-on: windows-2025
     timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: WSL2
+          vm-type: wsl2
+          template: .\templates\experimental\wsl2.yaml
+        # The reverse-sshfs mount starts through the native sftp-server, but
+        # sshocker does not fail when the mount check fails, so the mount
+        # itself is not covered.
+        - name: QEMU
+          vm-type: qemu
+          template: .\templates\default.yaml
+        # The HCS driver is experimental and lacks features (mounts, port
+        # forwarding, ...) that the full test suite needs.
+        # The windows-2025 image ships the Hyper-V and Containers features
+        # that HCS and HNS need, and the runner user is an Administrator.
+        - name: HCS
+          vm-type: hcs
+          template: .\templates\experimental\hcs.yaml
     steps:
     - name: Set gitconfig
       run: |
@@ -241,48 +261,27 @@ jobs:
       with:
         go-version: stable
         cache: false
-    - uses: $/.github/actions/windows_wsl2_setup
-    # No windows_plain_templates: wsl2.yaml has no `base:`.
-    - uses: $/.github/actions/windows_plain_host
-    - uses: $/.github/actions/windows_plain_build
-    - uses: $/.github/actions/windows_plain_smoke_test
-      with:
-        template: .\templates\experimental\wsl2.yaml
-        launch-default-distro-during-stop: 'true'
-
-  windows-plain-qemu:
-    # Like windows-plain-wsl2, for the QEMU driver. The reverse-sshfs mount
-    # starts through the native sftp-server, but sshocker does not fail when
-    # the mount check fails, so the mount itself is not covered.
-    name: "Windows tests (QEMU, plain Windows host)"
-    runs-on: windows-2025
-    timeout-minutes: 30
-    steps:
-    - name: Set gitconfig
-      run: |
-        git config --global core.autocrlf false
-        git config --global core.eol lf
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-      with:
-        persist-credentials: false
-    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
-      with:
-        go-version: stable
-        cache: false
-    - uses: $/.github/actions/windows_qemu_install
-    - uses: $/.github/actions/windows_plain_templates
+    - if: matrix.vm-type == 'wsl2'
+      uses: $/.github/actions/windows_wsl2_setup
+    - if: matrix.vm-type == 'qemu'
+      uses: $/.github/actions/windows_qemu_install
+    # Only default.yaml has `base:`; wsl2.yaml and hcs.yaml do not.
+    - if: matrix.vm-type == 'qemu'
+      uses: $/.github/actions/windows_plain_templates
     - uses: $/.github/actions/windows_plain_host
     # No QEMU on PATH here: limactl appends the default QEMU install dir to
     # its own PATH, and this job tests that.
     - name: Check that QEMU is not on PATH
+      if: matrix.vm-type == 'qemu'
       run: |
         $qemu = Get-Command qemu-system-x86_64 -ErrorAction SilentlyContinue
         if ($qemu) { throw "QEMU is on PATH: $($qemu.Source)" }
     - uses: $/.github/actions/windows_plain_build
     - uses: $/.github/actions/windows_plain_smoke_test
       with:
-        template: .\templates\default.yaml
-        vm-type: qemu
+        template: ${{ matrix.template }}
+        vm-type: ${{ matrix.vm-type }}
+        launch-default-distro-during-stop: ${{ matrix.vm-type == 'wsl2' }}
 
   qemu:
     name: "Integration tests (QEMU, macOS host)"
