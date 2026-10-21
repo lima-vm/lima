@@ -80,7 +80,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 
 	sshAddress, sshPort := a.sshAddressPort()
 	// Create a copy of sshConfig to avoid
-	// modifying HostAgent's sshConfig in case of Windows
+	// modifying HostAgent's sshConfig
 	sshConfig := *a.sshConfig
 	rsf := &reversesshfs.ReverseSSHFS{
 		Driver:                  *m.SSHFS.SFTPDriver,
@@ -93,17 +93,10 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		Readonly:                !(*m.Writable),
 		SSHFSAdditionalArgs:     []string{"-o", sshfsOptions},
 	}
-	if runtime.GOOS == "windows" {
-		// cygwin/msys2 doesn't support full feature set over mux socket, this has at least 2 side effects:
-		// 1. unnecessary pollutes output with error on errors encountered (ssh will try to tolerate them with fallbacks);
-		// 2. these errors still imply additional coms over mux socket, which resulted sftp-server to fail more often statistically during test runs.
-		// It is reasonable to disable this on Windows if required feature is not fully operational.
-		rsf.SSHConfig.Persist = false
-
-		// HostAgent's `sshConfig` already has some ControlMaster related args in `AdditionalArgs`,
-		// so it is necessary to remove them to avoid overrides above `Persist=false`.
-		rsf.SSHConfig.AdditionalArgs = sshutil.DisableControlMasterOptsFromSSHArgs(rsf.SSHConfig.AdditionalArgs)
-	}
+	// Give the mount its own ssh connection so that it keeps working after the ControlMaster
+	// exits (`limactl shell --reconnect` ends it).
+	// Cygwin and MSYS2 ssh on Windows also lack part of the feature set over the mux socket.
+	rsf.SSHConfig.AdditionalArgs = sshutil.DisableControlMasterOptsFromSSHArgs(rsf.SSHConfig.AdditionalArgs)
 	if err := rsf.Prepare(); err != nil {
 		return nil, fmt.Errorf("failed to prepare reverse sshfs for %#q on %#q: %w", resolvedLocation, *m.MountPoint, err)
 	}
