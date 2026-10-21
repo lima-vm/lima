@@ -1,0 +1,94 @@
+images:
+# Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
+
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:a021682aff9c0d455315230f229138e4d1413c5bce96ec336e453a69086d9c2f"
+  variant: "server"
+# x86-64-v3 optimized image. Still runs as x86_64, distinguished by archVariant.
+# Select it with `limactl start --arch-variant v3`.
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-amd64v3.img"
+  arch: "x86_64"
+  digest: "sha256:954748dd0ed6dea5edd4aecfab0a95507faaa575e535e91652f6030dd6cec534"
+  variant: "server"
+  archVariant: "v3"
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:ef1ac0e0bfd3ab265507c9efe78f130960b808b940b4f03e68382f1fd3f34a1e"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-riscv64.img"
+  arch: "riscv64"
+  digest: "sha256:17bf6bd3ff12829ad722ef611026326f10f0cf1fd8932a022833313048ea62f8"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-armhf.img"
+  arch: "armv7l"
+  digest: "sha256:0f5b9bc44a7c78370a36766ec1d8312231fd0d722f442eae03bb5e4f024c9bee"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-s390x.img"
+  arch: "s390x"
+  digest: "sha256:027838a52c14e4aa8f4a6f2d320f78e65f2e0b9af9ab1ce4204df83badf05679"
+  variant: "server"
+- location: "https://cloud-images.ubuntu.com/releases/stonking/release-20261019/ubuntu-26.10-server-cloudimg-ppc64el.img"
+  arch: "ppc64le"
+  digest: "sha256:d01db7b8797eafc08f123b622dba00d86e6fd10014c42af028e2ebb67538f6cf"
+  variant: "server"
+# Fallback to the latest release image.
+# Hint: run `limactl prune` to invalidate the cache
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-amd64.img
+  arch: x86_64
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-amd64v3.img
+  arch: x86_64
+  variant: "server"
+  archVariant: "v3"
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-arm64.img
+  arch: aarch64
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-riscv64.img
+  arch: riscv64
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-armhf.img
+  arch: armv7l
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-s390x.img
+  arch: s390x
+  variant: "server"
+
+- location: https://cloud-images.ubuntu.com/releases/stonking/release/ubuntu-26.10-server-cloudimg-ppc64el.img
+  arch: ppc64le
+  variant: "server"
+
+# Try to use release-yyyyMMdd minimal image if available.
+- location: "https://cloud-images.ubuntu.com/minimal/releases/stonking/release-20261019/ubuntu-26.10-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  digest: "sha256:8e3415f53bb0b22c794f71658558bd89af9365d2dd3ef2f4f3e13d813297e07b"
+  variant: "minimal"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/stonking/release-20261019/ubuntu-26.10-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  digest: "sha256:f3590bd748db86b9e4fa298fef266105d06eea7e78d63f1a653cd458681f9bfc"
+  variant: "minimal"
+
+# Fallback minimal images
+- location: "https://cloud-images.ubuntu.com/minimal/releases/stonking/release/ubuntu-26.10-minimal-cloudimg-amd64.img"
+  arch: "x86_64"
+  variant: "minimal"
+
+- location: "https://cloud-images.ubuntu.com/minimal/releases/stonking/release/ubuntu-26.10-minimal-cloudimg-arm64.img"
+  arch: "aarch64"
+  variant: "minimal"
+
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu
+
+# Do not require Lima NICs for systemd-networkd-wait-online: the first-boot
+# rename to eth0 fails on 26.04 and later (LP: #2136392) and would block boot for 120s.
+# Lima's cidata bootcmd renames the NIC and waits for it instead.
+param:
+  internal_netplanOptional: "true"
