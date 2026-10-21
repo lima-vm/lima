@@ -29,8 +29,8 @@ var (
 	cPrim = tcell.NewRGBColor(0x32, 0xCD, 0x32)
 	cSec  = tcell.NewRGBColor(0x4E, 0x9A, 0x06)
 	cBord = tcell.NewRGBColor(0x55, 0x55, 0x55)
-	cTxt  = tcell.ColorWhite
-	cDim  = tcell.ColorGray
+	cTxt  = tcell.ColorDefault
+	cDim  = tcell.ColorDarkCyan
 )
 
 type State struct {
@@ -85,7 +85,7 @@ func (s *State) run() error {
 
 	footer := tview.NewTextView().
 		SetDynamicColors(true).
-		SetText(" [yellow]F1[white] Help  [yellow]F2[white] Start/Stop  [yellow]F3[white] Info  [yellow]F5[white] Refresh  [yellow]F8[white] Delete  [yellow]F10[white] Quit")
+		SetText(" [::r]F1[::-] Help  [::r]F2[::-] Start/Stop  [::r]F3[::-] Info  [::r]F5[::-] Refresh  [::r]F8[::-] Delete  [::r]F10[::-] Quit")
 
 	s.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(s.panel, 0, 1, true).
@@ -110,8 +110,7 @@ func (s *State) buildUI() {
 	s.list = tview.NewList().
 		SetHighlightFullLine(true).
 		SetMainTextColor(cTxt).
-		SetSelectedTextColor(tcell.ColorBlack).
-		SetSelectedBackgroundColor(cPrim)
+		SetSelectedStyle(tcell.StyleDefault.Reverse(true))
 
 	s.header = tview.NewTextView().SetTextColor(cDim)
 
@@ -160,13 +159,13 @@ func fmtHeader() string {
 
 func fmtInst(in *limatype.Instance) string {
 	icon := map[string]string{
-		"Running":    "[green]●[white]",
-		"Stopped":    "[red]●[white]",
-		"Broken":     "[yellow]●[white]",
-		"Installing": "[blue]◐[white]",
+		"Running":    "[green]●[-]",
+		"Stopped":    "[red]●[-]",
+		"Broken":     "[yellow]●[-]",
+		"Installing": "[blue]◐[-]",
 	}[in.Status]
 	if icon == "" {
-		icon = "[gray]○[white]"
+		icon = "[gray]○[-]"
 	}
 
 	name := in.Name
@@ -262,18 +261,18 @@ func (s *State) toggleStartStop(in *limatype.Instance) {
 }
 
 func (s *State) showHelp() {
-	help := `[yellow]Keybindings:[white]
+	help := `[green]Keybindings:[-]
 
-  [green]F1[white] / [green]?[white]       Help (this screen)
-  [green]F2[white] / [green]t[white]       Start / Stop toggle
-  [green]F3[white] / [green]i[white]       Show instance info
-  [green]F5[white]           Refresh instance list
-  [green]F8[white] / [green]d[white]       Delete instance
-  [green]F10[white] / [green]q[white]      Quit
+  [green]F1[-] / [green]?[-]       Help (this screen)
+  [green]F2[-] / [green]t[-]       Start / Stop toggle
+  [green]F3[-] / [green]i[-]       Show instance info
+  [green]F5[-]           Refresh instance list
+  [green]F8[-] / [green]d[-]       Delete instance
+  [green]F10[-] / [green]q[-]      Quit
 
-  [green]Enter[white] / [green]h[white]    Open actions menu
-  [green]s[white]            Shell into instance
-  [green]r[white]            Restart instance`
+  [green]Enter[-] / [green]h[-]    Open actions menu
+  [green]s[-]            Shell into instance
+  [green]r[-]            Restart instance`
 	s.showTextView(" Help ", help)
 }
 
@@ -310,10 +309,9 @@ func (s *State) showActions(in *limatype.Instance) {
 	}
 
 	modal := tview.NewList().
+		SetSelectedStyle(tcell.StyleDefault.Reverse(true)).
 		SetHighlightFullLine(true).
-		SetMainTextColor(cTxt).
-		SetSelectedTextColor(tcell.ColorBlack).
-		SetSelectedBackgroundColor(cSec)
+		SetMainTextColor(cTxt)
 	modal.SetBorder(true).
 		SetBorderColor(cBord).
 		SetTitle(fmt.Sprintf(" Actions for %s ", in.Name)).
@@ -413,6 +411,20 @@ func (s *State) confirm(text string, onYes func()) {
 				onYes()
 			}
 		})
+
+	m.SetBorderColor(cBord)
+
+	m.SetButtonStyle(
+		tcell.StyleDefault.
+			Foreground(tcell.ColorDefault).
+			Background(tcell.ColorDefault),
+	)
+
+	m.SetButtonActivatedStyle(
+		tcell.StyleDefault.
+			Foreground(tcell.ColorBlack).
+			Background(cPrim),
+	)
 	s.app.SetRoot(m, false).SetFocus(m)
 }
 
@@ -497,9 +509,9 @@ func listInstances(ctx context.Context, limactl string) ([]*limatype.Instance, e
 
 func statusTag(st string) string {
 	return map[string]string{
-		"Running":    "[green]RUNNING[white]",
-		"Stopped":    "[red]STOPPED[white]",
-		"Broken":     "[yellow]BROKEN[white]",
-		"Installing": "[blue]INSTALLING[white]",
+		"Running":    "[green]RUNNING[-]",
+		"Stopped":    "[red]STOPPED[-]",
+		"Broken":     "[yellow]BROKEN[-]",
+		"Installing": "[blue]INSTALLING[-]",
 	}[st]
 }
