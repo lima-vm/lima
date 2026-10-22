@@ -1,0 +1,5 @@
+minimumLimaVersion: 2.1.2
+
+base:
+- template:_images/amazonlinux-2023
+- template:_default/mounts

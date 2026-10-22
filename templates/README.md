@@ -42,6 +42,7 @@ lima
 - [`alpine-3.22`](./alpine-3.22.yaml): Alpine Linux 3.22
 - [`alpine-3.23`](./alpine-3.23.yaml), `alpine`: ☆Alpine Linux 3.23
 - [`alpine-iso`](./alpine-iso.yaml): ☆Alpine Linux (ISO9660 image). Compatible with the `alpine` template used in Lima prior to v1.0.
+- [`amazonlinux-2023`](./amazonlinux-2023.yaml): Amazon Linux 2023
 - [`archlinux`](./archlinux.yaml): ☆Arch Linux
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream`: CentOS Stream 9
 - [`centos-stream-10`](./centos-stream-10.yaml): CentOS Stream 10
