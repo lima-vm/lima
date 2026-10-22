@@ -91,6 +91,7 @@ func (a *HostAgent) setupMount(ctx context.Context, m limatype.Mount) (*mount, e
 		Port:                    sshPort,
 		RemotePath:              *m.MountPoint,
 		Readonly:                !(*m.Writable),
+		ReadonlyNames:           m.SSHFS.ReadonlyNames,
 		SSHFSAdditionalArgs:     []string{"-o", sshfsOptions},
 	}
 	// Give the mount its own ssh connection so that it keeps working after the ControlMaster
