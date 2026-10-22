@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"os/exec"
 	"runtime"
 	"strconv"
 	"strings"
@@ -103,7 +102,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 	return errors.Join(errs...)
 }
 
-// prefixExportParam will modify a script to be executed by ssh.ExecuteScript so that it exports
+// prefixExportParam will modify a script to be executed by waitForRequirement so that it exports
 // all the variables from /mnt/lima-cidata/param.env before invoking the actual interpreter.
 //
 //   - The script is executed in user mode, so needs to read the file using `sudo`.
@@ -123,7 +122,7 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 //	EOF
 //	/usr/bin/env ruby
 //
-// ssh.ExecuteScript will strip the `#!` prefix from the first line and invoke the
+// executeUnixScript will strip the `#!` prefix from the first line and invoke the
 // rest of the line as the command. The full script is then passed via STDIN. We use
 // "$(printf '…')" to be able to use \n as newline escapes, to fit everything on a
 // single line:
@@ -194,7 +193,7 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	stdout, stderr, err := ssh.ExecuteScript(a.instSSHAddress, a.sshLocalPort, sshConfig, script, r.description)
+	stdout, stderr, err := a.executeUnixScript(sshConfig, script, r.description)
 	logrus.Debugf("stdout=%#q, stderr=%#q, err=%v", stdout, stderr, err)
 	if err != nil {
 		return fmt.Errorf("stdout=%#q, stderr=%#q: %w", stdout, stderr, err)
@@ -202,9 +201,6 @@ func (a *HostAgent) waitForRequirement(r requirement) error {
 	return nil
 }
 
-// This function is copied from sshocker's ExecuteScript, because
-// the function doesn't support Windows commands.
-// TODO: Support Windows on sshocker, and replace this function.
 func (a *HostAgent) waitForWinRequirement(r requirement) error {
 	logrus.Debugf("executing script for windows %q", r.description)
 	script := r.script
@@ -227,25 +223,42 @@ func (a *HostAgent) waitForWinRequirement(r requirement) error {
 			AdditionalArgs: sshutil.DisableControlMasterOptsFromSSHArgs(sshConfig.AdditionalArgs),
 		}
 	}
-	if sshConfig == nil {
-		return errors.New("got nil SSHConfig")
+	_, _, err := a.executeScript(sshConfig, script, script, r.description)
+	return err
+}
+
+// executeUnixScript runs script on the guest with the interpreter named on its #! line.
+func (a *HostAgent) executeUnixScript(sshConfig *ssh.SSHConfig, script, scriptName string) (stdout, stderr string, err error) {
+	interpreter, err := ssh.ParseScriptInterpreter(script)
+	if err != nil {
+		return "", "", err
 	}
-	sshBinary := sshConfig.Binary()
+	return a.executeScript(sshConfig, interpreter, script, scriptName)
+}
+
+// executeScript runs remoteCommand on the guest with script as its stdin,
+// and returns stdout and stderr.
+//
+// scriptName is used only for readability of error strings.
+func (a *HostAgent) executeScript(sshConfig *ssh.SSHConfig, remoteCommand, script, scriptName string) (stdout, stderr string, err error) {
+	if sshConfig == nil {
+		return "", "", errors.New("got nil SSHConfig")
+	}
 	sshArgs := sshConfig.Args()
 	if a.sshLocalPort != 0 {
 		sshArgs = append(sshArgs, "-p", strconv.Itoa(a.sshLocalPort))
 	}
-	sshArgs = append(sshArgs, a.instSSHAddress, "--", script)
-	sshCmd := exec.CommandContext(context.Background(), sshBinary, sshArgs...)
+	sshArgs = append(sshArgs, a.instSSHAddress, "--", remoteCommand)
+	sshCmd := sshCommand(context.Background(), sshConfig.Binary(), sshArgs...)
 	sshCmd.Stdin = strings.NewReader(script)
-	var stderr bytes.Buffer
-	sshCmd.Stderr = &stderr
-	logrus.Debugf("executing ssh for script :%s %v", sshCmd.Path, sshCmd.Args)
+	var stderrBuf bytes.Buffer
+	sshCmd.Stderr = &stderrBuf
+	logrus.Debugf("executing ssh for script %q: %s %v", scriptName, sshCmd.Path, sshCmd.Args)
 	out, err := sshCmd.Output()
 	if err != nil {
-		return fmt.Errorf("failed to execute script: stdout=%q, stderr=%q: %w", string(out), stderr.String(), err)
+		return string(out), stderrBuf.String(), fmt.Errorf("failed to execute script %q: stdout=%q, stderr=%q: %w", scriptName, string(out), stderrBuf.String(), err)
 	}
-	return nil
+	return string(out), stderrBuf.String(), nil
 }
 
 type requirement struct {
