@@ -174,6 +174,7 @@ func newApp() *cobra.Command {
 		}
 		return nil
 	}
+	rootCmd.RunE = runRoot
 	rootCmd.AddGroup(&cobra.Group{ID: "basic", Title: "Basic Commands:"})
 	rootCmd.AddGroup(&cobra.Group{ID: "advanced", Title: "Advanced Commands:"})
 	rootCmd.AddGroup(&cobra.Group{ID: "plugin", Title: "Available Plugins (Experimental):"})
@@ -218,6 +219,27 @@ func newApp() *cobra.Command {
 	addPluginCommands(rootCmd)
 
 	return rootCmd
+}
+
+// runRoot runs `limactl` without a subcommand.
+// It opens the `limactl-menu` plugin when it is installed and the terminal is interactive,
+// otherwise it shows the usage.
+func runRoot(cmd *cobra.Command, _ []string) error {
+	tty, err := cmd.Flags().GetBool("tty")
+	if err != nil {
+		return err
+	}
+	if tty && isatty.IsTerminal(os.Stdin.Fd()) {
+		menu, err := plugins.Find("menu")
+		if err != nil {
+			logrus.WithError(err).Debug("Failed to find the menu plugin")
+		}
+		if menu != nil {
+			menu.Run(cmd.Context(), nil)
+			// NOTREACHED
+		}
+	}
+	return cmd.Help()
 }
 
 func addPluginCommands(rootCmd *cobra.Command) {
