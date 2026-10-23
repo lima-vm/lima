@@ -52,5 +52,7 @@ On macOS, see %s for the usage.`, socketVMNetURL),
 		fmt.Sprintf("check that the sudoers file is up-to-date with %#q", cfgFile))
 	sudoersCommand.Flags().StringSlice("block-device", nil,
 		"include the macOS VZ host block-device helper for the current user and comma-separated devices")
+	sudoersCommand.Flags().Bool("digest", true,
+		"pin Lima's privileged helpers to their sha256 digest; with --digest=false the file survives Lima upgrades, but sudo runs whatever binary is installed at the helper path")
 	return sudoersCommand
 }

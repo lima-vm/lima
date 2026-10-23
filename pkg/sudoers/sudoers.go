@@ -41,8 +41,17 @@ func Run(ctx context.Context, user, group string, stdin io.Reader, stdout, stder
 	return nil
 }
 
-// NOPASSWD renders a sudoers entry for one or more commands.
-func NOPASSWD(subject, runAsUser, runAsGroup string, commands ...string) string {
+// NOPASSWD renders a sudoers entry for one or more commands. Commands that run
+// one of Lima's privileged helpers are pinned to the helper's digest.
+func NOPASSWD(subject, runAsUser, runAsGroup string, commands ...string) (string, error) {
+	commands, err := pinPrivilegedHelpers(commands)
+	if err != nil {
+		return "", err
+	}
+	return render(subject, runAsUser, runAsGroup, commands...), nil
+}
+
+func render(subject, runAsUser, runAsGroup string, commands ...string) string {
 	if len(commands) == 1 {
 		return fmt.Sprintf("%s ALL=(%s:%s) NOPASSWD:NOSETENV: %s\n", subject, runAsUser, runAsGroup, commands[0])
 	}

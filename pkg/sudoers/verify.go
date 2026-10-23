@@ -59,7 +59,7 @@ func VerifyFragment(ctx context.Context, file, fragment, hint string, runAs ...R
 	}
 	// The file may carry grants from other Lima features, or from other users.
 	// Only this fragment has to be present verbatim.
-	if !ContainsActiveFragment(content, fragment) {
+	if !ContainsFragment(content, fragment) {
 		return fmt.Errorf("sudoers file %#q is out of sync and must be regenerated (Hint: %s)", file, hint)
 	}
 	return nil

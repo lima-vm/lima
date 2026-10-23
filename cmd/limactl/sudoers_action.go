@@ -35,6 +35,10 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	pinDigest, err := cmd.Flags().GetBool("digest")
+	if err != nil {
+		return err
+	}
 	includeNetwork := true
 	if err := nwCfg.Validate(); err != nil {
 		if len(blockDevices) == 0 {
@@ -64,6 +68,9 @@ func sudoersAction(cmd *cobra.Command, args []string) error {
 	content, err := renderSudoers(nwCfg, blockDevices, includeNetwork)
 	if err != nil {
 		return err
+	}
+	if !pinDigest {
+		content = sudoers.Unpin(content)
 	}
 	if !includeNetwork {
 		logrus.Warn("Generated sudoers file has no network entries; replacing an existing file removes its network grants")
@@ -132,7 +139,8 @@ func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string, 
 	if err != nil {
 		return err
 	}
-	if b == content {
+	// Files generated with --digest=false are accepted too.
+	if b == content || b == sudoers.Unpin(content) {
 		return nil
 	}
 	if len(blockDevices) == 0 {
@@ -140,7 +148,7 @@ func verifySudoersFile(ctx context.Context, nwCfg networks.Config, file string, 
 		if err != nil {
 			return err
 		}
-		if sudoers.ContainsActiveFragment(b, networkSudoers) {
+		if sudoers.ContainsFragment(b, networkSudoers) {
 			return nil
 		}
 	}
