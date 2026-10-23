@@ -21,8 +21,18 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/registry"
 )
 
+// RegisterSetAndParam registers the `--set` and `--param` flags, which modify a template or an instance configuration in place.
+func RegisterSetAndParam(cmd *cobra.Command, commentPrefix string) {
+	flags := cmd.Flags()
+
+	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times. See 'limactl help yq-restrictions' for limitations.")
+	_ = cmd.RegisterFlagCompletionFunc("set", setFlagCompletion)
+	flags.StringArray("param", []string{}, commentPrefix+"Set a template parameter, e.g. name=value. Can be passed multiple times.")
+}
+
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.
 func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
+	RegisterSetAndParam(cmd, commentPrefix)
 	flags := cmd.Flags()
 
 	flags.Int("cpus", 0, commentPrefix+"Number of CPUs") // Similar to colima's --cpu, but the flag name is slightly different (cpu vs cpus)
@@ -68,9 +78,6 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 
 	flags.Bool("rosetta", false, commentPrefix+"Enable Rosetta (for vz instances)")
 	flags.StringSlice("block-device", nil, commentPrefix+"Host block devices to attach (macOS VZ), e.g. /dev/disk4; requires a protected helper and 'limactl sudoers --block-device' setup")
-
-	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times. See 'limactl help yq-restrictions' for limitations.")
-	flags.StringArray("param", []string{}, commentPrefix+"Set a template parameter, e.g. name=value. Can be passed multiple times.")
 
 	flags.Uint16("ssh-port", 0, commentPrefix+"SSH port (0 for random)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("ssh-port", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {

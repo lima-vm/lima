@@ -12,7 +12,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 
+	"github.com/lima-vm/lima/v2/cmd/limactl/editflags"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/limatmpl"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
@@ -72,7 +74,26 @@ func newTemplateCopyCommand() *cobra.Command {
 	templateCopyCommand.Flags().Bool("embed-all", false, "Embed all dependencies into template")
 	templateCopyCommand.Flags().Bool("fill", false, "Fill defaults")
 	templateCopyCommand.Flags().Bool("verbatim", false, "Don't make locators absolute")
+	editflags.RegisterSetAndParam(templateCopyCommand, "")
 	return templateCopyCommand
+}
+
+func applyTemplateFlags(ctx context.Context, flags *pflag.FlagSet, tmpl *limatmpl.Template) error {
+	var params map[string]string
+	if flags.Changed("param") {
+		if err := tmpl.Unmarshal(); err != nil {
+			return err
+		}
+		params = tmpl.Config.Param
+	}
+	yqExprs, err := editflags.YQExpressions(flags, true, params)
+	if err != nil {
+		return err
+	}
+	if len(yqExprs) == 0 {
+		return nil
+	}
+	return modifyInPlace(ctx, tmpl, yqutil.Join(yqExprs))
 }
 
 func fillDefaults(ctx context.Context, tmpl *limatmpl.Template) error {
@@ -148,6 +169,9 @@ func templateCopyAction(cmd *cobra.Command, args []string) error {
 				return err
 			}
 		}
+	}
+	if err := applyTemplateFlags(ctx, cmd.Flags(), tmpl); err != nil {
+		return err
 	}
 	if fill {
 		if err := fillDefaults(ctx, tmpl); err != nil {
@@ -231,6 +255,7 @@ func newTemplateValidateCommand() *cobra.Command {
 		RunE:  templateValidateAction,
 	}
 	templateValidateCommand.Flags().Bool("fill", false, "Fill defaults")
+	editflags.RegisterSetAndParam(templateValidateCommand, "")
 	return templateValidateCommand
 }
 
@@ -259,6 +284,9 @@ func templateValidateAction(cmd *cobra.Command, args []string) error {
 		// Embed default base.yaml only when fill is true.
 		if err := tmpl.Embed(cmd.Context(), true, fill); err != nil {
 			return err
+		}
+		if err := applyTemplateFlags(ctx, cmd.Flags(), tmpl); err != nil {
+			return fmt.Errorf("failed to modify template %#q: %w", arg, err)
 		}
 		// Load() will merge the template with override.yaml and default.yaml via FillDefaults().
 		// FillDefaults() needs the potential instance directory to validate host templates using {{.Dir}}.
