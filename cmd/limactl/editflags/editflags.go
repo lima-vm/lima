@@ -71,6 +71,7 @@ func RegisterEdit(cmd *cobra.Command, commentPrefix string) {
 
 	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times. See 'limactl help yq-restrictions' for limitations.")
 	flags.StringArray("param", []string{}, commentPrefix+"Set a template parameter, e.g. name=value. Can be passed multiple times.")
+	_ = cmd.RegisterFlagCompletionFunc("param", paramFlagCompletion)
 
 	flags.Uint16("ssh-port", 0, commentPrefix+"SSH port (0 for random)") // colima-compatible
 	_ = cmd.RegisterFlagCompletionFunc("ssh-port", func(*cobra.Command, []string, string) ([]string, cobra.ShellCompDirective) {
