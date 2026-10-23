@@ -136,6 +136,11 @@ The helper only accepts real macOS disk device nodes such as `/dev/disk4` and `/
 Use builtin VZ through the installed `limactl` executable; external VZ drivers and
 renamed executables are not supported for block-device attachment.
 
+Each generated entry is pinned to the `sha256:` digest of the installed helper, so sudo refuses
+to run a modified helper. Regenerate the file after upgrading or reinstalling Lima.
+To skip the digest, for example when Lima is upgraded often, pass `--digest=false` to
+`limactl sudoers`. The file then survives upgrades, but sudo runs whatever binary is installed
+at the helper path, so only use it when that path is root-owned and not user-writable.
 Include every current-user `--block-device` grant you want to keep when regenerating this file.
 If network validation fails, the generated file omits network grants; installing it over
 an existing file removes those grants. Review the output before replacing it.

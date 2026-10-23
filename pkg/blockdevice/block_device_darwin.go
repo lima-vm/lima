@@ -156,10 +156,10 @@ func SudoersForUser(userName string, devicePaths []string) (string, error) {
 		}
 		helperCommands = append(helperCommands, helperArgs)
 	}
-	return sudoersForUserAndHelpers(userName, helperCommands...), nil
+	return sudoersForUserAndHelpers(userName, helperCommands...)
 }
 
-func sudoersForUserAndHelpers(userName string, helperArgs ...[]string) string {
+func sudoersForUserAndHelpers(userName string, helperArgs ...[]string) (string, error) {
 	helperCommands := make([]string, 0, len(helperArgs))
 	for _, args := range helperArgs {
 		helperCommands = append(helperCommands, strings.Join(args, " "))

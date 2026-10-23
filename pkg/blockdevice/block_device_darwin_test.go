@@ -24,27 +24,52 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 )
 
+// sha256 of the empty helper written by writeEmptyHelper.
+const emptyHelperDigest = "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+// writeEmptyHelper installs an empty helper in a privileged directory, where
+// sudoers.NOPASSWD pins it.
+func writeEmptyHelper(t *testing.T) string {
+	t.Helper()
+	dir := filepath.Join(t.TempDir(), "libexec", "lima", "privileged")
+	assert.NilError(t, os.MkdirAll(dir, 0o755))
+	helper := filepath.Join(dir, PrivilegedHelperName)
+	assert.NilError(t, os.WriteFile(helper, nil, 0o755))
+	return helper
+}
+
+func mustSudoersForUserAndHelpers(t *testing.T, userName string, helperArgs ...[]string) string {
+	t.Helper()
+	s, err := sudoersForUserAndHelpers(userName, helperArgs...)
+	assert.NilError(t, err)
+	return s
+}
+
 func TestSudoersForUserAndHelpers(t *testing.T) {
-	single := sudoersForUserAndHelpers("alice", []string{"/usr/local/libexec/lima/privileged/" + PrivilegedHelperName, "/dev/rdisk2"})
-	assert.Equal(t, single, "alice ALL=(root:wheel) NOPASSWD:NOSETENV: /usr/local/libexec/lima/privileged/"+PrivilegedHelperName+" /dev/rdisk2\n")
+	helper := writeEmptyHelper(t)
+	single := mustSudoersForUserAndHelpers(t, "alice", []string{helper, "/dev/rdisk2"})
+	assert.Equal(t, single, "alice ALL=(root:wheel) NOPASSWD:NOSETENV: "+emptyHelperDigest+" "+helper+" /dev/rdisk2\n")
 	assert.Assert(t, !strings.Contains(single, "%everyone"))
 
-	sudoers := sudoersForUserAndHelpers(
+	sudoers := mustSudoersForUserAndHelpers(t,
 		"alice",
-		[]string{"/usr/local/libexec/lima/privileged/" + PrivilegedHelperName, "/dev/rdisk2"},
-		[]string{"/usr/local/libexec/lima/privileged/" + PrivilegedHelperName, "/dev/rdisk3"},
+		[]string{helper, "/dev/rdisk2"},
+		[]string{helper, "/dev/rdisk3"},
 	)
 	assert.Equal(t, sudoers, "alice ALL=(root:wheel) NOPASSWD:NOSETENV: \\\n"+
-		"    /usr/local/libexec/lima/privileged/"+PrivilegedHelperName+" /dev/rdisk2, \\\n"+
-		"    /usr/local/libexec/lima/privileged/"+PrivilegedHelperName+" /dev/rdisk3\n")
+		"    "+emptyHelperDigest+" "+helper+" /dev/rdisk2, \\\n"+
+		"    "+emptyHelperDigest+" "+helper+" /dev/rdisk3\n")
+
+	_, err := sudoersForUserAndHelpers("alice", []string{filepath.Join(filepath.Dir(helper), "missing"), "/dev/rdisk2"})
+	assert.ErrorIs(t, err, os.ErrNotExist)
 }
 
 func TestSudoersGrantOrderAndDuplicates(t *testing.T) {
-	a := []string{"/opt/lima/libexec/lima/privileged/" + PrivilegedHelperName, "/dev/disk4"}
+	a := []string{writeEmptyHelper(t), "/dev/disk4"}
 	b := []string{a[0], "/dev/disk5"}
-	want := sudoersForUserAndHelpers("alice", a, b)
-	assert.Equal(t, sudoersForUserAndHelpers("alice", b, a, b), want)
-	assert.Assert(t, sudoersForUserAndHelpers("alice", a) != want)
+	want := mustSudoersForUserAndHelpers(t, "alice", a, b)
+	assert.Equal(t, mustSudoersForUserAndHelpers(t, "alice", b, a, b), want)
+	assert.Assert(t, mustSudoersForUserAndHelpers(t, "alice", a) != want)
 	assert.DeepEqual(t, a, []string{b[0], "/dev/disk4"})
 }
 
