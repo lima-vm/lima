@@ -54,7 +54,7 @@ func TestChownIntegration(t *testing.T) {
 
 	// Verify filesystem integrity after raw block modification.
 	cmd = exec.CommandContext(ctx, "hdiutil", "attach", imgPath, "-nomount")
-	out, err = cmd.CombinedOutput()
+	out, err = cmd.Output()
 	assert.NilError(t, err, "hdiutil attach -nomount failed: %s", out)
 	dev := strings.Fields(string(out))[0]
 	cmd = exec.CommandContext(ctx, "fsck_apfs", "-n", dev)
