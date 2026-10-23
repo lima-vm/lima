@@ -291,7 +291,31 @@ func (s *State) showHelp() {
   [green]Enter[-] / [green]h[-]    Open actions menu
   [green]s[-]            Shell into instance
   [green]r[-]            Restart instance`
-	s.showTextView(" Help ", help)
+	form := newFormStyled().
+		AddTextView("", help, 0, strings.Count(help, "\n")+1, true, false).
+		AddButton("Show limactl --help", s.showUsage).
+		AddButton("Cancel", s.backToList).
+		SetCancelFunc(s.backToList)
+	form.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		return formArrowKey(form, e)
+	})
+	form.SetFocus(1)
+	form.SetBorder(true).
+		SetBorderColor(cBord).
+		SetTitle(" Help ").
+		SetTitleAlign(tview.AlignLeft).
+		SetTitleColor(cPrim).
+		SetBorderPadding(1, 1, 2, 2)
+	s.app.SetRoot(form, true).SetFocus(form)
+}
+
+func (s *State) showUsage() {
+	out, err := exec.CommandContext(s.ctx, s.limactl, "--help").CombinedOutput()
+	if err != nil {
+		s.showTextView(" Error ", "Failed to get the usage: "+tview.Escape(err.Error()))
+		return
+	}
+	s.showTextView(" limactl --help ", tview.Escape(string(out)))
 }
 
 func (s *State) refreshList() {
