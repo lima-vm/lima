@@ -41,7 +41,6 @@ func registerCreateFlags(cmd *cobra.Command, commentPrefix string) {
 	flags.Bool("list-templates", false, commentPrefix+"List available templates and exit")
 	flags.Bool("list-drivers", false, commentPrefix+"List available drivers and exit")
 	editflags.RegisterCreate(cmd, commentPrefix)
-	_ = cmd.RegisterFlagCompletionFunc("set", setFlagCompletion)
 }
 
 func newCreateCommand() *cobra.Command {
@@ -414,6 +413,7 @@ func modifyInPlace(ctx context.Context, st *limatmpl.Template, yq string) error 
 		return err
 	}
 	st.Bytes = out
+	st.Config = nil
 	return nil
 }
 
