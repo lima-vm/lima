@@ -28,6 +28,7 @@ func RegisterSetAndParam(cmd *cobra.Command, commentPrefix string) {
 	flags.StringArray("set", []string{}, commentPrefix+"Modify the template inplace, using yq syntax. Can be passed multiple times. See 'limactl help yq-restrictions' for limitations.")
 	_ = cmd.RegisterFlagCompletionFunc("set", setFlagCompletion)
 	flags.StringArray("param", []string{}, commentPrefix+"Set a template parameter, e.g. name=value. Can be passed multiple times.")
+	_ = cmd.RegisterFlagCompletionFunc("param", paramFlagCompletion)
 }
 
 // RegisterEdit registers flags related to in-place YAML modification, for `limactl edit`.
