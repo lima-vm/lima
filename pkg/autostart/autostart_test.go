@@ -334,7 +334,7 @@ func TestRenderTemplateEscapesPath(t *testing.T) {
 		})
 		assert.NilError(t, err)
 		assert.Assert(t, strings.Contains(string(tmpl), "<string>/Users/alice/R&amp;D/bin:/usr/bin:/bin</string>"))
-		// The plist must stay well-formed XML so launchd can load it.
+		// The plist must stay well-formed XML.
 		dec := xml.NewDecoder(bytes.NewReader(tmpl))
 		for {
 			_, err := dec.Token()

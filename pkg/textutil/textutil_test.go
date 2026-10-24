@@ -60,3 +60,20 @@ message: |-
 		assert.Equal(t, expected, b.String())
 	}
 }
+
+func TestXMLFunc(t *testing.T) {
+	xmlFunc := TemplateFuncMap["xml"].(func(string) (string, error))
+	out, err := xmlFunc("a&<>'\"\t\n\r\uFFFD")
+	assert.NilError(t, err)
+	assert.Equal(t, out, "a&amp;&lt;&gt;&#39;&#34;&#x9;&#xA;&#xD;\uFFFD")
+
+	for s, msg := range map[string]string{
+		"a\xffb":         "not valid UTF-8",
+		"a\xed\xa0\x80b": "not valid UTF-8", // an encoded surrogate
+		"a\x01b":         "not allowed in XML 1.0",
+		"a\uFFFEb":       "not allowed in XML 1.0",
+	} {
+		_, err := xmlFunc(s)
+		assert.ErrorContains(t, err, msg, "%q", s)
+	}
+}
