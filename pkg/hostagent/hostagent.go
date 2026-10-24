@@ -780,13 +780,20 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	// TODO: use vSock (when QEMU for macOS gets support for vSock)
 
 	// Setup all socket forwards and defer their teardown
+
+	useSSHFwd := useSSHPortForwarder()
 	if !a.driver.Info(ctx).Features.SkipSocketForwarding {
 		logrus.Debugf("Forwarding unix sockets")
 		sshAddress, sshPort := a.sshAddressPort()
+		dialContext := portfwd.DialContextToGRPCTunnel(a.getClient)
 		for _, rule := range a.instConfig.PortForwards {
 			if rule.GuestSocket != "" {
 				local := hostAddress(rule, &guestagentapi.IPPort{})
-				_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse)
+				if useSSHFwd || rule.Reverse {
+					_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbForward, rule.Reverse)
+				} else {
+					a.grpcPortForwarder.ForwardStatic(ctx, dialContext, "unix", local, rule.GuestSocket)
+				}
 			}
 		}
 	}
@@ -799,7 +806,7 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		var errs []error
 		sshAddress, sshPort := a.sshAddressPort()
 		for _, rule := range a.instConfig.PortForwards {
-			if rule.GuestSocket != "" {
+			if rule.GuestSocket != "" && (useSSHFwd || rule.Reverse) {
 				local := hostAddress(rule, &guestagentapi.IPPort{})
 				if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, local, rule.GuestSocket, verbCancel, rule.Reverse); err != nil {
 					errs = append(errs, err)
@@ -991,21 +998,7 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 				return fmt.Errorf("guest agent reported invalid IP %#q", f.Ip)
 			}
 		}
-		// History of the default value of useSSHFwd:
-		// - v0.1.0:        true  (effectively)
-		// - v1.0.0:        false
-		// - v1.0.1:        true
-		// - v1.1.0-beta.0: false
-		useSSHFwd := false
-		if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
-			b, err := strconv.ParseBool(envVar)
-			if err != nil {
-				logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %#q", envVar)
-			} else {
-				useSSHFwd = b
-			}
-		}
-		if useSSHFwd {
+		if useSSHPortForwarder() {
 			a.portForwarder.OnEvent(ctx, ev)
 		} else {
 			dialContext := portfwd.DialContextToGRPCTunnel(a.getClient)
@@ -1027,6 +1020,24 @@ const (
 	verbForward = "forward"
 	verbCancel  = "cancel"
 )
+
+func useSSHPortForwarder() bool {
+	// History of the default value of useSSHFwd:
+	// - v0.1.0:        true  (effectively)
+	// - v1.0.0:        false
+	// - v1.0.1:        true
+	// - v1.1.0-beta.0: false
+	useSSHFwd := false
+	if envVar := os.Getenv("LIMA_SSH_PORT_FORWARDER"); envVar != "" {
+		b, err := strconv.ParseBool(envVar)
+		if err != nil {
+			logrus.WithError(err).Warnf("invalid LIMA_SSH_PORT_FORWARDER value %#q", envVar)
+		} else {
+			useSSHFwd = b
+		}
+	}
+	return useSSHFwd
+}
 
 func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string, sshPort int, command ...string) error {
 	args := sshConfig.Args()

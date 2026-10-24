@@ -17,8 +17,7 @@ func Listen(ctx context.Context, listenConfig net.ListenConfig, hostAddress stri
 		if err := prepareUnixSocket(hostAddress); err != nil {
 			return nil, err
 		}
-		var lc net.ListenConfig
-		unixLis, err := lc.Listen(ctx, "unix", hostAddress)
+		unixLis, err := listenUnixOwnerOnly(ctx, hostAddress)
 		if err != nil {
 			logListenError(err, "unix", hostAddress)
 			return nil, err
