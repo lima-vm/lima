@@ -29,11 +29,49 @@ func Delete(ctx context.Context, inst *limatype.Instance, force bool) error {
 			return fmt.Errorf("failed to unregister %#q: %w", inst.Dir, err)
 		}
 	}
-	if err := os.RemoveAll(inst.Dir); err != nil {
+	if err := removeDir(inst.Dir); err != nil {
 		return fmt.Errorf("failed to remove %#q: %w", inst.Dir, err)
 	}
 
 	return nil
+}
+
+func removeDir(path string) error {
+	fileInfo, err := os.Lstat(path) // Use Lstat to not follow symlinks
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil // Path doesn't exist, treat as success
+		}
+		return fmt.Errorf("failed to get path info: %w", err)
+	}
+
+	// Check if it's a symlink
+	if (fileInfo.Mode() & os.ModeSymlink) != 0 {
+		target, err := os.Readlink(path)
+		if err != nil {
+			return fmt.Errorf("failed to read symlink: %w", err)
+		}
+
+		// Remove the target content first
+		if err := os.RemoveAll(target); err != nil {
+			return fmt.Errorf("failed to remove symlink target: %w", err)
+		}
+
+		// Remove the symlink itself
+		if err := os.Remove(path); err != nil {
+			return fmt.Errorf("failed to remove symlink: %w", err)
+		}
+		return nil
+	}
+
+	// Remove regular directory
+	if fileInfo.IsDir() {
+		if err := os.RemoveAll(path); err != nil {
+			return fmt.Errorf("failed to remove directory: %w", err)
+		}
+		return nil
+	}
+	return fmt.Errorf("path is neither a directory nor a symlink: %s", path)
 }
 
 func unregister(ctx context.Context, inst *limatype.Instance) error {
