@@ -5,16 +5,21 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"io/fs"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
+	"time"
 
 	"github.com/cpuguy83/go-md2man/v2/md2man"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/cobra/doc"
+
+	"github.com/lima-vm/lima/v2/pkg/gendoc"
+	"github.com/lima-vm/lima/v2/pkg/plugins"
 )
 
 func newGenDocCommand() *cobra.Command {
@@ -62,6 +67,9 @@ func gendocAction(cmd *cobra.Command, args []string) error {
 		if err := genDocsy(cmd, dir); err != nil {
 			return err
 		}
+		if err := genPluginsDocsy(cmd.Context(), plugins.DiscoverBundled(), dir); err != nil {
+			return err
+		}
 	}
 	if output != "" && prefix != "" {
 		if err := replaceAll(dir, output, prefix); err != nil {
@@ -101,41 +109,36 @@ and $LIMA_WORKDIR.
 	return doc.GenManTree(cmd.Root(), header, dir)
 }
 
-func escapeMarkdown(text string) string {
-	lines := strings.Split(text, "\n")
-	for i := range lines {
-		// Need to escape backticks first, before adding more
-		for c := range strings.SplitSeq("\\`*_[]()#+-.|", "") {
-			lines[i] = strings.ReplaceAll(lines[i], c, "\\"+c)
-		}
-		if i < len(lines)-1 {
-			if lines[i] != "" && lines[i+1] != "" {
-				lines[i] += "  " // line break
-			}
-		}
-	}
-	return strings.Join(lines, "\n")
+func genDocsy(cmd *cobra.Command, dir string) error {
+	return gendoc.Docsy(cmd.Root(), dir)
 }
 
-func genDocsy(cmd *cobra.Command, dir string) error {
-	for _, c := range cmd.Root().Commands() {
-		c.Long = escapeMarkdown(c.Long)
+// genPluginsDocsy generates the cli-reference pages of the plugins that support `generate-doc --content-mode=cli DIR`.
+func genPluginsDocsy(ctx context.Context, allPlugins []plugins.Plugin, dir string) error {
+	for _, plugin := range allPlugins {
+		if !supportsGenDocsy(ctx, plugin.Path) {
+			continue
+		}
+		logrus.Infof("Generating docsy for plugin %#q", plugin.Name)
+		cmd := exec.CommandContext(ctx, plugin.Path, "generate-doc", "--content-mode="+gendoc.ContentModeCLI, dir)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			return fmt.Errorf("failed to generate docsy for plugin %#q: %w", plugin.Name, err)
+		}
 	}
-	return doc.GenMarkdownTreeCustom(cmd.Root(), dir, func(s string) string {
-		// Replace limactl_completion_bash to completion bash for docsy title
-		name := filepath.Base(s)
-		name = strings.ReplaceAll(name, "limactl_", "")
-		name = strings.ReplaceAll(name, "_", " ")
-		name = strings.TrimSuffix(name, filepath.Ext(name))
-		return fmt.Sprintf(`---
-title: %s
-weight: 3
----
-`, name)
-	}, func(s string) string {
-		// Use ../ for move one folder up for docsy
-		return "../" + strings.TrimSuffix(s, filepath.Ext(s))
-	})
+	return nil
+}
+
+// supportsGenDocsy checks whether the plugin has the `generate-doc --content-mode` flag.
+func supportsGenDocsy(ctx context.Context, path string) bool {
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+	out, err := exec.CommandContext(ctx, path, "generate-doc", "--help").Output()
+	if err != nil {
+		return false
+	}
+	return bytes.Contains(out, []byte("--content-mode"))
 }
 
 // replaceAll replaces all occurrences of text with replacement, for all files in dir.
