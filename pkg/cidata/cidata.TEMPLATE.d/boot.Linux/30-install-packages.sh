@@ -39,6 +39,7 @@ if [ "${LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION}" = 1 ]; then
 fi
 
 REMOUNT_VIRTIOFS=0
+RELOAD_NETFILTER_MODULES=0
 
 if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 	pkgs=""
@@ -89,6 +90,26 @@ elif command -v dnf >/dev/null 2>&1; then
 	if ! command -v rsync >/dev/null 2>&1; then
 		pkgs="${pkgs} rsync"
 	fi
+	# Rootless iptables-nft cannot autoload the comment match: https://github.com/lima-vm/lima/issues/5623
+	if [ "${INSTALL_IPTABLES}" = 1 ] && command -v modprobe >/dev/null 2>&1; then
+		if ! modprobe -n xt_comment >/dev/null 2>&1; then
+			kernel_release="$(uname -r)"
+			case "${kernel_release}" in
+			*uek*)
+				extrapkgs="${extrapkgs} kernel-uek-modules-${kernel_release}"
+				RELOAD_NETFILTER_MODULES=1
+				;;
+			*)
+				if dnf -q info "kernel-modules-extra-${kernel_release}" >/dev/null 2>&1; then
+					pkgs="${pkgs} kernel-modules-extra-${kernel_release}"
+					RELOAD_NETFILTER_MODULES=1
+				else
+					echo >&2 "WARNING: kernel-modules-extra-${kernel_release} not found; continuing without it"
+				fi
+				;;
+			esac
+		fi
+	fi
 	if [ -n "${pkgs}" ] || [ -n "${extrapkgs}" ]; then
 		dnf_install_flags="-y --setopt=install_weak_deps=False"
 		epel_install_flags=""
@@ -119,13 +140,21 @@ elif command -v dnf >/dev/null 2>&1; then
 			epel_install_flags="${epel_install_flags} --enablerepo epel"
 		fi
 		if grep -q "Oracle Linux Server" /etc/system-release && [ "${LIMA_CIDATA_MOUNTTYPE}" = "virtiofs" ]; then
+			# The comment-match path may already have appended this package.
+			uek_modules_pkg="kernel-uek-modules-$(uname -r)"
+			if ! echo " ${extrapkgs} " | grep -F -q " ${uek_modules_pkg} "; then
+				extrapkgs="${extrapkgs} ${uek_modules_pkg}"
+			fi
+			REMOUNT_VIRTIOFS=1
+		fi
+		case "${extrapkgs}" in
+		*kernel-uek-modules-*)
 			# Enable repositories like "ol9_UEKR7"
 			for repo in $(dnf -q repolist | awk '/UEK/NR>1{print $1}'); do
 				epel_install_flags="${epel_install_flags} --enablerepo ${repo}"
 			done
-			extrapkgs="${extrapkgs} kernel-uek-modules-$(uname -r)"
-			REMOUNT_VIRTIOFS=1
-		fi
+			;;
+		esac
 		if [ -n "${pkgs}" ]; then
 			# shellcheck disable=SC2086
 			dnf install ${dnf_install_flags} ${pkgs}
@@ -228,4 +257,8 @@ fi
 
 if [ "${REMOUNT_VIRTIOFS}" = 1 ]; then
 	mount -t virtiofs -a
+fi
+if [ "${RELOAD_NETFILTER_MODULES}" = 1 ]; then
+	# Load xt_comment and nft_compat before rootless BuildKit starts.
+	"${LIMA_CIDATA_MNT}/boot.Linux/00-modprobe.sh"
 fi

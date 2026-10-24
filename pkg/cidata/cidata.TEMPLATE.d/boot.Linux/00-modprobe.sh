@@ -10,12 +10,13 @@ set -eu
 
 command -v modprobe >/dev/null 2>&1 || exit 0
 
+# iptables-nft needs nft_compat for -m comment: https://github.com/lima-vm/lima/issues/5623
 for f in \
 	fuse \
 	tun tap \
 	bridge veth \
 	ip_tables ip6_tables iptable_nat ip6table_nat iptable_filter ip6table_filter \
-	nf_tables \
+	nf_tables nft_compat \
 	x_tables xt_MASQUERADE xt_addrtype xt_comment xt_conntrack xt_mark xt_multiport xt_nat xt_tcpudp \
 	overlay; do
 	echo "Loading kernel module \"$f\""
