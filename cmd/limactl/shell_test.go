@@ -8,13 +8,16 @@ import (
 	"io/fs"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
+	"runtime"
 	"testing"
 
 	"github.com/spf13/cobra"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/copytool"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 // TestPathDepth covers both host path forms, because `limactl shell --sync`
@@ -390,6 +393,40 @@ func TestSyncBackSkipsIgnoreFile(t *testing.T) {
 			assert.NilError(t, err)
 			got.Metadata = 0 // the directory timestamps depend on when the test wrote them
 			assert.DeepEqual(t, *got, rsyncStats{})
+		})
+	}
+}
+
+func TestMountedGuestPath(t *testing.T) {
+	root := t.TempDir()
+	a := filepath.Join(root, "a")
+	assert.NilError(t, os.MkdirAll(filepath.Join(a, "sub"), 0o755))
+	assert.NilError(t, os.MkdirAll(filepath.Join(root, "ab"), 0o755))
+	assert.NilError(t, os.Symlink(a, filepath.Join(root, "link")))
+	resolvedSub, err := filepath.EvalSymlinks(filepath.Join(a, "sub"))
+	assert.NilError(t, err)
+	tests := []struct {
+		name       string
+		location   string
+		mountPoint string
+		hostDir    string // relative to root
+		want       string // "" when no mount contains hostDir
+	}{
+		{"same mount point", a, filepath.ToSlash(a), "a/sub", filepath.ToSlash(a) + "/sub"},
+		{"remapped mount point", a, "/home/user.linux/a", "a", "/home/user.linux/a"},
+		{"nested dir", a, "/home/user.linux/a", "a/sub", "/home/user.linux/a/sub"},
+		{"root mount", "/", "/mnt/host", "a/sub", path.Join("/mnt/host", resolvedSub)},
+		{"symlinked host dir", a, "/home/user.linux/a", "link/sub", "/home/user.linux/a/sub"},
+		{"not under any mount", a, "/home/user.linux/a", ".", ""},
+		{"sibling with the same prefix", a, "/home/user.linux/a", "ab", ""},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if tt.location == "/" && runtime.GOOS == "windows" {
+				t.Skip(`on Windows "/" is the root of the current drive, which may not hold the temp dir`)
+			}
+			mounts := []limatype.Mount{{Location: tt.location, MountPoint: new(tt.mountPoint)}}
+			assert.Equal(t, tt.want, mountedGuestPath(mounts, filepath.Join(root, tt.hostDir)))
 		})
 	}
 }
