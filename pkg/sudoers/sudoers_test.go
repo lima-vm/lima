@@ -36,11 +36,18 @@ func TestNewCommand(t *testing.T) {
 	assert.Equal(t, cmd.Dir, "/tmp")
 }
 
+func mustNOPASSWD(t *testing.T, subject, runAsUser, runAsGroup string, commands ...string) string {
+	t.Helper()
+	s, err := NOPASSWD(subject, runAsUser, runAsGroup, commands...)
+	assert.NilError(t, err)
+	return s
+}
+
 func TestNOPASSWD(t *testing.T) {
-	assert.Equal(t, NOPASSWD("%everyone", "root", "wheel", "/bin/mkdir -m 775 -p /private/var/run/lima"),
+	assert.Equal(t, mustNOPASSWD(t, "%everyone", "root", "wheel", "/bin/mkdir -m 775 -p /private/var/run/lima"),
 		"%everyone ALL=(root:wheel) NOPASSWD:NOSETENV: /bin/mkdir -m 775 -p /private/var/run/lima\n")
 
-	assert.Equal(t, NOPASSWD("%everyone", "daemon", "staff", "/bin/start", "/bin/stop"),
+	assert.Equal(t, mustNOPASSWD(t, "%everyone", "daemon", "staff", "/bin/start", "/bin/stop"),
 		"%everyone ALL=(daemon:staff) NOPASSWD:NOSETENV: \\\n    /bin/start, \\\n    /bin/stop\n")
 }
 
@@ -82,7 +89,7 @@ func TestContainsActiveFragmentIgnoresCommentsOnBothSides(t *testing.T) {
 }
 
 func TestContainsActiveFragmentRejectsBroadenedGrant(t *testing.T) {
-	grant := NOPASSWD("alice", "root", "wheel", "/bin/mkdir /var/run/lima")
+	grant := mustNOPASSWD(t, "alice", "root", "wheel", "/bin/mkdir /var/run/lima")
 	for _, file := range []string{
 		strings.TrimSpace(grant) + ", /bin/sh\n",
 		"other" + grant,
@@ -94,7 +101,7 @@ func TestContainsActiveFragmentRejectsBroadenedGrant(t *testing.T) {
 }
 
 func TestContainsActiveFragmentLineContinuations(t *testing.T) {
-	grant := NOPASSWD("alice", "root", "wheel", "/bin/mkdir /var/run/lima", "/bin/rmdir /var/run/lima")
+	grant := mustNOPASSWD(t, "alice", "root", "wheel", "/bin/mkdir /var/run/lima", "/bin/rmdir /var/run/lima")
 	for _, tc := range []struct {
 		name, prefix string
 		want         bool

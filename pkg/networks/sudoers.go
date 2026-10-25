@@ -51,7 +51,11 @@ func (c Config) Sudoers() (string, error) {
 func (c Config) sudoers(mkdir bool, daemons []sudoersDaemon) (string, error) {
 	var sb strings.Builder
 	if mkdir {
-		sb.WriteString(sudoers.NOPASSWD("%"+c.Group, "root", "wheel", c.MkdirCmd()))
+		grant, err := sudoers.NOPASSWD("%"+c.Group, "root", "wheel", c.MkdirCmd())
+		if err != nil {
+			return "", err
+		}
+		sb.WriteString(grant)
 	}
 
 	// names must be in stable order to be able to check if sudoers file needs updating
@@ -73,15 +77,15 @@ func (c Config) sudoers(mkdir bool, daemons []sudoersDaemon) (string, error) {
 				// The wildcard stands for the instance name; the helper derives
 				// the tap name itself, from SUDO_UID.
 				cmds = append(cmds, c.tapCmdPattern(d.path, name))
-				var err error
-				if cmds, err = sudoers.Pin(d.path, cmds...); err != nil {
-					return "", err
-				}
 			}
 			// Not pinned: a system binary, updated independently of Lima.
 			cmds = append(cmds, c.StopCmd(name, d.name))
+			grant, err := sudoers.NOPASSWD("%"+c.Group, d.user.User, d.user.Group, cmds...)
+			if err != nil {
+				return "", err
+			}
 			sb.WriteRune('\n')
-			sb.WriteString(sudoers.NOPASSWD("%"+c.Group, d.user.User, d.user.Group, cmds...))
+			sb.WriteString(grant)
 		}
 	}
 	return strings.TrimPrefix(sb.String(), "\n"), nil

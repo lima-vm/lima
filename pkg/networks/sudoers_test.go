@@ -38,7 +38,9 @@ func TestSudoersRendering(t *testing.T) {
 	}
 
 	t.Run("lima-privileged-net", func(t *testing.T) {
-		helper := filepath.Join(t.TempDir(), LimaPrivilegedNet)
+		helperDir := filepath.Join(t.TempDir(), "libexec", "lima", "privileged")
+		assert.NilError(t, os.MkdirAll(helperDir, 0o755))
+		helper := filepath.Join(helperDir, LimaPrivilegedNet)
 		assert.NilError(t, os.WriteFile(helper, nil, 0o755))
 		root := osutil.User{User: "root", Group: "root"}
 
