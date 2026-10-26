@@ -185,6 +185,20 @@ func (c *Config) daemonPath(daemon string) string {
 }
 
 func (c *Config) StopCmd(name, daemon string) string {
+	var daemonPath string
+	if daemon == LimaPrivilegedNet {
+		daemonPath = c.daemonPath(daemon)
+	}
+	return c.stopCmd(name, daemon, daemonPath)
+}
+
+// stopCmd renders the command line from an already resolved daemon path, like startCmd.
+func (c *Config) stopCmd(name, daemon, daemonPath string) string {
+	if daemon == LimaPrivilegedNet {
+		// Not `pkill -F`, which signals whichever process has the PID by now when
+		// the daemon died without removing its PID file.
+		return fmt.Sprintf("%s stop --pidfile=%s", daemonPath, c.PIDFile(name, daemon))
+	}
 	return fmt.Sprintf("/usr/bin/pkill -F %s", c.PIDFile(name, daemon))
 }
 

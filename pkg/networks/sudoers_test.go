@@ -53,14 +53,14 @@ func TestSudoersRendering(t *testing.T) {
 %staff ALL=(root:root) NOPASSWD:NOSETENV: \
     DIGEST HELPER start --pidfile=/run/lima/bridged_lima-privileged-net.pid --mode=bridged --bridge=br0, \
     DIGEST HELPER tap --bridge=br0 --network=bridged -- *, \
-    /usr/bin/pkill -F /run/lima/bridged_lima-privileged-net.pid
+    DIGEST HELPER stop --pidfile=/run/lima/bridged_lima-privileged-net.pid
 
 # Manage "shared" network daemons
 
 %staff ALL=(root:root) NOPASSWD:NOSETENV: \
     DIGEST HELPER start --pidfile=/run/lima/shared_lima-privileged-net.pid --mode=shared --bridge=lima-shared --gateway=192.168.105.1 --dhcp-end=192.168.105.254 --netmask=255.255.255.0, \
     DIGEST HELPER tap --bridge=lima-shared --network=shared -- *, \
-    /usr/bin/pkill -F /run/lima/shared_lima-privileged-net.pid
+    DIGEST HELPER stop --pidfile=/run/lima/shared_lima-privileged-net.pid
 `, "DIGEST HELPER", digest+" "+helper)
 		assert.Equal(t, got, want)
 	})

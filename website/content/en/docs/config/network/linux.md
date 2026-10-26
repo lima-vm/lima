@@ -46,7 +46,7 @@ else:
 %wheel ALL=(root:root) NOPASSWD:NOSETENV: \
     sha256:f705f79886fc248802e0bc388a66e2a61d09c827471d9639a5e558cf71080c72 /usr/local/libexec/lima/privileged/lima-privileged-net start --pidfile=/run/lima/shared_lima-privileged-net.pid --mode=shared --bridge=lima-shared --gateway=192.168.105.1 --dhcp-end=192.168.105.254 --netmask=255.255.255.0, \
     sha256:f705f79886fc248802e0bc388a66e2a61d09c827471d9639a5e558cf71080c72 /usr/local/libexec/lima/privileged/lima-privileged-net tap --bridge=lima-shared --network=shared -- *, \
-    /usr/bin/pkill -F /run/lima/shared_lima-privileged-net.pid
+    sha256:f705f79886fc248802e0bc388a66e2a61d09c827471d9639a5e558cf71080c72 /usr/local/libexec/lima/privileged/lima-privileged-net stop --pidfile=/run/lima/shared_lima-privileged-net.pid
 ```
 
 The instance ID, a hash of the instance directory, is the only wildcard in the
@@ -61,8 +61,7 @@ The `sha256:` prefix is a sudo [`Digest_Spec`](https://www.sudo.ws/docs/man/sudo
 to asking for a password when the binary no longer matches, so a helper that was
 swapped out after the file was installed cannot be run as root. Unlike the
 ownership checks `limactl` performs, this is enforced inside `sudo` itself and is
-therefore not subject to a time-of-check/time-of-use race. `/usr/bin/pkill` is
-not pinned, because it is a system binary that is updated independently of Lima.
+therefore not subject to a time-of-check/time-of-use race.
 
 Re-run `limactl sudoers` and re-install the file whenever `networks.yaml` changes
 or `lima-privileged-net` is reinstalled, otherwise `sudo` will reject the command
@@ -232,5 +231,5 @@ child process. The tap device is handed to the calling user (`ip tuntap add ... 
 QEMU itself runs unprivileged and needs no network capabilities.
 
 The `varRun` directory (`/run/lima`) must stay owned by root and must not be
-writable by the user, because it holds the PID files that are passed to
-`pkill -F` as root.
+writable by the user, because it holds the PID files that `lima-privileged-net stop`
+reads as root to pick the process to signal.

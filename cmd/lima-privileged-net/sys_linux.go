@@ -232,9 +232,41 @@ func verifySelf() error {
 	return nil
 }
 
+// lockFile takes an exclusive lock on path, which the kernel releases when the
+// process exits, however it exits. The file is never removed: unlinking it would
+// let a waiting process lock an inode that the next one no longer sees.
+func lockFile(path string) (*os.File, error) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|unix.O_NOFOLLOW, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		f.Close()
+		if errors.Is(err, unix.EWOULDBLOCK) {
+			return nil, fmt.Errorf("%#q is locked by another process: the network is already up", path)
+		}
+		return nil, err
+	}
+	return f, nil
+}
+
+// writePIDFile writes the PID through a rename, so that the file never holds a
+// partial number, even when the write fails.
+func writePIDFile(path string) error {
+	tmp := path + ".tmp"
+	err := os.WriteFile(tmp, fmt.Appendf(nil, "%d\n", os.Getpid()), 0o644)
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		return errors.Join(err, os.Remove(tmp))
+	}
+	return nil
+}
+
 // ensureRunDir creates the directory holding the PID file and verifies that only
-// root can write to it: a user-writable PID file would let `pkill -F` kill any
-// process as root.
+// root can write to it: a user-writable PID file would let the caller choose the
+// process that `stop` signals as root.
 func ensureRunDir(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

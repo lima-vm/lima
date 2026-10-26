@@ -36,7 +36,7 @@ func newApp() *cobra.Command {
 			return verifySelf()
 		},
 	}
-	rootCmd.AddCommand(newStartCommand(), newTapCommand())
+	rootCmd.AddCommand(newStartCommand(), newStopCommand(), newTapCommand())
 	return rootCmd
 }
 
@@ -57,6 +57,20 @@ func newStartCommand() *cobra.Command {
 	f.StringVar(&c.gateway, "gateway", "", "IPv4 address assigned to the bridge")
 	f.StringVar(&c.netmask, "netmask", "", "IPv4 netmask of the network")
 	f.StringVar(&c.dhcpEnd, "dhcp-end", "", "last IPv4 address handed out by DHCP")
+	return cmd
+}
+
+func newStopCommand() *cobra.Command {
+	var pidFile string
+	cmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Terminate the `start` process that wrote the PID file",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return stop(pidFile)
+		},
+	}
+	cmd.Flags().StringVar(&pidFile, "pidfile", "", "file the `start` process wrote its PID to")
 	return cmd
 }
 
