@@ -32,7 +32,7 @@ jobs:
     - name: Run yamllint
       run: make yamllint
     - name: Run file and directory name linter
-      uses: ls-lint/action@02e380fe8733d499cbfc9e22276de5085508a5bd  # v2.3.1
+      uses: ls-lint/action@a87c5eb4fb26d7af1bd0adba203dd1e76f7e94eb  # v2.3.2
     - name: Check hyperlinks
       uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8  # v2.9.0
       with:
