@@ -112,7 +112,7 @@ func Serve(ctx context.Context, driver driver.Driver) {
 	case <-sigs:
 		logger.Info("Received shutdown signal, stopping server...")
 		server.GracefulStop()
-		<-serveErr
+		_ = <-serveErr
 	case err := <-serveErr:
 		if err != nil && !errors.Is(err, grpc.ErrServerStopped) {
 			logger.Errorf("Failed to serve: %v", err)
@@ -251,7 +251,7 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 					if err := cmd.Process.Kill(); err != nil {
 						driverLogger.Errorf("Failed to kill external driver process after client creation failure: %v", err)
 					}
-					<-procExit
+					_ = <-procExit
 					return fmt.Errorf("failed to create driver client: %w", err)
 				}
 				driverLogger.Debugf("External driver %s started successfully", extDriver.Name)
@@ -266,7 +266,7 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 			if err := cmd.Process.Kill(); err != nil {
 				driverLogger.Errorf("Failed to kill external driver process after socket wait timeout: %v", err)
 			}
-			<-procExit
+			_ = <-procExit
 			return errors.New("timed out waiting for external driver to create socket file")
 		}
 	}

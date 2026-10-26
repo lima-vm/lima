@@ -173,14 +173,14 @@ func (l *LimaKrunkitDriver) Stop(_ context.Context) error {
 
 	timeout := time.After(30 * time.Second)
 	select {
-	case <-l.krunkitWaitCh:
+	case _ = <-l.krunkitWaitCh:
 		return nil
 	case <-timeout:
 		if err := l.krunkitCmd.Process.Kill(); err != nil {
 			return err
 		}
 
-		<-l.krunkitWaitCh
+		_ = <-l.krunkitWaitCh
 		return nil
 	}
 }

@@ -331,7 +331,7 @@ func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout t
 		ready, err := pidFileWritten(pidFile)
 		if err != nil {
 			_ = cmd.Process.Kill()
-			<-waitCh
+			_ = <-waitCh
 			return err
 		}
 		if ready {
@@ -340,7 +340,7 @@ func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout t
 		select {
 		case <-ctx.Done():
 			_ = cmd.Process.Kill()
-			<-waitCh
+			_ = <-waitCh
 			return ctx.Err()
 		case waitErr := <-waitCh:
 			// Process exited. If it managed to write the PID file first, treat as success;
@@ -358,7 +358,7 @@ func waitForDaemon(ctx context.Context, cmd *exec.Cmd, pidFile string, timeout t
 			return &daemonExitedError{err: waitErr}
 		case <-timer.C:
 			_ = cmd.Process.Kill()
-			<-waitCh
+			_ = <-waitCh
 			return &daemonStuckError{timeout: timeout}
 		case <-ticker.C:
 			// re-check the PID file on the next loop iteration
