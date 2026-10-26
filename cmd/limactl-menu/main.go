@@ -346,6 +346,9 @@ func (s *State) showActions(in *limatype.Instance) {
 			}
 		})
 	}
+	modal.SetDoneFunc(func() {
+		s.app.SetRoot(s.flex, true).SetFocus(s.list)
+	})
 
 	s.app.SetRoot(modal, true).SetFocus(modal)
 }
