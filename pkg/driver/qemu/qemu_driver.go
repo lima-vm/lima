@@ -408,6 +408,9 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 		qArgsFinal = append(qArgsFinal, applied)
 	}
 	qCmd := exec.CommandContext(ctx, qExe, qArgsFinal...)
+	// QEMU looks up its firmware files (BIOS, option ROMs, keymaps) in the working directory first.
+	// Do not inherit the directory where `limactl start` was executed, as it may be writable by a guest.
+	qCmd.Dir = l.Instance.Dir
 	qCmd.ExtraFiles = append(qCmd.ExtraFiles, applier.files...)
 	qCmd.SysProcAttr = executil.BackgroundSysProcAttr
 	qStdout, err := qCmd.StdoutPipe()
