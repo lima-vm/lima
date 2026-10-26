@@ -5,6 +5,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -514,9 +515,16 @@ func (s *State) showEmptyState() {
 
 func listInstances(ctx context.Context, limactl string) ([]*limatype.Instance, error) {
 	cmd := exec.CommandContext(ctx, limactl, "list", "--json")
-	cmd.Stderr = os.Stderr
+	// Buffer stderr rather than writing it to the terminal, so that warnings such as
+	// "No instance found. Run `limactl create` ..." do not reappear when the menu
+	// suspends the TUI to run another limactl command.
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
 	stdout, err := cmd.StdoutPipe()
-	if err != nil || cmd.Start() != nil {
+	if err != nil {
+		return nil, err
+	}
+	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
 	var res []*limatype.Instance
@@ -529,7 +537,7 @@ func listInstances(ctx context.Context, limactl string) ([]*limatype.Instance, e
 		res = append(res, &in)
 	}
 	if err := cmd.Wait(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to run `limactl list --json`: %w: %s", err, strings.TrimSpace(stderr.String()))
 	}
 	slices.SortFunc(res, func(a, b *limatype.Instance) int {
 		if (a.Status == "Running") != (b.Status == "Running") {
