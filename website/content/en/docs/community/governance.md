@@ -19,12 +19,12 @@ Maintainers consist of two roles:
 - **Committer** (Full maintainership): Committers have full write accesses to repos under <https://github.com/lima-vm>.
   Committers' commits should still be made via GitHub pull requests (except for urgent security fixes), and should not be pushed directly.
   Committers must enable 2FA for their GitHub accounts.
-  Committers are also recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers.csv>.
+  Committers are also recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers-.project.csv>.
 
 - **Reviewer** (Limited maintainership): Reviewers may moderate GitHub issues and pull requests (such as adding labels and cleaning up spams), and make posts on [social accounts]({{< ref "/docs/community#social-media-accounts" >}}),
   but they do not have any access to merge pull requests nor push commits.
   A Reviewer is considered as a candidate to become a Committer.
-  Reviewers are not recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers.csv>.
+  Reviewers are not recognized as Maintainers in <https://github.com/cncf/foundation/blob/main/project-maintainers-.project.csv>.
 
 Access control is enforced via GitHub team membership:
 * All committers are members of the `@lima-vm/committers` team and have the `Maintain` role on all repos.
@@ -35,7 +35,11 @@ See also the [Contributing]({{< ref "/docs/community/contributing" >}}) page.
 
 ### Current maintainers
 
-<!-- When updating the affiliation, update https://github.com/cncf/foundation/blob/main/project-maintainers.csv too -->
+<!--
+When adding or removing a Committer, update https://github.com/lima-vm/.project/blob/main/maintainers.yaml too.
+When a maintainer's affiliation changes, they should update their LFID profile on https://openprofile.dev too.
+CNCF generates the project-maintainers-.project.csv linked above from both.
+-->
 
 | Name               | Affiliation  | Role      | GitHub ID (not X ID)                             | GPG fingerprint                                                                           |
 |--------------------|--------------|-----------|--------------------------------------------------|-------------------------------------------------------------------------------------------|
