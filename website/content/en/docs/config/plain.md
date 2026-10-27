@@ -24,14 +24,14 @@ plain: true
 limactl start --plain
 ```
 {{% /tab %}}
-{{% tab header="CLI (edit)" %}}
-```bash
-limactl edit <instance> --plain
-```
-{{% /tab %}}
 {{< /tabpane >}}
 
 Plain mode is disabled (`false`) by default.
+
+`plain` can only be chosen when the instance is created (for example with
+`limactl start --plain` or `plain: true` in the template). There is no
+`limactl edit <instance> --plain` flag; changing `plain` on an existing
+instance is not supported.
 
 ## What is disabled
 
