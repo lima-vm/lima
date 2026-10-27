@@ -8,6 +8,10 @@ weight: 40
 
 By default, the guest user has passwordless sudo (`NOPASSWD:ALL`).
 
+> **Warning**
+> `user.passwordlessSudo: false` is [experimental]({{< ref "/docs/releases/experimental" >}}).
+> The default `user.passwordlessSudo: true` is not experimental.
+
 The password is only generated once, on first boot. If you manually change the
 password and remove `~/password`, it will **not** be regenerated on subsequent
 boots, the file is purely informational for the initial login.
