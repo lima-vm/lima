@@ -13,7 +13,7 @@ The following features are experimental and subject to change:
 - `audio.device`, `audio.interface`, and `audio.microphone`
 - `mountInotify: true`
 - `tpm: true`
-- `user.passwordlessSudo` (See [Sudo]({{< ref "/docs/config/sudo" >}}))
+- `user.passwordlessSudo: false` (See [Sudo]({{< ref "/docs/config/sudo" >}}))
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}))
 - [`vmType: krunkit`]({{< ref "/docs/config/vmtype/krunkit" >}})
 - [`vmType:hcs`]({{< ref "/docs/config/vmtype/hcs" >}})
