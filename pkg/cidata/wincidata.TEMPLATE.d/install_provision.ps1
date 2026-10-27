@@ -8,7 +8,7 @@ function Copy-Provision {
     param(
         [string]$Src,
         [string]$Dst,
-        [bool]$Extension
+        [switch]$Extension
     )
 
     if (-not (Test-Path -LiteralPath $Src)) {
