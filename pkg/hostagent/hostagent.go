@@ -78,6 +78,9 @@ type HostAgent struct {
 	virtioPort string
 	iid        string // instance ID, changes on every boot
 
+	sshHostKeyPinned         bool // set by pinSSHHostKey
+	sshHostKeyMismatchWarned bool // set by pinSSHHostKey
+
 	clientMu sync.RWMutex
 	client   *guestagentclient.GuestAgentClient
 
@@ -203,6 +206,11 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		if err != nil {
 			return nil, err
 		}
+	}
+
+	// Must be written before calling sshutil.SSHOpts, which disables the host key verification when this file does not exist.
+	if err := sshutil.WriteKnownHostsFile(inst.Dir, inst.Name, inst.SSHAddress, sshLocalPort); err != nil {
+		return nil, err
 	}
 
 	sshExe, err := sshutil.NewSSHExe()
@@ -415,6 +423,9 @@ func generatePassword(length int) (string, error) {
 
 func (a *HostAgent) Run(ctx context.Context) error {
 	defer func() {
+		if err := sshutil.RemoveKnownHostsFileUnlessPinned(a.instDir); err != nil {
+			logrus.WithError(err).Warn("failed to remove the SSH known_hosts file")
+		}
 		exitingEv := events.Event{
 			Status: events.Status{
 				Exiting: true,
@@ -464,6 +475,9 @@ func (a *HostAgent) Run(ctx context.Context) error {
 			return err
 		}
 		a.instSSHAddress = sshAddr
+		if err := sshutil.WriteKnownHostsFile(a.instDir, a.instName, a.instSSHAddress, a.sshLocalPort); err != nil {
+			return err
+		}
 	}
 
 	if a.instConfig.Video.Display != nil && *a.instConfig.Video.Display == "vnc" {
