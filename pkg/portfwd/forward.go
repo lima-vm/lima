@@ -46,6 +46,10 @@ func (fw *Forwarder) Close() error {
 	return fw.closableListeners.Close()
 }
 
+func (fw *Forwarder) ForwardStatic(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), protocol, hostAddr, guestAddr string) {
+	fw.closableListeners.Forward(ctx, dialContext, protocol, hostAddr, guestAddr)
+}
+
 func (fw *Forwarder) OnEvent(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), ev *api.Event) {
 	for _, f := range ev.AddedLocalPorts {
 		// Before forwarding, check if any static rule matches this port otherwise it will be forwarded twice and cause a port conflict

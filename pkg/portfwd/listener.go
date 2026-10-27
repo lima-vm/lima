@@ -5,11 +5,14 @@ package portfwd
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"net"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 
@@ -67,6 +70,8 @@ func (p *ClosableListeners) Forward(ctx context.Context, dialContext func(ctx co
 		go p.forwardTCP(ctx, dialContext, hostAddress, guestAddress)
 	case "udp":
 		go p.forwardUDP(ctx, dialContext, hostAddress, guestAddress)
+	case "unix":
+		go p.forwardUnix(ctx, dialContext, hostAddress, guestAddress)
 	}
 }
 
@@ -74,7 +79,7 @@ func (p *ClosableListeners) Remove(_ context.Context, protocol, hostAddress, gue
 	logrus.Debugf("removing listener for hostAddress: %s, guestAddress: %s", hostAddress, guestAddress)
 	key := key(protocol, hostAddress, guestAddress)
 	switch protocol {
-	case "tcp":
+	case "tcp", "tcp6", "unix":
 		p.listenersRW.Lock()
 		defer p.listenersRW.Unlock()
 		listener, ok := p.listeners[key]
@@ -128,6 +133,93 @@ func (p *ClosableListeners) forwardTCP(ctx context.Context, dialContext func(ctx
 	}
 }
 
+func (p *ClosableListeners) forwardUnix(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), hostAddress, guestAddress string) {
+	key := key("unix", hostAddress, guestAddress)
+
+	p.listenersRW.Lock()
+	_, ok := p.listeners[key]
+	if ok {
+		p.listenersRW.Unlock()
+		return
+	}
+	unixLis, err := Listen(ctx, p.listenConfig, hostAddress)
+	if err != nil {
+		logListenError(err, "unix", hostAddress)
+		p.listenersRW.Unlock()
+		return
+	}
+	defer p.Remove(ctx, "unix", hostAddress, guestAddress)
+	p.listeners[key] = unixLis
+	p.listenersRW.Unlock()
+	for {
+		conn, err := unixLis.Accept()
+		if err != nil {
+			if errors.Is(err, net.ErrClosed) {
+				return
+			}
+			logrus.Errorf("failed to accept unix connection: %v", err)
+			if strings.Contains(err.Error(), "pseudoloopback") {
+				// don't stop forwarding because the forwarder has rejected a non-local address
+				continue
+			}
+			return
+		}
+		go handleUnixConnection(ctx, dialContext, conn, guestAddress)
+	}
+}
+
+func handleUnixConnection(ctx context.Context, dialContext func(ctx context.Context, network, addr string) (net.Conn, error), conn net.Conn, guestAddress string) {
+	defer conn.Close()
+	dst, err := dialContext(ctx, "unix", guestAddress)
+	if err != nil {
+		logrus.WithError(err).Errorf("could not dial guest unix socket %s", guestAddress)
+		return
+	}
+	defer dst.Close()
+
+	// If the copy to the host fails, tear down both directions so the other goroutine
+	// does not stay blocked. The tunnel is cancelled with CloseRead rather than Close,
+	// because Close calls gRPC CloseSend, which must not run concurrently with the writer goroutine.
+	var abortOnce sync.Once
+	abort := func() {
+		abortOnce.Do(func() {
+			_ = conn.Close()
+			if cr, ok := dst.(interface{ CloseRead() error }); ok {
+				_ = cr.CloseRead()
+			}
+		})
+	}
+	var wg sync.WaitGroup
+	wg.Add(2)
+	go func() {
+		defer wg.Done()
+		// A failed send usually means the guest service has already closed, while its
+		// response may still be in flight, so half-close as on EOF instead of aborting.
+		_, err := io.Copy(dst, conn)
+		closeWriteIfPossible(dst)
+		if err != nil {
+			// Closing conn with unread input would reset it and may discard the response.
+			_, _ = io.Copy(io.Discard, conn)
+		}
+	}()
+	go func() {
+		defer wg.Done()
+		if _, err := io.Copy(conn, dst); err != nil {
+			abort()
+			return
+		}
+		closeWriteIfPossible(conn)
+	}()
+	wg.Wait()
+	logrus.Debugf("unix proxy for guestAddr: %s closed", guestAddress)
+}
+
+func closeWriteIfPossible(c net.Conn) {
+	if cw, ok := c.(interface{ CloseWrite() error }); ok {
+		_ = cw.CloseWrite()
+	}
+}
+
 func (p *ClosableListeners) forwardUDP(ctx context.Context, dialContext func(ctx context.Context, network string, addr string) (net.Conn, error), hostAddress, guestAddress string) {
 	key := key("udp", hostAddress, guestAddress)
 
@@ -152,6 +244,9 @@ func (p *ClosableListeners) forwardUDP(ctx context.Context, dialContext func(ctx
 }
 
 func key(protocol, hostAddress, guestAddress string) string {
+	if protocol == "unix" {
+		guestAddress = ""
+	}
 	return fmt.Sprintf("%s-%s-%s", protocol, hostAddress, guestAddress)
 }
 
@@ -163,6 +258,83 @@ func prepareUnixSocket(hostSocket string) error {
 		return fmt.Errorf("can't create directory for local socket %#q: %w", hostSocket, err)
 	}
 	return nil
+}
+
+// listenUnixOwnerOnly listens on a Unix socket that only the owner can access (0600),
+// matching SSH's default StreamLocalBindMask, independent of the process umask.
+// The socket is bound inside a private (0700) temporary directory and renamed into
+// place, so it is never reachable by other users with looser permissions. Only a
+// path too close to UNIX_PATH_MAX for that is bound in place and chmod-ed right away.
+func listenUnixOwnerOnly(ctx context.Context, hostSocket string) (net.Listener, error) {
+	var lc net.ListenConfig
+	if runtime.GOOS == "windows" {
+		return lc.Listen(ctx, "unix", hostSocket)
+	}
+	dir := filepath.Dir(hostSocket)
+	// The staging socket "<dir>/<name>/s" must stay shorter than UNIX_PATH_MAX.
+	nameLen := min(osutil.UnixPathMax-1-len(dir)-len("//s"), 7)
+	if nameLen < 2 {
+		// No room for a staging directory, so restrict the socket right after binding it.
+		lis, err := lc.Listen(ctx, "unix", hostSocket)
+		if err != nil {
+			return nil, err
+		}
+		if err := os.Chmod(hostSocket, 0o600); err != nil {
+			_ = lis.Close()
+			return nil, err
+		}
+		return lis, nil
+	}
+	tmpDir, err := mkdirPrivate(dir, nameLen)
+	if err != nil {
+		return nil, err
+	}
+	defer os.RemoveAll(tmpDir)
+	tmpSocket := filepath.Join(tmpDir, "s")
+	lis, err := lc.Listen(ctx, "unix", tmpSocket)
+	if err != nil {
+		return nil, err
+	}
+	unixLis := lis.(*net.UnixListener)
+	// The socket is unlinked by ownerOnlyUnixListener.Close at its final path instead.
+	unixLis.SetUnlinkOnClose(false)
+	if err := os.Chmod(tmpSocket, 0o600); err != nil {
+		_ = unixLis.Close()
+		return nil, err
+	}
+	if err := os.Rename(tmpSocket, hostSocket); err != nil {
+		_ = unixLis.Close()
+		return nil, err
+	}
+	return &ownerOnlyUnixListener{UnixListener: unixLis, path: hostSocket}, nil
+}
+
+// mkdirPrivate creates a 0700 directory in dir with a random hidden name of nameLen bytes.
+func mkdirPrivate(dir string, nameLen int) (string, error) {
+	for range 100 {
+		path := filepath.Join(dir, "."+rand.Text()[:nameLen-1])
+		err := os.Mkdir(path, 0o700)
+		if err == nil {
+			return path, nil
+		}
+		if !errors.Is(err, os.ErrExist) {
+			return "", err
+		}
+	}
+	return "", fmt.Errorf("can't create a staging directory in %#q", dir)
+}
+
+type ownerOnlyUnixListener struct {
+	*net.UnixListener
+	path string
+}
+
+func (l *ownerOnlyUnixListener) Close() error {
+	err := l.UnixListener.Close()
+	if rmErr := osutil.RemoveStaleSocket(l.path); rmErr != nil {
+		logrus.WithError(rmErr).Debugf("failed to remove unix socket %s", l.path)
+	}
+	return err
 }
 
 func logListenError(err error, proto, hostAddress string) {

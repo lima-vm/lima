@@ -5,12 +5,18 @@ package hostagent
 
 import (
 	"context"
+	"os"
+	"path/filepath"
+	"slices"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/portfwd"
 )
 
 // Regression test for https://github.com/lima-vm/lima/issues/2227.
@@ -81,6 +87,58 @@ func TestCancelGuestAgentSockForward_IssuesCancel(t *testing.T) {
 	got := calls()
 	assert.Equal(t, len(got), 1)
 	assert.Equal(t, got[0].verb, verbCancel)
+}
+
+func TestForwardGuestSockets(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		useSSHFwd bool
+	}{{"grpc", false}, {"ssh", true}} {
+		t.Run(tc.name, func(t *testing.T) {
+			//nolint:usetesting // t.TempDir() may return a path too long for a Unix socket.
+			dir, err := os.MkdirTemp("", "lima")
+			assert.NilError(t, err)
+			t.Cleanup(func() { _ = os.RemoveAll(dir) })
+			forwardSocket := filepath.Join(dir, "forward.sock")
+			reverseSocket := filepath.Join(dir, "reverse.sock")
+
+			calls, restore := stubForwardSSH(t, nil)
+			defer restore()
+
+			a := &HostAgent{
+				instConfig: &limatype.LimaYAML{PortForwards: []limatype.PortForward{
+					{GuestSocket: "/run/forward.sock", HostSocket: forwardSocket},
+					{GuestSocket: "/run/reverse.sock", HostSocket: reverseSocket, Reverse: true},
+				}},
+				grpcPortForwarder: portfwd.NewPortForwarder(nil, false, false, nil),
+			}
+			defer a.grpcPortForwarder.Close()
+
+			a.forwardGuestSockets(t.Context(), tc.useSSHFwd)
+			want := []forwardCall{{verb: verbForward, local: reverseSocket}}
+			if tc.useSSHFwd {
+				want = []forwardCall{{verb: verbForward, local: forwardSocket}, {verb: verbForward, local: reverseSocket}}
+			} else {
+				deadline := time.Now().Add(5 * time.Second)
+				for {
+					if _, err = os.Stat(forwardSocket); err == nil || time.Now().After(deadline) {
+						break
+					}
+					time.Sleep(20 * time.Millisecond)
+				}
+				assert.NilError(t, err, "the gRPC forwarder did not listen on %s", forwardSocket)
+			}
+			got := calls()
+			assert.Assert(t, slices.Equal(got, want), "forwardSSH calls: got %v, want %v", got, want)
+
+			assert.NilError(t, a.cancelGuestSocketForwards(t.Context(), tc.useSSHFwd))
+			for i := range want {
+				want[i].verb = verbCancel
+			}
+			got = calls()[len(want):]
+			assert.Assert(t, slices.Equal(got, want), "forwardSSH cancel calls: got %v, want %v", got, want)
+		})
+	}
 }
 
 // TestGuestAgentSockForward_SerializedUnderContention runs many concurrent
