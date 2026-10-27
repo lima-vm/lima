@@ -141,6 +141,21 @@ For the full per-method contract, see the doc comments in
 [`driver.proto`](https://github.com/lima-vm/lima/blob/master/pkg/driver/external/driver.proto)
 and the [`driver.Driver`](https://pkg.go.dev/github.com/lima-vm/lima/v2/pkg/driver#Driver) godoc.
 
+## Driver capabilities
+
+`limactl info` reports per VM type whether the driver supports snapshots, under
+`vmTypesEx`:
+
+```console
+$ limactl info --yq '.vmTypesEx.qemu.canSnapshot'
+true
+```
+
+Only capabilities that do not depend on an instance are reported; the rest of
+`driver.DriverFeatures` is per-instance state. `canSnapshot` is absent when the
+driver could not be queried. External drivers are started in a temporary
+directory to be queried, then stopped.
+
 ## Examples
 
 See existing external driver implementations:

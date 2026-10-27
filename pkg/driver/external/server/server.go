@@ -27,7 +27,6 @@ import (
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
-	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/registry"
@@ -174,17 +173,13 @@ func isServerRunning(socketPath string) bool {
 
 // Start connects to an existing external driver server if one is already running
 // (socket exists and is connectable). Otherwise, it launches a new server process.
-// Only one server process per instance should exist at any time.
-func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName string) error {
+// Only one server process per instance should exist at any time. instanceDir
+// holds the socket, the PID file and the driver's log.
+func Start(ctx context.Context, extDriver *registry.ExternalDriver, instanceDir string) error {
+	if instanceDir == "" {
+		return errors.New("instance directory cannot be empty")
+	}
 	extDriver.Logger.Debugf("Starting external driver at %s", extDriver.Path)
-	if instName == "" {
-		return errors.New("instance name cannot be empty")
-	}
-	extDriver.InstanceName = instName
-	instanceDir, err := dirnames.InstanceDir(extDriver.InstanceName)
-	if err != nil {
-		return fmt.Errorf("failed to determine instance directory: %w", err)
-	}
 	socketPath := driverSocketPath(instanceDir, extDriver.Name)
 
 	if extDriver.Client != nil && extDriver.Client.Conn != nil {
@@ -195,6 +190,7 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 	// If the socket already exists and is connectable, reuse the existing server.
 	if isServerRunning(socketPath) {
 		extDriver.Logger.Debugf("Reusing already-running external driver server for %#q at %s", extDriver.Name, socketPath)
+		var err error
 		extDriver.Client, err = client.NewDriverClient(socketPath, extDriver.Logger)
 		if err != nil {
 			return fmt.Errorf("failed to create driver client for existing server: %w", err)

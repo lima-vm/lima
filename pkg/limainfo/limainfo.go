@@ -7,11 +7,14 @@ import (
 	"context"
 	"errors"
 	"io/fs"
+	"os"
 	"path/filepath"
 	"runtime"
+	"time"
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/envutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
@@ -43,10 +46,45 @@ type LimaInfo struct {
 
 type DriverExt struct {
 	Location string `json:"location,omitempty"` // since Lima v2.0.0
+	// CanSnapshot is nil when the driver could not be queried.
+	CanSnapshot *bool `json:"canSnapshot,omitempty"`
 }
 
 type GuestAgent struct {
 	Location string `json:"location"` // since Lima v1.1.0
+}
+
+// driverCanSnapshot returns nil when the driver is unknown or cannot be
+// queried. Only capabilities that do not depend on an instance are reported.
+func driverCanSnapshot(ctx context.Context, name string) *bool {
+	queryCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	extDriver, intDriver, exists := registry.Get(name)
+	if !exists {
+		return nil
+	}
+	if intDriver != nil {
+		canSnapshot := intDriver.Info(queryCtx).Features.CanSnapshot
+		return &canSnapshot
+	}
+
+	// An external driver must be started to answer, in a temporary directory
+	// so that no instance is touched.
+	tmpDir, err := os.MkdirTemp("", "lima-info-")
+	if err != nil {
+		logrus.WithError(err).Debugf("Failed to query the external driver %q", name)
+		return nil
+	}
+	defer os.RemoveAll(tmpDir)
+	if err := server.Start(queryCtx, extDriver, tmpDir); err != nil {
+		logrus.WithError(err).Debugf("Failed to query the external driver %q", name)
+		return nil
+	}
+	defer server.Stop(tmpDir, true)
+
+	canSnapshot := extDriver.Client.Info(queryCtx).Features.CanSnapshot
+	return &canSnapshot
 }
 
 // New returns a LimaInfo object with the Lima version, a list of all Templates and their location,
@@ -70,7 +108,8 @@ func New(ctx context.Context) (*LimaInfo, error) {
 	var vmTypes []string
 	for name, path := range reg {
 		vmTypesEx[name] = DriverExt{
-			Location: path,
+			Location:    path,
+			CanSnapshot: driverCanSnapshot(ctx, name),
 		}
 		vmTypes = append(vmTypes, name)
 	}
