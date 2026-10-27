@@ -632,6 +632,50 @@ jobs:
     - if: always()
       uses: $/.github/actions/upload_failure_logs_if_exists
 
+  downgrade:
+    name: "Downgrade tests (QEMU, macOS host)"
+    runs-on: macos-15-large  # Intel
+    timeout-minutes: 120
+    strategy:
+      matrix:
+        oldver: ["v2.2.1"]
+    steps:
+    - name: "Adjust LIMACTL_CREATE_ARGS"
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu" >>$GITHUB_ENV
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+      with:
+        persist-credentials: false
+    - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e  # v7.0.0
+      with:
+        go-version: stable
+        cache: false
+    - name: Embed the base templates of default.yaml
+      # Lima is installed by test-downgrade.sh, so setup_cache_for_template cannot resolve `base` of templates/default.yaml.
+      run: |
+        make minimal
+        LIMA_TEMPLATES_PATH="$PWD/templates" ./_output/bin/limactl tmpl copy --embed-all templates/default.yaml "$RUNNER_TEMP/default.yaml"
+    - name: "Inject `no_timer_check` to kernel cmdline"
+      # workaround to https://github.com/lima-vm/lima/issues/84
+      # The kernel cmdline is recorded in the instance, so the old Lima uses it too.
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh "$RUNNER_TEMP/default.yaml" no_timer_check
+    - name: Cache image used by default .yaml
+      uses: $/.github/actions/setup_cache_for_template
+      with:
+        template: ${{ runner.temp }}/default.yaml
+    - name: Install test dependencies
+      run: brew install qemu bash coreutils
+    - name: Test
+      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
+      with:
+        timeout_minutes: 30
+        retry_on: error
+        max_attempts: 3
+        command: ./hack/test-downgrade.sh ${{ matrix.oldver }} ${{ github.sha }} ${{ runner.temp }}/default.yaml
+    - if: always()
+      uses: $/.github/actions/upload_failure_logs_if_exists
+
   vz:
     name: "Integration tests (vz)"
     runs-on: macos-15-large  # Intel

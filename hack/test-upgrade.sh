@@ -8,6 +8,8 @@ set -eu -o pipefail
 scriptdir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=common.inc.sh
 source "${scriptdir}/common.inc.sh"
+# shellcheck source=test-upgrade.inc.sh
+source "${scriptdir}/test-upgrade.inc.sh"
 cd "${scriptdir}/.."
 
 if [ "$#" -ne 2 ]; then
@@ -17,46 +19,6 @@ fi
 
 OLDVER="$1"
 NEWVER="$2"
-
-PREFIX="/usr/local"
-function install_lima() {
-	ver="$1"
-	git checkout "${ver}"
-	make clean
-	make
-	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ] && [ -w "${PREFIX}/libexec" ]; then
-		make install
-	else
-		sudo make install
-	fi
-}
-
-function install_lima_binary() {
-	ver="$1"
-	tar="tar"
-	if [ ! -w "${PREFIX}/bin" ] || [ ! -w "${PREFIX}/share" ] || [ ! -w "${PREFIX}/libexec" ]; then
-		tar="sudo ${tar}"
-	fi
-	curl -fsSL "https://github.com/lima-vm/lima/releases/download/${ver}/lima-${ver:1}-$(uname -s)-$(uname -m).tar.gz" | ${tar} Cxzvm "${PREFIX}"
-}
-
-function uninstall_lima() {
-	files="${PREFIX}/bin/lima ${PREFIX}/bin/limactl ${PREFIX}/share/lima ${PREFIX}/share/doc/lima ${PREFIX}/libexec/lima"
-	if [ -w "${PREFIX}/bin" ] && [ -w "${PREFIX}/share" ] && [ -w "${PREFIX}/libexec" ]; then
-		# shellcheck disable=SC2086
-		rm -rf $files
-	else
-		# shellcheck disable=SC2086
-		sudo rm -rf $files
-	fi
-}
-
-function show_lima_log() {
-	tail -n 100 ~/.lima/"${LIMA_INSTANCE}"/*.log || true
-	mkdir -p failure-logs
-	cp -pf ~/.lima/"${LIMA_INSTANCE}"/*.log failure-logs/ || true
-	limactl shell "${LIMA_INSTANCE}" sudo cat /var/log/cloud-init-output.log | tee failure-logs/cloud-init-output.log || true
-}
 
 INFO "Uninstalling lima"
 uninstall_lima
