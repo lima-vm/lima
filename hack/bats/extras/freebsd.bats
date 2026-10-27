@@ -22,3 +22,12 @@ local_teardown_file() {
     # FIXME: the shell always shows freebsd-tips (specified in ~/.login)
     assert_output --partial "FreeBSD"
 }
+
+@test 'Restart keeps the pinned SSH host key' {
+    pinned="$(cat "${LIMA_HOME}/freebsd/ssh.known_hosts")"
+    limactl stop freebsd
+    limactl start --tty=false freebsd
+    run -0 limactl shell freebsd -- true
+    # The address and the port may change, but the key must not.
+    assert_equal "$(awk '{print $2, $3}' "${LIMA_HOME}/freebsd/ssh.known_hosts")" "$(awk '{print $2, $3}' <<<"${pinned}")"
+}

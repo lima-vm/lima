@@ -50,7 +50,7 @@ export PATH
 
 CODE=0
 
-# Don't make any changes to /etc or /var/lib until boot.Linux/04-persistent-data-volume.sh
+# Don't make any changes to /etc or /var/lib until boot.essential.Linux/20-persistent-data-volume.sh
 # has run because it might move the directories to /mnt/data on first boot. In that
 # case changes made on restart would be lost.
 

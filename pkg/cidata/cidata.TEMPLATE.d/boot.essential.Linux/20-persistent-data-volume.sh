@@ -7,6 +7,9 @@
 # NOTE: On Alpine, /bin/bash is ash with ASH_BASH_COMPAT, not GNU bash
 set -eux -o pipefail
 
+# This script is executed in plain mode too, as the host pins the SSH host key in /etc/ssh,
+# which has to persist across reboots.
+
 # Restrict the rest of this script to Alpine until it has been tested with other distros
 test -f /etc/alpine-release || exit 0
 
@@ -153,7 +156,7 @@ done
 /mnt.sh
 # Reinstall packages from /mnt/data/apk/cache into the RAM disk
 apk fix --no-network
-# boot.essential.Linux/10-alpine-prep.sh starts acpid before this script
+# 10-alpine-prep.sh starts acpid before this script
 # replaces /etc, and acpid looks up its event handlers relative to the
 # /etc/acpi directory that it started in. On the first boot the move above
 # deletes that directory, so the guest would ignore the power-button event

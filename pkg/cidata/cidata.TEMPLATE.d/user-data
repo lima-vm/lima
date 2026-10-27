@@ -150,6 +150,17 @@ write_files:
    path: /etc/rc.conf.d/lima_freebsd_init
    permissions: '0644'
 {{- end }}
+{{- if eq .OS "Linux" }}
+  # The host pins the SSH host key that the guest presents on the first boot.
+  # Lima changes the instance-id on every boot, and cloud-init regenerates the host keys for a new instance-id by default.
+  # This is written as a file rather than set in this user-data, so that the first boot still regenerates the keys
+  # (in case the image contains ones), and so that the keys are kept even when an older version of Lima starts the instance.
+ - content: |
+      ssh_deletekeys: false
+   owner: root:root
+   path: /etc/cloud/cloud.cfg.d/99_lima_ssh_keep_host_keys.cfg
+   permissions: '0644'
+{{- end }}
 {{- end }}
 
 {{- if .DNSAddresses }}

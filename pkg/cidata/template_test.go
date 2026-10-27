@@ -40,6 +40,41 @@ func TestConfig(t *testing.T) {
 	assert.Assert(t, !strings.Contains(string(config), "mounts:"))
 }
 
+func TestConfigSSHKeepHostKeys(t *testing.T) {
+	const path = "/etc/cloud/cloud.cfg.d/99_lima_ssh_keep_host_keys.cfg"
+	for _, tc := range []struct {
+		os       string
+		expected bool
+	}{
+		{os: "Linux", expected: true},
+		{os: "FreeBSD", expected: false},
+		{os: "Darwin", expected: false},
+	} {
+		t.Run(tc.os, func(t *testing.T) {
+			args := &TemplateArgs{
+				Name:        "default",
+				OS:          tc.os,
+				BootScripts: true,
+				User:        "foo",
+				UID:         501,
+				Home:        "/home/foo.guest",
+				Shell:       "/bin/bash",
+				SSHPubKeys:  []string{"ssh-rsa dummy foo@example.com"},
+				MountType:   "reverse-sshfs",
+			}
+			config, err := ExecuteTemplateCloudConfig(args)
+			assert.NilError(t, err)
+			var userData cloudinittypes.UserData
+			assert.NilError(t, yaml.Unmarshal(config, &userData))
+			idx := slices.IndexFunc(userData.WriteFiles, func(f cloudinittypes.WriteFile) bool { return f.Path == path })
+			assert.Equal(t, idx >= 0, tc.expected)
+			if tc.expected {
+				assert.Equal(t, userData.WriteFiles[idx].Content, "ssh_deletekeys: false\n")
+			}
+		})
+	}
+}
+
 func TestConfigCACerts(t *testing.T) {
 	args := &TemplateArgs{
 		Name:    "default",
