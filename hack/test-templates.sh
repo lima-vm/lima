@@ -614,7 +614,13 @@ if [[ -n ${CHECKS["restart"]} ]]; then
 	fi
 
 	INFO "Stopping \"$NAME\""
-	limactl stop "$NAME"
+	# When the guest does not shut down in time, Lima kills QEMU and
+	# `limactl stop` still succeeds, so check that the guest shut down by itself.
+	limactl stop "$NAME" 2>&1 | tee "$tmpdir/stop.log"
+	if grep -q 'forcibly killing' "$tmpdir/stop.log"; then
+		ERROR "Lima forcibly killed process(es) instead of shutting down \"$NAME\""
+		exit 1
+	fi
 	sleep 3
 
 	if [[ -n ${CHECKS["disk"]} ]]; then
