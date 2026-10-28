@@ -18,6 +18,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -110,6 +111,9 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 
 	if err := os.MkdirAll(diskDir, 0o700); err != nil {
 		return err
+	}
+	if err := fsutil.DisableCopyOnWrite(diskDir); err != nil {
+		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", diskDir)
 	}
 
 	// qemu may not be available, use it only if needed.
@@ -475,6 +479,9 @@ func diskImportAction(_ *cobra.Command, args []string) error {
 
 	if err := os.MkdirAll(diskDir, 0o755); err != nil {
 		return err
+	}
+	if err := fsutil.DisableCopyOnWrite(diskDir); err != nil {
+		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", diskDir)
 	}
 
 	if err := contfs.CopyFile(filepath.Join(diskDir, filenames.DataDisk), fName); err != nil {

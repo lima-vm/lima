@@ -14,7 +14,9 @@ import (
 	"strings"
 
 	continuityfs "github.com/containerd/continuity/fs"
+	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -55,6 +57,9 @@ func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName 
 
 	if err = os.Mkdir(newInstDir, 0o700); err != nil {
 		return nil, err
+	}
+	if err := fsutil.DisableCopyOnWrite(newInstDir); err != nil {
+		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", newInstDir)
 	}
 
 	walkDirFn := func(path string, d fs.DirEntry, err error) error {

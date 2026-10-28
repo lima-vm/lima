@@ -184,6 +184,12 @@ A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86
 
 <https://bugs.launchpad.net/qemu/+bug/1838390>
 
+#### "Copy-on-write on btrfs hosts"
+On a btrfs host, Lima turns off copy-on-write (like `chattr +C`) for new instance directories,
+`limactl disk` directories and download cache directories, so that VM disk images do not fragment over time.
+libvirt does the same for its storage pools.
+This also turns off btrfs checksums for these files. Existing instances and already cached images are not changed.
+
 ### VZ
 #### "Lima gets stuck at `Installing rosetta...`"
 
