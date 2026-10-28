@@ -120,6 +120,7 @@ func (s *State) buildUI() {
 		SetHighlightFullLine(true).
 		SetMainTextColor(cTxt).
 		SetSelectedStyle(tcell.StyleDefault.Reverse(true))
+	s.list.SetInputCapture(s.handleListInput)
 
 	s.header = tview.NewTextView().SetTextColor(cDim)
 
@@ -206,10 +207,33 @@ func (s *State) currentInst() *limatype.Instance {
 	return nil
 }
 
-func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
-	if e.Key() == tcell.KeyCtrlC || e.Key() == tcell.KeyF10 {
+func (s *State) handleListInput(e *tcell.EventKey) *tcell.EventKey {
+	if e.Key() != tcell.KeyRune {
+		return e
+	}
+
+	switch e.Rune() {
+	case 'j':
+		return tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
+	case 'k':
+		return tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
+	case 'q', 'Q':
 		s.app.Stop()
 		return nil
+	default:
+		return e
+	}
+}
+
+func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
+	switch e.Key() {
+	case tcell.KeyCtrlC, tcell.KeyF10:
+		s.app.Stop()
+		return nil
+	case tcell.KeyCtrlN:
+		return tcell.NewEventKey(tcell.KeyDown, 0, tcell.ModNone)
+	case tcell.KeyCtrlP:
+		return tcell.NewEventKey(tcell.KeyUp, 0, tcell.ModNone)
 	}
 
 	// The shortcuts below are only for the instance list; other views
@@ -227,9 +251,6 @@ func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case e.Key() == tcell.KeyF7, e.Rune() == 'c', e.Rune() == 'C':
 		s.showCreateForm()
-		return nil
-	case e.Rune() == 'q', e.Rune() == 'Q':
-		s.app.Stop()
 		return nil
 	}
 
@@ -250,13 +271,13 @@ func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case tcell.KeyRune:
 		switch e.Rune() {
-		case 's', 'S':
+		case 's':
 			s.execCmd("shell", in.Name)
 			return nil
 		case 'i', 'I':
 			s.showInfo(in)
 			return nil
-		case 't', 'T':
+		case 'S':
 			s.toggleStartStop(in)
 			return nil
 		case 'r', 'R':
@@ -282,7 +303,7 @@ func (s *State) showHelp() {
 	help := `[green]Keybindings:[-]
 
   [green]F1[-] / [green]?[-]       Help (this screen)
-  [green]F2[-] / [green]t[-]       Start / Stop toggle
+  [green]F2[-] / [green]S[-]       Start / Stop toggle
   [green]F3[-] / [green]i[-]       Show instance info
   [green]F5[-]           Refresh instance list
   [green]F7[-] / [green]c[-]       Create a new instance
@@ -337,6 +358,7 @@ func (s *State) showActions(in *limatype.Instance) {
 		SetTitleAlign(tview.AlignLeft).
 		SetTitleColor(cSec).
 		SetBorderPadding(1, 1, 1, 1)
+	modal.SetInputCapture(s.handleListInput)
 
 	for _, a := range actions {
 		action := a
