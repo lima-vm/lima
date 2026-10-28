@@ -1,17 +1,17 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-genericcloud-amd64-20260923-2610.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-genericcloud-amd64-20261026-2643.qcow2"
   arch: "x86_64"
-  digest: "sha512:3d94c9dd66d8a283fde060b8810373b7ae04038b956ee00d553d1ae564f6fbdeaa2fd6e7404e87e53348b5a9509170f3ea7c0731ba737590c5c4cb8d559a47f8"
+  digest: "sha512:0464b5d4ae3aa4f658468d88da83af7857b71548b30d46dcb6282770955a747fb95a983476db90d25afd0653af607224c7ebd05122ab71faa106fd712aaad652"
   variant: "genericcloud"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-genericcloud-arm64-20260923-2610.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-genericcloud-arm64-20261026-2643.qcow2"
   arch: "aarch64"
-  digest: "sha512:89a752d5c7d8e88bee39a57d88d496cca574f7d1e8df5df7a169825435f99feb11ed13ab27ec7bee96fe1584be4ff9479358fbca6cc859efa109f4aba18724c8"
+  digest: "sha512:f42866fe22b4baf9f0ed4f81d620064f2a4b86b18b92bfe3aaaa40babf6819d39cbf0caaaad13f4ae3e7c9f82cbd78b0c8cabadd8bc737ce13578e61fa86970c"
   variant: "genericcloud"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-generic-ppc64el-20260923-2610.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-generic-ppc64el-20261026-2643.qcow2"
   arch: "ppc64le"
-  digest: "sha512:ba981268c7fa730c004314730e3545dace001e2e4d7e4118e8b5e51b4953f9c151477ac5f10442b496762804df2354cd0c7f051e9a0119e4eff51c013e5a454b"
+  digest: "sha512:09b157363ae19ca3d88da2c2941b5b1a58242819fafb11a6b04258c4ba52ea233d3758a53714750799f76b6310de5db4056ee0e52fc2e4462aef02a27ae5627d"
   variant: "generic"
 
 # Fallback to the latest release image.
@@ -30,17 +30,17 @@ images:
   variant: "generic"
 
 # Try to use release-yyyyMMdd nocloud image if available.
-- location: "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-nocloud-amd64-20260923-2610.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-nocloud-amd64-20261026-2643.qcow2"
   arch: "x86_64"
-  digest: "sha512:d8262cf05112a3311f37fa2a01a33fb35b1f0f0934261fa204bdbbe49d5d1d9956156bc64348de2f19e9a362c2861fd6289e4cff7447a205092a37a3b78027bc"
+  digest: "sha512:3b7c3342105085c60097147c7f7491e761c115170213ba7d9c87685e32d234bdafe0ddf8d6fd6600a6a837c761fa229ce8b9fe2086d1235f8eebeb778d05b977"
   variant: "nocloud"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-nocloud-arm64-20260923-2610.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-nocloud-arm64-20261026-2643.qcow2"
   arch: "aarch64"
-  digest: "sha512:407f2dfc897aea98aa95b948d79f00ded4aa940c3f13a6f314eeaf10ac2cd3d0453943f836d8410c26c7e80c7c3cb823c89a877fdf1e18811db4e61feadeb729"
+  digest: "sha512:f5889d18bbd59228c6cafce7ab98dfc01129aa62b4ca9be044ff5a2149c3880ad3d44eaf62f80f0f85d3ab026082aa929f5b71731b8098e3acd09edcf8615c38"
   variant: "nocloud"
-- location: "https://cloud.debian.org/images/cloud/bookworm/20260923-2610/debian-12-nocloud-ppc64el-20260923-2610.qcow2"
+- location: "https://cloud.debian.org/images/cloud/bookworm/20261026-2643/debian-12-nocloud-ppc64el-20261026-2643.qcow2"
   arch: "ppc64le"
-  digest: "sha512:af2620fc0e3f200294f48e5a608d41a9925515e1dd5382d5998cf175414de6bf515b34016cb8b47ae736e2f51b35b2da45b908a482d9b4d079f56b1a6c77f39d"
+  digest: "sha512:52b3d5cc5f1a5463440b2401344048f0c8f138c3155e08d3e902d9a77a328e7d00ece3c517397c804bd8eb54f51e2b72dcf80fa2a132bbd8d6517b1c783bba23"
   variant: "nocloud"
 
 # Fallback nocloud images

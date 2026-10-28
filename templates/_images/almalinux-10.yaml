@@ -1,23 +1,23 @@
 images:
-- location: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64/images/AlmaLinux-10-GenericCloud-10.2-20260817.0.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64/images/AlmaLinux-10-GenericCloud-10.2-20261012.0.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:bc59485c4828861a15887e30ff1bb913f0f16202fd7286208518f4814da1e10a"
+  digest: "sha256:cbee4726fc0f5a60694bb4f289003cc221e715dfbacebcce76b54daf386d8eca"
 # AlmaLinux 10 ships x86-64-v3 by default (x86_64) and offers x86-64-v2 for older
 # hardware. Still runs as x86_64, distinguished by archVariant.
 # Select it with `limactl start --arch-variant v2`.
-- location: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-10.2-20260817.0.x86_64_v2.qcow2"
+- location: "https://repo.almalinux.org/almalinux/10.2/cloud/x86_64_v2/images/AlmaLinux-10-GenericCloud-10.2-20261012.0.x86_64_v2.qcow2"
   arch: "x86_64"
-  digest: "sha256:0bd83fd9c638cf78efee22f6245fe359a4d18b78efdec4975406bb7fd2b9a422"
+  digest: "sha256:bf441cb90a56ee08ec8a3c38d920996e217e79cfdf6e33561afd3408bed5a337"
   archVariant: "v2"
-- location: "https://repo.almalinux.org/almalinux/10.2/cloud/aarch64/images/AlmaLinux-10-GenericCloud-10.2-20260817.0.aarch64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/10.2/cloud/aarch64/images/AlmaLinux-10-GenericCloud-10.2-20261012.0.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:b1203c2ecc74b5529ffd9ef7675c6914fa80b4a29fe6ddeeffde78817ca850bd"
-- location: "https://repo.almalinux.org/almalinux/10.2/cloud/s390x/images/AlmaLinux-10-GenericCloud-10.2-20260817.0.s390x.qcow2"
+  digest: "sha256:ca65d1c32430acd84e9126c2e48f3b4110cd649a592712bfb570a6650e7e19e7"
+- location: "https://repo.almalinux.org/almalinux/10.2/cloud/s390x/images/AlmaLinux-10-GenericCloud-10.2-20261012.0.s390x.qcow2"
   arch: "s390x"
-  digest: "sha256:1d15f32d0d4f75431a0aa7b73de96d16c8e9dabb7201ce724b2865e5c0b1a9d2"
-- location: "https://repo.almalinux.org/almalinux/10.2/cloud/ppc64le/images/AlmaLinux-10-GenericCloud-10.2-20260817.0.ppc64le.qcow2"
+  digest: "sha256:73f6648eb789eea7a53300c6a7c654fa3c0d8967670173a9ed384eab5a05799a"
+- location: "https://repo.almalinux.org/almalinux/10.2/cloud/ppc64le/images/AlmaLinux-10-GenericCloud-10.2-20261012.0.ppc64le.qcow2"
   arch: "ppc64le"
-  digest: "sha256:4539b18ef2e0e5f3024e745413e54f49b765f4d61ddca6b1e3bdb43a8b51882c"
+  digest: "sha256:42a42ab7edd07d6c5464232e228e44fe0fe80a7a316d6ef2119bef7c830342c8"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
