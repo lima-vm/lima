@@ -1,36 +1,36 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:8800651811af9a85465ad1d552add729947bb16488dddb4a9b5305a3d97332b2"
+  digest: "sha256:5645d0318ad21f643ebb1ac4567514620e9893380b07b0201fda163baa5b7eb5"
   variant: "server"
 # x86-64-v3 optimized image. Still runs as x86_64, distinguished by archVariant.
 # Select it with `limactl start --arch-variant v3`.
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-amd64v3.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-amd64v3.img"
   arch: "x86_64"
-  digest: "sha256:9b278bda1b4bc63a021f98a316f5cd1aba583466a402f1d3a4eefca2bfe0aa2b"
+  digest: "sha256:1da459ae2a59e76e9de460d4b07c237e11d15c7bd72ab44c88a6bcc35f054b2d"
   variant: "server"
   archVariant: "v3"
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:63a93bd5a8d76e33b15ceb5daa3657bd79be804748051ab178e643b0f5da22e7"
+  digest: "sha256:8eb876c2ccc4b6ff89e4a65d511815923b285e04503ba465809bf587f763da24"
   variant: "server"
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-riscv64.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-riscv64.img"
   arch: "riscv64"
-  digest: "sha256:ed5c27df4b06c27fa3b7fcc0b17f41481cf3ca393391777dae8d7c351155dd22"
+  digest: "sha256:5309a1cf1e61c05a4222b6381f0bb6c38fc32cc9941bdb70e18d2df865ee60a1"
   variant: "server"
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-armhf.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-armhf.img"
   arch: "armv7l"
-  digest: "sha256:690db1a30c7d1f0ee018a652beca4a9e46f21f4cfffb781210a5d02bb84ad1fd"
+  digest: "sha256:9f4763c1fb4f54193a8eec13384ad388b4bd41892d1e4a1c533dc934be7c2a18"
   variant: "server"
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-s390x.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-s390x.img"
   arch: "s390x"
-  digest: "sha256:5a660630427045d40938862545e5535784059810bc959dd04ace54195887cb41"
+  digest: "sha256:18b92368ab6cd33a177badab505b2f489b9bfbcf86866b22c6d1afd13fa6aa3b"
   variant: "server"
-- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20260927/ubuntu-26.04-server-cloudimg-ppc64el.img"
+- location: "https://cloud-images.ubuntu.com/releases/resolute/release-20261016/ubuntu-26.04-server-cloudimg-ppc64el.img"
   arch: "ppc64le"
-  digest: "sha256:eb39d5f33b6aa2f5994629a1ac950ed057e57704894a2d8e15cbdfae5882abcf"
+  digest: "sha256:7694b11cb77dc1b7b0f4285d68dc176a8ca98df61f03899e8170d18509ca124f"
   variant: "server"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
@@ -65,13 +65,13 @@ images:
   variant: "server"
 
 # Try to use release-yyyyMMdd minimal image if available.
-- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261002/ubuntu-26.04-minimal-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261024/ubuntu-26.04-minimal-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:bae05f5515b205ff3689105a862884103a6bbf2a1f5eac4fd5c8f639270fee7f"
+  digest: "sha256:6c083e6bea1573aab619c1dfa8d17bb7e3a8618fbd6cb57fa39d517b20062aa4"
   variant: "minimal"
-- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261002/ubuntu-26.04-minimal-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261024/ubuntu-26.04-minimal-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:768d6339844cb8a86c7287e9ac7b9d71ddc391531ad2521b72d22f0833660b01"
+  digest: "sha256:b0bb7d1dba37af81c0f74cb5e3bba3a9837e89856e38edf9cecc4a88d6afe5d5"
   variant: "minimal"
 
 # Fallback minimal images
