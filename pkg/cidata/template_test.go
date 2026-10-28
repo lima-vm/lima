@@ -240,6 +240,24 @@ func TestTemplateGuestOSVersion(t *testing.T) {
 	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_OS_BUILD_VERSION=\n"))
 }
 
+func TestTemplateInotify(t *testing.T) {
+	args := &TemplateArgs{
+		Name:                    "default",
+		User:                    "foo",
+		UID:                     501,
+		Home:                    "/home/foo.guest",
+		Shell:                   "/bin/bash",
+		SSHPubKeys:              []string{"ssh-rsa dummy foo@example.com"},
+		MountType:               "reverse-sshfs",
+		OS:                      "Linux",
+		InotifyMaxUserWatches:   524288,
+		InotifyMaxUserInstances: 512,
+	}
+	limaEnv := renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_INOTIFY_MAX_USER_WATCHES=524288\n"), limaEnv)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_INOTIFY_MAX_USER_INSTANCES=512\n"), limaEnv)
+}
+
 func renderLimaEnv(t *testing.T, args *TemplateArgs) string {
 	t.Helper()
 	layout, err := ExecuteTemplateCIDataISO(args)

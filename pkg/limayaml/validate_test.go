@@ -451,6 +451,30 @@ additionalDisks:
 	assert.Error(t, Validate(y, false), "field `additionalDisks[0].mountPoint` is the reserved internal home directory `/home/foo.guest`")
 }
 
+func TestValidateInotify(t *testing.T) {
+	y, err := Load(t.Context(), []byte(`
+images:
+  - location: /
+inotify:
+  maxUserWatches: 524288
+  maxUserInstances: 512
+`), "lima.yaml")
+	assert.NilError(t, err)
+	assert.NilError(t, Validate(y, false))
+
+	y, err = Load(t.Context(), []byte(`
+images:
+  - location: /
+inotify:
+  maxUserWatches: 0
+  maxUserInstances: 2147483648
+`), "lima.yaml")
+	assert.NilError(t, err)
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `inotify.maxUserWatches` must be between 1 and 2147483647, got 0")
+	assert.ErrorContains(t, err, "field `inotify.maxUserInstances` must be between 1 and 2147483647, got 2147483648")
+}
+
 func TestValidateParamName(t *testing.T) {
 	images := `images: [{"location": "/"}]`
 	validProvision := `provision: [{"script": "echo $PARAM_name $PARAM_NAME $PARAM_Name_123"}]`
