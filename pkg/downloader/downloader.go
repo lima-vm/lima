@@ -27,6 +27,7 @@ import (
 	"github.com/opencontainers/go-digest"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
@@ -247,6 +248,10 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	shad := cacheDirectoryPath(o.cacheDir, remote)
 	if err := os.MkdirAll(shad, 0o700); err != nil {
 		return nil, err
+	}
+	// Keeps the copy from the cache into a No_COW instance directory a reflink on btrfs.
+	if err := fsutil.DisableCopyOnWrite(shad); err != nil {
+		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", shad)
 	}
 
 	var res *Result

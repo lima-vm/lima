@@ -14,7 +14,9 @@ import (
 	"strings"
 
 	continuityfs "github.com/containerd/continuity/fs"
+	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -55,6 +57,11 @@ func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName 
 
 	if err = os.Mkdir(newInstDir, 0o700); err != nil {
 		return nil, err
+	}
+	// The new directory follows the old instance, not the default: btrfs can't reflink between
+	// files with and without No_COW, and instances made by older versions are copy-on-write.
+	if err := fsutil.MatchCopyOnWrite(newInstDir, oldInst.Dir); err != nil {
+		logrus.WithError(err).Warnf("Failed to match the copy-on-write setting of %#q to %#q (non-fatal)", newInstDir, oldInst.Dir)
 	}
 
 	walkDirFn := func(path string, d fs.DirEntry, err error) error {

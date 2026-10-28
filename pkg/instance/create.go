@@ -10,9 +10,12 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/sirupsen/logrus"
+
 	"github.com/lima-vm/lima/v2/pkg/cidata"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/server"
 	"github.com/lima-vm/lima/v2/pkg/driverutil"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -66,6 +69,9 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 	}
 	if err := os.MkdirAll(instDir, 0o700); err != nil {
 		return nil, err
+	}
+	if err := fsutil.DisableCopyOnWrite(instDir); err != nil {
+		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", instDir)
 	}
 	var createSucceeded bool
 	defer func() {

@@ -23,6 +23,7 @@ weight: 6
   - ["QEMU is slow"](#qemu-is-slow)
   - [error "killed -9"](#error-killed--9)
   - ["QEMU crashes with `vmx_write_mem: mmu_gva_to_gpa XXXXXXXXXXXXXXXX failed`"](#qemu-crashes-with-vmx_write_mem-mmu_gva_to_gpa-xxxxxxxxxxxxxxxx-failed)
+  - ["Copy-on-write on btrfs hosts"](#copy-on-write-on-btrfs-hosts)
 - [VZ](#vz)
   - ["Lima gets stuck at `Installing rosetta...`"](#lima-gets-stuck-at-installing-rosetta)
 - [Networking](#networking)
@@ -183,6 +184,24 @@ This error is known to happen when running an image of RHEL8-compatible distribu
 A workaround is to set environment variable `QEMU_SYSTEM_X86_64="qemu-system-x86_64 -cpu Haswell-v4"`.
 
 <https://bugs.launchpad.net/qemu/+bug/1838390>
+
+#### "Copy-on-write on btrfs hosts"
+On a btrfs host, Lima turns off copy-on-write (like `chattr +C`) for new instance directories,
+`limactl disk` directories and download cache directories, so that VM disk images do not fragment over time.
+libvirt does the same for its storage pools.
+Existing instances are not changed, and `limactl clone` and `limactl rename` keep the setting of the original instance.
+
+To keep copy-on-write, set the environment variable `LIMA_BTRFS_NOCOW=false`.
+See [Environment Variables]({{< ref "/docs/config/environment-variables" >}}).
+
+Turning copy-on-write off has some costs:
+- btrfs keeps no checksums for these files, so it does not notice a corrupted block.
+  Reading it returns the bad data without an error, and `btrfs scrub` does not report it.
+  With copy-on-write, reading the same block fails with an I/O error.
+- Clones and btrfs snapshots share their blocks with the original, and the first write to a shared block moves it.
+  So a disk image fragments again after a clone or a snapshot, and regular snapshots bring the fragmentation back.
+- Images that are already in the download cache are not changed.
+  Each new instance created from such an image is a full copy until `limactl prune` clears the cache.
 
 ### VZ
 #### "Lima gets stuck at `Installing rosetta...`"
