@@ -153,3 +153,9 @@ done
 /mnt.sh
 # Reinstall packages from /mnt/data/apk/cache into the RAM disk
 apk fix --no-network
+# boot.essential.Linux/10-alpine-prep.sh starts acpid before this script
+# replaces /etc, and acpid looks up its event handlers relative to the
+# /etc/acpi directory that it started in. On the first boot the move above
+# deletes that directory, so the guest would ignore the power-button event
+# that `limactl stop` sends. Restart acpid so that it uses the persistent /etc.
+rc-service --ifstarted acpid restart
