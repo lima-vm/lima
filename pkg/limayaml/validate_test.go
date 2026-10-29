@@ -783,3 +783,14 @@ osOpts:
 		})
 	}
 }
+
+func TestValidateMountRelativePathWithoutMountPoint(t *testing.T) {
+	images := `images: [{"location": "https://example.com/image.img"}]`
+	mountYaml := `mounts: [{"location": "relative/path"}]`
+	y, err := Load(t.Context(), []byte(mountYaml+"\n"+images), "lima.yaml")
+	assert.NilError(t, err)
+	y.Mounts[0].MountPoint = nil
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `mounts[0].location` must be an absolute path")
+	assert.ErrorContains(t, err, "field `mounts[0].mountPoint` must be specified explicitly")
+}

@@ -177,6 +177,11 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` refers to a non-directory path: %#q: %w", i, f.Location, err))
 		}
 
+		if f.MountPoint == nil {
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must be specified explicitly (failed to automatically determine default mount point)", i))
+			continue
+		}
+
 		switch *f.MountPoint {
 		case "/", "/bin", "/dev", "/etc", "/home", "/opt", "/sbin", "/tmp", "/usr", "/var":
 			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].mountPoint` must not be a system path such as /etc or /usr", i))
