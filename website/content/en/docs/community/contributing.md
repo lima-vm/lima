@@ -56,15 +56,15 @@ Usually, all commits in a PR need to be squashed to a single commit before it ca
 
 ### AI Contribution Rules
 
-Lima welcomes help from AI tools, but we only accept high-quality pull requests. These rules help keep review time useful and fair for maintainers.
+Lima welcomes help from AI coding assistants, but we only accept high-quality pull requests. These rules help keep review time useful and fair for maintainers.
 
 #### Humans are responsible for all content
 
-All content in your pull request whether written directly by you or generated with AI tools must be reviewed and edited by you. You are responsible for ensuring the description is clear, accurate, and free of errors. It is often discouraged to have long AI-generated text blocks for pull request description, as reviewers need clear explanations directly from the contributor. When reviewers leave review comments, reply yourself without relying on AI tools.
+All content in your pull request whether written directly by you or generated with AI coding assistants must be reviewed and edited by you. You are responsible for ensuring the description is clear, accurate, and free of errors. It is often discouraged to have long AI-generated text blocks for pull request description, as reviewers need clear explanations directly from the contributor. When reviewers leave review comments, reply yourself without relying on AI coding assistants.
 
 #### Legal sign-off (DCO)
 
-AI tools cannot legally sign off code. Only the human submitting the code can add a `Signed-off-by` line. See [Developer Certificate of Origin](#developer-certificate-of-origin-dco) below.
+AI coding assistants cannot legally sign off code. Only the human submitting the code can add a `Signed-off-by` line. See [Developer Certificate of Origin](#developer-certificate-of-origin-dco) below.
 If you use AI-generated code, you must:
 
 - Read and check all generated code before submitting.
@@ -73,7 +73,11 @@ If you use AI-generated code, you must:
 
 #### Mention AI usage
 
-If you used AI tools while preparing your pull request, disclose that in the pull request description using an `Assisted-by: AI_TOOL_NAME` trailer (see [Linux kernel coding assistants policy](https://docs.kernel.org/process/coding-assistants.html)). `Co-Authored-By` trailers added by AI tools are also acceptable and will not block a pull request from being merged.
+Disclose AI-generated code in the git commit message with an `Assisted-by: LLM` trailer, like the [Linux kernel coding assistants policy](https://docs.kernel.org/process/coding-assistants.html). Naming the specific assistant (`Assisted-by: Claude`) is also welcome, and `Co-Authored-By` trailers added by AI coding assistants are acceptable and will not block a pull request from being merged.
+
+Unlike the kernel policy, no trailer is needed for the "specialized analysis tools" that the kernel document calls `TOOL` (e.g. coccinelle, sparse, smatch, clang-tidy), or for linters that run in CI anyway.
+
+The git commit message documents how the code was produced. The pull request description tells the reviewers what the change does: write it yourself, in your own words.
 
 #### Enforcement
 
