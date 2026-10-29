@@ -160,6 +160,10 @@ func TestStopCmd(t *testing.T) {
 
 	cmd := config.StopCmd("name", "daemon")
 	assert.Equal(t, cmd, "/usr/bin/pkill -F "+filepath.Join(config.Paths.VarRun, "name_daemon.pid"))
+
+	const helper = "/usr/local/libexec/lima/privileged/lima-privileged-net"
+	cmd = config.stopCmd("shared", LimaPrivilegedNet, helper)
+	assert.Equal(t, cmd, helper+" stop --pidfile="+filepath.Join(config.Paths.VarRun, "shared_lima-privileged-net.pid"))
 }
 
 func TestIsManagedBridge(t *testing.T) {

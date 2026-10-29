@@ -202,7 +202,7 @@ func ipForwardEnabled() bool {
 }
 
 // verifySelf refuses to run when this executable, or any directory leading to
-// it, is writable by anyone but root. This helper runs as root, so a writable path
+// it, is writable by anyone but root (or the root group). This helper runs as root, so a writable path
 // hands root to whoever can write there. The sudoers file additionally pins the
 // SHA-256 of the binary, but that only covers hosts that use it: a host with
 // blanket password-less sudo has no sudoers entry to pin.
@@ -225,16 +225,48 @@ func verifySelf() error {
 		if st.Uid != 0 {
 			return fmt.Errorf("%#q is owned by uid %d, not by root", path, st.Uid)
 		}
-		if fi.Mode()&0o022 != 0 {
-			return fmt.Errorf("%#q is writable by non-root users (mode %#o)", path, fi.Mode().Perm())
+		if fi.Mode()&0o002 != 0 || (fi.Mode()&0o020 != 0 && st.Gid != 0) {
+			return fmt.Errorf("%#q is writable by non-root users (mode %#o, gid %d)", path, fi.Mode().Perm(), st.Gid)
 		}
 	}
 	return nil
 }
 
+// lockFile takes an exclusive lock on path, which the kernel releases when the
+// process exits, however it exits. The file is never removed: unlinking it would
+// let a waiting process lock an inode that the next one no longer sees.
+func lockFile(path string) (*os.File, error) {
+	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE|unix.O_NOFOLLOW, 0o600)
+	if err != nil {
+		return nil, err
+	}
+	if err := unix.Flock(int(f.Fd()), unix.LOCK_EX|unix.LOCK_NB); err != nil {
+		f.Close()
+		if errors.Is(err, unix.EWOULDBLOCK) {
+			return nil, fmt.Errorf("%#q is locked by another process: the network is already up", path)
+		}
+		return nil, err
+	}
+	return f, nil
+}
+
+// writePIDFile writes the PID through a rename, so that the file never holds a
+// partial number, even when the write fails.
+func writePIDFile(path string) error {
+	tmp := path + ".tmp"
+	err := os.WriteFile(tmp, fmt.Appendf(nil, "%d\n", os.Getpid()), 0o644)
+	if err == nil {
+		err = os.Rename(tmp, path)
+	}
+	if err != nil {
+		return errors.Join(err, os.Remove(tmp))
+	}
+	return nil
+}
+
 // ensureRunDir creates the directory holding the PID file and verifies that only
-// root can write to it: a user-writable PID file would let `pkill -F` kill any
-// process as root.
+// root can write to it: a user-writable PID file would let the caller choose the
+// process that `stop` signals as root.
 func ensureRunDir(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return err

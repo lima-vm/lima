@@ -36,7 +36,7 @@ func newApp() *cobra.Command {
 			return verifySelf()
 		},
 	}
-	rootCmd.AddCommand(newStartCommand(), newTapCommand())
+	rootCmd.AddCommand(newStartCommand(), newStopCommand(), newTapCommand())
 	return rootCmd
 }
 
@@ -60,10 +60,24 @@ func newStartCommand() *cobra.Command {
 	return cmd
 }
 
+func newStopCommand() *cobra.Command {
+	var pidFile string
+	cmd := &cobra.Command{
+		Use:   "stop",
+		Short: "Terminate the `start` process that wrote the PID file",
+		Args:  cobra.NoArgs,
+		RunE: func(_ *cobra.Command, _ []string) error {
+			return stop(pidFile)
+		},
+	}
+	cmd.Flags().StringVar(&pidFile, "pidfile", "", "file the `start` process wrote its PID to")
+	return cmd
+}
+
 func newTapCommand() *cobra.Command {
 	var bridge, network string
 	cmd := &cobra.Command{
-		Use:   "tap INSTANCE",
+		Use:   "tap INSTANCE_ID",
 		Short: "Create a tap device owned by the calling user and attach it to a bridge",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

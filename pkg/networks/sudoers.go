@@ -78,8 +78,7 @@ func (c Config) sudoers(mkdir bool, daemons []sudoersDaemon) (string, error) {
 				// the tap name itself, from SUDO_UID.
 				cmds = append(cmds, c.tapCmdPattern(d.path, name))
 			}
-			// Not pinned: a system binary, updated independently of Lima.
-			cmds = append(cmds, c.StopCmd(name, d.name))
+			cmds = append(cmds, c.stopCmd(name, d.name, d.path))
 			grant, err := sudoers.NOPASSWD("%"+c.Group, d.user.User, d.user.Group, cmds...)
 			if err != nil {
 				return "", err

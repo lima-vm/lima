@@ -92,7 +92,7 @@ func (c *netConfig) validate() error {
 }
 
 // run brings the network up and then blocks until limactl terminates the process
-// (via `pkill -F <pidfile>`).
+// (via `lima-privileged-net stop`).
 func (c *netConfig) run(ctx context.Context) error {
 	if err := c.validate(); err != nil {
 		return err
@@ -100,8 +100,18 @@ func (c *netConfig) run(ctx context.Context) error {
 	if err := ensureRunDir(filepath.Dir(c.pidFile)); err != nil {
 		return err
 	}
+	// Held until exit, so that a second `start` cannot take over the PID file of a running network.
+	lock, err := lockFile(c.pidFile + ".lock")
+	if err != nil {
+		return err
+	}
+	defer lock.Close()
+	// Every catchable signal the unprivileged caller can provoke must end in an
+	// orderly teardown too: SIGHUP and SIGQUIT come from the caller's terminal,
+	// SIGPIPE from logging to a stderr whose read end the caller has closed, and
+	// SIGXFSZ from a file size limit the caller set.
 	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM)
+	signal.Notify(sig, syscall.SIGINT, syscall.SIGTERM, syscall.SIGHUP, syscall.SIGQUIT, syscall.SIGPIPE, syscall.SIGXFSZ)
 
 	// Teardown must run to completion even if ctx is already done, or the bridge
 	// and the firewall rules would be left behind on the host.
@@ -114,14 +124,63 @@ func (c *netConfig) run(ctx context.Context) error {
 	if err != nil {
 		return errors.Join(err, c.down(downCtx))
 	}
-	if err := os.WriteFile(c.pidFile, fmt.Appendf(nil, "%d\n", os.Getpid()), 0o644); err != nil {
+	if err := writePIDFile(c.pidFile); err != nil {
 		return errors.Join(err, stopDnsmasq(dnsmasq), c.down(downCtx))
 	}
 	logrus.Infof("Network is up on bridge %#q", c.bridge)
 
 	<-sig
 	logrus.Infof("Shutting down the network on bridge %#q", c.bridge)
-	return errors.Join(os.Remove(c.pidFile), stopDnsmasq(dnsmasq), c.down(downCtx))
+	// limactl treats a missing PID file as a finished teardown, so remove it last.
+	err = errors.Join(stopDnsmasq(dnsmasq), c.down(downCtx))
+	return errors.Join(err, os.Remove(c.pidFile))
+}
+
+// stop terminates the `start` process that wrote the PID file, or removes the
+// file when that process is gone.
+//
+// The PID file outlives a process that could not remove it (SIGKILL cannot be
+// caught), and the kernel eventually hands the PID to an unrelated process. Unlike `pkill -F`, this
+// therefore does not trust the number alone: only a process running this very
+// executable is signaled.
+func stop(pidFile string) error {
+	b, err := os.ReadFile(pidFile)
+	if err != nil {
+		return err
+	}
+	s := strings.TrimSpace(string(b))
+	pid, err := strconv.Atoi(s)
+	if err != nil || pid <= 0 {
+		return fmt.Errorf("invalid PID %#q in %#q", s, pidFile)
+	}
+	// The handle is a pidfd, taken before the check, so that the signal cannot
+	// reach a process that received the PID only after the check.
+	proc, err := os.FindProcess(pid)
+	if err != nil {
+		return err
+	}
+	self, err := os.Executable()
+	if err != nil {
+		return err
+	}
+	// The suffix is there when the helper was reinstalled while the network was up.
+	exe, err := os.Readlink(fmt.Sprintf("/proc/%d/exe", pid))
+	if err != nil || strings.TrimSuffix(exe, " (deleted)") != self {
+		// A free lock means that the `start` that wrote the file has exited, so the file
+		// can go and the next `start` brings the network up again. Holding the lock keeps
+		// a new `start` from writing the file meanwhile.
+		lock, lockErr := lockFile(pidFile + ".lock")
+		if lockErr != nil {
+			return fmt.Errorf("PID file %#q is stale: process %d is not running %#q", pidFile, pid, self)
+		}
+		defer lock.Close()
+		logrus.Warnf("Removing stale PID file %#q: process %d is not running %#q", pidFile, pid, self)
+		if err := os.Remove(pidFile); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return err
+		}
+		return nil
+	}
+	return proc.Signal(syscall.SIGTERM)
 }
 
 // up creates the bridge and, for "shared" networks, the NAT rules. Every step is
@@ -242,15 +301,16 @@ func (c *netConfig) restoreForwarding(ctx context.Context) {
 
 // firewallZones are the firewalld zones the Lima bridge is bound to, in order of
 // preference. They all have target=ACCEPT, so the guests' forwarded traffic
-// passes, while a low priority reject rule leaves only DHCP, DNS and ICMP
-// reachable on the host itself. "lima" is not shipped by firewalld and only
-// exists when an administrator (or ensureFirewallZone) created it; the other two
-// are built in. The "trusted" zone is deliberately not used: it would expose
+// passes, while a low priority reject rule blocks the host's other services.
+// The "lima" zone that ensureFirewallZone creates opens only DHCP, DNS and ICMP;
+// "nm-shared" (installed by NetworkManager) also opens SSH, and "libvirt"
+// (installed by libvirt) also opens SSH, TFTP and DHCPv6. None of them ships with
+// firewalld itself. The "trusted" zone is deliberately not used: it would expose
 // every service listening on the host to the guests.
 var firewallZones = []string{"lima", "nm-shared", "libvirt"}
 
 // firewalldZone returns the zone to bind the bridge to, creating "lima" when the
-// host has none of the built-in ones.
+// host has none of the others.
 func firewalldZone(ctx context.Context) (string, error) {
 	out, err := output(ctx, "firewall-cmd", "--get-zones")
 	if err != nil {
@@ -413,7 +473,7 @@ func tapUp(ctx context.Context, bridge, network, instance string) error {
 		return fmt.Errorf("invalid network name %#q: %w", network, err)
 	}
 	if err := identifiers.Validate(instance); err != nil {
-		return fmt.Errorf("invalid instance name %#q: %w", instance, err)
+		return fmt.Errorf("invalid instance ID %#q: %w", instance, err)
 	}
 	// SUDO_UID is set by sudo itself, so the caller cannot forge it.
 	uid, err := strconv.ParseUint(os.Getenv("SUDO_UID"), 10, 32)

@@ -6,6 +6,7 @@ package networks
 import (
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -184,6 +185,20 @@ func (c *Config) daemonPath(daemon string) string {
 }
 
 func (c *Config) StopCmd(name, daemon string) string {
+	var daemonPath string
+	if daemon == LimaPrivilegedNet {
+		daemonPath = c.daemonPath(daemon)
+	}
+	return c.stopCmd(name, daemon, daemonPath)
+}
+
+// stopCmd renders the command line from an already resolved daemon path, like startCmd.
+func (c *Config) stopCmd(name, daemon, daemonPath string) string {
+	if daemon == LimaPrivilegedNet {
+		// Not `pkill -F`, which signals whichever process has the PID by now when
+		// the daemon died without removing its PID file.
+		return fmt.Sprintf("%s stop --pidfile=%s", daemonPath, c.PIDFile(name, daemon))
+	}
 	return fmt.Sprintf("/usr/bin/pkill -F %s", c.PIDFile(name, daemon))
 }
 
@@ -219,7 +234,7 @@ func (c *Config) TapCmd(instName, netName string) string {
 }
 
 // tapCmdPattern returns the sudoers entry authorizing TapCmd for every instance
-// on a network. The instance name is the only wildcard, but "*" also matches
+// on a network. The instance ID is the only wildcard, but "*" also matches
 // whitespace, so an attacker could otherwise smuggle extra words - including a
 // second --bridge flag - ahead of it. The pinned "--" that tapCmd renders stops
 // lima-privileged-net's flag parsing first, so every smuggled word lands as a
@@ -234,7 +249,7 @@ func (c *Config) tapCmd(daemonPath, netName, instArg string) string {
 
 // TapName returns the name of the tap device connecting an instance to a
 // network: tapPrefix followed by the owner's uid and 32 bits of a hash of the
-// instance and network name, packed into a single uint64 and rendered as
+// instance ID and network name, packed into a single uint64 and rendered as
 // tapDigits base-36 digits. The uid is kept in clear rather than folded into
 // the hash, so that two different uids can never produce the same name, closing
 // the gap a truncated hash alone would leave; packing it into a fixed-width
@@ -248,4 +263,11 @@ func TapName(uid int, instName, netName string) string {
 	packed := uint64(uint32(uid))<<32 | uint64(binary.BigEndian.Uint32(sum[:4]))
 	digits := strconv.FormatUint(packed, 36)
 	return tapPrefix + strings.Repeat("0", tapDigits-len(digits)) + digits
+}
+
+// InstanceID returns the identity passed to TapName and TapCmd for an instance,
+// derived from its directory so that same-named instances in different LIMA_HOMEs don't share a tap.
+func InstanceID(instDir string) string {
+	sum := sha256.Sum256([]byte(instDir))
+	return hex.EncodeToString(sum[:8])
 }

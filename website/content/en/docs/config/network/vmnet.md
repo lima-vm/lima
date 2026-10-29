@@ -9,9 +9,14 @@ weight: 33
 
 VMNet assigns a "real" IP address that is reachable from the host.
 
+On Linux hosts, the same `shared`, `host` and `bridged` networks are provided by
+[lima-privileged-net]({{< ref "/docs/config/network/linux" >}}) instead.
+
 The configuration steps are different for each network type:
-- [vzNAT](#vzNAT)
-- [socket_vmnet](#socket_vmnet)
+- [vzNAT](#vznat)
+- [socket\_vmnet](#socket_vmnet)
+  - [Managed (192.168.105.0/24)](#managed-192168105024)
+  - [Unmanaged](#unmanaged)
 
 ## vzNAT
 

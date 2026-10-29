@@ -571,6 +571,7 @@ func validateFileObject(f limatype.File, fieldName string) error {
 func validateNetwork(y *limatype.LimaYAML) error {
 	var errs error
 	interfaceName := make(map[string]int)
+	limaNetwork := make(map[string]int)
 	for i, nw := range y.Networks {
 		field := fmt.Sprintf("networks[%d]", i)
 		switch {
@@ -586,8 +587,15 @@ func validateNetwork(y *limatype.LimaYAML) error {
 			if err != nil {
 				return err
 			}
-			if !usernet && runtime.GOOS != "darwin" {
-				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` is only supported on macOS right now", field))
+			if !usernet && runtime.GOOS != "darwin" && runtime.GOOS != "linux" {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` is only supported on macOS and Linux right now", field))
+			}
+			// Each instance gets a single tap device per network on Linux.
+			if !usernet && runtime.GOOS == "linux" {
+				if prev, ok := limaNetwork[nw.Lima]; ok {
+					errs = errors.Join(errs, fmt.Errorf("field `%s.lima` value %#q has already been used by field `networks[%d].lima`", field, nw.Lima, prev))
+				}
+				limaNetwork[nw.Lima] = i
 			}
 			if nw.Socket != "" {
 				errs = errors.Join(errs, fmt.Errorf("field `%s.lima` and field `%s.socket` are mutually exclusive", field, field))
@@ -746,6 +754,13 @@ func warnExperimental(y *limatype.LimaYAML) {
 	}
 	if y.MountInotify != nil && *y.MountInotify {
 		logrus.Warn("`mountInotify` is experimental")
+	}
+	if runtime.GOOS == "linux" {
+		for _, nw := range y.Networks {
+			if nw.Lima != "" && !networks.IsUsernet(nw.Lima) {
+				logrus.Warnf("`networks: [{lima: %s}]` on Linux is experimental", nw.Lima)
+			}
+		}
 	}
 	if y.User.PasswordlessSudo != nil && !*y.User.PasswordlessSudo {
 		if y.OS == nil || *y.OS != limatype.DARWIN {
