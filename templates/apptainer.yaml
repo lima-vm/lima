@@ -26,7 +26,7 @@ provision:
     # - Building images has a problem with "nodev"
     # - The image might be too big to fit in memory
     echo "APPTAINER_TMPDIR=/var/tmp" > /etc/profile.d/apptainer.sh
-    echo "export APPTAINER_TMPDIR" > /etc/profile.d/apptainer.sh
+    echo "export APPTAINER_TMPDIR" >> /etc/profile.d/apptainer.sh
 probes:
 - script: |
     #!/bin/bash
