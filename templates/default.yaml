@@ -203,6 +203,17 @@ caCerts:
 # 🟢 Builtin default: false
 upgradePackages: null
 
+# inotify limits of Linux guests. The builtin defaults are higher than most kernel
+# defaults, so that kind clusters and file watchers don't hit "too many open files".
+# Applied with sysctl on every boot, except in plain mode.
+inotify:
+  # Value for fs.inotify.max_user_watches
+  # 🟢 Builtin default: 524288
+  maxUserWatches: null
+  # Value for fs.inotify.max_user_instances
+  # 🟢 Builtin default: 512
+  maxUserInstances: null
+
 containerd:
   # Enable system-wide (aka rootful)  containerd and its dependencies (BuildKit, Stargz Snapshotter)
   # Note that `nerdctl.lima` only works in rootless mode; you have to use `lima sudo nerdctl ...`

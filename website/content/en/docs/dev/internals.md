@@ -223,6 +223,8 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_YQ_PROVISION_%08d_PERMISSIONS`: the file permissions (in octal) for the N-th yq provision step.
 - `LIMA_CIDATA_GUEST_INSTALL_PREFIX`: the install prefix used for guest tools (e.g. `/usr/local`).
 - `LIMA_CIDATA_UPGRADE_PACKAGES`: set to "1" if `upgradePackages` is enabled in `lima.yaml`, empty otherwise.
+- `LIMA_CIDATA_INOTIFY_MAX_USER_WATCHES`: set to `inotify.maxUserWatches` from `lima.yaml`.
+- `LIMA_CIDATA_INOTIFY_MAX_USER_INSTANCES`: set to `inotify.maxUserInstances` from `lima.yaml`.
 - `LIMA_CIDATA_CONTAINERD_USER`: set to "1" if rootless containerd to be set up.
 - `LIMA_CIDATA_CONTAINERD_SYSTEM`: set to "1" if system-wide containerd to be set up.
 - `LIMA_CIDATA_CONTAINERD_ARCHIVE`: the name of the containerd archive. `nerdctl-full.tgz`.

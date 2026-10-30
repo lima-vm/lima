@@ -45,6 +45,7 @@ corresponding YAML properties are ignored:
 - **Rosetta** (`rosetta`)
 - **SSH agent forwarding** (`ssh.forwardAgent`)
 - **Host clock synchronization**
+- **inotify limits** (`inotify`)
 
 Dependency packages such as `sshfs` are not installed into the VM either.
 
