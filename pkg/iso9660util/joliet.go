@@ -13,6 +13,8 @@ import (
 	"runtime"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/sshutil"
 )
 
 func writeJoliet(isoPath, label string, layout []Entry) error {
@@ -41,7 +43,7 @@ func writeJoliet(isoPath, label string, layout []Entry) error {
 	}
 
 	ctx := context.TODO()
-	cmdSlice, err := writeJolietCommand(isoPath, label, tmpDir)
+	cmdSlice, err := writeJolietCommand(ctx, isoPath, label, tmpDir)
 	if err != nil {
 		return err
 	}
@@ -54,18 +56,32 @@ func writeJoliet(isoPath, label string, layout []Entry) error {
 	return nil
 }
 
-func writeJolietCommand(isoPath, label, workDir string) ([]string, error) {
+func writeJolietCommand(ctx context.Context, isoPath, label, workDir string) ([]string, error) {
 	if runtime.GOOS == "darwin" {
 		return []string{"hdiutil", "makehybrid", "-o", isoPath, "-iso", "-joliet", "-default-volume-name", label, workDir}, nil
 	}
+
 	candidates := []string{"xorrisofs", "genisoimage", "mkisofs"}
 	for _, cmd := range candidates {
-		if cmdAbs, err := exec.LookPath(cmd); err == nil {
-			if cmd == "xorrisofs" {
-				return []string{cmdAbs, "-o", isoPath, "--norock", "-J", "-V", label, workDir}, nil
-			}
-			return []string{cmdAbs, "-o", isoPath, "-J", "-V", label, workDir}, nil
+		cmdAbs, err := exec.LookPath(cmd)
+		if err != nil {
+			continue
 		}
+
+		isoPathForTool, err := sshutil.PathForTool(ctx, cmdAbs, isoPath)
+		if err != nil {
+			return nil, err
+		}
+
+		workDirForTool, err := sshutil.PathForTool(ctx, cmdAbs, workDir)
+		if err != nil {
+			return nil, err
+		}
+
+		if cmd == "xorrisofs" {
+			return []string{cmdAbs, "-o", isoPathForTool, "--norock", "-J", "-V", label, workDirForTool}, nil
+		}
+		return []string{cmdAbs, "-o", isoPathForTool, "-J", "-V", label, workDirForTool}, nil
 	}
 	return nil, fmt.Errorf("none of %v is available", candidates)
 }
