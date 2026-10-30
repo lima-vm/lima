@@ -8,3 +8,7 @@ package fsutil
 func IsNFS(string) (bool, error) {
 	return false, nil
 }
+
+func DisableCopyOnWrite(string) error {
+	return nil
+}
