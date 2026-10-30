@@ -237,6 +237,19 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			return nil, err
 		}
 	}
+	diskPath, err := flags.GetString("disk-path")
+	if err != nil {
+		return nil, err
+	}
+	if diskPath != "" {
+		logrus.Warn("`--disk-path` is experimental")
+		// The path has to be absolute, because it is stored as the symlink
+		// target of the instance disk.
+		diskPath, err = filepath.Abs(diskPath)
+		if err != nil {
+			return nil, err
+		}
+	}
 	if isTemplateURL, templateName := limatmpl.SeemsTemplateURL(arg); isTemplateURL {
 		switch templateName {
 		case "experimental/vz":
@@ -297,6 +310,9 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 				return nil, fmt.Errorf("instance %#q already exists", tmpl.Name)
 			}
 			logrus.Infof("Using the existing instance %#q", tmpl.Name)
+			if diskPath != "" {
+				return nil, fmt.Errorf("`--disk-path` can only be set when the instance is created, but the instance %#q already exists", tmpl.Name)
+			}
 			yqExprs, err := editflags.YQExpressions(flags, false, inst.Config.Param)
 			if err != nil {
 				return nil, err
@@ -364,7 +380,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 		}
 	}
 	saveBrokenYAML := tty
-	return instance.Create(ctx, tmpl.Name, tmpl.Bytes, saveBrokenYAML)
+	return instance.Create(ctx, tmpl.Name, diskPath, tmpl.Bytes, saveBrokenYAML)
 }
 
 func applyYQExpressionToExistingInstance(ctx context.Context, inst *limatype.Instance, yq string) (*limatype.Instance, error) {

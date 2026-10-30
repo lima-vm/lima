@@ -9,7 +9,10 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
+	"syscall"
 
+	contfs "github.com/containerd/continuity/fs"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/lima-vm/go-qcow2reader/image/vhdx"
@@ -58,12 +61,98 @@ func MigrateDiskLayout(instDir string) error {
 	return nil
 }
 
+// EnsureDiskSymlink makes the VM disk live at diskPath instead of the instance
+// directory, by creating the symlink <instDir>/disk -> diskPath.
+// The symlink is created before the disk file exists; the disk file is created
+// later through the symlink (see osutil.ResolveSymlink).
+// It is a NOP when diskPath is empty.
+func EnsureDiskSymlink(instDir, diskPath string) error {
+	if diskPath == "" {
+		return nil
+	}
+
+	instDiskPath := filepath.Join(instDir, filenames.Disk)
+	realDiskPath, err := filepath.Abs(diskPath)
+	if err != nil {
+		return err
+	}
+	absInstDir, err := filepath.Abs(instDir)
+	if err != nil {
+		return err
+	}
+	// A disk inside the instance directory would make the symlink point to
+	// itself, and the disk would be removed together with the instance.
+	if rel, err := filepath.Rel(absInstDir, realDiskPath); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(os.PathSeparator)) {
+		return fmt.Errorf("disk path %#q must be outside of the instance directory %#q", diskPath, instDir)
+	}
+	// The disk path has to be a file, not an existing directory.
+	if fi, err := os.Stat(realDiskPath); err == nil && fi.IsDir() {
+		return fmt.Errorf("disk path %#q is a directory", realDiskPath)
+	} else if err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+
+	if osutil.IsSymlink(instDiskPath) {
+		target, err := os.Readlink(instDiskPath)
+		if err != nil {
+			return fmt.Errorf("failed to read symlink %#q: %w", instDiskPath, err)
+		}
+		if !filepath.IsAbs(target) {
+			target = filepath.Join(instDir, target)
+		}
+		if filepath.Clean(target) != filepath.Clean(realDiskPath) {
+			return fmt.Errorf("%#q already points to %#q instead of %#q", instDiskPath, target, realDiskPath)
+		}
+		return nil
+	}
+	if _, err := os.Lstat(instDiskPath); err == nil {
+		return fmt.Errorf("%#q already exists and is not a symlink", instDiskPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	// Refuse to reuse an existing disk file, otherwise two instances would
+	// share the same disk.
+	if _, err := os.Lstat(realDiskPath); err == nil {
+		return fmt.Errorf("disk file %#q already exists", realDiskPath)
+	} else if !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(realDiskPath), 0o700); err != nil {
+		return err
+	}
+	logrus.Infof("Creating symlink %#q -> %#q", instDiskPath, realDiskPath)
+	if err := os.Symlink(realDiskPath, instDiskPath); err != nil {
+		return fmt.Errorf("failed to symlink %#q to %#q: %w", instDiskPath, realDiskPath, err)
+	}
+	return nil
+}
+
+// MoveFile renames src to dst, and falls back to copying the file when src and
+// dst are on different filesystems (EXDEV).
+func MoveFile(src, dst string) error {
+	if err := os.Rename(src, dst); err != nil {
+		if !errors.Is(err, syscall.EXDEV) {
+			return fmt.Errorf("failed to rename %#q to %#q: %w", src, dst, err)
+		}
+		logrus.Infof("Copying %#q to %#q instead of renaming it: %v", src, dst, err)
+		if err := contfs.CopyFile(dst, src); err != nil {
+			return fmt.Errorf("failed to copy %#q into %#q: %w", src, dst, err)
+		}
+		if err := os.Remove(src); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // EnsureDisk creates the VM disk from the downloaded image.
 // For ISO images, it renames the image to "iso" and creates an empty disk.
 // For non-ISO images, it converts the image to "disk" and removes the original.
 func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat image.Type) error {
-	diskPath := filepath.Join(instDir, filenames.Disk)
-	if _, err := os.Stat(diskPath); err == nil || !errors.Is(err, os.ErrNotExist) {
+	dPath := filepath.Join(instDir, filenames.Disk)
+	// The disk may be a symlink to a file outside of the instance directory
+	diskPath := osutil.ResolveSymlink(dPath)
+	if _, err := os.Stat(dPath); err == nil || !errors.Is(err, os.ErrNotExist) {
 		return err
 	}
 
@@ -109,8 +198,8 @@ func EnsureDisk(ctx context.Context, instDir, diskSize string, diskImageFormat i
 			if diskImageFormat == vhdx.Type {
 				logrus.Warnf("Disk size %#q is not applied to %#q: a %s image keeps the virtual size it was built with", diskSize, diskPath, diskImageFormat)
 			}
-			if err = os.Rename(imagePath, diskPath); err != nil {
-				return fmt.Errorf("failed to rename %#q to %#q: %w", imagePath, diskPath, err)
+			if err = MoveFile(imagePath, diskPath); err != nil {
+				return err
 			}
 			if err := os.Chmod(diskPath, 0o644); err != nil {
 				return fmt.Errorf("failed to chmod %#q: %w", diskPath, err)

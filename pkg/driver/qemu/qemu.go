@@ -31,6 +31,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/driverutil"
 	"github.com/lima-vm/lima/v2/pkg/fileutils"
 	"github.com/lima-vm/lima/v2/pkg/iso9660util"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -140,7 +141,10 @@ func EnsureDisk(ctx context.Context, cfg Config) error {
 			return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)
 		}
 	} else {
-		if err = os.Rename(imagePath, diskPath); err != nil {
+		realDiskPath := osutil.ResolveSymlink(diskPath)
+		// The disk may be a symlink to a file outside of the instance directory,
+		// so move the image to the resolved path instead of replacing the symlink.
+		if err = driverutil.MoveFile(imagePath, realDiskPath); err != nil {
 			return err
 		}
 	}

@@ -27,6 +27,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/imgutil/nativeimgutil/asifutil"
+	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/progressbar"
 )
 
@@ -48,6 +49,11 @@ func roundUp(size int64) int64 {
 // source and dest may be same.
 // convertTo is a NOP if source == dest, and no resizing is needed.
 func convertTo(destType image.Type, source, dest string, size *int64, allowSourceWithBackingFile bool) error {
+	// Replace a symlinked source/dest with its target, so that the tmp file is
+	// created next to the target and the rename below replaces the target file
+	// instead of the symlink itself.
+	source = osutil.ResolveSymlink(source)
+	dest = osutil.ResolveSymlink(dest)
 	srcF, err := os.Open(source)
 	if err != nil {
 		return err
