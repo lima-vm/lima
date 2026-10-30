@@ -55,6 +55,7 @@ const (
 	SerialVirtioSock        = "serialv.sock"
 	SSHSock                 = "ssh.sock"
 	SSHConfig               = "ssh.config"
+	SSHKnownHosts           = "ssh.known_hosts" // pins the SSH host key presented by the guest on the first boot
 	VhostSock               = "virtiofsd-%d.sock"
 	VZBlockDeviceSock       = "vz-block-device.%d.sock"
 	VNCDisplayFile          = "vncdisplay"

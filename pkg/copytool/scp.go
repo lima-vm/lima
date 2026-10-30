@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os/exec"
 	"path/filepath"
+	"slices"
 
 	"github.com/coreos/go-semver/semver"
 
@@ -131,6 +132,20 @@ func (t *scpTool) Command(ctx context.Context, paths []string, opts *Options) (*
 		if err != nil {
 			return nil, err
 		}
+		instDirs := make([]string, 0, len(instances))
+		for _, inst := range instances {
+			// The keys are looked up by the address and the port, which an older version of the host agent does not update.
+			if err := sshutil.RefreshKnownHostsFile(inst.Dir, inst.Name, inst.SSHAddress, inst.SSHLocalPort); err != nil {
+				return nil, err
+			}
+			instDirs = append(instDirs, inst.Dir)
+		}
+		slices.Sort(instDirs)
+		hostKeyOpts, err := sshutil.HostKeyOpts(ctx, t.toolPath, instDirs...)
+		if err != nil {
+			return nil, err
+		}
+		sshOpts = append(sshOpts, hostKeyOpts...)
 	}
 	sshArgs := sshutil.SSHArgsFromOpts(sshOpts)
 

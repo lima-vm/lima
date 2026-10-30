@@ -10,6 +10,12 @@ weight: 20
 - The `SnapshotManager.ListSnapshots()` method now returns structured snapshot metadata instead of raw text.
   `ApplySnapshot()` and `DeleteSnapshot()` now identify snapshots by ID instead of tag. External drivers must
   update their snapshot implementations and regenerate their protobuf bindings.
+- The SSH host key of the guest is now verified. Lima pins the `ssh-ed25519` host key that the guest presents
+  on the first boot in `~/.lima/<instance>/ssh.known_hosts`, and verifies the key on the later boots.
+  The guest must keep its host key across reboots; for cloud-init, Lima writes `ssh_deletekeys: false` into
+  `/etc/cloud/cloud.cfg.d/99_lima_ssh_keep_host_keys.cfg` in the guest.
+  For an instance created with an older version of Lima, the key is pinned on the first boot with this version.
+  See also [SSH]({{< ref "/docs/usage/ssh" >}}).
 
 ## v2.2.0
 - The default [`socket_vmnet` group]({{< ref "/docs/config/network/vmnet" >}}) in `networks.yaml` was changed from `everyone` to

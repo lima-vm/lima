@@ -69,7 +69,10 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 		})
 	retryLoop:
 		for j := range retries {
-			err := fn(req)
+			err := a.pinSSHHostKey(ctx)
+			if err == nil {
+				err = fn(req)
+			}
 			if err == nil {
 				a.emitRequirementProgress(ctx, &events.RequirementProgress{
 					Step:        stepNum,
@@ -157,6 +160,26 @@ func prefixExportParam(script string, guestOS *limatype.OS) (string, error) {
 	interpreter = strings.ReplaceAll(interpreter, "'", `'"'"'`)
 	exportParam = strings.ReplaceAll(exportParam, "'", `'"'"'`)
 	return fmt.Sprintf("#!/bin/bash -c \"$(printf '%s%s')\"\n%s", exportParam, interpreter, script), nil
+}
+
+// pinSSHHostKey pins the SSH host key that the guest presents on the first boot after creating the instance,
+// and verifies the key on the later boots, before executing ssh with StrictHostKeyChecking=yes.
+func (a *HostAgent) pinSSHHostKey(ctx context.Context) error {
+	if a.sshHostKeyPinned {
+		return nil
+	}
+	sshAddress, sshPort := a.sshAddressPort()
+	if err := sshutil.PinHostKey(ctx, a.instDir, a.instName, sshAddress, sshPort); err != nil {
+		// The error is retried like other errors, as the guest might be still setting up the host keys,
+		// but it has to be visible to the user before the retries time out.
+		if errors.Is(err, sshutil.ErrHostKeyMismatch) && !a.sshHostKeyMismatchWarned {
+			logrus.Warn(err)
+			a.sshHostKeyMismatchWarned = true
+		}
+		return err
+	}
+	a.sshHostKeyPinned = true
+	return nil
 }
 
 func (a *HostAgent) bashAvailable() bool {

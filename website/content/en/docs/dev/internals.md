@@ -89,6 +89,8 @@ Serial:
 SSH:
 - `ssh.sock`: SSH control master socket
 - `ssh.config`: SSH config file for `ssh -F`. Not consumed by Lima itself.
+- `ssh.known_hosts`: SSH known hosts file that pins the SSH host key (ed25519) presented by the guest on the first boot,
+  for `lima-<INSTANCE>` and `[<ADDRESS>]:<PORT>`
 
 VNC:
 - `vncdisplay`: VNC display host/port
