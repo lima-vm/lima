@@ -13,6 +13,8 @@ import (
 	"runtime"
 
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 )
 
 func writeJoliet(isoPath, label string, layout []Entry) error {
@@ -57,6 +59,24 @@ func writeJoliet(isoPath, label string, layout []Entry) error {
 func writeJolietCommand(isoPath, label, workDir string) ([]string, error) {
 	if runtime.GOOS == "darwin" {
 		return []string{"hdiutil", "makehybrid", "-o", isoPath, "-iso", "-joliet", "-default-volume-name", label, workDir}, nil
+	}
+
+	if runtime.GOOS == "windows" {
+		cygwinPath, err := exec.LookPath("cygpath")
+		if err != nil {
+			return nil, err
+		}
+
+		ctx := context.TODO()
+		isoPath, err = fsutil.WindowsSubsystemPathWithCygpath(ctx, cygwinPath, isoPath)
+		if err != nil {
+			return nil, err
+		}
+
+		workDir, err = fsutil.WindowsSubsystemPathWithCygpath(ctx, cygwinPath, workDir)
+		if err != nil {
+			return nil, err
+		}
 	}
 	candidates := []string{"xorrisofs", "genisoimage", "mkisofs"}
 	for _, cmd := range candidates {
