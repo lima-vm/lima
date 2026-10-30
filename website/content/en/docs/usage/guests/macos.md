@@ -120,7 +120,7 @@ target OS release if needed.
 - No support for turning off the video display.
 - No support for automatic port forwarding.
   Use `ssh -L` to manually set up port forwarding, or,
-  use the [`vzNAT`]({{< ref "/docs/config/network/vmnet#vznat" >}}) network to access the guest by its IP.
+  use the [`vzNAT`]({{< ref "/docs/config/network/vznat" >}}) network to access the guest by its IP.
 - No support for installing custom `caCerts`
 
 ## Plain mode
