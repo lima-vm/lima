@@ -8,6 +8,8 @@ import (
 	"time"
 
 	"github.com/sirupsen/logrus"
+
+	guestagentapi "github.com/lima-vm/lima/v2/pkg/guestagent/api"
 )
 
 const (
@@ -32,7 +34,9 @@ func (a *HostAgent) startTimeSync(ctx context.Context) {
 	ticker := time.NewTicker(timeSyncInterval)
 	defer ticker.Stop()
 
-	a.syncTimeOnce(ctx)
+	// prev and last are the two most recent successful round trips.
+	var prev, last time.Duration
+	prev, last = a.syncTimeOnce(ctx, prev, last)
 
 	for {
 		select {
@@ -40,28 +44,42 @@ func (a *HostAgent) startTimeSync(ctx context.Context) {
 			logrus.Debug("Time sync: context cancelled, stopping")
 			return
 		case <-ticker.C:
-			a.syncTimeOnce(ctx)
+			prev, last = a.syncTimeOnce(ctx, prev, last)
 		}
 	}
 }
 
-func (a *HostAgent) syncTimeOnce(ctx context.Context) {
+func (a *HostAgent) syncTimeOnce(ctx context.Context, prev, last time.Duration) (prevRTT, lastRTT time.Duration) {
 	client, err := a.getOrCreateClient(ctx)
 	if err != nil {
 		logrus.WithError(err).Debug("Time sync: failed to get client")
-		return
+		return prev, last
 	}
+	return syncGuestClock(ctx, client.SyncTime, prev, last, time.Now)
+}
 
-	hostTime := time.Now()
-	resp, err := client.SyncTime(ctx, hostTime)
+// syncGuestClock sends the predicted guest receipt time and shifts the RTT window
+// after SyncTime returns a nil error. An RPC error leaves the window unchanged.
+func syncGuestClock(ctx context.Context, doSync func(context.Context, time.Time) (*guestagentapi.TimeSyncResponse, error), prevIn, lastIn time.Duration, now func() time.Time) (prev, last time.Duration) {
+	prev, last = prevIn, lastIn
+	sentAt := now()
+	// host_time is the predicted receipt time (issue 5543).
+	// The delay comes from earlier round trips. Capping it at the guest's
+	// threshold stops an overestimate from stepping the guest ahead of the host.
+	delay := min(oneWayDelay(prev, last), guestagentapi.TimeSyncDriftThreshold)
+	hostTime := compensatedHostTime(sentAt, delay)
+	resp, err := doSync(ctx, hostTime)
 	if err != nil {
 		logrus.WithError(err).Debug("Time sync: RPC failed")
-		return
+		return prev, last
 	}
+
+	// A response Error string still counts: the round trip completed.
+	prev, last = last, now().Sub(sentAt)
 
 	if resp.Error != "" {
 		logrus.Warnf("Time sync: guest failed to set time: %#q (drift was %dms)", resp.Error, resp.DriftMs)
-		return
+		return prev, last
 	}
 
 	if resp.Adjusted {
@@ -69,4 +87,20 @@ func (a *HostAgent) syncTimeOnce(ctx context.Context) {
 	} else {
 		logrus.Debugf("Time sync: drift %dms within threshold", resp.DriftMs)
 	}
+	return prev, last
+}
+
+// oneWayDelay estimates host-to-guest delay as half the lesser of the two most
+// recent round trips. It is 0 until both samples are positive, so a single
+// slow round trip, the first one included, cannot aim the next tick ahead.
+func oneWayDelay(prev, last time.Duration) time.Duration {
+	if prev <= 0 || last <= 0 {
+		return 0
+	}
+	return min(prev, last) / 2
+}
+
+// compensatedHostTime is the predicted guest receipt time sent as host_time.
+func compensatedHostTime(sentAt time.Time, delay time.Duration) time.Time {
+	return sentAt.Add(delay)
 }
