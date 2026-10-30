@@ -49,6 +49,8 @@ type State struct {
 	header  *tview.TextView
 	panel   *tview.Flex
 	flex    *tview.Flex
+	// status is the status line shown above the footer until a key is pressed.
+	status *tview.TextView
 	// createView is the root of the create form, restored after an error message.
 	createView *tview.Flex
 }
@@ -93,8 +95,13 @@ func (s *State) run() error {
 		SetDynamicColors(true).
 		SetText(" [::r]F1[::-] Help  [::r]F2[::-] Start/Stop  [::r]F3[::-] Info  [::r]F5[::-] Refresh  [::r]F7[::-] Create  [::r]F8[::-] Delete  [::r]F10[::-] Quit")
 
+	s.status = tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(" Press [::b]F1[::-], [::b]?[::-], or [::b]h[::-] to show the usage")
+
 	s.flex = tview.NewFlex().SetDirection(tview.FlexRow).
 		AddItem(s.panel, 0, 1, true).
+		AddItem(s.status, 1, 1, false).
 		AddItem(footer, 1, 1, false)
 
 	s.app.SetRoot(s.flex, true).SetFocus(s.list)
@@ -226,6 +233,11 @@ func (s *State) handleListInput(e *tcell.EventKey) *tcell.EventKey {
 }
 
 func (s *State) handleGlobalKey(e *tcell.EventKey) *tcell.EventKey {
+	if s.status != nil {
+		s.flex.RemoveItem(s.status)
+		s.status = nil
+	}
+
 	switch e.Key() {
 	case tcell.KeyCtrlC, tcell.KeyF10:
 		s.app.Stop()
@@ -302,7 +314,7 @@ func (s *State) toggleStartStop(in *limatype.Instance) {
 func (s *State) showHelp() {
 	help := `[green]Keybindings:[-]
 
-  [green]F1[-] / [green]?[-]       Help (this screen)
+  [green]F1[-] / [green]?[-] / [green]h[-]   Help (this screen)
   [green]F2[-] / [green]S[-]       Start / Stop toggle
   [green]F3[-] / [green]i[-]       Show instance info
   [green]F5[-]           Refresh instance list
@@ -310,10 +322,39 @@ func (s *State) showHelp() {
   [green]F8[-] / [green]d[-]       Delete instance
   [green]F10[-] / [green]q[-]      Quit
 
-  [green]Enter[-] / [green]h[-]    Open actions menu
+  [green]Enter[-]        Open actions menu
   [green]s[-]            Shell into instance
   [green]r[-]            Restart instance`
-	s.showTextView(" Help ", help)
+	tv := tview.NewTextView().
+		SetDynamicColors(true).
+		SetText(help)
+	buttons := newFormStyled().
+		AddButton("Show limactl --help", s.showUsage).
+		AddButton("Cancel", s.backToList).
+		SetCancelFunc(s.backToList)
+	buttons.SetBorderPadding(0, 0, 0, 0)
+	buttons.SetInputCapture(func(e *tcell.EventKey) *tcell.EventKey {
+		return formArrowKey(buttons, e)
+	})
+	view := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(tv, 0, 1, false).
+		AddItem(buttons, 1, 0, true)
+	view.SetBorder(true).
+		SetBorderColor(cBord).
+		SetTitle(" Help ").
+		SetTitleAlign(tview.AlignLeft).
+		SetTitleColor(cPrim).
+		SetBorderPadding(1, 1, 1, 1)
+	s.app.SetRoot(view, true).SetFocus(buttons)
+}
+
+func (s *State) showUsage() {
+	out, err := exec.CommandContext(s.ctx, s.limactl, "--help").CombinedOutput()
+	if err != nil {
+		s.showTextView(" Error ", "Failed to get the usage: "+tview.Escape(err.Error()))
+		return
+	}
+	s.showTextView(" limactl --help ", tview.Escape(string(out)))
 }
 
 func (s *State) refreshList() {
