@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -239,7 +240,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	// When workDir is explicitly set, the shell MUST have workDir as the cwd, or exit with an error.
 	//
 	// changeDirCmd := "cd workDir || exit 1"                  if workDir != ""
-	//              := "cd hostCurrentDir || cd hostHomeDir"   if workDir == ""
+	//              := "cd guestCurrentDir || cd guestHomeDir" if workDir == ""
 	var changeDirCmd string
 	// hostCurrentDirNative is the path as the host sees it. hostCurrentDir is the
 	// form the guest and the copy tool receive, which on Windows differs.
@@ -296,27 +297,35 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if syncHostWorkdir {
 		destRsyncDir = *inst.Config.User.Home + hostCurrentDir
 	}
-	hostHomeDir, err := os.UserHomeDir()
+	hostHomeDirNative, err := os.UserHomeDir()
+	hostHomeDir := hostHomeDirNative
 	if err == nil && runtime.GOOS == "windows" {
-		hostHomeDir, err = mountDirFromWindowsDir(ctx, inst, hostHomeDir)
+		hostHomeDir, err = mountDirFromWindowsDir(ctx, inst, hostHomeDirNative)
 	}
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get the home directory")
 		hostHomeDir = ""
 	}
 
+	guestCurrentDir := mountedGuestPath(inst.Config.Mounts, hostCurrentDirNative)
+	guestHomeDir := mountedGuestPath(inst.Config.Mounts, hostHomeDirNative)
+	if inst.VMType == limatype.WSL2 {
+		// The /mnt automount exposes every host directory to a wsl2 guest.
+		guestCurrentDir, guestHomeDir = hostCurrentDir, hostHomeDir
+	}
+
 	switch {
 	case workDir != "":
 		changeDirCmd = fmt.Sprintf("cd %s || exit 1", shellescape.Quote(workDir))
-	case mountsContainPath(inst.Config.Mounts, hostCurrentDir) || inst.VMType == limatype.WSL2:
-		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostCurrentDir))
-		if hostHomeDir != "" {
-			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(hostHomeDir))
+	case guestCurrentDir != "":
+		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(guestCurrentDir))
+		if guestHomeDir != "" {
+			changeDirCmd = fmt.Sprintf("%s || cd %s", changeDirCmd, shellescape.Quote(guestHomeDir))
 		}
 	case syncHostWorkdir:
 		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(destRsyncDir))
-	case hostHomeDir != "" && mountsContainPath(inst.Config.Mounts, hostHomeDir):
-		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(hostHomeDir))
+	case guestHomeDir != "":
+		changeDirCmd = fmt.Sprintf("cd %s", shellescape.Quote(guestHomeDir))
 	default:
 		logrus.Debug("the host home does not seem mounted, so the guest shell will have a different cwd")
 	}
@@ -778,10 +787,12 @@ func lessHasRawColorFlag(flags []string) bool {
 	return false
 }
 
-func mountsContainPath(mounts []limatype.Mount, path string) bool {
-	resolvedPath, err := filepath.EvalSymlinks(path)
+// mountedGuestPath returns the guest path of hostPath under the first mount
+// that contains it, or "" when no mount contains it.
+func mountedGuestPath(mounts []limatype.Mount, hostPath string) string {
+	resolvedPath, err := filepath.EvalSymlinks(hostPath)
 	if err != nil {
-		resolvedPath = path
+		resolvedPath = hostPath
 	}
 	for _, m := range mounts {
 		loc, err := localpathutil.Expand(m.Location)
@@ -792,12 +803,13 @@ func mountsContainPath(mounts []limatype.Mount, path string) bool {
 		if err != nil {
 			resolvedLoc = loc
 		}
-		if resolvedPath == resolvedLoc ||
-			resolvedLoc == string(os.PathSeparator) || strings.HasPrefix(resolvedPath, resolvedLoc+string(os.PathSeparator)) {
-			return true
+		rel, err := filepath.Rel(resolvedLoc, resolvedPath)
+		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
+			continue
 		}
+		return path.Join(*m.MountPoint, filepath.ToSlash(rel))
 	}
-	return false
+	return ""
 }
 
 func executeSSHForRsync(ctx context.Context, sshCmd exec.Cmd, sshLocalPort int, sshAddress, command string) error {
