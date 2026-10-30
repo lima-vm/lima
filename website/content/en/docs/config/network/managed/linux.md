@@ -1,7 +1,8 @@
 ---
-title: Managed networks on Linux
-weight: 34
-
+title: Managed networks (Linux)
+weight: 20
+aliases:
+  - /docs/config/network/linux/
 ---
 
 | ⚡ Requirement    | Lima >= 2.3, Linux |
@@ -13,7 +14,7 @@ weight: 34
 
 On Linux hosts, the `shared`, `host` and `bridged` networks defined in
 `$LIMA_HOME/_config/networks.yaml` assign a "real" IP address that is reachable
-from the host, in the same way [socket_vmnet]({{< ref "/docs/config/network/vmnet" >}})
+from the host, in the same way [socket_vmnet]({{< ref "/docs/config/network/managed/macos" >}})
 does on macOS.
 
 They are managed by `lima-privileged-net`, a privileged helper that ships with

@@ -88,7 +88,8 @@ limactl start --network vzNAT
 lima ip addr show lima0
 ```
 
-See [Config » Network » VMNet networks]({{< ref "/docs/config/network/vmnet" >}}) for the further information.
+See [Config » Network » vzNAT network]({{< ref "/docs/config/network/vznat" >}}) and
+[Config » Network » Managed networks]({{< ref "/docs/config/network/managed" >}}) for the further information.
 
 ## Benchmarks
 

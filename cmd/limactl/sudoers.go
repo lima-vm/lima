@@ -11,7 +11,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/networks"
 )
 
-const socketVMNetURL = "https://lima-vm.io/docs/config/network/vmnet/#socket_vmnet"
+const socketVMNetURL = "https://lima-vm.io/docs/config/network/managed/macos/#socket_vmnet"
 
 // newSudoersCommand is compiled on every host, as `make docsy` depends on the
 // help message; the action is only implemented on macOS and Linux.

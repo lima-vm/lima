@@ -12,7 +12,7 @@ weight: 20
   update their snapshot implementations and regenerate their protobuf bindings.
 
 ## v2.2.0
-- The default [`socket_vmnet` group]({{< ref "/docs/config/network/vmnet" >}}) in `networks.yaml` was changed from `everyone` to
+- The default [`socket_vmnet` group]({{< ref "/docs/config/network/managed/macos" >}}) in `networks.yaml` was changed from `everyone` to
   `admin`. A non-admin user must set `group` to a group they belong to (e.g. `staff`).
 - The default VM driver on Windows hosts was changed from `wsl2` to `qemu`,
   as `wsl2` is not compatible with most templates.
