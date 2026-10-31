@@ -38,6 +38,7 @@ func Reconcile(ctx context.Context, newInst string) error {
 		return err
 	}
 	activeNetwork := make(map[string][]string, 3)
+	newInstNetwork := make(map[string]bool)
 	skippedInstance := false
 	for _, instName := range instances {
 		instance, err := store.Inspect(ctx, instName)
@@ -62,13 +63,16 @@ func Reconcile(ctx context.Context, newInst string) error {
 				continue
 			}
 			activeNetwork[nw.Lima] = append(activeNetwork[nw.Lima], instance.Dir)
+			if instName == newInst {
+				newInstNetwork[nw.Lima] = true
+			}
 		}
 	}
 	for name := range cfg.Networks {
 		var err error
 		switch {
 		case len(activeNetwork[name]) > 0:
-			err = startNetwork(ctx, &cfg, name, activeNetwork[name])
+			err = startNetwork(ctx, &cfg, name, activeNetwork[name], newInstNetwork[name])
 		case skippedInstance:
 			logrus.Debugf("Not stopping network %#q: an instance could not be inspected", name)
 		default:
@@ -195,7 +199,7 @@ func validateConfig(ctx context.Context, cfg *networks.Config) error {
 	return validation.err
 }
 
-func startNetwork(ctx context.Context, cfg *networks.Config, name string, instDirs []string) error {
+func startNetwork(ctx context.Context, cfg *networks.Config, name string, instDirs []string, usedByNewInst bool) error {
 	logrus.Debugf("Make sure %#q network is running", name)
 
 	// Handle usernet first without sudo requirements
@@ -204,7 +208,20 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string, instDi
 		return err
 	}
 	if isUsernet {
+		external, err := cfg.External(name)
+		if err != nil {
+			return err
+		}
+		if external && !usedByNewInst {
+			// Lima cannot start an external daemon, so there is nothing to do for the instances that are
+			// already running. Only the instance that is about to be started should fail when it is down.
+			return nil
+		}
+		// usernet.Start only checks that an external daemon is running, and its error already names the network
 		if err := usernet.Start(ctx, name); err != nil {
+			if external {
+				return err
+			}
 			return fmt.Errorf("failed to start usernet %#q: %w", name, err)
 		}
 		return nil

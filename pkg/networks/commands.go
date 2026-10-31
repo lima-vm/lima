@@ -76,6 +76,14 @@ func (c *Config) Usernet(name string) (bool, error) {
 	return false, fmt.Errorf("network %#q is not defined", name)
 }
 
+// External returns true if the daemon of given network is not started or stopped by Lima.
+func (c *Config) External(name string) (bool, error) {
+	if nw, ok := c.Networks[name]; ok {
+		return nw.External, nil
+	}
+	return false, fmt.Errorf("network %#q is not defined", name)
+}
+
 // DaemonPath returns the daemon path.
 func (c *Config) DaemonPath(daemon string) (string, error) {
 	switch daemon {

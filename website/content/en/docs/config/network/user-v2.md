@@ -83,3 +83,32 @@ then navigate to `http://lima-default.internal`.
 > **Note**
 >
 > `limactl tunnel` is experimental.
+
+## External daemon
+
+| ⚡ Requirement | Lima >= 2.4 |
+|-------------------|-------------|
+
+> **Warning**
+> `external: true` is [experimental]({{< ref "/docs/releases/experimental" >}}).
+
+By default, the daemon of a user-v2 network is started by Lima with the first instance that uses the network,
+and stopped with the last one.
+
+To use a daemon that is not controlled by Lima, e.g., to filter the traffic of the guests,
+set `external: true` in `networks.yaml`:
+
+```yaml
+networks:
+  filtered:
+    mode: user-v2
+    external: true
+    # Must match the subnet of the external daemon
+    gateway: 192.168.110.1
+    netmask: 255.255.255.0
+```
+
+Like for [unmanaged networks]({{< ref "/docs/config/network/unmanaged" >}}), the daemon must be started before the instance.
+Lima never starts or stops the daemon, and an instance fails to start when the daemon is not running.
+
+The daemon has to provide the same sockets as the daemon of Lima in `$LIMA_HOME/_networks/<NETWORK>/`.

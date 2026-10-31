@@ -15,6 +15,7 @@ The following features are experimental and subject to change:
 - `mountInotify: true`
 - `tpm: true`
 - `user.passwordlessSudo: false` (See [Sudo]({{< ref "/docs/config/sudo" >}}))
+- `external: true` in `networks.yaml` (See [user-v2 network]({{< ref "/docs/config/network/user-v2#external-daemon" >}}))
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}))
 - [`vmType: krunkit`]({{< ref "/docs/config/vmtype/krunkit" >}})
 - [`vmType:hcs`]({{< ref "/docs/config/vmtype/hcs" >}})

@@ -112,6 +112,27 @@ func fillDefaults(cfg Config) (Config, error) {
 	return cfg, nil
 }
 
+// validateExternal validates the networks with `external: true`. loadCache applies it to
+// every configuration before fillDefaults, so unlike Validate() it must not depend on the
+// filesystem.
+func (c *Config) validateExternal() error {
+	for name, nw := range c.Networks {
+		if !nw.External {
+			continue
+		}
+		if nw.Mode != ModeUserV2 {
+			return fmt.Errorf("network %#q: `external` is only supported for mode %#q, not %#q", name, ModeUserV2, nw.Mode)
+		}
+		// fillDefaults overwrites the "user-v2" network with the default one when no
+		// user-v2 network has a gateway, which would silently drop `external`. The
+		// guest is also configured from the gateway, so it has to match the daemon.
+		if nw.Gateway == nil {
+			return fmt.Errorf("network %#q: `external` requires `gateway` to be set to the gateway of the external daemon", name)
+		}
+	}
+	return nil
+}
+
 func DefaultConfig() (Config, error) {
 	var cfg Config
 	b, err := defaultConfigBytes()
@@ -183,6 +204,10 @@ func loadCache() {
 			// Allow non-existing YAML fields, as a cfg created with Lima < v0.22 contains `vdeSwitch` and `vdeVMNet`.
 			// These fields were removed in Lima v0.22.
 			logrus.WithError(strictErr).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima: " + cfgFile)
+		}
+		if cache.err = cache.cfg.validateExternal(); cache.err != nil {
+			cache.err = fmt.Errorf("invalid %#q: %w", cfgFile, cache.err)
+			return
 		}
 		cache.cfg, cache.err = fillDefaults(cache.cfg)
 		if cache.err != nil {
