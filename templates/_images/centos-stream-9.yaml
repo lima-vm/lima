@@ -29,7 +29,3 @@ images:
   arch: ppc64le
 
 mountTypesUnsupported: [9p]
-
-firmware:
-  # CentOS Stream 9 still requires legacyBIOS, while AlmaLinux 9 and Rocky Linux 9 do not.
-  legacyBIOS: true
