@@ -9,6 +9,7 @@
 load "../helpers/load"
 
 SHARED=bats-net-shared
+SHARED2=bats-net-shared2
 HOST=bats-net-host
 
 case "$(uname -s)" in
@@ -24,14 +25,38 @@ esac
 
 local_setup_file() {
     [[ -n ${DAEMON:-} ]] || skip "shared and host networks are only supported on macOS and Linux hosts"
-    ensure_instance "$SHARED"
-    ensure_instance "$HOST"
+    case ${NETWORK_ARM:-} in
+    shared-only)
+        ensure_instance "$SHARED"
+        ;;
+    two-shared)
+        ensure_instance "$SHARED"
+        ensure_instance "$SHARED2"
+        ;;
+    host-first)
+        ensure_instance "$HOST"
+        ensure_instance "$SHARED"
+        ;;
+    *)
+        ensure_instance "$SHARED"
+        ensure_instance "$HOST"
+        ;;
+    esac
 }
 
 local_teardown_file() {
     [[ -n ${DAEMON:-} ]] || return 0
     delete_instance "$SHARED"
+    delete_instance "$SHARED2"
     delete_instance "$HOST"
+}
+
+local_setup() {
+    case ${NETWORK_ARM:-} in
+    shared-only | two-shared)
+        skip "these arms test only setup_file, and the tests need a host instance"
+        ;;
+    esac
 }
 
 linux_only() {
