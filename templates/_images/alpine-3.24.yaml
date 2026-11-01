@@ -1,0 +1,7 @@
+images:
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/alpine-3.24.2-x86_64-cloudinit-r2.qcow2"
+  arch: "x86_64"
+  digest: "sha512:6b9928cea1c6243affb8a9b09eba6046cd090e8bdb7141fbf0c8f2649c4a99d62e12cda289da41f99de82ce2b3e3780772dd594eaee3693cb49691d81cbe5d4b"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.24/releases/cloud/alpine-3.24.2-aarch64-cloudinit-r2.qcow2"
+  arch: "aarch64"
+  digest: "sha512:7ff4944380af149f747101516fa466ac601210caa84c667792220c187695aad24ca4531f397159c449c9e8a2ad76f6a2d9395d7f4d566e59bf925e35b186ba88"
