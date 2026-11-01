@@ -1,7 +1,8 @@
 ---
-title: VMNet networks
-weight: 33
-
+title: Managed networks (macOS)
+weight: 10
+aliases:
+  - /docs/config/network/vmnet/
 ---
 
 | ⚡ Requirement    | macOS |
@@ -10,39 +11,13 @@ weight: 33
 VMNet assigns a "real" IP address that is reachable from the host.
 
 On Linux hosts, the same `shared`, `host` and `bridged` networks are provided by
-[lima-privileged-net]({{< ref "/docs/config/network/linux" >}}) instead.
+[lima-privileged-net]({{< ref "/docs/config/network/managed/linux" >}}) instead.
 
-The configuration steps are different for each network type:
-- [vzNAT](#vznat)
-- [socket\_vmnet](#socket_vmnet)
-  - [Managed (192.168.105.0/24)](#managed-192168105024)
-  - [Unmanaged](#unmanaged)
+For [VZ]({{< ref "/docs/config/vmtype#vz" >}}) instances, the [vzNAT]({{< ref "/docs/config/network/vznat" >}})
+network is easier to set up, as it needs neither `socket_vmnet` nor the `sudoers` file.
 
-## vzNAT
-
-| ⚡ Requirement | Lima >= 0.14, macOS >= 13.0 |
-|-------------------|-----------------------------|
-
-For [VZ]({{< ref "/docs/config/vmtype#vz" >}}) instances, the "vzNAT" network can be configured as follows:
-{{< tabpane text=true >}}
-{{% tab header="CLI" %}}
-```bash
-limactl start --vm-type=vz --network=vzNAT
-```
-{{% /tab %}}
-{{% tab header="YAML" %}}
-```yaml
-networks:
-- vzNAT: true
-```
-{{% /tab %}}
-{{< /tabpane >}}
-
-The range of the IP address is not specifiable.
-
-The "vzNAT" network does not need the `socket_vmnet` binary and the `sudoers` file.
-
-The "vzNAT" network also has a significant advantage in the throughput. See the [benchmark result]({{< ref "/docs/config/port#benchmarks" >}}).
+To connect to a `socket_vmnet` daemon that is not controlled by Lima, see
+[Unmanaged networks]({{< ref "/docs/config/network/unmanaged" >}}).
 
 ## socket_vmnet
 ### Managed (192.168.105.0/24)
@@ -191,15 +166,4 @@ If the IP address is not assigned, try the following commands:
 ```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
-```
-
-### Unmanaged
-Lima can also connect to "unmanaged" networks addressed by "socket". This
-means that the daemons will not be controlled by Lima, but must be started
-before the instance.  The interface type (host, shared, or bridged) is
-configured in `socket_vmnet` and not in lima.
-
-```yaml
-networks:
-  - socket: "/var/run/socket_vmnet"
 ```

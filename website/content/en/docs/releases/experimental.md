@@ -7,7 +7,7 @@ weight: 10
 The following features are experimental and subject to change:
 
 - `mountType: virtiofs` on Linux
-- [`networks: [{lima: ...}]` on Linux]({{< ref "/docs/config/network/linux" >}}) (`shared`, `host`, and `bridged`)
+- [`networks: [{lima: ...}]` on Linux]({{< ref "/docs/config/network/managed/linux" >}}) (`shared`, `host`, and `bridged`)
 - `vmType: wsl2` and relevant configurations (`mountType: wsl2`)
 - `arch`: `riscv64`, `armv7l`, `s390x`, and `ppc64le`
 - `video.display: vnc` and relevant configuration (`video.vnc.display`)
