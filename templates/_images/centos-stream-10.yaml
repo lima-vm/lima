@@ -29,8 +29,3 @@ images:
   arch: ppc64le
 
 mountTypesUnsupported: [9p]
-
-firmware:
-  # CentOS Stream 10 still requires legacyBIOS
-  # https://issues.redhat.com/browse/CS-2672
-  legacyBIOS: true
