@@ -26,8 +26,8 @@ jobs:
       max-parallel: 8
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        # The last key varies fastest, so the arms alternate through the queue.
-        arm: [shared-then-host, shared-only, two-shared, host-first]
+        # two-shared lost the runner in 5 of 8 jobs at the default size (4 CPUs, 4 GiB).
+        arm: [two-shared-small]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -98,4 +98,5 @@ jobs:
     - name: "Run BATS shared/host network tests"
       env:
         NETWORK_ARM: ${{ matrix.arm }}
+        NETWORK_START_ARGS: ${{ matrix.arm == 'two-shared-small' && '--cpus 1 --memory 1' || '' }}
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/network-shared-host.bats

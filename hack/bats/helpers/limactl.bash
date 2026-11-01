@@ -27,12 +27,14 @@ ensure_instance() {
     fi
     limactl unprotect "$instance" || :
     limactl delete --force "$instance" || :
+    # NETWORK_START_ARGS is word-split on purpose, e.g. "--cpus 1 --memory 1".
+    # shellcheck disable=SC2086
     case "$instance" in
         bats)          limactl start --yes --name "$instance" template:default 3>&- 4>&- ;;
         bats-nomount)  limactl start --yes --name "$instance" --mount-none template:default 3>&- 4>&- ;;
         bats-dummy)    create_dummy_instance "$instance" '.disk = "1M"' ;;
-        bats-net-shared | bats-net-shared2) limactl start --yes --name "$instance" --vm-type=qemu --network=lima:shared template:default 3>&- 4>&- ;;
-        bats-net-host)   limactl start --yes --name "$instance" --vm-type=qemu --network=lima:host template:default 3>&- 4>&- ;;
+        bats-net-shared | bats-net-shared2) limactl start --yes --name "$instance" --vm-type=qemu --network=lima:shared ${NETWORK_START_ARGS:-} template:default 3>&- 4>&- ;;
+        bats-net-host)   limactl start --yes --name "$instance" --vm-type=qemu --network=lima:host ${NETWORK_START_ARGS:-} template:default 3>&- 4>&- ;;
         *)
             echo "ensure_instance: unknown instance name '$instance'" >&2
             return 1

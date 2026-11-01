@@ -29,7 +29,7 @@ local_setup_file() {
     shared-only)
         ensure_instance "$SHARED"
         ;;
-    two-shared)
+    two-shared | two-shared-small)
         ensure_instance "$SHARED"
         ensure_instance "$SHARED2"
         ;;
@@ -53,7 +53,7 @@ local_teardown_file() {
 
 local_setup() {
     case ${NETWORK_ARM:-} in
-    shared-only | two-shared)
+    shared-only | two-shared | two-shared-small)
         skip "these arms test only setup_file, and the tests need a host instance"
         ;;
     esac
