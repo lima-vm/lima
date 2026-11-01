@@ -35,6 +35,7 @@ ensure_instance() {
         bats-dummy)    create_dummy_instance "$instance" '.disk = "1M"' ;;
         bats-net-shared | bats-net-shared2) limactl start --yes --name "$instance" --vm-type=qemu --network=lima:shared ${NETWORK_START_ARGS:-} template:default 3>&- 4>&- ;;
         bats-net-host)   limactl start --yes --name "$instance" --vm-type=qemu --network=lima:host ${NETWORK_START_ARGS:-} template:default 3>&- 4>&- ;;
+        bats-net-user | bats-net-user2) limactl start --yes --name "$instance" --vm-type=qemu ${NETWORK_START_ARGS:-} template:default 3>&- 4>&- ;;
         *)
             echo "ensure_instance: unknown instance name '$instance'" >&2
             return 1

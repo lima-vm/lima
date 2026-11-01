@@ -11,6 +11,8 @@ load "../helpers/load"
 SHARED=bats-net-shared
 SHARED2=bats-net-shared2
 HOST=bats-net-host
+USER1=bats-net-user
+USER2=bats-net-user2
 
 case "$(uname -s)" in
 Darwin)
@@ -33,6 +35,10 @@ local_setup_file() {
         ensure_instance "$SHARED"
         ensure_instance "$SHARED2"
         ;;
+    two-user)
+        ensure_instance "$USER1"
+        ensure_instance "$USER2"
+        ;;
     host-first)
         ensure_instance "$HOST"
         ensure_instance "$SHARED"
@@ -49,11 +55,13 @@ local_teardown_file() {
     delete_instance "$SHARED"
     delete_instance "$SHARED2"
     delete_instance "$HOST"
+    delete_instance "$USER1"
+    delete_instance "$USER2"
 }
 
 local_setup() {
     case ${NETWORK_ARM:-} in
-    shared-only | two-shared | two-shared-small)
+    shared-only | two-shared | two-shared-small | two-user)
         skip "these arms test only setup_file, and the tests need a host instance"
         ;;
     esac

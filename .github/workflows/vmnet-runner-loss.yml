@@ -26,8 +26,9 @@ jobs:
       max-parallel: 8
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        # two-shared lost the runner in 5 of 8 jobs at the default size (4 CPUs, 4 GiB).
-        arm: [two-shared-small]
+        # two-shared lost the runner in 5 of 8 jobs at the default size (4 CPUs, 4 GiB),
+        # and in about 4 of 8 at 1 CPU / 1 GiB. two-user drops socket_vmnet.
+        arm: [two-user]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
