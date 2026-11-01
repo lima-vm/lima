@@ -12,10 +12,6 @@ images:
   digest: "sha256:729114abf775e4dcc811b3bb4b0d85647c0db0dc2e4c700f09f59e2aea806533"
 mountTypesUnsupported: [9p]
 
-firmware:
-  # Oracle Linux 8 still requires legacyBIOS, while AlmaLinux 8 and Rocky Linux 8 do not.
-  legacyBIOS: true
-
 vmOpts:
   qemu:
     cpuType:
