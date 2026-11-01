@@ -40,7 +40,8 @@ lima
 - [`experimental/almalinux-kitten-10`](./experimental/almalinux-kitten-10.yaml), `experimental/almalinux-kitten`: AlmaLinux Kitten 10
 - [`alpine-3.21`](./alpine-3.21.yaml): Alpine Linux 3.21
 - [`alpine-3.22`](./alpine-3.22.yaml): Alpine Linux 3.22
-- [`alpine-3.23`](./alpine-3.23.yaml), `alpine`: ☆Alpine Linux 3.23
+- [`alpine-3.23`](./alpine-3.23.yaml): Alpine Linux 3.23
+- [`alpine-3.24`](./alpine-3.24.yaml), `alpine`: ☆Alpine Linux 3.24
 - [`alpine-iso`](./alpine-iso.yaml): ☆Alpine Linux (ISO9660 image). Compatible with the `alpine` template used in Lima prior to v1.0.
 - [`archlinux`](./archlinux.yaml): ☆Arch Linux
 - [`centos-stream-9`](./centos-stream-9.yaml), `centos-stream`: CentOS Stream 9
