@@ -23,7 +23,11 @@ Description:
   This script updates the Alpine Linux image location in the specified templates.
   Image location basename format:
 
-    <target vendor>_alpine-<version>-<arch>-<firmware>-<bootstrap>[-<machine>]-<image revision>.qcow2
+    [<target vendor>_]alpine-<version>-<arch>[-<firmware>]-<bootstrap>[-<machine>]-<image revision>.qcow2
+
+  The <target vendor> prefix (e.g., "nocloud_") was dropped in Alpine Linux 3.21.8, 3.22.6, and 3.23.6.
+  The <firmware> field (e.g., "uefi") was dropped in Alpine Linux 3.24.
+  Images that use the newer naming scheme are preferred.
 
   Published Alpine Linux image information is fetched from the following URLs:
 
@@ -54,8 +58,8 @@ function alpine_url_spec_from_location() {
 	local location=$1 jq_filter url_spec
 	jq_filter='capture("
 		^https://dl-cdn\\.alpinelinux\\.org/alpine/(?<path_version>v\\d+\\.\\d+|latest-stable)/releases/cloud/
-		(?<target_vendor>[^_]+)_alpine-(?<version>\\d+\\.\\d+\\.\\d+)-(?<arch>[^-]+)-
-		(?<firmware>[^-]+)-(?<bootstrap>[^-]+)(-(?<machine>metal|vm))?-(?<image_revision>r\\d+)\\.(?<file_extension>.*)$
+		((?<target_vendor>[^_/]+)_)?alpine-(?<version>\\d+\\.\\d+\\.\\d+)-(?<arch>[^-]+)-
+		((?<firmware>bios|uefi)-)?(?<bootstrap>[^-]+)(-(?<machine>metal|vm))?-(?<image_revision>r\\d+)\\.(?<file_extension>.*)$
 	";"x")
 	'
 	url_spec=$(jq -e -r "${jq_filter}" <<<"\"${location}\"")
@@ -64,7 +68,8 @@ function alpine_url_spec_from_location() {
 
 readonly alpine_jq_filter_directory='"https://dl-cdn.alpinelinux.org/alpine/\(.path_version)/releases/cloud/"'
 readonly alpine_jq_filter_filename='
-	"\(.target_vendor)_alpine-\(.version)-\(.arch)-\(.firmware)-\(.bootstrap)" +
+	"\(if .target_vendor then .target_vendor + "_" else "" end)alpine-\(.version)-\(.arch)" +
+	"\(if .firmware then "-" + .firmware else "" end)-\(.bootstrap)" +
 	"\(if .machine then "-" + .machine else "" end)-\(.image_revision).\(.file_extension)"
 '
 
@@ -101,17 +106,25 @@ function alpine_latest_image_entry_for_url_spec() {
 	else
 		error_exit "Please install 'htmlq' or 'pup' to list images from ${image_directory}"
 	fi
+	# Both the older naming scheme (with the target vendor prefix and the firmware field)
+	# and the newer naming scheme (without them) are matched.
+	# When the template does not specify the firmware, "uefi" is assumed.
 	latest_version_info=$(jq -e -Rrs --argjson spec "${url_spec}" '
 		[
 			split("\n").[] |
 			capture(
-				"^\($spec.target_vendor)_alpine-(?<version>\\d+\\.\\d+\\.\\d+)-\($spec.arch)-" +
-				"\($spec.firmware)-\($spec.bootstrap)\(if $spec.machine then "-" + $spec.machine else "" end)-" +
-				"(?<image_revision>r\\d+)\\.\($spec.file_extension)"
+				"^((?<target_vendor>[^_]+)_)?alpine-(?<version>\\d+\\.\\d+\\.\\d+)-\($spec.arch)-" +
+				"((?<firmware>bios|uefi)-)?\($spec.bootstrap)\(if $spec.machine then "-" + $spec.machine else "" end)-" +
+				"(?<image_revision>r\\d+)\\.\($spec.file_extension)$"
 				;"x"
 			) |
-			.version_number_array = ([.version | scan("\\d+") | tonumber])
-		] | sort_by(.version_number_array, .image_revision) | last
+			select(.target_vendor == null or .target_vendor == ($spec.target_vendor // "nocloud")) |
+			select(.firmware == null or .firmware == ($spec.firmware // "uefi")) |
+			.version_number_array = ([.version | scan("\\d+") | tonumber]) |
+			.image_revision_number = (.image_revision | ltrimstr("r") | tonumber) |
+			.prefer_newer_naming_scheme = (if .target_vendor then 0 else 1 end)
+		] | sort_by(.version_number_array, .image_revision_number, .prefer_newer_naming_scheme) | last
+		| del(.image_revision_number, .prefer_newer_naming_scheme)
 	' <<<"${links_in_page}")
 	[[ -n ${latest_version_info} ]] || return
 	local newer_url_spec location sha512sum_location downloaded_sha256sum filename digest
@@ -130,7 +143,7 @@ function alpine_latest_image_entry_for_url_spec() {
 function alpine_cache_key_for_image_kernel() {
 	local location=$1 url_spec
 	url_spec=$(alpine_url_spec_from_location "${location}")
-	jq -r '["alpine", .path_version, .target_vendor, .arch, .file_extension] | join(":")' <<<"${url_spec}"
+	jq -r '["alpine", .path_version, .target_vendor, .arch, .firmware, .file_extension] | join(":")' <<<"${url_spec}"
 }
 
 function alpine_image_entry_for_image_kernel() {
