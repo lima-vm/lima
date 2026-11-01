@@ -10,6 +10,9 @@ load "../helpers/load"
 
 SHARED=bats-net-shared
 HOST=bats-net-host
+DOUBLE=bats-net-double
+PLAIN1=bats-plain-1
+PLAIN2=bats-plain-2
 
 case "$(uname -s)" in
 Darwin)
@@ -24,14 +27,45 @@ esac
 
 local_setup_file() {
     [[ -n ${DAEMON:-} ]] || skip "shared and host networks are only supported on macOS and Linux hosts"
-    ensure_instance "$SHARED"
-    ensure_instance "$HOST"
+    case ${NETWORK_ARM:-} in
+    two-plain)
+        ensure_instance "$PLAIN1"
+        ensure_instance "$PLAIN2"
+        ;;
+    one-double)
+        ensure_instance "$DOUBLE"
+        # Fill guest memory, to stand in for what a second VM would hold on the host.
+        limactl shell "$DOUBLE" sudo dd if=/dev/zero of=/dev/shm/fill bs=1M count=3500
+        # Hold that memory for as long as a second VM takes to start.
+        sleep 180
+        ;;
+    shared-stop-host)
+        ensure_instance "$SHARED"
+        limactl stop "$SHARED"
+        ensure_instance "$HOST"
+        ;;
+    *)
+        ensure_instance "$SHARED"
+        ensure_instance "$HOST"
+        ;;
+    esac
 }
 
 local_teardown_file() {
     [[ -n ${DAEMON:-} ]] || return 0
     delete_instance "$SHARED"
     delete_instance "$HOST"
+    delete_instance "$DOUBLE"
+    delete_instance "$PLAIN1"
+    delete_instance "$PLAIN2"
+}
+
+local_setup() {
+    case ${NETWORK_ARM:-} in
+    two-plain | one-double | shared-stop-host)
+        skip "this arm tests only setup_file, and the tests need running shared and host instances"
+        ;;
+    esac
 }
 
 linux_only() {
