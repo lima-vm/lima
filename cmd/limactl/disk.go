@@ -117,14 +117,19 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
 	err = diskUtil.CreateDisk(ctx, dataDisk, diskSize)
 	if err != nil {
-		rerr := os.RemoveAll(diskDir)
-		if rerr != nil {
-			err = errors.Join(err, fmt.Errorf("failed to remove a directory %#q: %w", diskDir, rerr))
-		}
-		return fmt.Errorf("failed to create %s disk in %#q: %w", format, diskDir, err)
+		return fmt.Errorf("failed to create %s disk in %#q: %w", format, diskDir, removeFailedDiskDir(diskDir, err))
 	}
 
 	return nil
+}
+
+// removeFailedDiskDir removes diskDir after a disk create or import failed with err, so that a
+// retry can reuse the disk name. It returns err, joined with any error from the removal.
+func removeFailedDiskDir(diskDir string, err error) error {
+	if rerr := os.RemoveAll(diskDir); rerr != nil {
+		return errors.Join(err, fmt.Errorf("failed to remove a directory %#q: %w", diskDir, rerr))
+	}
+	return err
 }
 
 func newDiskListCommand() *cobra.Command {
@@ -478,7 +483,7 @@ func diskImportAction(_ *cobra.Command, args []string) error {
 	}
 
 	if err := contfs.CopyFile(filepath.Join(diskDir, filenames.DataDisk), fName); err != nil {
-		return nil
+		return fmt.Errorf("failed to import %#q into %#q: %w", fName, diskDir, removeFailedDiskDir(diskDir, err))
 	}
 
 	logrus.Infof("Imported %s with size %s", diskName, units.BytesSize(float64(diskSize)))
