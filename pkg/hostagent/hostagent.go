@@ -160,7 +160,7 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		if err != nil {
 			return nil, err
 		}
-		tcpDNSLocalPort, err = freeport.TCP()
+		tcpDNSLocalPort, err = pickTCPDNSLocalPort(sshLocalPort, freeport.TCP)
 		if err != nil {
 			return nil, err
 		}
@@ -335,6 +335,17 @@ func determineSSHLocalPort(confLocalPort int, instName, limaVersion string) (int
 		return 0, fmt.Errorf("failed to find a free port, try setting `ssh.localPort` manually: %w", err)
 	}
 	return sshLocalPort, nil
+}
+
+func pickTCPDNSLocalPort(sshLocalPort int, freeTCP func() (int, error)) (int, error) {
+	// Nothing binds the SSH port until the driver starts, so freeTCP can return it.
+	for range 10 {
+		port, err := freeTCP()
+		if err != nil || port != sshLocalPort {
+			return port, err
+		}
+	}
+	return 0, fmt.Errorf("failed to find a free TCP port other than the SSH port %d for the DNS server", sshLocalPort)
 }
 
 func (a *HostAgent) emitEvent(_ context.Context, ev events.Event) {
