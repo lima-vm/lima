@@ -17,7 +17,8 @@ cd "$HOME" || exit 1
 mkdir -p vmnet-evidence/vm
 nohup "$sampler" vmnet-evidence 5 >vmnet-evidence/sampler.log 2>&1 &
 
-sha=
+# An earlier run may have left this file, and replacing it needs its sha.
+sha=$(gh api "repos/${GITHUB_REPOSITORY}/contents/evidence/${name}.tgz?ref=vmnet-evidence" --jq .sha 2>/dev/null) || sha=
 while :; do
     # Keep a copy of these logs, because teardown deletes the instances.
     for dir in .lima-bats/*/; do
