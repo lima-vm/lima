@@ -1,4 +1,4 @@
-# Using the Alpine 3.22 aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
+# Using the aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
 images:
 - location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.49/alpine-lima-std-3.23.0-x86_64.iso
   arch: x86_64
