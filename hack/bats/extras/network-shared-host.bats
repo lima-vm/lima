@@ -90,6 +90,16 @@ local_setup_file() {
         sleep 120
         ensure_instance "$HOST"
         ;;
+    vz-create-both-delay-host)
+        # Copy the image and build the disk for both instances before either runs, so
+        # starting the second one only boots its VM.
+        limactl create --yes --name "$SHARED" --network=lima:shared template:default
+        limactl create --yes --name "$HOST" --network=lima:host template:default
+        limactl start "$SHARED" 3>&- 4>&-
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        sleep 120
+        limactl start "$HOST" 3>&- 4>&-
+        ;;
     *)
         ensure_instance "$SHARED"
         ensure_instance "$HOST"
