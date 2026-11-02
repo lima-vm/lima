@@ -82,6 +82,14 @@ local_setup_file() {
         limactl stop "$SHARED"
         ensure_instance "$HOST"
         ;;
+    vz-shared-delay-host)
+        ensure_instance "$SHARED"
+        # The gap spans several evidence ticks, so a lost runner shows whether it died as
+        # the first instance finished starting or as the second one started.
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        sleep 120
+        ensure_instance "$HOST"
+        ;;
     *)
         ensure_instance "$SHARED"
         ensure_instance "$HOST"
