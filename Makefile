@@ -505,7 +505,13 @@ force_link = $(if $(filter windows,$(GOOS)),force,$(shell test ! -L $(1) && echo
 # templates/_images
 
 # fedora-N.yaml should not be updated to refer to Fedora N+1 images
-TEMPLATES_TO_BE_UPDATED = $(filter-out $(wildcard templates/_images/fedora*.yaml),$(wildcard templates/_images/*.yaml))
+TEMPLATES_NOT_TO_BE_UPDATED = $(wildcard templates/_images/fedora*.yaml)
+# alpine-3.23.yaml and alpine-3.24.yaml are held back at 3.23.6 and 3.24.2, because the
+# x86_64 images of 3.23.7 and 3.24.3 ship Linux 6.18.58, which ignores the ACPI power button
+# (`limactl stop` has to kill QEMU forcibly). The regression was introduced in Linux 6.18.57.
+# Remove them from this list once Alpine publishes images with Linux 6.18.60 or later.
+TEMPLATES_NOT_TO_BE_UPDATED += templates/_images/alpine-3.23.yaml templates/_images/alpine-3.24.yaml
+TEMPLATES_TO_BE_UPDATED = $(filter-out $(TEMPLATES_NOT_TO_BE_UPDATED),$(wildcard templates/_images/*.yaml))
 
 .PHONY: update-templates
 update-templates: $(TEMPLATES_TO_BE_UPDATED)
