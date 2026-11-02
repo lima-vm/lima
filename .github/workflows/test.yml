@@ -509,7 +509,7 @@ jobs:
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/colima.bats
 
   vmnet:
-    name: "VMNet tests (QEMU, ${{ matrix.runs-on }})"
+    name: "VMNet tests (${{ matrix.runs-on }})"
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
     strategy:
@@ -531,23 +531,17 @@ jobs:
         cache: false
     - name: Make
       run: make
-    - name: "Inject `no_timer_check` to kernel cmdline"
-      if: runner.os == 'macOS'
-      # workaround to https://github.com/lima-vm/lima/issues/84
-      run: |
-        export PATH="$PWD/_output/bin:$PATH"
-        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
     - name: Install
       run: sudo make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
-      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --network=lima:shared" >>$GITHUB_ENV
     - name: Cache image used by default .yaml
       uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: Install test dependencies (macOS)
       if: runner.os == 'macOS'
-      run: brew install qemu bash coreutils w3m
+      run: brew install bash coreutils w3m
     - name: Install socket_vmnet
       if: runner.os == 'macOS'
       env:
