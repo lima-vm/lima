@@ -62,6 +62,14 @@ local_setup_file() {
         ensure_instance "$PLAIN1"
         start_bare_qemu_guest
         ;;
+    bare-qemu-delayed)
+        ensure_instance "$PLAIN1"
+        # The gap spans several evidence ticks, so a lost runner shows whether it died as
+        # the first VM finished starting or as the second guest launched.
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        sleep 120
+        start_bare_qemu_guest
+        ;;
     one-double)
         ensure_instance "$DOUBLE"
         # Fill guest memory, to stand in for what a second VM would hold on the host.
@@ -92,7 +100,7 @@ local_teardown_file() {
 
 local_setup() {
     case ${NETWORK_ARM:-} in
-    two-plain | bare-qemu | one-double | shared-stop-host)
+    two-plain | bare-qemu | bare-qemu-delayed | one-double | shared-stop-host)
         skip "this arm tests only setup_file, and the tests need running shared and host instances"
         ;;
     esac
