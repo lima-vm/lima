@@ -1,6 +1,5 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
-# It starts a bare QEMU guest beside a Lima VM, to tell whether the runner loss needs a
-# second Lima VM.
+# It runs the vmnet step under vz, as Lima PR 5717 does, to tell whether vz keeps the runner.
 name: vmnet-two-vms
 
 on:
@@ -29,7 +28,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [bare-qemu-delayed]
+        arm: [vz-shared-then-host]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -43,23 +42,17 @@ jobs:
         cache: false
     - name: Make
       run: make
-    - name: "Inject `no_timer_check` to kernel cmdline"
-      if: runner.os == 'macOS'
-      # workaround to https://github.com/lima-vm/lima/issues/84
-      run: |
-        export PATH="$PWD/_output/bin:$PATH"
-        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
     - name: Install
       run: sudo make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
-      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --vm-type=qemu --network=lima:shared" >>$GITHUB_ENV
+      run: echo "LIMACTL_CREATE_ARGS=${LIMACTL_CREATE_ARGS} --network=lima:shared" >>$GITHUB_ENV
     - name: Cache image used by default .yaml
       uses: $/.github/actions/setup_cache_for_template
       with:
         template: templates/default.yaml
     - name: Install test dependencies (macOS)
       if: runner.os == 'macOS'
-      run: brew install qemu bash coreutils w3m
+      run: brew install bash coreutils w3m
     - name: Install socket_vmnet
       if: runner.os == 'macOS'
       env:

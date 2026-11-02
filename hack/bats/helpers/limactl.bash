@@ -31,8 +31,8 @@ ensure_instance() {
         bats)          limactl start --yes --name "$instance" template:default 3>&- 4>&- ;;
         bats-nomount)  limactl start --yes --name "$instance" --mount-none template:default 3>&- 4>&- ;;
         bats-dummy)    create_dummy_instance "$instance" '.disk = "1M"' ;;
-        bats-net-shared) limactl start --yes --name "$instance" --vm-type=qemu --network=lima:shared template:default 3>&- 4>&- ;;
-        bats-net-host)   limactl start --yes --name "$instance" --vm-type=qemu --network=lima:host template:default 3>&- 4>&- ;;
+        bats-net-shared) limactl start --yes --name "$instance" --network=lima:shared template:default 3>&- 4>&- ;;
+        bats-net-host)   limactl start --yes --name "$instance" --network=lima:host template:default 3>&- 4>&- ;;
         bats-net-double) limactl start --yes --name "$instance" --vm-type=qemu --network=lima:shared --cpus=8 --memory=8 template:default 3>&- 4>&- ;;
         bats-plain-1 | bats-plain-2) limactl start --yes --name "$instance" --vm-type=qemu template:default 3>&- 4>&- ;;
         *)
