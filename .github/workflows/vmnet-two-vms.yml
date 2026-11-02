@@ -1,6 +1,6 @@
-# DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel,
-# with arms that tell whether a failure with two VMs comes from vmnet, from the second
-# VM itself, or from the load that the second VM adds.
+# DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
+# It starts a bare QEMU guest beside a Lima VM, to tell whether the runner loss needs a
+# second Lima VM.
 name: vmnet-two-vms
 
 on:
@@ -29,8 +29,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        # The last key varies fastest, so the arms alternate through the queue.
-        arm: [shared-then-host, two-plain, one-double, shared-stop-host]
+        arm: [bare-qemu]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:

@@ -25,12 +25,42 @@ Linux)
     ;;
 esac
 
+# Runs a guest beside $PLAIN1 with the CPU, memory, disk and network arguments that Lima uses,
+# but without a hostagent or cidata. It boots from a throwaway snapshot of $PLAIN1's disk, and
+# console=ttyS0 puts the boot on the serial log, which shows that the guest ran.
+start_bare_qemu_guest() {
+    local instance=${LIMA_HOME}/${PLAIN1}
+    local evidence=${HOME}/vmnet-evidence
+    date -u >"${evidence}/bare-qemu.log"
+    qemu-system-x86_64 -m 4096 -cpu host,-avx512vl,-pdpe1gb -machine q35,accel=hvf \
+        -smp 4,sockets=1,cores=4,threads=1 \
+        -drive if=pflash,format=raw,readonly=on,file=/usr/local/share/qemu/edk2-x86_64-code.fd \
+        -drive "file=${instance}/disk,if=none,discard=on,id=boot-disk,snapshot=on,file.locking=off" \
+        -device virtio-blk-pci,drive=boot-disk,bootindex=1 \
+        -kernel "${instance}/kernel" -initrd "${instance}/initrd" \
+        -append "root=LABEL=cloudimg-rootfs ro console=ttyS0 no_timer_check" \
+        -netdev user,id=net0,net=192.168.5.0/24,dhcpstart=192.168.5.15 \
+        -device virtio-net-pci,netdev=net0,mac=52:55:55:dd:37:e7 \
+        -device virtio-rng-pci -display none -vga none -parallel none \
+        -serial "file:${evidence}/bare-qemu-serial.log" \
+        >>"${evidence}/bare-qemu.log" 2>&1 3>&- 4>&- &
+    local pid=$!
+    sleep 180
+    # QEMU exiting early must fail setup_file, or a clean job would prove nothing.
+    kill -0 "$pid"
+    kill "$pid"
+}
+
 local_setup_file() {
     [[ -n ${DAEMON:-} ]] || skip "shared and host networks are only supported on macOS and Linux hosts"
     case ${NETWORK_ARM:-} in
     two-plain)
         ensure_instance "$PLAIN1"
         ensure_instance "$PLAIN2"
+        ;;
+    bare-qemu)
+        ensure_instance "$PLAIN1"
+        start_bare_qemu_guest
         ;;
     one-double)
         ensure_instance "$DOUBLE"
@@ -62,7 +92,7 @@ local_teardown_file() {
 
 local_setup() {
     case ${NETWORK_ARM:-} in
-    two-plain | one-double | shared-stop-host)
+    two-plain | bare-qemu | one-double | shared-stop-host)
         skip "this arm tests only setup_file, and the tests need running shared and host instances"
         ;;
     esac
