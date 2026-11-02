@@ -1,9 +1,9 @@
 # Using the aarch64 image with vmType=vz requires macOS Ventura 13.3 or later.
 images:
-- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.49/alpine-lima-std-3.23.0-x86_64.iso
-  arch: x86_64
-  digest: sha512:da507ee9939d971abf95cbffe798fc340bb567b4c37fb220ddd97fdf68fa4e2c1bc39df67aac3705645c13f49a1d31794c4491f24f029b6468a984533595de46
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.51/alpine-lima-std-3.24.3-x86_64.iso"
+  arch: "x86_64"
+  digest: "sha512:78234e62b428c896a647cc1c464640c9b7e3603581bf229df3f875c3e359853e19860c1df3a8b9a46592fb62e0f234ec4d1cd5023fd38cf263f5c971ad8e89fc"
 
-- location: https://github.com/lima-vm/alpine-lima/releases/download/v0.2.49/alpine-lima-std-3.23.0-aarch64.iso
-  arch: aarch64
-  digest: sha512:7ef845a28cd8d77da8317a2d748456f0861d86d23dc2c51739927f16c634fec21ec90d58edd71202bdd708f81629bcffc4c9c682689bcc34f37668803757d463
+- location: "https://github.com/lima-vm/alpine-lima/releases/download/v0.2.51/alpine-lima-std-3.24.3-aarch64.iso"
+  arch: "aarch64"
+  digest: "sha512:d7a2d4344a963766ee34651b5278156154bc9421790675ff1defa1391568d2cd369e2c3fa3df562a540e466504ad0d849bf80f1aea759a7c72c4d87fdc4ddead"
