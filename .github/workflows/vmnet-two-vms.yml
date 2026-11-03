@@ -1,6 +1,6 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
-# It starts both instances in plain mode with 2 GiB each, one after the other with no wait:
-# the shared-network instance under vz with 1 CPU, and the host-network instance as an
+# It starts both instances without containerd and with 2 GiB each, one after the other with
+# no wait: the shared-network instance under vz with 1 CPU, and the host-network instance as an
 # aarch64 guest, which QEMU runs under TCG. It skips test-templates.sh to save time, and boots
 # the aarch64 guest with a 600-second systemd device timeout instead of the default 90.
 name: vmnet-two-vms
@@ -8,7 +8,7 @@ name: vmnet-two-vms
 on:
   push:
     branches:
-    - vmnet-plain-tcg-host-devtimeout
+    - vmnet-no-containerd-tcg-host
 
 env:
   LIMACTL_CREATE_ARGS: ""
@@ -18,7 +18,7 @@ permissions:
   contents: write  # hack/vmnet-evidence.sh pushes to the vmnet-evidence branch
 
 concurrency:
-  group: vmnet-plain-tcg-host-devtimeout
+  group: vmnet-no-containerd-tcg-host
   cancel-in-progress: true
 
 jobs:
@@ -31,7 +31,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [vz-plain-tcg-host-devtimeout]
+        arm: [vz-no-containerd-tcg-host]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
