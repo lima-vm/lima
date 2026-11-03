@@ -115,7 +115,9 @@ This page documents the environment variables used in Lima.
 ### `LIMA_BTRFS_NOCOW`
 
 - **Description**: Specifies to turn off copy-on-write (like `chattr +C`) for new instance directories, `limactl disk` directories and download cache directories on btrfs hosts.
-  Set it to `false` to keep copy-on-write and the btrfs checksums, at the price of disk images that fragment over time.
+  Set it to `false` to keep copy-on-write and the btrfs checksums, at the price of disk images that fragment as the guest writes to them.
+  Set it for every `limactl` command, for example in your shell profile: the command that creates the instance, `limactl disk create`, and the first `limactl start` that downloads an image into the cache all read it.
+  Setting it later does not change directories that already exist.
   `limactl clone` and `limactl rename` always keep the setting of the original instance.
   See the [FAQ]({{< ref "/docs/faq" >}}#copy-on-write-on-btrfs-hosts) for the trade-offs.
 - **Default**: `true`

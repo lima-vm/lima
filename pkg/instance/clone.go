@@ -58,8 +58,10 @@ func CloneOrRename(ctx context.Context, oldInst *limatype.Instance, newInstName 
 	if err = os.Mkdir(newInstDir, 0o700); err != nil {
 		return nil, err
 	}
-	// The new directory follows the old instance, not the default: btrfs can't reflink between
-	// files with and without No_COW, and instances made by older versions are copy-on-write.
+	// The new directory follows the old instance directory, not the default: btrfs can't reflink
+	// between files with and without No_COW, and instances made by older versions are copy-on-write.
+	// The directory decides, not the disks in it, so `chattr +C` on the old directory followed by
+	// a clone moves an old instance to No_COW (see the FAQ).
 	if err := fsutil.MatchCopyOnWrite(newInstDir, oldInst.Dir); err != nil {
 		logrus.WithError(err).Warnf("Failed to match the copy-on-write setting of %#q to %#q (non-fatal)", newInstDir, oldInst.Dir)
 	}

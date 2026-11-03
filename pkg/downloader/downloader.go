@@ -682,6 +682,7 @@ func copyLocal(ctx context.Context, dst, src, ext string, decompress bool, descr
 		}
 	}
 	// TODO: progress bar for copy
+	fsutil.WarnIfFullCopy(dstPath, srcPath)
 	return fs.CopyFile(dstPath, srcPath)
 }
 

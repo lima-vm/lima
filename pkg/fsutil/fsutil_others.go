@@ -16,3 +16,5 @@ func DisableCopyOnWrite(string) error {
 func MatchCopyOnWrite(string, string) error {
 	return nil
 }
+
+func WarnIfFullCopy(string, string) {}

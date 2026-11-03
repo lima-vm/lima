@@ -484,6 +484,7 @@ func diskImportAction(_ *cobra.Command, args []string) error {
 		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", diskDir)
 	}
 
+	fsutil.WarnIfFullCopy(filepath.Join(diskDir, filenames.DataDisk), fName)
 	if err := contfs.CopyFile(filepath.Join(diskDir, filenames.DataDisk), fName); err != nil {
 		return nil
 	}
