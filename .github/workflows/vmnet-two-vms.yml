@@ -1,13 +1,14 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
 # It starts both instances in plain mode with 2 GiB each, one after the other with no wait:
 # the shared-network instance under vz with 1 CPU, and the host-network instance as an
-# aarch64 guest, which QEMU runs under TCG. It skips test-templates.sh to save time.
+# aarch64 guest, which QEMU runs under TCG. It skips test-templates.sh to save time, and boots
+# the aarch64 guest with a 600-second systemd device timeout instead of the default 90.
 name: vmnet-two-vms
 
 on:
   push:
     branches:
-    - vmnet-plain-tcg-host
+    - vmnet-plain-tcg-host-devtimeout
 
 env:
   LIMACTL_CREATE_ARGS: ""
@@ -17,7 +18,7 @@ permissions:
   contents: write  # hack/vmnet-evidence.sh pushes to the vmnet-evidence branch
 
 concurrency:
-  group: vmnet-plain-tcg-host
+  group: vmnet-plain-tcg-host-devtimeout
   cancel-in-progress: true
 
 jobs:
@@ -30,7 +31,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [vz-plain-tcg-host]
+        arm: [vz-plain-tcg-host-devtimeout]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -44,6 +45,12 @@ jobs:
         cache: false
     - name: Make
       run: make
+    - name: "Raise the device timeout of the aarch64 guest"
+      # Under TCG, the guest can take longer than systemd's 90-second default to find its
+      # BOOT and UEFI partitions, and then boots into emergency mode without SSH.
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml systemd.default_device_timeout_sec=600 aarch64
     - name: Install
       run: sudo make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
