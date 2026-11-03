@@ -1,12 +1,13 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
-# It starts the shared-network instance under vz and the host-network instance as an aarch64
-# guest, which QEMU runs under TCG, one after the other with no wait. Containerd stays on.
+# It starts both instances in plain mode with 2 GiB each, one after the other with no wait:
+# the shared-network instance under vz with 1 CPU, and the host-network instance as an
+# aarch64 guest, which QEMU runs under TCG. It skips test-templates.sh to save time.
 name: vmnet-two-vms
 
 on:
   push:
     branches:
-    - vmnet-tcg-host
+    - vmnet-plain-tcg-host
 
 env:
   LIMACTL_CREATE_ARGS: ""
@@ -16,7 +17,7 @@ permissions:
   contents: write  # hack/vmnet-evidence.sh pushes to the vmnet-evidence branch
 
 concurrency:
-  group: vmnet-tcg-host
+  group: vmnet-plain-tcg-host
   cancel-in-progress: true
 
 jobs:
@@ -29,7 +30,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [vz-shared-tcg-host]
+        arm: [vz-plain-tcg-host]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -81,17 +82,6 @@ jobs:
     - name: Unit test (pkg/networks)
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
-    - name: Test shared network with templates/default.yaml
-      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
-      with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-templates.sh templates/default.yaml
-    - if: always()
-      uses: $/.github/actions/upload_failure_logs_if_exists
-      with:
-        suffix: ${{ matrix.arm }}-${{ matrix.run }}
     # "bridged" is not tested: it needs a pre-existing bridge on the host.
     - name: "Run BATS shared/host network tests"
       env:

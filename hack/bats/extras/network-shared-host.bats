@@ -111,6 +111,15 @@ local_setup_file() {
         limactl start --yes --name "$HOST" --vm-type=qemu --arch=aarch64 --network=lima:host --timeout=40m template:default 3>&- 4>&- ||
             limactl shell "$HOST" test -x /usr/local/bin/nerdctl
         ;;
+    vz-plain-tcg-host)
+        # Both instances run in plain mode, with 2 GiB each. The shared-network instance runs
+        # under vz with 1 CPU. The host-network instance is an aarch64 guest, which QEMU runs
+        # under TCG, so only the first instance uses hardware acceleration. It keeps the default
+        # CPUs, as TCG emulates each one on its own host thread, and fewer would slow its boot.
+        limactl start --yes --name "$SHARED" --plain --cpus=1 --memory=2 --network=lima:shared template:default 3>&- 4>&-
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        limactl start --yes --name "$HOST" --plain --memory=2 --vm-type=qemu --arch=aarch64 --network=lima:host --timeout=40m template:default 3>&- 4>&-
+        ;;
     *)
         ensure_instance "$SHARED"
         ensure_instance "$HOST"
