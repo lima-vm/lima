@@ -100,6 +100,13 @@ local_setup_file() {
         sleep 120
         limactl start "$HOST" 3>&- 4>&-
         ;;
+    vz-plain)
+        # Plain mode skips the guest agent, mounts, port forwarding and containerd.
+        # The instances start one after the other, with no wait.
+        limactl start --yes --name "$SHARED" --plain --network=lima:shared template:default 3>&- 4>&-
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        limactl start --yes --name "$HOST" --plain --network=lima:host template:default 3>&- 4>&-
+        ;;
     *)
         ensure_instance "$SHARED"
         ensure_instance "$HOST"

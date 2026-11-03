@@ -1,12 +1,12 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
-# It runs the vmnet step under vz, as Lima PR 5717 does, creates both instances before starting either,
-# and waits 120 seconds between the first instance becoming ready and the second one starting.
+# It starts both instances under vz with --plain, one after the other with no wait, so the
+# guests run no guest agent, mounts, port forwarding or containerd.
 name: vmnet-two-vms
 
 on:
   push:
     branches:
-    - vmnet-two-vms
+    - vmnet-plain
 
 env:
   LIMACTL_CREATE_ARGS: ""
@@ -16,7 +16,7 @@ permissions:
   contents: write  # hack/vmnet-evidence.sh pushes to the vmnet-evidence branch
 
 concurrency:
-  group: vmnet-two-vms
+  group: vmnet-plain
   cancel-in-progress: true
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [vz-create-both-delay-host]
+        arm: [vz-plain]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
