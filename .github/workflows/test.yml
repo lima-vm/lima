@@ -509,7 +509,7 @@ jobs:
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/colima.bats
 
   vmnet:
-    name: "VMNet tests (QEMU, ${{ matrix.runs-on }})"
+    name: "VMNet tests (${{ matrix.runs-on }})"
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 120
     strategy:
@@ -537,6 +537,14 @@ jobs:
       run: |
         export PATH="$PWD/_output/bin:$PATH"
         ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml no_timer_check
+    - name: "Inject `systemd.default_device_timeout_sec=600` to the aarch64 kernel cmdline"
+      if: runner.os == 'macOS'
+      # The BATS tests run the host-network guest as aarch64 under TCG, which can take longer than
+      # systemd's 90-second default to find its BOOT and UEFI partitions, and then boots into
+      # emergency mode without SSH.
+      run: |
+        export PATH="$PWD/_output/bin:$PATH"
+        ./hack/inject-cmdline-to-template.sh _output/share/lima/templates/_images/ubuntu.yaml systemd.default_device_timeout_sec=600 aarch64
     - name: Install
       run: sudo make install
     - name: "Adjust LIMACTL_CREATE_ARGS"
