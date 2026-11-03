@@ -30,6 +30,10 @@ The following commands are experimental and subject to change:
 - `limactl template *`
 - `limactl mcp *`
 
+The following flags are experimental and subject to change:
+
+- `--disk-path` of `limactl create`, `limactl start`, and `limactl disk create`
+
 ## Graduated
 
 The following features were experimental in the past:

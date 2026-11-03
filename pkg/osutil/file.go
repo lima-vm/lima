@@ -70,3 +70,37 @@ func WriteFileBeneathDir(name string, data []byte, perm os.FileMode) error {
 	}
 	return f.Close()
 }
+
+// IsSymlink reports whether path itself is a symlink, even when its target
+// does not exist (dangling symlink).
+func IsSymlink(path string) bool {
+	fi, err := os.Lstat(path)
+	if err != nil {
+		return false
+	}
+	return fi.Mode()&os.ModeSymlink != 0
+}
+
+// ResolveSymlink returns the resolved path of the symlink at path, so that
+// operations like renaming onto path replace the target file instead of the
+// symlink itself. The original path is returned when it is not a symlink, or
+// when it cannot be resolved.
+//
+// A dangling symlink (i.e. a symlink whose target does not exist yet) is also
+// resolved, so that the target file can be created through the symlink.
+func ResolveSymlink(path string) string {
+	if !IsSymlink(path) {
+		return path
+	}
+	if resolved, err := filepath.EvalSymlinks(path); err == nil {
+		return resolved
+	}
+	target, err := os.Readlink(path)
+	if err != nil {
+		return path
+	}
+	if !filepath.IsAbs(target) {
+		target = filepath.Join(filepath.Dir(path), target)
+	}
+	return target
+}

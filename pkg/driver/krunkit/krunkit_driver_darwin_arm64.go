@@ -412,7 +412,7 @@ func (l *LimaKrunkitDriver) CreateSnapshot(_ context.Context, tag string) error 
 	if err != nil {
 		return err
 	}
-	bootDisk := filepath.Join(l.Instance.Dir, filenames.Disk)
+	bootDisk := osutil.ResolveSymlink(filepath.Join(l.Instance.Dir, filenames.Disk))
 	if err := unix.Clonefile(bootDisk, filepath.Join(tmpDir, filenames.Disk), 0); err != nil {
 		_ = os.RemoveAll(tmpDir)
 		return fmt.Errorf("clonefile %#q to %#q: %w", bootDisk, filepath.Join(tmpDir, filenames.Disk), err)
@@ -436,7 +436,8 @@ func (l *LimaKrunkitDriver) ApplySnapshot(_ context.Context, id string) error {
 	if _, err := os.Stat(src); err != nil {
 		return fmt.Errorf("snapshot %q: %w", id, err)
 	}
-	bootDisk := filepath.Join(l.Instance.Dir, filenames.Disk)
+	// The disk may be a symlink to a file outside of the instance directory
+	bootDisk := osutil.ResolveSymlink(filepath.Join(l.Instance.Dir, filenames.Disk))
 	tmp := bootDisk + ".snap-tmp"
 	_ = os.Remove(tmp)
 	if err := unix.Clonefile(src, tmp, 0); err != nil {

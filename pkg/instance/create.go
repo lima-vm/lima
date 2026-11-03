@@ -22,7 +22,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/version"
 )
 
-func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenYAML bool) (*limatype.Instance, error) {
+func Create(ctx context.Context, instName, diskPathOverride string, instConfig []byte, saveBrokenYAML bool) (*limatype.Instance, error) {
 	if instName == "" {
 		return nil, errors.New("got empty instName")
 	}
@@ -74,6 +74,10 @@ func Create(ctx context.Context, instName string, instConfig []byte, saveBrokenY
 			_ = os.RemoveAll(instDir)
 		}
 	}()
+
+	if err := driverutil.EnsureDiskSymlink(instDir, diskPathOverride); err != nil {
+		return nil, err
+	}
 
 	if err := os.WriteFile(filePath, instConfig, 0o644); err != nil {
 		return nil, err
