@@ -1,5 +1,8 @@
-# DO NOT MERGE. Repeats the vmnet job from test.yml, as changed by #5717 (vz, 1 CPU, 2 GiB),
-# 10 times on macOS and once on Linux, to check that the macOS runner is no longer lost.
+# DO NOT MERGE. Repeats the macOS leg of the vmnet job from test.yml, as changed by #5717 (vz),
+# in two arms, 12 times each, alternating. Both start the instances one after the other with no wait.
+# - vz-no-containerd: both instances under vz with --containerd=none.
+# - vz-shared-tcg-host: the shared-network instance under vz, the host-network instance
+#   as an aarch64 guest under QEMU's TCG, with containerd left on.
 name: vmnet-vz-repeat
 
 on:
@@ -18,19 +21,15 @@ concurrency:
 
 jobs:
   vmnet:
-    name: "VMNet ${{ matrix.runs-on }} ${{ matrix.run }}"
-    runs-on: ${{ matrix.runs-on }}
+    name: "VMNet ${{ matrix.run }} ${{ matrix.arm }}"
+    runs-on: macos-15-intel  # socket_vmnet
     timeout-minutes: 120
     strategy:
       fail-fast: false
-      max-parallel: 8
+      max-parallel: 5
       matrix:
-        runs-on:
-        - macos-15-large  # Intel; socket_vmnet
-        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        include:
-        - runs-on: ubuntu-24.04  # lima-privileged-net
-          run: 1
+        run: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+        arm: [vz-no-containerd, vz-shared-tcg-host]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -55,6 +54,9 @@ jobs:
     - name: Install test dependencies (macOS)
       if: runner.os == 'macOS'
       run: brew install bash coreutils w3m
+    - name: Install QEMU for the aarch64 guest
+      if: matrix.arm == 'vz-shared-tcg-host'
+      run: brew install qemu
     - name: Install socket_vmnet
       if: runner.os == 'macOS'
       env:
@@ -90,7 +92,9 @@ jobs:
     - if: always()
       uses: $/.github/actions/upload_failure_logs_if_exists
       with:
-        suffix: ${{ matrix.runs-on }}-${{ matrix.run }}
+        suffix: ${{ matrix.arm }}-${{ matrix.run }}
     # "bridged" is not tested: it needs a pre-existing bridge on the host.
     - name: "Run BATS shared/host network tests"
+      env:
+        NETWORK_ARM: ${{ matrix.arm }}
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/network-shared-host.bats
