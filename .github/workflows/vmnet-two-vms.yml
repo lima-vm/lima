@@ -1,6 +1,7 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
-# It starts both instances under vz with --plain, one after the other with no wait, so the
-# guests run no guest agent, mounts, port forwarding or containerd.
+# It starts both instances under vz with --plain, 1 CPU and 2 GiB each, one after the other
+# with no wait, so the guests are small and run no guest agent, mounts, port forwarding or
+# containerd.
 name: vmnet-two-vms
 
 on:
@@ -30,7 +31,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [vz-plain]
+        arm: [vz-plain-small]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -80,17 +81,6 @@ jobs:
     - name: Unit test (pkg/networks)
       # Set -count=1 to disable cache
       run: go test -v -count=1 ./pkg/networks/...
-    - name: Test shared network with templates/default.yaml
-      uses: nick-fields/retry@ad984534de44a9489a53aefd81eb77f87c70dc60  # v4.0.0
-      with:
-        timeout_minutes: 30
-        retry_on: error
-        max_attempts: 3
-        command: ./hack/test-templates.sh templates/default.yaml
-    - if: always()
-      uses: $/.github/actions/upload_failure_logs_if_exists
-      with:
-        suffix: ${{ matrix.arm }}-${{ matrix.run }}
     # "bridged" is not tested: it needs a pre-existing bridge on the host.
     - name: "Run BATS shared/host network tests"
       env:

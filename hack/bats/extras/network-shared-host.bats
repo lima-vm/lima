@@ -107,6 +107,13 @@ local_setup_file() {
         date -u >"${HOME}/vmnet-evidence/first-vm-ready"
         limactl start --yes --name "$HOST" --plain --network=lima:host template:default 3>&- 4>&-
         ;;
+    vz-plain-small)
+        # Plain mode, with 1 CPU and 2 GiB per instance, the size #5717 uses.
+        # The instances start one after the other, with no wait.
+        limactl start --yes --name "$SHARED" --plain --cpus=1 --memory=2 --network=lima:shared template:default 3>&- 4>&-
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        limactl start --yes --name "$HOST" --plain --cpus=1 --memory=2 --network=lima:host template:default 3>&- 4>&-
+        ;;
     *)
         ensure_instance "$SHARED"
         ensure_instance "$HOST"
