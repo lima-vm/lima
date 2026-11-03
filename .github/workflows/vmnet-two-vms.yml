@@ -4,19 +4,20 @@
 name: vmnet-two-vms
 
 on:
-  push:
-    branches:
-    - vmnet-plain
+  pull_request:
 
 env:
   LIMACTL_CREATE_ARGS: ""
   GOTOOLCHAIN: local
 
+# A pull request from a fork gets a read-only token, so hack/vmnet-evidence.sh can't push
+# to the vmnet-evidence branch. Its samples are uploaded as an artifact instead, which a
+# job that loses its runner can't do.
 permissions:
-  contents: write  # hack/vmnet-evidence.sh pushes to the vmnet-evidence branch
+  contents: read
 
 concurrency:
-  group: vmnet-plain
+  group: vmnet-two-vms-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -99,3 +100,9 @@ jobs:
       run: |
         nohup ./hack/vmnet-evidence.sh "$JOB_NAME" >"$HOME/vmnet-evidence.log" 2>&1 &
         ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/network-shared-host.bats
+    - if: always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+      with:
+        name: vmnet-evidence-${{ matrix.arm }}-${{ matrix.run }}
+        path: ~/vmnet-evidence
+        if-no-files-found: ignore
