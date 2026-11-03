@@ -1,12 +1,12 @@
 # DO NOT MERGE. Repeats the macOS leg of the vmnet job in test.yml on macos-15-intel.
-# It runs the vmnet step under vz, as Lima PR 5717 does, creates both instances before starting either,
-# and waits 120 seconds between the first instance becoming ready and the second one starting.
+# It starts the shared-network instance under vz and the host-network instance as an aarch64
+# guest, which QEMU runs under TCG, one after the other with no wait. Containerd stays on.
 name: vmnet-two-vms
 
 on:
   push:
     branches:
-    - vmnet-two-vms
+    - vmnet-tcg-host
 
 env:
   LIMACTL_CREATE_ARGS: ""
@@ -16,7 +16,7 @@ permissions:
   contents: write  # hack/vmnet-evidence.sh pushes to the vmnet-evidence branch
 
 concurrency:
-  group: vmnet-two-vms
+  group: vmnet-tcg-host
   cancel-in-progress: true
 
 jobs:
@@ -29,7 +29,7 @@ jobs:
       max-parallel: 5
       matrix:
         run: [1, 2, 3, 4, 5, 6, 7, 8]
-        arm: [vz-create-both-delay-host]
+        arm: [vz-shared-tcg-host]
     steps:
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
       with:
@@ -54,6 +54,8 @@ jobs:
     - name: Install test dependencies (macOS)
       if: runner.os == 'macOS'
       run: brew install bash coreutils w3m
+    - name: Install QEMU for the aarch64 guest
+      run: brew install qemu
     - name: Install socket_vmnet
       if: runner.os == 'macOS'
       env:

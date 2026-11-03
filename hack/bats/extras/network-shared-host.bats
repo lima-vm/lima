@@ -100,6 +100,17 @@ local_setup_file() {
         sleep 120
         limactl start "$HOST" 3>&- 4>&-
         ;;
+    vz-shared-tcg-host)
+        # The host-network instance is an aarch64 guest, which QEMU runs under TCG,
+        # so only the first instance uses hardware acceleration.
+        limactl start --yes --name "$SHARED" --network=lima:shared template:default 3>&- 4>&-
+        date -u >"${HOME}/vmnet-evidence/first-vm-ready"
+        # Under TCG, the containerd install outlasts the hostagent's fixed 10-minute wait for
+        # nerdctl, so `limactl start` reports the instance as degraded. Accept that, as long as
+        # nerdctl is installed once the boot scripts have finished.
+        limactl start --yes --name "$HOST" --vm-type=qemu --arch=aarch64 --network=lima:host --timeout=40m template:default 3>&- 4>&- ||
+            limactl shell "$HOST" test -x /usr/local/bin/nerdctl
+        ;;
     *)
         ensure_instance "$SHARED"
         ensure_instance "$HOST"
