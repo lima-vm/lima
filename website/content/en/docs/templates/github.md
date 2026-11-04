@@ -76,11 +76,11 @@ FATA[0000] file "https://raw.githubusercontent.com/lima-vm/lima/master/.lima.yam
 
 Lima will check if the template file referenced by the `github:` URL is a symlink (or a text file whose content has no spaces, newlines, or colons). In that case it will treat the content as a relative path and return the address of that target file. The target must stay within the repository; Lima rejects one that climbs above the repo root via `../`.
 
-For example the `fedora` template is a symlink to `fedora-43.yaml`:
+For example the `fedora` template is a symlink to the latest `fedora-<VERSION>.yaml`:
 
 ```console
 ❯ limactl tmpl url github:lima-vm/lima/templates/fedora
-https://raw.githubusercontent.com/lima-vm/lima/master/templates/fedora-43.yaml
+https://raw.githubusercontent.com/lima-vm/lima/master/templates/fedora-<VERSION>.yaml
 ```
 
 ## Org repositories
