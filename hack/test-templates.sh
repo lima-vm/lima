@@ -750,6 +750,20 @@ if [[ -n ${CHECKS["clone"]} ]]; then
 	limactl start "$NAME"
 fi
 
+# shellcheck disable=SC2016
+if [[ "$(limactl shell "$NAME" sh -c '. /etc/os-release && echo "$ID"')" == "fedora" && "$(limactl ls "${NAME}" --yq .vmType)" == "qemu" ]]; then
+	# selinux-policy >= 44.7 made sshd_session_t enforcing, which prevented the guest agent socket
+	# from being forwarded over SSH: https://github.com/lima-vm/lima/issues/5572
+	# The image may ship an older selinux-policy, so upgrade it and restart the instance.
+	INFO "Testing the guest agent with the latest selinux-policy"
+	limactl shell "$NAME" sudo dnf -y upgrade selinux-policy-targeted
+	if ! limactl restart "$NAME"; then
+		ERROR "Failed to start \"$NAME\" with the latest selinux-policy"
+		diagnose "$NAME"
+		exit 1
+	fi
+fi
+
 if [[ $NAME == "fedora" && "$(limactl ls "${NAME}" --yq .vmType)" == "vz" ]]; then
 	"${scriptdir}"/test-selinux.sh "$NAME"
 fi
