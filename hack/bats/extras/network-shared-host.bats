@@ -24,8 +24,20 @@ esac
 
 local_setup_file() {
     [[ -n ${DAEMON:-} ]] || skip "shared and host networks are only supported on macOS and Linux hosts"
+    # Delete any earlier instances first, so that a stale one doesn't count as running below.
+    delete_instance "$HOST"
+    delete_instance "$SHARED"
+    # Start both instances at once, the host-network one first, as it boots slowly under TCG on
+    # macOS. `limactl start` and `limactl delete` stop the network of any instance that isn't
+    # running yet, so start the other instance only once the first one is running.
+    ensure_instance "$HOST" 3>&- 4>&- &
+    local host_pid=$!
+    while kill -0 "$host_pid" 2>/dev/null; do
+        [[ $(limactl list --format '{{.Status}}' "$HOST" 2>/dev/null) == "Running" ]] && break
+        sleep 5
+    done
     ensure_instance "$SHARED"
-    ensure_instance "$HOST"
+    wait "$host_pid"
 }
 
 local_teardown_file() {

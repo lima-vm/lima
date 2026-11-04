@@ -31,8 +31,20 @@ ensure_instance() {
         bats)          limactl start --yes --name "$instance" template:default 3>&- 4>&- ;;
         bats-nomount)  limactl start --yes --name "$instance" --mount-none template:default 3>&- 4>&- ;;
         bats-dummy)    create_dummy_instance "$instance" '.disk = "1M"' ;;
-        bats-net-shared) limactl start --yes --name "$instance" --vm-type=qemu --network=lima:shared template:default 3>&- 4>&- ;;
-        bats-net-host)   limactl start --yes --name "$instance" --vm-type=qemu --network=lima:host template:default 3>&- 4>&- ;;
+        bats-net-shared) limactl start --yes --name "$instance" --containerd=none --network=lima:shared template:default 3>&- 4>&- ;;
+        bats-net-host)
+            local args=()
+            if [[ $(uname -s) == "Darwin" ]]; then
+                # GitHub's macOS runners lose contact when two hardware-accelerated guests run at
+                # once, so run this one as an aarch64 guest: on the Intel runners that is a foreign
+                # architecture, which the QEMU driver runs under TCG (`-accel tcg`) instead of HVF.
+                # Emulation is slow, so give it a longer start timeout. It keeps the default CPUs:
+                # TCG gains little from more of them, as much of the boot is serial and its vCPU
+                # threads share translation locks.
+                args=(--vm-type=qemu --arch=aarch64 --timeout=40m)
+            fi
+            limactl start --yes --name "$instance" --containerd=none --network=lima:host "${args[@]}" template:default 3>&- 4>&-
+            ;;
         *)
             echo "ensure_instance: unknown instance name '$instance'" >&2
             return 1
