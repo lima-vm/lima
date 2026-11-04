@@ -17,11 +17,13 @@ runs:
       # path conversion that backend performs goes unexercised.
       # openssh: keeps a Cygwin ssh ahead of %SystemRoot%\System32\OpenSSH, so
       # these jobs cover the Cygwin toolchain and the plain jobs the native one.
-      & 'C:\msys64\usr\bin\pacman.exe' -Sy --noconfirm diffutils jq openssh rsync socat w3m
+      # xorriso: provides xorrisofs for the Windows Joliet ISO unit test.
+      & 'C:\msys64\usr\bin\pacman.exe' -Sy --noconfirm diffutils jq openssh rsync socat w3m xorriso
       if ($LASTEXITCODE -ne 0) { throw "pacman failed: $LASTEXITCODE" }
       # Lima's ssh selection skips an ssh.exe without scp.exe and ssh-keygen.exe
       # beside it, and reverse-sshfs takes the sftp-server from the same install.
-      foreach ($exe in 'bin\ssh.exe', 'bin\scp.exe', 'bin\ssh-keygen.exe', 'lib\ssh\sftp-server.exe') {
+      # The Joliet test also needs xorrisofs and its sibling cygpath.
+      foreach ($exe in 'bin\ssh.exe', 'bin\scp.exe', 'bin\ssh-keygen.exe', 'lib\ssh\sftp-server.exe', 'bin\cygpath.exe', 'bin\xorrisofs.exe') {
         $exePath = Join-Path 'C:\msys64\usr' $exe
         if (-not (Test-Path $exePath)) { throw "missing: $exePath" }
       }

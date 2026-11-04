@@ -21,6 +21,10 @@ limactl start template:windows-2025
 {{% /tab %}}
 {{< /tabpane >}}
 
+Prerequisites:
+- QEMU
+- A Joliet ISO generator on the host: `hdiutil` on macOS, or `xorrisofs` (from xorriso), `genisoimage`, or `mkisofs` on other hosts.
+
 The user password is randomly generated and stored in the `%USERPROFILE%\password.txt` file in the VM.
 Consider changing it after the first login.
 
