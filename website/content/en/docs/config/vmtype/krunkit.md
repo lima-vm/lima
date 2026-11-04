@@ -105,8 +105,8 @@ This path builds and installs dependencies (which can take some time. For faster
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
-limactl start --vm-type=krunkit template:fedora
-limactl shell fedora
+limactl start --vm-type=krunkit template:fedora-44
+limactl shell fedora-44
 ```
 {{% /tab %}}
 {{% tab header="YAML" %}}
@@ -114,7 +114,7 @@ limactl shell fedora
 vmType: krunkit
 
 base:
-- template:_images/fedora
+- template:_images/fedora-44
 - template:_default/mounts
 
 mountType: virtiofs
