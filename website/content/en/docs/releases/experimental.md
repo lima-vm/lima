@@ -29,6 +29,7 @@ The following commands are experimental and subject to change:
 - `limactl tunnel`
 - `limactl template *`
 - `limactl mcp *`
+- `limactl menu`
 
 ## Graduated
 
