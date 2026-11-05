@@ -10,6 +10,8 @@ import (
 	"net"
 	"time"
 
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -22,7 +24,9 @@ func (d *DriverClient) Validate(ctx context.Context) error {
 
 	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
 	defer cancel()
-	_, err := d.DriverSvc.Validate(ctx, &emptypb.Empty{})
+	var trailer metadata.MD
+	_, err := d.DriverSvc.Validate(ctx, &emptypb.Empty{}, grpc.Trailer(&trailer))
+	relayWarnings(trailer)
 	if err != nil {
 		d.logger.WithError(err).Error("Validation failed")
 		return err

@@ -141,6 +141,7 @@ mounts:
 
 #### Caveats
 - For macOS, the "virtiofs" mount type is supported only on macOS 13 or above with `vmType: vz` config. See also [`vmtype`]({{< ref "/docs/config/vmtype" >}}).
+- For [`vmType: krunkit`]({{< ref "/docs/config/vmtype/krunkit" >}}), virtiofs mounts cannot be enforced to be read-only, even when `writable: false` is set, as the guest may remount them in writable mode.
 - For Linux, the "virtiofs" mount type requires the [Rust version of virtiofsd](https://gitlab.com/virtio-fs/virtiofsd).
   Using the version from QEMU (usually packaged as `qemu-virtiofsd`) will *not* work, as it requires root access to run.
 
