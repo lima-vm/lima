@@ -190,7 +190,24 @@ func (l *LimaKrunkitDriver) Validate(_ context.Context) error {
 	if cfg := l.Instance.Config; cfg != nil && cfg.NetworkOpts.HostLoopback != nil && !*cfg.NetworkOpts.HostLoopback {
 		return errors.New("`networkOpts.hostLoopback: false` is not supported in krunkit driver")
 	}
-	return validateConfig(l.Instance.Config)
+	if err := validateConfig(l.Instance.Config); err != nil {
+		return err
+	}
+	// Not in validateConfig, as it is also called on deletion via Configure.
+	// Not in Cmdline either, as Cmdline runs on the hostagent and its warnings are not printed on limactl output.
+	warnReadOnlyVirtiofsMounts(l.Instance.Config)
+	return nil
+}
+
+func warnReadOnlyVirtiofsMounts(cfg *limatype.LimaYAML) {
+	if cfg.MountType == nil || *cfg.MountType != limatype.VIRTIOFS {
+		return
+	}
+	for _, mount := range cfg.Mounts {
+		if mount.Writable == nil || !*mount.Writable {
+			logrus.Warnf("vmType %s: read-only mount cannot be enforced for virtiofs, as the guest may remount it in writable mode: %q", vmType, mount.Location)
+		}
+	}
 }
 
 func checkKrunkitVersion() error {
