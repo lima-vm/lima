@@ -65,13 +65,13 @@ images:
   variant: "server"
 
 # Try to use release-yyyyMMdd minimal image if available.
-- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261024/ubuntu-26.04-minimal-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261105/ubuntu-26.04-minimal-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:6c083e6bea1573aab619c1dfa8d17bb7e3a8618fbd6cb57fa39d517b20062aa4"
+  digest: "sha256:ee808a4ad9e4bab636cec268e1b6385115e756be45ee30d7b3df84b832908ddc"
   variant: "minimal"
-- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261024/ubuntu-26.04-minimal-cloudimg-arm64.img"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/resolute/release-20261105/ubuntu-26.04-minimal-cloudimg-arm64.img"
   arch: "aarch64"
-  digest: "sha256:b0bb7d1dba37af81c0f74cb5e3bba3a9837e89856e38edf9cecc4a88d6afe5d5"
+  digest: "sha256:750d9f0c077e64734b664d357859d1de97c29d07fa126ac602ce9a939c94eac7"
   variant: "minimal"
 
 # Fallback minimal images
