@@ -1,21 +1,21 @@
 images:
 # Try to use release-yyyyMMdd image if available. Note that release-yyyyMMdd will be removed after several months.
 
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-genericcloud-amd64-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-genericcloud-amd64-20261103-2651.qcow2"
   arch: "x86_64"
-  digest: "sha512:3ace18e33bdd036edb49d1f79342bd01d2ab980e35194edb0b410435cd543538d286a0bd13bbb0835f7862306e3d385ce2f6a70d8ecf0bd961111166adbc1b8e"
+  digest: "sha512:d25999de0770d4cde1be72c299ba3ad94eac7ea8fd4d18f8cc86c69df69337e2e8a91d64465a9bfd8f2a78c566fcbcb0842eacc91c09efdef72d719d9f13b535"
   variant: "genericcloud"
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-genericcloud-arm64-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-genericcloud-arm64-20261103-2651.qcow2"
   arch: "aarch64"
-  digest: "sha512:71aa5d5dbcb3d9ecfe96bc3f6dd41b6805a0a41c852204a32747d230b64b95912297fb453b11a6031fd54d84a0a0a430e137d07e6986dc9ebc9d41483be003c4"
+  digest: "sha512:5d3ecec46fd29605db4084388a1e2eb82fd19a80202898f962840ea73793261de721e505e3877c829ae86c37fdd2f6c205b0b3b1337a89d0d4b98d9081adc0c2"
   variant: "genericcloud"
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-generic-ppc64el-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-generic-ppc64el-20261103-2651.qcow2"
   arch: "ppc64le"
-  digest: "sha512:15f949d8270d45acbfacc928e35292a5cfac311cd12e64ad08fd19d6df1fdb97cce4546aa2067d3cbec5577c87bf5a13cf5b3ebb9f0d119b611ff4ed5255fb82"
+  digest: "sha512:5b47fffd72981c7bd07b579401625d777f3b94d5d87e9345f9d8f9cc3fa423fdf7faf0f932dfe50069c52a685f6870d0148efd06f8df49b17f1a32926011bfe4"
   variant: "generic"
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-generic-riscv64-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-generic-riscv64-20261103-2651.qcow2"
   arch: "riscv64"
-  digest: "sha512:6782527bd4e6b783ab943092da1342a079fb9965cc13285a830db8f5c5925762e31daa8ecbc8b29d30a33f39c610e574e8307f8d51d3d54073d6858f71a6144c"
+  digest: "sha512:31c77110cb310d8fd6f216f784e2679b50002de6fb0e10212e3823c77bada26f73d8c93e37ce9bfef8c012d9218d366da8098057c2f9e8bcff437fd84f33daa4"
   variant: "generic"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
@@ -37,17 +37,17 @@ images:
   variant: "generic"
 
 # Try to use release-yyyyMMdd nocloud image if available.
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-nocloud-amd64-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-nocloud-amd64-20261103-2651.qcow2"
   arch: "x86_64"
-  digest: "sha512:129471badafeff16e59f7e95cb0fcc91828d570ecc7803ca06a05160176e65e61dd5c770310531cd68e6863b8dd102d939519002943e0bc77a4a5fe6a724f8a9"
+  digest: "sha512:6ab6c41b385c5e65d1f8e6631261dbc3be7ef35d820e9ad10fd34ca3e2ad2e4daa4549045ce482aa8a12d43e9a50a328a56cc6224bbd995261e33f2498c17516"
   variant: "nocloud"
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-nocloud-arm64-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-nocloud-arm64-20261103-2651.qcow2"
   arch: "aarch64"
-  digest: "sha512:c495666882f152beef1597c10441368fc304735a0c71eeecbd006e555b1c828584b00203cb6e0a1281f76e52ec172e3bebfdfbe978935bf032e826bd5f1917ce"
+  digest: "sha512:f99c23f0d4c18ba7512bae254a201b72dafe11ef0c69beac489a2daba4e128171ca5dcfcdc6d76c2b81a8aa17fc6da8ced2d0a3b9442c97358b3e99ed6668ca7"
   variant: "nocloud"
-- location: "https://cloud.debian.org/images/cloud/trixie/20261026-2643/debian-13-nocloud-ppc64el-20261026-2643.qcow2"
+- location: "https://cloud.debian.org/images/cloud/trixie/20261103-2651/debian-13-nocloud-ppc64el-20261103-2651.qcow2"
   arch: "ppc64le"
-  digest: "sha512:9714a0efee29eeb08f414fb08930eeef0c3d614de3f616e11781681db772ffb058e9189b92f202f14da964530e6d22f13ee798fdc0caa89df270837ca68e03ee"
+  digest: "sha512:4736f3fbb9b820279c4dc94f4c91fc866ce381429ba6cabe6da765d12843ee476f4ef0ee3513e123f60923293e0afe901e48673893645c92c2b3907a5b9c182e"
   variant: "nocloud"
 
 # Fallback nocloud images
