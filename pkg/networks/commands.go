@@ -150,8 +150,9 @@ func (c *Config) startCmd(name, daemon, daemonPath string) string {
 	var cmd string
 	switch daemon {
 	case SocketVMNet:
-		cmd = fmt.Sprintf("%s --pidfile=%s --socket-group=%s --vmnet-mode=%s",
-			daemonPath, c.PIDFile(name, SocketVMNet), c.Group, nw.Mode)
+		// sudo lets the caller merge adjacent words into one argument, so the
+		// free-form --pidfile must not precede, and thereby swallow, the pinned options.
+		cmd = fmt.Sprintf("%s --socket-group=%s --vmnet-mode=%s", daemonPath, c.Group, nw.Mode)
 		switch nw.Mode {
 		case ModeBridged:
 			cmd += fmt.Sprintf(" --vmnet-interface=%s", nw.Interface)
@@ -159,7 +160,7 @@ func (c *Config) startCmd(name, daemon, daemonPath string) string {
 			cmd += fmt.Sprintf(" --vmnet-gateway=%s --vmnet-dhcp-end=%s --vmnet-mask=%s",
 				nw.Gateway, nw.DHCPEnd, nw.NetMask)
 		}
-		cmd += " " + c.Sock(name)
+		cmd += fmt.Sprintf(" --pidfile=%s %s", c.PIDFile(name, SocketVMNet), c.Sock(name))
 	case LimaPrivilegedNet:
 		cmd = fmt.Sprintf("%s start --pidfile=%s --mode=%s --bridge=%s",
 			daemonPath, c.PIDFile(name, LimaPrivilegedNet), nw.Mode, c.BridgeName(name))
@@ -199,7 +200,9 @@ func (c *Config) stopCmd(name, daemon, daemonPath string) string {
 		// the daemon died without removing its PID file.
 		return fmt.Sprintf("%s stop --pidfile=%s", daemonPath, c.PIDFile(name, daemon))
 	}
-	return fmt.Sprintf("/usr/bin/pkill -F %s", c.PIDFile(name, daemon))
+	// One word, so that the caller cannot pass "-F <pidfile>" as a single argument,
+	// which pkill reads as the relative path " <pidfile>".
+	return fmt.Sprintf("/usr/bin/pkill -F%s", c.PIDFile(name, daemon))
 }
 
 // IsManagedBridge reports whether the interface is a bridge created by
@@ -238,7 +241,8 @@ func (c *Config) TapCmd(instName, netName string) string {
 // whitespace, so an attacker could otherwise smuggle extra words - including a
 // second --bridge flag - ahead of it. The pinned "--" that tapCmd renders stops
 // lima-privileged-net's flag parsing first, so every smuggled word lands as a
-// positional argument and is rejected as surplus.
+// positional argument and is rejected as surplus. That relies on the helper
+// rejecting arguments with whitespace, which could otherwise hide the "--".
 func (c *Config) tapCmdPattern(daemonPath, netName string) string {
 	return c.tapCmd(daemonPath, netName, "*")
 }

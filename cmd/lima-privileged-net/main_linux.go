@@ -4,8 +4,10 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
@@ -17,10 +19,29 @@ import (
 
 func main() {
 	os.Setenv("PATH", strings.Join(safeDirs, ":"))
+	if err := verifyArgs(os.Args[1:]); err != nil {
+		logrus.Fatal(err)
+	}
 	if err := newApp().Execute(); err != nil {
 		osutil.HandleExitError(err)
 		logrus.Fatal(err)
 	}
+}
+
+// verifyArgs refuses arguments that contain whitespace. sudo matches a sudoers
+// entry against the arguments joined with spaces, so the words of the entry are
+// not necessarily separate arguments: "--network=host --" passed as a single
+// argument satisfies an entry pinning "--network=host -- *" too, but the "--" is
+// then part of the flag value instead of the end of the flags, and the words
+// matched by the "*" are parsed as flags overriding the pinned ones. Without
+// whitespace, the arguments are exactly the words that sudo has matched.
+func verifyArgs(args []string) error {
+	for _, arg := range args {
+		if strings.ContainsFunc(arg, unicode.IsSpace) {
+			return fmt.Errorf("argument %#q contains whitespace", arg)
+		}
+	}
+	return nil
 }
 
 func newApp() *cobra.Command {
