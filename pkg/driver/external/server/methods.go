@@ -143,7 +143,9 @@ func (s *DriverServer) Info(ctx context.Context, _ *emptypb.Empty) (*pb.InfoResp
 
 func (s *DriverServer) Validate(ctx context.Context, empty *emptypb.Empty) (*emptypb.Empty, error) {
 	s.logger.Debugf("Received Validate request")
-	err := s.driver.Validate(ctx)
+	err := captureWarnings(ctx, s.logger, func() error {
+		return s.driver.Validate(ctx)
+	})
 	if err != nil {
 		s.logger.WithError(err).Error("Validation failed")
 		return empty, err
