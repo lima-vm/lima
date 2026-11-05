@@ -19,6 +19,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 
+	"github.com/lima-vm/lima/v2/pkg/gendoc"
 	"github.com/lima-vm/lima/v2/pkg/limactlutil"
 	"github.com/lima-vm/lima/v2/pkg/mcp/toolset"
 	"github.com/lima-vm/lima/v2/pkg/version"
@@ -37,6 +38,10 @@ func newApp() *cobra.Command {
 		Version:       strings.TrimPrefix(version.Version, "v"),
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		Annotations: map[string]string{
+			// Show "limactl mcp" rather than "limactl-mcp" in the usage and in the docs
+			cobra.CommandDisplayNameAnnotation: "limactl mcp",
+		},
 	}
 	cmd.AddCommand(
 		newMcpInfoCommand(),
@@ -187,13 +192,24 @@ func newMcpGenDocCommand() *cobra.Command {
 		RunE:   mcpGenDocAction,
 		Hidden: true,
 	}
+	cmd.Flags().String("content-mode", "mcp", "Content to generate (mcp: the MCP page, cli: the cli-reference pages for docsy)")
 	return cmd
 }
 
 func mcpGenDocAction(cmd *cobra.Command, args []string) error {
 	ctx := cmd.Context()
+	contentMode, err := cmd.Flags().GetString("content-mode")
+	if err != nil {
+		return err
+	}
 	dir := args[0]
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if contentMode == gendoc.ContentModeCLI {
+		return gendoc.Docsy(cmd.Root(), dir)
+	}
+	if contentMode != "mcp" {
+		return fmt.Errorf("unknown content mode %q", contentMode)
+	}
+	if err = os.MkdirAll(dir, 0o755); err != nil {
 		return err
 	}
 	fName := filepath.Join(dir, "mcp.md")
