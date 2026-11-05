@@ -136,6 +136,9 @@ func editAction(cmd *cobra.Command, args []string) error {
 	if err := driverutil.ResolveVMType(y); err != nil {
 		return err
 	}
+	if inst != nil && inst.VMType != "" && *y.VMType != inst.VMType {
+		logrus.Warnf("Changing the VM type of an existing instance (%q -> %q) is not guaranteed to work", inst.VMType, *y.VMType)
+	}
 	if err := limayaml.Validate(y, false); err != nil {
 		return saveRejectedYAML(yBytes, err)
 	}
