@@ -631,6 +631,25 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 			yLatest: `disk: 100GiB`,
 			wantErr: "field `disk`: shrinking the disk (100GiB --> 50GiB) is not supported",
 		},
+		{
+			name: "Latest YAML has an unused param",
+			yNew: `disk: 100GiB
+param:
+  FOO: bar
+provision:
+- mode: system
+  script: "echo {{.Param.FOO}}"`,
+			yLatest: `disk: 100GiB
+param:
+  FOO: bar`,
+			wantErr: "field `param` key `FOO` is not used in any provision, probe, copyToHost, or portForward",
+		},
+		{
+			name:    "Latest YAML is malformed",
+			yNew:    `disk: 100GiB`,
+			yLatest: `disk: [`,
+			wantErr: "failed to unmarshal YAML",
+		},
 	}
 
 	for _, tt := range tests {
@@ -639,7 +658,7 @@ func TestValidateAgainstLatestConfig(t *testing.T) {
 			if tt.wantErr == "" {
 				assert.NilError(t, err)
 			} else {
-				assert.Error(t, err, tt.wantErr)
+				assert.ErrorContains(t, err, tt.wantErr)
 			}
 		})
 	}
