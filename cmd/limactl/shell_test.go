@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"io/fs"
 	"os"
@@ -11,6 +12,8 @@ import (
 	"path"
 	"path/filepath"
 	"runtime"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/spf13/cobra"
@@ -18,6 +21,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/copytool"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/uiutil"
 )
 
 // TestPathDepth covers both host path forms, because `limactl shell --sync`
@@ -429,4 +433,130 @@ func TestMountedGuestPath(t *testing.T) {
 			assert.Equal(t, tt.want, mountedGuestPath(mounts, filepath.Join(root, tt.hostDir)))
 		})
 	}
+}
+
+// localRsyncTool serves "inst:DIR" from DIR on the host instead of from a guest,
+// and records the options of every read of the guest.
+type localRsyncTool struct {
+	guestReads [][]string
+}
+
+func (*localRsyncTool) Name() string { return "rsync" }
+
+func (*localRsyncTool) IsAvailableOnGuest(context.Context, []string) bool { return true }
+
+func (l *localRsyncTool) Command(ctx context.Context, paths []string, opts *copytool.Options) (*exec.Cmd, error) {
+	extra := syncArgs(nil)
+	if opts != nil {
+		extra = opts.AdditionalArgs
+	}
+	args := slices.Concat([]string{"-a", "-q"}, extra, []string{"--"})
+	for _, p := range paths {
+		if guestPath, ok := strings.CutPrefix(p, "inst:"); ok {
+			l.guestReads = append(l.guestReads, extra)
+			p = guestPath
+		}
+		args = append(args, p)
+	}
+	return exec.CommandContext(ctx, "rsync", args...), nil
+}
+
+// newSyncDirs returns a host and a guest directory named alike, as for `limactl shell --sync`.
+func newSyncDirs(t *testing.T) (hostDir, guestDir string) {
+	t.Helper()
+	if runtime.GOOS == "windows" {
+		t.Skip("localRsyncTool passes native paths to rsync")
+	}
+	if _, err := exec.LookPath("rsync"); err != nil {
+		t.Skip("rsync not found:", err)
+	}
+	hostDir = filepath.Join(t.TempDir(), "project")
+	guestDir = filepath.Join(t.TempDir(), "project")
+	assert.NilError(t, os.Mkdir(hostDir, 0o755))
+	assert.NilError(t, os.Mkdir(guestDir, 0o755))
+	t.Cleanup(func() { selectPrompt = uiutil.Select })
+	return hostDir, guestDir
+}
+
+func askUserForRsyncBackLocally(t *testing.T, hostDir, guestDir string, rsync *localRsyncTool) error {
+	t.Helper()
+	inst := &limatype.Instance{
+		Name:   "inst",
+		Config: &limatype.LimaYAML{User: limatype.User{Home: new("/home/user.linux")}},
+	}
+	// Stands in for ssh, which only removes the guest workdir afterwards.
+	sshCmd := exec.CommandContext(t.Context(), "true")
+	return askUserForRsyncBack(t.Context(), &cobra.Command{}, inst, sshCmd, hostDir, hostDir, guestDir, rsync, true, nil)
+}
+
+// TestAskUserForRsyncBackAppliesReviewedContents checks that "Yes" applies the
+// guest directory as it was reviewed, not as a guest process left it afterwards.
+func TestAskUserForRsyncBackAppliesReviewedContents(t *testing.T) {
+	hostDir, guestDir := newSyncDirs(t)
+	assert.NilError(t, os.WriteFile(filepath.Join(hostDir, "build.sh"), []byte("echo building\n"), 0o644))
+	assert.NilError(t, os.WriteFile(filepath.Join(hostDir, "keep.txt"), []byte("keep\n"), 0o644))
+	reviewed := "echo building\n# comment added by the agent\n"
+	assert.NilError(t, os.WriteFile(filepath.Join(guestDir, "build.sh"), []byte(reviewed), 0o644))
+	assert.NilError(t, os.WriteFile(filepath.Join(guestDir, "keep.txt"), []byte("keep\n"), 0o644))
+	// Same content and mtime as on the host, so only the mode tells the copy-dest basis apart.
+	assert.NilError(t, os.Chmod(filepath.Join(guestDir, "keep.txt"), 0o755))
+	hostKeep, err := os.Stat(filepath.Join(hostDir, "keep.txt"))
+	assert.NilError(t, err)
+	assert.NilError(t, os.Chtimes(filepath.Join(guestDir, "keep.txt"), hostKeep.ModTime(), hostKeep.ModTime()))
+
+	var prompt string
+	selectPrompt = func(message string, _ []string) (int, error) {
+		prompt = message
+		assert.NilError(t, os.WriteFile(filepath.Join(guestDir, "build.sh"), []byte(reviewed+"echo unreviewed\n"), 0o644))
+		assert.NilError(t, os.MkdirAll(filepath.Join(guestDir, ".git", "hooks"), 0o755))
+		assert.NilError(t, os.WriteFile(filepath.Join(guestDir, ".git", "hooks", "pre-commit"), []byte("#!/bin/sh\n"), 0o755))
+		assert.NilError(t, os.Remove(filepath.Join(guestDir, "keep.txt")))
+		return 0, nil // Yes
+	}
+	rsync := &localRsyncTool{}
+	assert.NilError(t, askUserForRsyncBackLocally(t, hostDir, guestDir, rsync))
+
+	got, err := os.ReadFile(filepath.Join(hostDir, "build.sh"))
+	assert.NilError(t, err)
+	assert.Equal(t, string(got), reviewed)
+	_, err = os.Stat(filepath.Join(hostDir, ".git"))
+	assert.Assert(t, errors.Is(err, fs.ErrNotExist), "unreviewed file reached the host: %v", err)
+	keep, err := os.Stat(filepath.Join(hostDir, "keep.txt"))
+	assert.NilError(t, err)
+	assert.Equal(t, keep.Mode().Perm(), fs.FileMode(0o755))
+	// One read of the guest, which takes unchanged files from the host.
+	assert.Equal(t, len(rsync.guestReads), 1)
+	assert.Check(t, slices.Contains(rsync.guestReads[0], "--copy-dest="+hostDir), rsync.guestReads[0])
+	assert.Check(t, strings.Contains(prompt, "modified: 1"), prompt)
+}
+
+// TestAskUserForRsyncBackRemovesSnapshot checks that the snapshot is taken beside
+// the project and removed afterwards, even with read-only directories from the guest.
+func TestAskUserForRsyncBackRemovesSnapshot(t *testing.T) {
+	hostDir, guestDir := newSyncDirs(t)
+	readOnly := filepath.Join(guestDir, "cache")
+	assert.NilError(t, os.Mkdir(readOnly, 0o755))
+	assert.NilError(t, os.WriteFile(filepath.Join(readOnly, "mod.go"), []byte("package mod\n"), 0o444))
+	assert.NilError(t, os.Chmod(readOnly, 0o555))
+	t.Cleanup(func() { _ = os.Chmod(readOnly, 0o755) })
+
+	listParent := func() []string {
+		entries, err := os.ReadDir(filepath.Dir(hostDir))
+		assert.NilError(t, err)
+		var names []string
+		for _, e := range entries {
+			names = append(names, e.Name())
+		}
+		return names
+	}
+	var duringPrompt []string
+	selectPrompt = func(string, []string) (int, error) {
+		duringPrompt = listParent()
+		return 1, nil // No
+	}
+	assert.NilError(t, askUserForRsyncBackLocally(t, hostDir, guestDir, &localRsyncTool{}))
+
+	assert.Equal(t, len(duringPrompt), 2, duringPrompt)
+	assert.Assert(t, strings.HasPrefix(duringPrompt[0], ".lima-guest-synced-"), duringPrompt)
+	assert.DeepEqual(t, listParent(), []string{"project"})
 }
