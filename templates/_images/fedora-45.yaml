@@ -1,0 +1,16 @@
+images:
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/x86_64/images/Fedora-Cloud-Base-Generic-45-1.4.x86_64.qcow2"
+  arch: "x86_64"
+  digest: "sha256:50bdc5e70f6a24f540932d15411c1c6ae9fcfa40fb990d876d83c5cc823b2ad0"
+
+- location: "https://download.fedoraproject.org/pub/fedora/linux/releases/45/Cloud/aarch64/images/Fedora-Cloud-Base-Generic-45-1.4.aarch64.qcow2"
+  arch: aarch64
+  digest: "sha256:1632acc8bc14d45b6c9596a0acc71b070d3748d1abdcf1a519be5c983bb0286c"
+
+- location: "https://download.fedoraproject.org/pub/alt/risc-v/release/45/Cloud/riscv64/images/Fedora-Cloud-Base-Generic-45-20261022.0.riscv64.qcow2"
+  arch: riscv64
+  digest: "sha256:58c5a0944b1f7f206b3aae643e00d41866c576d6ec6946ccba02d9575b80048e"
+
+# # NOTE: Intel Mac with macOS prior to 15.5 requires setting vmType to qemu
+# # https://github.com/lima-vm/lima/issues/3334
+# vmType: qemu
