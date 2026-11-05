@@ -629,3 +629,35 @@ func TestDownloadImageConversionCachedDigestMismatch(t *testing.T) {
 	)
 	assert.ErrorContains(t, err, "expected digest")
 }
+
+func TestDownloadCompressedTruncated(t *testing.T) {
+	check := func(t *testing.T, noExternal bool) {
+		t.Helper()
+		if noExternal {
+			t.Setenv("PATH", t.TempDir())
+		}
+		var buf strings.Builder
+		gz := gzip.NewWriter(&buf)
+		for i := range 1 << 16 {
+			_, err := gz.Write([]byte(strings.Repeat(string(rune('a'+i%26)), 64)))
+			assert.NilError(t, err)
+		}
+		assert.NilError(t, gz.Close())
+		compressed := buf.String()
+
+		localPath := filepath.Join(t.TempDir(), "basedisk")
+		localFile := filepath.Join(t.TempDir(), "image.gz")
+		assert.NilError(t, os.WriteFile(localFile, []byte(compressed[:len(compressed)/2]), 0o644))
+
+		_, err := Download(t.Context(), localPath, "file://"+localFile, WithDecompress(true))
+		assert.Assert(t, err != nil)
+		_, err = os.Stat(localPath)
+		assert.Assert(t, os.IsNotExist(err), "a failed decompression must not leave a partial file at the local path")
+
+		r, err := Download(t.Context(), localPath, "file://"+localFile, WithDecompress(true))
+		assert.Assert(t, err != nil)
+		assert.Assert(t, r == nil)
+	}
+	t.Run("external", func(t *testing.T) { check(t, false) })
+	t.Run("built-in", func(t *testing.T) { check(t, true) })
+}
