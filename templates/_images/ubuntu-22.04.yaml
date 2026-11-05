@@ -53,9 +53,9 @@ images:
   variant: "server"
 
 # Try to use release-yyyyMMdd minimal image if available.
-- location: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release-20261020/ubuntu-22.04-minimal-cloudimg-amd64.img"
+- location: "https://cloud-images.ubuntu.com/minimal/releases/jammy/release-20261028/ubuntu-22.04-minimal-cloudimg-amd64.img"
   arch: "x86_64"
-  digest: "sha256:6a05f0e81090bfa0aad89d6caeedb8ea70c91a89e8961fe5f7347a5ae1ccc84a"
+  digest: "sha256:6f815a0e248991b9a57be75cef992d611fa15aa4eef3461affc1389e184e89c5"
   variant: "minimal"
 
 # Fallback minimal images
