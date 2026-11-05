@@ -778,13 +778,15 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	var n limatype.LimaYAML
 	var errs error
 
-	// Load the latest YAML and fill in defaults
-	l, err := LoadWithWarnings(ctx, yLatest, "")
-	if err != nil {
-		errs = errors.Join(errs, err)
-	}
 	if err := Unmarshal(yNew, &n, "Unmarshal new YAML bytes"); err != nil {
 		errs = errors.Join(errs, err)
+	}
+
+	// Load the latest YAML and fill in defaults.
+	// If it cannot be loaded, there is nothing to compare against.
+	l, err := LoadWithWarnings(ctx, yLatest, "")
+	if err != nil {
+		return errors.Join(errs, err)
 	}
 
 	// Handle editing the template without a disk value
