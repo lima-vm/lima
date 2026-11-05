@@ -16,6 +16,12 @@ The default mount type is shown in the following table:
 | >= 0.17      | reverse-sshfs + OpenSSH SFTP server for QEMU, virtiofs for VZ |
 | >= 1.0       | 9p for QEMU (on non-Windows), virtiofs for VZ                 |
 
+> **Warning**
+> Overlapping mounts are not supported and may result in an unexpected error.
+> Avoid specifying a mount whose `location` (on the host) or `mountPoint` (in the guest)
+> is the same as, or is nested inside, the `location` or `mountPoint` of another mount.
+> For example, mounting both `~` and `~/src` is not supported.
+
 ## Mount types
 
 ### reverse-sshfs

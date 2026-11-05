@@ -212,6 +212,12 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		}
 	}
 
+	if warn {
+		for _, w := range overlappingMountWarnings(y.Mounts) {
+			logrus.Warn(w)
+		}
+	}
+
 	if warn && runtime.GOOS != "linux" {
 		for i, mount := range y.Mounts {
 			if mount.Virtiofs.QueueSize != nil {
@@ -810,4 +816,50 @@ func ValidateAgainstLatestConfig(ctx context.Context, yNew, yLatest []byte) erro
 	}
 
 	return errs
+}
+
+// isSameOrSubPath returns true if child is equal to parent, or is located under parent.
+// Both paths are expected to be cleaned and absolute.
+func isSameOrSubPath(parent, child, sep string) bool {
+	if parent == child {
+		return true
+	}
+	return strings.HasPrefix(child, strings.TrimSuffix(parent, sep)+sep)
+}
+
+// normalizeHostPathForComparison cleans a host path for comparison.
+// On Windows, the path is lowercased, as Windows paths (including drive letters) are case-insensitive.
+func normalizeHostPathForComparison(p string) string {
+	p = filepath.Clean(p)
+	if runtime.GOOS == "windows" {
+		p = strings.ToLower(p)
+	}
+	return p
+}
+
+// overlappingMountWarnings returns warning messages for mounts whose host locations
+// or guest mount points overlap with each other.
+// Overlapping mounts are not supported and may result in an unexpected error.
+func overlappingMountWarnings(mounts []limatype.Mount) []string {
+	const suffix = "; overlapping mounts are not supported and may result in an unexpected error"
+	var warnings []string
+	for i := range mounts {
+		for j := i + 1; j < len(mounts); j++ {
+			a, b := mounts[i], mounts[j]
+			locA, locB := normalizeHostPathForComparison(a.Location), normalizeHostPathForComparison(b.Location)
+			if isSameOrSubPath(locA, locB, string(filepath.Separator)) || isSameOrSubPath(locB, locA, string(filepath.Separator)) {
+				warnings = append(warnings, fmt.Sprintf("field `mounts[%d].location` (%#q) overlaps with `mounts[%d].location` (%#q)%s",
+					j, b.Location, i, a.Location, suffix))
+			}
+			if a.MountPoint == nil || b.MountPoint == nil {
+				continue
+			}
+			mpA, mpB := path.Clean(*a.MountPoint), path.Clean(*b.MountPoint)
+			if isSameOrSubPath(mpA, mpB, "/") || isSameOrSubPath(mpB, mpA, "/") {
+				warnings = append(warnings, fmt.Sprintf("field `mounts[%d].mountPoint` (%#q) overlaps with `mounts[%d].mountPoint` (%#q)%s",
+					j, *b.MountPoint, i, *a.MountPoint, suffix))
+			}
+		}
+	}
+	return warnings
 }
