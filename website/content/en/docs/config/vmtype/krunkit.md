@@ -207,7 +207,7 @@ and enjoy chatting with the AI model.
 💡 **Tip:** If the model takes too long to load or experiences performance issues, try reducing the `-ngl` (number of GPU layers) value.
 
 ## Notes and caveats
-- macOS Ventura or later on Apple Silicon is required.
+- macOS 14 or later on Apple Silicon is required.
 - virtiofs mounts cannot be enforced to be read-only, even when `writable: false` is set, as the guest may remount them in writable mode.
 - To verify GPU/Vulkan in the guest container or VM, use tools like `vulkaninfo --summary`.
 - AI models on containers can run on any Linux distribution but without containers Fedora is required.
