@@ -1,7 +1,7 @@
 images:
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/alpine-3.22.7-x86_64-uefi-cloudinit-r0.qcow2"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/alpine-3.22.8-x86_64-uefi-cloudinit-r0.qcow2"
   arch: "x86_64"
-  digest: "sha512:876ae6f11342cf45f46a1a748ff8d2b2ea220e9ec3b7c3774e1cfa0e90590e9fdff8d7808008eeee2787ea2e3ecdd5376ca733573c34ff0454882cdb22519600"
-- location: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/alpine-3.22.7-aarch64-uefi-cloudinit-r0.qcow2"
+  digest: "sha512:b7cc65d68d7f69b88190bbc4601c8055b1a16dcab9d25919e1f9992a02a0bc50bbe4d56aedbb4779970bdd9aae10b434da1438955987001e79a32e9319ff5825"
+- location: "https://dl-cdn.alpinelinux.org/alpine/v3.22/releases/cloud/alpine-3.22.8-aarch64-uefi-cloudinit-r0.qcow2"
   arch: "aarch64"
-  digest: "sha512:c73ef67891b118f4939cdc45c2d891cbca77305f6e6073cb0d702c82aaf7eef3934cf81274c6b9f350efc03e904926316771aebfc3b67a677d890dd36d162401"
+  digest: "sha512:1058154815107b1ebb094483dbe520eff2f2809309c42047f14d3dbf82b2c77aa0e0dc3b36760482870a62675bbf7e860132b67e48afb0d9a7ede36f8f2c241c"
