@@ -18,6 +18,7 @@ weight: 6
   - ["Advantages compared to Docker for Mac?"](#advantages-compared-to-docker-for-mac)
 - [Configuration](#configuration)
   - ["Is it possible to disable mounts, port forwarding, containerd, etc. ?"](#is-it-possible-to-disable-mounts-port-forwarding-containerd-etc-)
+  - ["Copy-on-write on btrfs hosts"](#copy-on-write-on-btrfs-hosts)
 - [QEMU](#qemu)
   - ["QEMU crashes with `HV_ERROR`"](#qemu-crashes-with-hv_error)
   - ["QEMU is slow"](#qemu-is-slow)
@@ -139,6 +140,26 @@ When the "plain" mode is enabled:
 - dependency packages like sshfs will not be installed into the VM
 
 User-specified provisioning scripts will be still executed.
+
+#### "Copy-on-write on btrfs hosts"
+On a btrfs host, Lima turns off copy-on-write (like `chattr +C`) for new instance directories,
+`limactl disk` directories and download cache directories, so that in-place writes do not fragment VM disk images.
+libvirt does the same for its storage pools.
+Existing instances are not changed, and `limactl clone` and `limactl rename` keep the setting of the original instance directory.
+To move an existing instance to No_COW, stop it, run `chattr +C` on its directory (`limactl list --format '{{.Dir}}' INSTANCE`),
+and clone it: the clone gets full copies of the disks, without copy-on-write.
+
+To keep copy-on-write, set the environment variable `LIMA_BTRFS_NOCOW=false`.
+See [Environment Variables]({{< ref "/docs/config/environment-variables" >}}).
+
+Turning copy-on-write off has some costs:
+- btrfs keeps no checksums for these files, so it does not notice a corrupted block.
+  Reading it returns the bad data without an error, and `btrfs scrub` does not report it.
+  With copy-on-write, reading the same block fails with an I/O error.
+- Clones and btrfs snapshots share their blocks with the original, and the first write to a shared block moves it.
+  So a disk image fragments again after a clone or a snapshot, and regular snapshots bring the fragmentation back.
+- btrfs can't share blocks between files with and without copy-on-write, so Lima makes a full copy of a file that still has it, and logs a warning.
+  That happens to `limactl disk import`, to images whose `location` is a local file, and to images that were already in the download cache, until `limactl prune` clears the cache.
 
 ### QEMU
 #### "QEMU crashes with `HV_ERROR`"
