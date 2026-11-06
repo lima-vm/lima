@@ -76,14 +76,14 @@ func TestSudoersRendering(t *testing.T) {
 # Manage "bridged" network daemons
 
 %staff ALL=(root:wheel) NOPASSWD:NOSETENV: \
-    /opt/socket_vmnet/bin/socket_vmnet --pidfile=/run/lima/bridged_socket_vmnet.pid --socket-group=staff --vmnet-mode=bridged --vmnet-interface=br0 /run/lima/socket_vmnet.bridged, \
-    /usr/bin/pkill -F /run/lima/bridged_socket_vmnet.pid
+    /opt/socket_vmnet/bin/socket_vmnet --socket-group=staff --vmnet-mode=bridged --vmnet-interface=br0 --pidfile=/run/lima/bridged_socket_vmnet.pid /run/lima/socket_vmnet.bridged, \
+    /usr/bin/pkill -F/run/lima/bridged_socket_vmnet.pid
 
 # Manage "shared" network daemons
 
 %staff ALL=(root:wheel) NOPASSWD:NOSETENV: \
-    /opt/socket_vmnet/bin/socket_vmnet --pidfile=/run/lima/shared_socket_vmnet.pid --socket-group=staff --vmnet-mode=shared --vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 /run/lima/socket_vmnet.shared, \
-    /usr/bin/pkill -F /run/lima/shared_socket_vmnet.pid
+    /opt/socket_vmnet/bin/socket_vmnet --socket-group=staff --vmnet-mode=shared --vmnet-gateway=192.168.105.1 --vmnet-dhcp-end=192.168.105.254 --vmnet-mask=255.255.255.0 --pidfile=/run/lima/shared_socket_vmnet.pid /run/lima/socket_vmnet.shared, \
+    /usr/bin/pkill -F/run/lima/shared_socket_vmnet.pid
 `
 		assert.Equal(t, got, want)
 	})
