@@ -27,6 +27,13 @@ brew install lima
 limactl start
 ```
 
+If you are on Windows, Lima can be installed through PowerShell using:
+```powershell
+winget install Lima.Lima
+```
+
+For other installation methods, see <https://lima-vm.io/docs/installation/>.
+
 To run Linux commands:
 ```bash
 lima uname -a
