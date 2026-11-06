@@ -1257,6 +1257,12 @@ func Exe(arch limatype.Arch) (exe string, args []string, err error) {
 	if err != nil {
 		return "", nil, err
 	}
+	// QEMU is started in the instance directory, not in the current directory,
+	// so a relative path (e.g., from $QEMU_SYSTEM_X86_64) has to be resolved here.
+	exe, err = filepath.Abs(exe)
+	if err != nil {
+		return "", nil, err
+	}
 	return exe, args, nil
 }
 

@@ -31,6 +31,10 @@ func LimaDir() (string, error) {
 		}
 		dir = filepath.Join(homeDir, DotLima)
 	}
+	dir, err := filepath.Abs(dir)
+	if err != nil {
+		return "", err
+	}
 	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
 		return dir, nil
 	}

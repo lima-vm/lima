@@ -117,6 +117,21 @@ func TestParseQemuVersion(t *testing.T) {
 	}
 }
 
+func TestExeRelative(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("the fake QEMU has no .exe suffix")
+	}
+	cwd, err := filepath.EvalSymlinks(t.TempDir())
+	assert.NilError(t, err)
+	t.Chdir(cwd)
+	assert.NilError(t, os.WriteFile("qemu", nil, 0o755))
+	t.Setenv("QEMU_SYSTEM_X86_64", "./qemu")
+
+	exe, _, err := Exe(limatype.X8664)
+	assert.NilError(t, err)
+	assert.Equal(t, exe, filepath.Join(cwd, "qemu"))
+}
+
 func TestSwtpmCmdline(t *testing.T) {
 	if runtime.GOOS == "windows" {
 		t.Skip("swtpm unix socket mode is not supported on Windows host")
