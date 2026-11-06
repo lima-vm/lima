@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"os"
 	"os/exec"
@@ -235,7 +236,7 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	}
 
 	if o.cacheDir == "" {
-		if err := downloadHTTP(ctx, localPath, "", "", remote, o.description, o.expectedDigest); err != nil {
+		if err := downloadHTTP(ctx, httpTarget{localPath: localPath}, remote, o.description, o.expectedDigest); err != nil {
 			return nil, err
 		}
 		res := &Result{
@@ -246,16 +247,8 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 	}
 
 	shad := cacheDirectoryPath(o.cacheDir, remote)
-	if err := os.MkdirAll(shad, 0o700); err != nil {
-		return nil, err
-	}
-	// Keeps the copy from the cache into a No_COW instance directory a reflink on btrfs.
-	if err := fsutil.DisableCopyOnWrite(shad); err != nil {
-		logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", shad)
-	}
-
 	var res *Result
-	err := lockutil.WithDirLock(shad, func() error {
+	err := withCacheEntryLock(shad, func() error {
 		var err error
 		res, err = getCached(ctx, localPath, remote, o)
 		if err != nil {
@@ -268,6 +261,35 @@ func Download(ctx context.Context, local, remote string, opts ...Opt) (*Result, 
 		return err
 	})
 	return res, err
+}
+
+// withCacheEntryLock creates the cache entry directory shad and calls fn while
+// holding its lock. Pruning removes an entry under the same lock, so a download
+// waiting for the lock may find the entry gone (lockutil.ErrDirRemoved), or it
+// may vanish before the lock is taken; the entry is then created and locked
+// again.
+func withCacheEntryLock(shad string, fn func() error) error {
+	const maxAttempts = 3
+	var err error
+	for range maxAttempts {
+		if err = os.MkdirAll(shad, 0o700); err != nil {
+			return err
+		}
+		// Keeps the copy from the cache into a No_COW instance directory a reflink on btrfs.
+		if err := fsutil.DisableCopyOnWrite(shad); err != nil {
+			logrus.WithError(err).Warnf("Failed to disable copy-on-write for %#q (non-fatal)", shad)
+		}
+		locked := false
+		err = lockutil.WithDirLock(shad, func() error {
+			locked = true
+			return fn()
+		})
+		if locked || (!errors.Is(err, lockutil.ErrDirRemoved) && !errors.Is(err, os.ErrNotExist)) {
+			return err
+		}
+		logrus.Debugf("cache entry %#q was removed while waiting for its lock, retrying", shad)
+	}
+	return err
 }
 
 // getCached tries to copy the file from the cache to local path. Return result,
@@ -405,6 +427,7 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 	shadData := filepath.Join(shad, "data")
 	shadTime := filepath.Join(shad, "time")
 	shadType := filepath.Join(shad, "type")
+	shadETag := filepath.Join(shad, "etag")
 	shadDigest, err := cacheDigestPath(shad, o.expectedDigest)
 	if err != nil {
 		return nil, err
@@ -414,7 +437,14 @@ func fetch(ctx context.Context, localPath, remote string, o options) (*Result, e
 	if err := os.WriteFile(shadURL, []byte(remote), 0o644); err != nil {
 		return nil, err
 	}
-	if err := downloadHTTP(ctx, shadData, shadTime, shadType, remote, o.description, o.expectedDigest); err != nil {
+	target := httpTarget{
+		localPath: shadData,
+		timePath:  shadTime,
+		typePath:  shadType,
+		etagPath:  shadETag,
+		resume:    true,
+	}
+	if err := downloadHTTP(ctx, target, remote, o.description, o.expectedDigest); err != nil {
 		return nil, err
 	}
 	if shadDigest != "" && o.expectedDigest != "" {
@@ -892,59 +922,172 @@ func matchLastModified(ctx context.Context, lastModifiedPath, url string) (match
 	return false, lmCached, lmRemote, nil
 }
 
-func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url, description string, expectedDigest digest.Digest) error {
-	if localPath == "" {
-		return errors.New("downloadHTTP: got empty localPath")
-	}
-	logrus.Debugf("downloading %#q into %#q", url, localPath)
+// httpTarget describes where downloadHTTP writes the downloaded data and its
+// metadata. The metadata paths are optional (empty disables writing them).
+type httpTarget struct {
+	localPath string // final destination (e.g. shadData, or the user's file)
+	timePath  string // "" or shadTime (Last-Modified)
+	typePath  string // "" or shadType (Content-Type)
+	etagPath  string // "" or shadETag (ETag)
+	resume    bool   // use a stable .part file and attempt an HTTP Range resume
+}
 
-	resp, err := httpclientutil.Get(ctx, http.DefaultClient, url)
+// ifRangeValidator returns the validator (ETag preferred, else Last-Modified)
+// cached on disk. It is sent as If-Range so the server only serves a partial
+// response when the resource is unchanged. A weak ETag is skipped because
+// If-Range must not carry one (RFC 9110 section 13.1.5).
+func ifRangeValidator(etagPath, timePath string) string {
+	if etag := readFile(etagPath); etag != "" && !strings.HasPrefix(etag, "W/") {
+		return etag
+	}
+	return readFile(timePath)
+}
+
+// resumeOffset returns the number of bytes of a previous partial download that
+// can be resumed, and the If-Range validator to send with the Range request.
+// The offset is 0 unless the target is resumable, a non-empty partial file
+// exists, a digest is configured to verify the final result, and a cached
+// validator (ETag or Last-Modified) is available for If-Range.
+func resumeOffset(t httpTarget, partial string, expectedDigest digest.Digest, url string) (offset int64, validator string) {
+	if !t.resume {
+		return 0, ""
+	}
+	fi, err := os.Stat(partial)
+	if err != nil || fi.Size() == 0 {
+		return 0, ""
+	}
+	if expectedDigest == "" {
+		// Without a digest the integrity of the existing partial cannot be
+		// verified, so restart from scratch instead of trusting possibly corrupt
+		// bytes.
+		logrus.Warnf("No digest configured for %#q; cannot verify the existing partial download, restarting from scratch", url)
+		return 0, ""
+	}
+	validator = ifRangeValidator(t.etagPath, t.timePath)
+	if validator == "" {
+		// Without If-Range the server cannot tell whether the resource changed
+		// and would append its bytes to a possibly stale partial.
+		logrus.Warnf("No ETag or Last-Modified cached for %#q; cannot safely resume the existing partial download, restarting from scratch", url)
+		return 0, ""
+	}
+	return fi.Size(), validator
+}
+
+// newDownloadRequest builds the GET request, adding Range/If-Range headers when
+// resuming from a non-zero offset.
+func newDownloadRequest(ctx context.Context, url string, offset int64, validator string) (*http.Request, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, http.NoBody)
 	if err != nil {
+		return nil, err
+	}
+	if offset > 0 {
+		req.Header.Set("Range", fmt.Sprintf("bytes=%d-", offset))
+		req.Header.Set("If-Range", validator)
+	}
+	return req, nil
+}
+
+// writeResponseMetadata persists the Last-Modified, Content-Type and ETag
+// response headers to the configured cache metadata files.
+func writeResponseMetadata(t httpTarget, resp *http.Response) error {
+	write := func(path, value string) error {
+		if path == "" {
+			return nil
+		}
+		return os.WriteFile(path, []byte(value), 0o644)
+	}
+	if err := write(t.timePath, resp.Header.Get("Last-Modified")); err != nil {
 		return err
 	}
-	if lastModified != "" {
-		lm := resp.Header.Get("Last-Modified")
-		if err := os.WriteFile(lastModified, []byte(lm), 0o644); err != nil {
-			return err
-		}
-	}
-	if contentType != "" {
-		ct := resp.Header.Get("Content-Type")
-		if err := os.WriteFile(contentType, []byte(ct), 0o644); err != nil {
-			return err
-		}
-	}
-	defer resp.Body.Close()
-	bar, err := progressbar.New(resp.ContentLength)
-	if err != nil {
+	if err := write(t.typePath, resp.Header.Get("Content-Type")); err != nil {
 		return err
+	}
+	return write(t.etagPath, resp.Header.Get("ETag"))
+}
+
+// openPartialFile opens the partial file for writing, appending when resuming or
+// truncating for a fresh download.
+func openPartialFile(partial string, resuming bool) (*os.File, error) {
+	flag := os.O_CREATE | os.O_WRONLY | os.O_TRUNC
+	if resuming {
+		flag = os.O_CREATE | os.O_WRONLY | os.O_APPEND
+	}
+	return os.OpenFile(partial, flag, 0o644)
+}
+
+// flushPartial flushes and closes the partial file. The explicit close surfaces
+// any deferred write error and releases the handle, which is required before the
+// file can be removed (on digest mismatch) or renamed on Windows, where an open
+// file cannot be deleted or renamed.
+func flushPartial(fileWriter *os.File) error {
+	if err := fileWriter.Sync(); err != nil {
+		return err
+	}
+	return fileWriter.Close()
+}
+
+// resumeDigester creates a digester for expectedDigest, seeding it with the
+// already-downloaded bytes of the partial file when resuming (offset > 0). It
+// returns a nil digester when no digest is expected.
+func resumeDigester(expectedDigest digest.Digest, partial string, offset int64) (digest.Digester, error) {
+	if expectedDigest == "" {
+		return nil, nil
+	}
+	algo := expectedDigest.Algorithm()
+	if !algo.Available() {
+		return nil, fmt.Errorf("unsupported digest algorithm %#q", algo)
+	}
+	digester := algo.Digester()
+	if offset > 0 {
+		existing, err := os.Open(partial)
+		if err != nil {
+			return nil, err
+		}
+		defer existing.Close()
+		if _, err := io.CopyN(digester.Hash(), existing, offset); err != nil {
+			return nil, err
+		}
+	}
+	return digester, nil
+}
+
+// verifyDownloadedDigest checks the digester result against expectedDigest. On
+// mismatch it discards a resumable partial so a corrupt resume does not poison
+// future retries, and also reports when that fails. It is a no-op when no digest
+// was expected (digester == nil).
+func verifyDownloadedDigest(digester digest.Digester, expectedDigest digest.Digest, partial string, resume bool) error {
+	if digester == nil {
+		return nil
+	}
+	actualDigest := digester.Digest()
+	if actualDigest == expectedDigest {
+		return nil
+	}
+	err := fmt.Errorf("expected digest %#q, got %#q", expectedDigest, actualDigest)
+	if resume {
+		if rmErr := os.Remove(partial); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
+			return errors.Join(err, rmErr)
+		}
+	}
+	return err
+}
+
+// startProgressBar creates and starts a progress bar for the download. total
+// always reflects the full size (existing offset + remaining) even when resuming,
+// and the bar starts pre-filled to offset. When HideProgress is set the bar is
+// silent and no description is printed.
+func startProgressBar(resp *http.Response, offset int64, resuming bool, description, url string) (*progressbar.ProgressBar, error) {
+	total := resp.ContentLength
+	if resuming && total >= 0 {
+		total += offset
+	}
+	bar, err := progressbar.New(total)
+	if err != nil {
+		return nil, err
 	}
 	if HideProgress {
 		hideBar(bar)
-	}
-
-	localPathTmp := perProcessTempfile(localPath)
-	fileWriter, err := os.Create(localPathTmp)
-	if err != nil {
-		return err
-	}
-	defer fileWriter.Close()
-	defer os.RemoveAll(localPathTmp)
-
-	writers := []io.Writer{fileWriter}
-	var digester digest.Digester
-	if expectedDigest != "" {
-		algo := expectedDigest.Algorithm()
-		if !algo.Available() {
-			return fmt.Errorf("unsupported digest algorithm %#q", algo)
-		}
-		digester = algo.Digester()
-		hasher := digester.Hash()
-		writers = append(writers, hasher)
-	}
-	multiWriter := io.MultiWriter(writers...)
-
-	if !HideProgress {
+	} else {
 		if description == "" {
 			description = url
 		}
@@ -952,26 +1095,137 @@ func downloadHTTP(ctx context.Context, localPath, lastModified, contentType, url
 		fmt.Fprintf(os.Stderr, "Downloading %s\n", description)
 	}
 	bar.Start()
-	if _, err := io.Copy(multiWriter, bar.NewProxyReader(resp.Body)); err != nil {
+	if offset > 0 {
+		bar.SetCurrent(offset)
+	}
+	return bar, nil
+}
+
+// finalizeOrRestartPartial handles a 416 response. A 416 usually means the partial
+// is already the complete file (interrupted after the body finished but before the
+// final rename): if a digest is configured and the partial validates against it,
+// it is finalized in place without re-downloading; otherwise the partial is
+// discarded and the download restarts from scratch.
+func finalizeOrRestartPartial(ctx context.Context, t httpTarget, partial string, offset int64, url, description string, expectedDigest digest.Digest) error {
+	if offset > 0 && expectedDigest != "" && validateLocalFileDigest(partial, expectedDigest) == nil {
+		logrus.Debugf("partial download of %#q is already complete; finalizing without re-downloading", url)
+		return os.Rename(partial, t.localPath)
+	}
+	logrus.Debugf("discarding partial %#q and re-downloading %#q", partial, url)
+	if err := os.Remove(partial); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return downloadHTTP(ctx, t, url, description, expectedDigest)
+}
+
+func downloadHTTP(ctx context.Context, t httpTarget, url, description string, expectedDigest digest.Digest) error {
+	if t.localPath == "" {
+		return errors.New("downloadHTTP: got empty localPath")
+	}
+	logrus.Debugf("downloading %#q into %#q", url, t.localPath)
+
+	// The resumable (cache) path uses a stable partial file so that an interrupted
+	// download can be continued on the next attempt. The uncached path keeps a
+	// per-process temp file that must not linger.
+	partial := perProcessTempfile(t.localPath)
+	if t.resume {
+		partial = partialFilePath(t.localPath)
+		logrus.Debugf("resumable download for %#q, using partial file %#q", url, partial)
+	}
+	offset, validator := resumeOffset(t, partial, expectedDigest, url)
+
+	req, err := newDownloadRequest(ctx, url, offset, validator)
+	if err != nil {
+		return err
+	}
+	if t.resume {
+		// Go negotiates gzip only for requests without Range, so a fresh request
+		// would cache the ETag of the gzip representation, which a later Range
+		// request cannot match. Ask for identity on every request so the offset
+		// and the validator always refer to the same representation.
+		req.Header.Set("Accept-Encoding", "identity")
+	}
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	logrus.Debugf("got HTTP status %q for %#q", resp.Status, url)
+
+	// Decide whether the server is resuming (206) or sending the whole file. A
+	// 206 counts as a resume only after a Range request: appending an unsolicited
+	// 206 to a leftover partial would leave bytes the digester never hashed.
+	var resuming bool
+	switch {
+	case resp.StatusCode == http.StatusPartialContent && offset > 0:
+		logrus.Debugf("server returned 206 Partial Content; resuming %#q from offset %d", url, offset)
+		resuming = true
+	case resp.StatusCode == http.StatusRequestedRangeNotSatisfiable && offset > 0:
+		resp.Body.Close()
+		return finalizeOrRestartPartial(ctx, t, partial, offset, url, description, expectedDigest)
+	case resp.StatusCode/100 == 2:
+		// 200 OK, or any other 2xx: full body. The server ignored Range, or
+		// If-Range signalled that the resource changed. Reset offset so the
+		// digester and progress bar treat this as a fresh download.
+		logrus.Debugf("server returned the full body for %#q (no Range support or the resource changed)", url)
+		offset = 0
+	default:
+		return httpclientutil.Successful(resp)
+	}
+
+	fileWriter, err := openPartialFile(partial, resuming)
+	if err != nil {
+		return err
+	}
+	defer fileWriter.Close()
+	if !t.resume {
+		defer os.RemoveAll(partial)
+	}
+
+	// Write the metadata only after O_TRUNC dropped the old bytes, so a new
+	// validator is never paired with them. On a 206 the matched If-Range already
+	// vouches for the cached metadata, and the server may omit Last-Modified and
+	// Content-Type (RFC 9110 section 15.3.7).
+	if !resuming {
+		if err := writeResponseMetadata(t, resp); err != nil {
+			return err
+		}
+	}
+
+	digester, err := resumeDigester(expectedDigest, partial, offset)
+	if err != nil {
+		return err
+	}
+	writers := []io.Writer{fileWriter}
+	if digester != nil {
+		writers = append(writers, digester.Hash())
+	}
+
+	bar, err := startProgressBar(resp, offset, resuming, description, url)
+	if err != nil {
+		return err
+	}
+	if _, err := io.Copy(io.MultiWriter(writers...), bar.NewProxyReader(resp.Body)); err != nil {
 		return err
 	}
 	bar.Finish()
 
-	if digester != nil {
-		actualDigest := digester.Digest()
-		if actualDigest != expectedDigest {
-			return fmt.Errorf("expected digest %#q, got %#q", expectedDigest, actualDigest)
+	// Flush and close before verifying and renaming: on Windows an open file
+	// cannot be removed (on digest mismatch) or renamed.
+	if err := flushPartial(fileWriter); err != nil {
+		return err
+	}
+	if err := verifyDownloadedDigest(digester, expectedDigest, partial, t.resume); err != nil {
+		if _, statErr := os.Stat(partial); offset > 0 && errors.Is(statErr, os.ErrNotExist) {
+			// A server that ignores If-Range can stitch a stale partial to the
+			// bytes of a changed resource. Restart only once the partial is
+			// discarded, so the restart starts from scratch and runs at most once.
+			logrus.WithError(err).Warnf("Resumed download of %#q failed verification, restarting from scratch", url)
+			return downloadHTTP(ctx, t, url, description, expectedDigest)
 		}
-	}
-
-	if err := fileWriter.Sync(); err != nil {
 		return err
 	}
-	if err := fileWriter.Close(); err != nil {
-		return err
-	}
-
-	return os.Rename(localPathTmp, localPath)
+	return os.Rename(partial, t.localPath)
 }
 
 var tempfileCount atomic.Uint64
@@ -984,6 +1238,15 @@ var tempfileCount atomic.Uint64
 // https://github.com/lima-vm/lima/issues/2722
 func perProcessTempfile(path string) string {
 	return fmt.Sprintf("%s.tmp.%d.%d", path, os.Getpid(), tempfileCount.Add(1))
+}
+
+// partialFilePath returns the stable partial-download path for a cache entry.
+// It is safe to reuse across processes because the cache download runs under an
+// exclusive directory lock (see Download), so only one process writes it at a
+// time. A single stable name also enables HTTP Range resume and bounds leftover
+// partial files to at most one per URL.
+func partialFilePath(path string) string {
+	return path + ".part"
 }
 
 // CacheEntries returns a map of cache entries.
@@ -1021,7 +1284,10 @@ func CacheKey(remote string) string {
 	return fmt.Sprintf("%x", sha256.Sum256([]byte(remote)))
 }
 
-// RemoveAllCacheDir removes the cache directory.
+// RemoveAllCacheDir removes all the cache entries. Each entry is removed under
+// its lock, so a download in progress is never pulled out from under it. The
+// download/by-url-sha256 directory itself is kept: a download may be creating a
+// new entry in it meanwhile.
 func RemoveAllCacheDir(opts ...Opt) error {
 	var o options
 	if err := o.apply(opts); err != nil {
@@ -1031,7 +1297,43 @@ func RemoveAllCacheDir(opts ...Opt) error {
 		return nil
 	}
 	logrus.Infof("Pruning %#q", o.cacheDir)
-	return os.RemoveAll(o.cacheDir)
+	entries, err := CacheEntries(opts...)
+	if err != nil {
+		return err
+	}
+	// Sorted, so that on Windows "<entry>.lock", which locking an entry recreates,
+	// is removed after the entry itself.
+	for _, key := range slices.Sorted(maps.Keys(entries)) {
+		if err := RemoveCacheEntry(entries[key]); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// RemoveCacheEntry removes a cache entry (a path returned by CacheEntries) while
+// holding its lock, so it waits for a download in progress, and a download that
+// waits for the lock meanwhile notices the removal and starts over.
+func RemoveCacheEntry(dir string) error {
+	fi, err := os.Stat(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return nil
+	}
+	if err != nil {
+		return err
+	}
+	if !fi.IsDir() {
+		// Not an entry, e.g. the "<entry>.lock" file of one on Windows.
+		return os.RemoveAll(dir)
+	}
+	err = lockutil.WithDirLock(dir, func() error {
+		return os.RemoveAll(dir)
+	})
+	if errors.Is(err, os.ErrNotExist) || errors.Is(err, lockutil.ErrDirRemoved) {
+		// Already removed while waiting for the lock.
+		return nil
+	}
+	return err
 }
 
 // RemoveStaleTempFiles removes leftover partial-download files ("data.part" and
