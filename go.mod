@@ -61,7 +61,7 @@ require (
 	github.com/sirupsen/logrus v1.10.2 // gomodjail:unconfined
 	github.com/spakin/netpbm v1.3.2
 	github.com/spf13/cobra v1.10.2 // gomodjail:unconfined
-	github.com/spf13/pflag v1.0.10
+	github.com/spf13/pflag v1.1.0
 	google.golang.org/grpc v1.85.0 // gomodjail:unconfined
 	google.golang.org/protobuf v1.36.12 // gomodjail:unconfined
 	gopkg.in/op/go-logging.v1 v1.0.0-20160211212156-b2cb9fa56473 // gomodjail:unconfined
