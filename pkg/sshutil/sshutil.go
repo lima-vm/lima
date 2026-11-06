@@ -404,7 +404,7 @@ var sshInfo struct {
 // The result may contain different values with the same key.
 //
 // The result always contains the IdentityFile option.
-// The result never contains the Port option.
+// The result never contains the Port option, nor the options for the host key verification (see HostKeyOpts).
 //
 // Path options take toolPath's form, for the binary that ends up reading them.
 // scp hands its options to the ssh beside itself, which need not be sshExe.
@@ -464,9 +464,6 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, toolPath string, useDotSSH b
 	}
 
 	opts = append(opts,
-		"StrictHostKeyChecking=no",
-		"UserKnownHostsFile=/dev/null",
-		"NoHostAuthenticationForLocalhost=yes",
 		"PreferredAuthentications=publickey",
 		"Compression=no",
 		"BatchMode=yes",
@@ -508,14 +505,23 @@ func CommonOpts(ctx context.Context, sshExe SSHExe, toolPath string, useDotSSH b
 }
 
 func identityFileEntry(ctx context.Context, toolPath, privateKeyPath string) (string, error) {
-	if runtime.GOOS == "windows" {
-		privateKeyPath, err := PathForTool(ctx, toolPath, privateKeyPath)
-		if err != nil {
-			return "", err
-		}
-		return fmt.Sprintf(`IdentityFile='%s'`, privateKeyPath), nil
+	privateKeyPath, err := quotedPathForTool(ctx, toolPath, privateKeyPath)
+	if err != nil {
+		return "", err
 	}
-	return fmt.Sprintf(`IdentityFile="%s"`, privateKeyPath), nil
+	return "IdentityFile=" + privateKeyPath, nil
+}
+
+// quotedPathForTool returns PathForTool(ctx, toolPath, orig), quoted for an ssh option value.
+func quotedPathForTool(ctx context.Context, toolPath, orig string) (string, error) {
+	p, err := PathForTool(ctx, toolPath, orig)
+	if err != nil {
+		return "", err
+	}
+	if runtime.GOOS == "windows" {
+		return fmt.Sprintf(`'%s'`, p), nil
+	}
+	return fmt.Sprintf(`"%s"`, p), nil
 }
 
 // DisableControlMasterOptsFromSSHArgs returns ssh args that disable ControlMaster, ControlPath, and ControlPersist.
@@ -599,7 +605,7 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 	if len(controlSock) >= osutil.UnixPathMax {
 		return nil, fmt.Errorf("socket path %#q is too long: >= UNIX_PATH_MAX=%d", controlSock, osutil.UnixPathMax)
 	}
-	opts, err := SSHOptsWithoutMultiplexing(ctx, sshExe, sshExe.Exe, username, useDotSSH)
+	opts, err := SSHOptsWithoutMultiplexing(ctx, sshExe, sshExe.Exe, instDir, username, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
@@ -628,18 +634,23 @@ func SSHOpts(ctx context.Context, sshExe SSHExe, instDir, username string, useDo
 	return opts, nil
 }
 
-// SSHOptsWithoutMultiplexing returns CommonOpts plus an explicit User, adding
-// neither multiplexing nor forwarding options. Use it for invocations that
+// SSHOptsWithoutMultiplexing returns CommonOpts plus HostKeyOpts and an explicit User,
+// adding neither multiplexing nor forwarding options. Use it for invocations that
 // cannot share a control socket: native Windows OpenSSH has no multiplexing,
 // and Cygwin ssh's is unreliable. It builds no control path, so the caller also
 // escapes the socket length limit SSHOpts enforces.
 // Path options take toolPath's form; pass sshExe.Exe unless another binary
 // receives the options, as described on CommonOpts.
-func SSHOptsWithoutMultiplexing(ctx context.Context, sshExe SSHExe, toolPath, username string, useDotSSH bool) ([]string, error) {
+func SSHOptsWithoutMultiplexing(ctx context.Context, sshExe SSHExe, toolPath, instDir, username string, useDotSSH bool) ([]string, error) {
 	opts, err := CommonOpts(ctx, sshExe, toolPath, useDotSSH)
 	if err != nil {
 		return nil, err
 	}
+	hostKeyOpts, err := HostKeyOpts(ctx, toolPath, instDir)
+	if err != nil {
+		return nil, err
+	}
+	opts = append(opts, hostKeyOpts...)
 	// guest and host have the same username, but we should specify the username explicitly (#85)
 	return append(opts, fmt.Sprintf("User=%s", username)), nil
 }

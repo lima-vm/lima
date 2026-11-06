@@ -132,7 +132,7 @@ func hasRemoteSourceAndDestination(ctx context.Context, paths []string) (bool, e
 // the ssh beside itself, while rsync hands them to the ssh it names with -e.
 func sshOptsForInstance(ctx context.Context, sshExe sshutil.SSHExe, toolPath string, inst *limatype.Instance) ([]string, error) {
 	if runtime.GOOS == "windows" {
-		return sshutil.SSHOptsWithoutMultiplexing(ctx, sshExe, toolPath, *inst.Config.User.Name, false)
+		return sshutil.SSHOptsWithoutMultiplexing(ctx, sshExe, toolPath, inst.Dir, *inst.Config.User.Name, false)
 	}
 	return sshutil.SSHOpts(ctx, sshExe, inst.Dir, *inst.Config.User.Name, false, false, false, false)
 }

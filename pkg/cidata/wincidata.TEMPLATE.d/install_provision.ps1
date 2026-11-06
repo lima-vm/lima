@@ -8,7 +8,7 @@ function Copy-Provision {
     param(
         [string]$Src,
         [string]$Dst,
-        [bool]$Extension
+        [switch]$Extension
     )
 
     if (-not (Test-Path -LiteralPath $Src)) {
@@ -17,12 +17,13 @@ function Copy-Provision {
 
     New-Item -ItemType Directory -Path $Dst -Force | Out-Null
     foreach ($item in Get-ChildItem -LiteralPath $Src) {
-        $dst = $Dst
+        # Not named $dst, as PowerShell variable names are case-insensitive, and it would overwrite $Dst.
+        $destination = $Dst
         if ($Extension) {
             # `.ps1` extension is necessary for script otherwise Powershell returns an error.
-            $dst = Join-Path $Dst ("{0}.ps1" -f $item.BaseName)
+            $destination = Join-Path $Dst ("{0}.ps1" -f $item.BaseName)
         }
-        Copy-Item -LiteralPath $item.FullName -Destination $dst
+        Copy-Item -LiteralPath $item.FullName -Destination $destination
     }
 }
 

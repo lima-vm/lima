@@ -5,7 +5,7 @@
 
 set -eux
 
-# /etc/environment must be written after 04-persistent-data-volume.sh has run to
+# /etc/environment must be written after boot.essential.Linux/20-persistent-data-volume.sh has run to
 # make sure the changes on a restart are applied to the persisted version.
 
 orig=$(test ! -f /etc/environment || cat /etc/environment)
