@@ -753,9 +753,11 @@ tpm: null
 #   combined. If override.yaml defines a list of `dns` entries, then the
 #   settings in default.yaml and lima.yaml are ignored.
 #
-# - `mounts` will update the `writable` setting when 2 entries have the
-#   same `location` value. For this reason they are processed in the opposite
-#   order: starting with default, followed by lima, and then override.
+# - `mounts` are merged when 2 entries have the same `mountPoint` (which
+#   defaults to `location`). Each setting that the higher priority entry
+#   defines, including `location`, replaces the one from the lower priority
+#   entry. For this reason they are processed in the opposite order:
+#   starting with default, followed by lima, and then override.
 #
 # -`networks` will replace lower priority entries with the same `interface`
 #   name with higher priority definitions. This does not apply if the

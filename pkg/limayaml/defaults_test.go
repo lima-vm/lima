@@ -1147,3 +1147,30 @@ func TestValidatePasswordlessSudoFalseNoPlainRequiredOnMacOS(t *testing.T) {
 	err := Validate(y, false)
 	assert.NilError(t, err)
 }
+
+// TestFillDefaultMountLocationPrecedence verifies that when two mounts share a
+// mountPoint, the location from the highest priority source wins.
+func TestFillDefaultMountLocationPrecedence(t *testing.T) {
+	limaHome := t.TempDir()
+	t.Setenv("LIMA_HOME", limaHome)
+	configDir := filepath.Join(limaHome, filenames.ConfigDir)
+	assert.NilError(t, os.MkdirAll(configDir, 0o755))
+
+	writeConfig := func(name, location string) {
+		b := []byte("mounts:\n- location: " + location + "\n  mountPoint: /mnt/data\n")
+		assert.NilError(t, os.WriteFile(filepath.Join(configDir, name), b, 0o644))
+	}
+	writeConfig(filenames.Default, filepath.Join(limaHome, "from-default"))
+	writeConfig(filenames.Override, filepath.Join(limaHome, "from-override"))
+
+	y, err := Load(t.Context(), []byte("{}"), filepath.Join(limaHome, "inst", "lima.yaml"))
+	assert.NilError(t, err)
+
+	var got []string
+	for _, m := range y.Mounts {
+		if m.MountPoint != nil && *m.MountPoint == "/mnt/data" {
+			got = append(got, m.Location)
+		}
+	}
+	assert.DeepEqual(t, got, []string{filepath.Join(limaHome, "from-override")})
+}
