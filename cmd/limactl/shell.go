@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path"
@@ -480,14 +481,14 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		}
 		rsync, err = copytool.New(ctx, string(copytool.BackendRsync), paths, &copytool.Options{
 			Verbose:        false,
-			AdditionalArgs: slices.Concat([]string{"--delete"}, syncIgnoreFileGuard, excludeArgs),
+			AdditionalArgs: syncArgs(excludeArgs),
 		})
 		if err != nil {
 			return err
 		}
 		logrus.Debugf("using copy tool %#q", rsync.Name())
 
-		if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
+		if err := rsyncDirectory(ctx, cmd, rsync, paths, nil); err != nil {
 			return fmt.Errorf("failed to rsync to the guest %w", err)
 		}
 		logrus.Infof("Successfully synced host current directory to guest(%s) instance.", destRsyncDir)
@@ -534,7 +535,7 @@ func shellAction(cmd *cobra.Command, args []string) error {
 		if err != nil {
 			return err
 		}
-		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, destRsyncDir, rsync, tty, excludeArgs)
+		return askUserForRsyncBack(ctx, cmd, inst, sshExecForRsync, hostCurrentDir, hostCurrentDirNative, destRsyncDir, rsync, tty, excludeArgs)
 	}
 	return nil
 }
@@ -566,20 +567,19 @@ func windowsQuoteShell(shell string) string {
 	return `"` + shell + `"`
 }
 
-func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, destRsyncDir string, rsync copytool.CopyTool, tty bool, excludeArgs []string) error {
+// selectPrompt is uiutil.Select, replaced in tests.
+var selectPrompt = uiutil.Select
+
+func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype.Instance, sshCmd *exec.Cmd, hostCurrentDir, hostCurrentDirNative, destRsyncDir string, rsync copytool.CopyTool, tty bool, excludeArgs []string) error {
 	remoteSource := fmt.Sprintf("%s:%s", inst.Name, destRsyncDir)
 	// See the comment on the trailing slash where the rsync tool is created.
 	remoteContents := remoteSource + "/"
 	clean := filepath.Clean(hostCurrentDir)
 	dirForCleanup := shellescape.Quote(filepath.Join(*inst.Config.User.Home, clean))
 	cleanupGuestWorkdir := false
-	syncBackPaths := []string{
-		remoteContents,
-		hostCurrentDir,
-	}
 
-	rsyncBack := func() error {
-		if err := rsyncDirectory(ctx, cmd, rsync, syncBackPaths); err != nil {
+	rsyncBack := func(source string) error {
+		if err := rsyncDirectory(ctx, cmd, rsync, []string{source, hostCurrentDir}, nil); err != nil {
 			return fmt.Errorf("failed to sync back the changes from guest instance to host: %w", err)
 		}
 		logrus.Info("Successfully synced back the changes to host.")
@@ -598,10 +598,37 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 	}()
 
 	if !tty {
-		return rsyncBack()
+		return rsyncBack(remoteContents)
 	}
 
-	rawOutput, stats, err := getRsyncStats(ctx, syncBackPaths, excludeArgs)
+	// Beside the project rather than in TMPDIR, which may lie inside it (in reach of
+	// --delete) or on a volume of another case sensitivity.
+	baseDir, err := os.MkdirTemp(filepath.Dir(hostCurrentDirNative), ".lima-guest-synced-*")
+	if err != nil {
+		baseDir, err = os.MkdirTemp("", "lima-guest-synced-*")
+	}
+	if err != nil {
+		return fmt.Errorf("failed to create temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
+	}
+	defer func() {
+		if err := removeAllWritable(baseDir); err != nil {
+			logrus.WithError(err).Warnf("Failed to clean up temporary directory %s", baseDir)
+		}
+	}()
+	hostTmpDest := filepath.Join(baseDir, "guest", filepath.Base(hostCurrentDir))
+	if err := os.MkdirAll(hostTmpDest, 0o755); err != nil {
+		return fmt.Errorf("failed to create temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
+	}
+	// The guest is read only once: a guest process could change the directory
+	// between the review and "Yes", so both use this snapshot.
+	// Unchanged files are copied from the host, so only the changes cross SSH.
+	snapshotOpts := &copytool.Options{AdditionalArgs: slices.Concat(syncArgs(excludeArgs), []string{"--copy-dest=" + hostCurrentDir})}
+	if err := rsyncDirectory(ctx, cmd, rsync, []string{remoteContents, hostTmpDest}, snapshotOpts); err != nil {
+		return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
+	}
+	snapshotContents := hostTmpDest + "/"
+
+	rawOutput, stats, err := getRsyncStats(ctx, []string{snapshotContents, hostCurrentDir}, excludeArgs)
 	if err != nil {
 		logrus.WithError(err).Warn("failed to get rsync stats")
 	}
@@ -624,33 +651,17 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 		"View the changed contents",
 	}
 
-	baseDir, err := os.MkdirTemp("", "lima-guest-synced-*")
-	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
-	}
-	defer func() {
-		if err := os.RemoveAll(baseDir); err != nil {
-			logrus.WithError(err).Warnf("Failed to clean up temporary directory %s", baseDir)
-		}
-	}()
-	hostTmpDest := filepath.Join(baseDir, "guest", filepath.Base(hostCurrentDir))
-	err = os.MkdirAll(hostTmpDest, 0o755)
-	if err != nil {
-		return fmt.Errorf("failed to create temporary directory: %w; preserving guest synced workdir at %s", err, destRsyncDir)
-	}
-
-	diffSource := hostCurrentDir
-	rsyncToTempDir := false
+	var diffSource string
 
 	for {
-		ans, err := uiutil.Select(message, options)
+		ans, err := selectPrompt(message, options)
 		if err != nil {
 			return fmt.Errorf("failed to open TUI: %w; preserving guest synced workdir at %s", err, destRsyncDir)
 		}
 
 		switch ans {
 		case 0: // Yes
-			return rsyncBack()
+			return rsyncBack(snapshotContents)
 		case 1: // No
 			cleanupGuestWorkdir = true
 			logrus.Info("Skipping syncing back the changes to host.")
@@ -660,19 +671,10 @@ func askUserForRsyncBack(ctx context.Context, cmd *cobra.Command, inst *limatype
 			if _, err := exec.LookPath("diff"); err != nil {
 				logrus.WithError(err).Warn("`diff` not found; showing rsync dry-run output only")
 			} else {
-				if !rsyncToTempDir {
-					paths := []string{
-						remoteContents,
-						hostTmpDest,
-					}
-
-					if err := rsyncDirectory(ctx, cmd, rsync, paths); err != nil {
-						return fmt.Errorf("failed to sync back the changes from guest instance to host temporary directory: %w", err)
-					}
+				if diffSource == "" {
 					if diffSource, err = hostTreeForDiff(ctx, cmd, rsync, hostCurrentDir, baseDir, excludeArgs); err != nil {
 						return fmt.Errorf("%w; preserving guest synced workdir at %s", err, destRsyncDir)
 					}
-					rsyncToTempDir = true
 				}
 				diffCmd = exec.CommandContext(ctx, "diff", "-ruN", "--color=always", diffSource, hostTmpDest)
 			}
@@ -747,10 +749,30 @@ func hostTreeForDiff(ctx context.Context, cmd *cobra.Command, rsync copytool.Cop
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return "", fmt.Errorf("failed to create temporary directory: %w", err)
 	}
-	if err := rsyncDirectory(ctx, cmd, rsync, []string{hostCurrentDir + "/", dir}); err != nil {
+	if err := rsyncDirectory(ctx, cmd, rsync, []string{hostCurrentDir + "/", dir}, nil); err != nil {
 		return "", fmt.Errorf("failed to copy the host directory to a temporary directory: %w", err)
 	}
 	return dir, nil
+}
+
+// syncArgs returns the rsync options shared by every transfer of the synced directory.
+func syncArgs(excludeArgs []string) []string {
+	return slices.Concat([]string{"--delete"}, syncIgnoreFileGuard, excludeArgs)
+}
+
+// removeAllWritable removes dir, whose subdirectories may carry read-only modes copied from the guest.
+func removeAllWritable(dir string) error {
+	if os.RemoveAll(dir) == nil {
+		return nil
+	}
+	// WalkDir visits a directory before reading it, so the chmod lets it descend.
+	_ = filepath.WalkDir(dir, func(p string, d fs.DirEntry, err error) error {
+		if err == nil && d.IsDir() {
+			_ = os.Chmod(p, 0o700)
+		}
+		return nil
+	})
+	return os.RemoveAll(dir)
 }
 
 // pagerCommand returns the pager command and arguments to use for viewing colored diff output.
@@ -873,8 +895,8 @@ func rsyncVersion(ctx context.Context) (*semver.Version, error) {
 
 // Syncs a directory from host to guest and vice-versa. It creates a directory in the guest's home directory and copies the contents of the host's
 // current working directory into it. The guest directory paths should be prefixed with `<InstanceName>:` followed by the path.
-func rsyncDirectory(ctx context.Context, cmd *cobra.Command, rsync copytool.CopyTool, paths []string) error {
-	rsyncCmd, err := rsync.Command(ctx, paths, nil)
+func rsyncDirectory(ctx context.Context, cmd *cobra.Command, rsync copytool.CopyTool, paths []string, opts *copytool.Options) error {
+	rsyncCmd, err := rsync.Command(ctx, paths, opts)
 	if err != nil {
 		return err
 	}
