@@ -38,6 +38,7 @@ type LimaYAML struct {
 	Video                 Video         `yaml:"video,omitempty" json:"video,omitempty"`
 	Provision             []Provision   `yaml:"provision,omitempty" json:"provision,omitempty"`
 	UpgradePackages       *bool         `yaml:"upgradePackages,omitempty" json:"upgradePackages,omitempty" jsonschema:"nullable"`
+	Inotify               Inotify       `yaml:"inotify,omitempty" json:"inotify,omitempty"`
 	Containerd            Containerd    `yaml:"containerd,omitempty" json:"containerd,omitempty"`
 	GuestInstallPrefix    *string       `yaml:"guestInstallPrefix,omitempty" json:"guestInstallPrefix,omitempty" jsonschema:"nullable"`
 	Probes                []Probe       `yaml:"probes,omitempty" json:"probes,omitempty"`
@@ -277,6 +278,12 @@ type ProvisionData struct {
 	Owner       *string `yaml:"owner,omitempty" json:"owner,omitempty"` // any owner string supported by `chown`, defaults to "root:root" on Linux
 	Path        *string `yaml:"path,omitempty" json:"path,omitempty"`
 	Permissions *string `yaml:"permissions,omitempty" json:"permissions,omitempty"`
+}
+
+// Inotify sets the fs.inotify.* limits of Linux guests.
+type Inotify struct {
+	MaxUserWatches   *int `yaml:"maxUserWatches,omitempty" json:"maxUserWatches,omitempty" jsonschema:"nullable"`     // default: 524288
+	MaxUserInstances *int `yaml:"maxUserInstances,omitempty" json:"maxUserInstances,omitempty" jsonschema:"nullable"` // default: 512
 }
 
 type Containerd struct {

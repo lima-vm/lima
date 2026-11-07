@@ -161,6 +161,9 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		Containerd:         Containerd{System: *instConfig.Containerd.System, User: *instConfig.Containerd.User, Archive: archive},
 		SlirpNICName:       networks.SlirpNICName,
 
+		InotifyMaxUserWatches:   *instConfig.Inotify.MaxUserWatches,
+		InotifyMaxUserInstances: *instConfig.Inotify.MaxUserInstances,
+
 		VMType:         *instConfig.VMType,
 		SSHOverVsock:   instConfig.SSH.OverVsock != nil && *instConfig.SSH.OverVsock,
 		VSockPort:      vsockPort,

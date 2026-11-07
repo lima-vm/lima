@@ -116,6 +116,10 @@ func TestFillDefault(t *testing.T) {
 		Disk:               new(defaultDiskSizeAsString()),
 		GuestInstallPrefix: new(defaultGuestInstallPrefix()),
 		UpgradePackages:    new(false),
+		Inotify: limatype.Inotify{
+			MaxUserWatches:   new(524288),
+			MaxUserInstances: new(512),
+		},
 		Containerd: limatype.Containerd{
 			System:   new(false),
 			User:     new(true),
@@ -362,6 +366,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		GuestInstallPrefix: new("/opt"),
 		UpgradePackages:    new(true),
+		Inotify: limatype.Inotify{
+			MaxUserWatches:   new(524288),
+			MaxUserInstances: new(512),
+		},
 		Containerd: limatype.Containerd{
 			System: new(true),
 			User:   new(false),
@@ -545,6 +553,7 @@ func TestFillDefault(t *testing.T) {
 
 	// The user-provided default is applied when the config doesn't specify it.
 	expect.HostResolver.Enabled = dExpected.HostResolver.Enabled
+	expect.Inotify = dExpected.Inotify
 
 	// "TWO" does not exist in filledDefaults.Env, so is set from dExpected.Env
 	expect.Env["TWO"] = dExpected.Env["TWO"]
@@ -576,6 +585,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		GuestInstallPrefix: new("/usr"),
 		UpgradePackages:    new(true),
+		Inotify: limatype.Inotify{
+			MaxUserWatches:   new(1048576),
+			MaxUserInstances: new(1024),
+		},
 		Containerd: limatype.Containerd{
 			System: new(true),
 			User:   new(false),
