@@ -710,7 +710,11 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			logrus.Infof("Using system firmware (%#q)", firmware)
 		}
 		if firmware != "" {
-			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=raw,readonly=on,file=%s", firmware))
+			firmwareFormat := "raw"
+			if strings.HasSuffix(firmware, ".qcow2") {
+				firmwareFormat = "qcow2"
+			}
+			args = append(args, "-drive", fmt.Sprintf("if=pflash,format=%s,readonly=on,file=%s", firmwareFormat, firmware))
 		}
 	}
 
@@ -1387,17 +1391,24 @@ func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 
 	switch arch {
 	case limatype.X8664:
+		// 4MB images are preferred over 2MB ones, as some distros (e.g., Fedora 43)
+		// build the 2MB images without TPM2 support, which is required by Windows 11.
 		// Archlinux package "edk2-ovmf"
 		// @see: https://archlinux.org/packages/extra/any/edk2-ovmf/files
 		candidates = append(candidates, "/usr/share/edk2/x64/OVMF_CODE.4m.fd")
 		// Debian package "ovmf"
-		candidates = append(candidates, "/usr/share/OVMF/OVMF_CODE.fd")
 		candidates = append(candidates, "/usr/share/OVMF/OVMF_CODE_4M.fd")
+		// Fedora package "edk2-ovmf"
+		candidates = append(candidates, "/usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2")
+		// openSUSE package "qemu-ovmf-x86_64"
+		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64-4m.bin")
+		// 2MB images
+		// Debian package "ovmf"
+		candidates = append(candidates, "/usr/share/OVMF/OVMF_CODE.fd")
 		// Fedora package "edk2-ovmf"
 		candidates = append(candidates, "/usr/share/edk2/ovmf/OVMF_CODE.fd")
 		// openSUSE package "qemu-ovmf-x86_64"
 		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64.bin")
-		candidates = append(candidates, "/usr/share/qemu/ovmf-x86_64-4m.bin")
 	case limatype.AARCH64:
 		// Archlinux package "edk2-aarch64"
 		// @see: https://archlinux.org/packages/extra/any/edk2-aarch64/files
