@@ -671,6 +671,18 @@ func copyLocal(ctx context.Context, dst, src, ext string, decompress bool, descr
 	if err != nil {
 		return err
 	}
+	// Write to a temporary file and rename it into place only on success, so
+	// an interrupted or failed copy does not leave a partial file at dstPath:
+	// Download skips (and does not validate) a local path that already exists.
+	dstPathTmp := perProcessTempfile(dstPath)
+	defer os.Remove(dstPathTmp)
+	if err := copyOrDecompressLocal(ctx, dstPathTmp, srcPath, ext, decompress, description); err != nil {
+		return err
+	}
+	return os.Rename(dstPathTmp, dstPath)
+}
+
+func copyOrDecompressLocal(ctx context.Context, dstPath, srcPath, ext string, decompress bool, description string) error {
 	if decompress {
 		command := decompressor(ext)
 		if command != "" {
@@ -747,7 +759,7 @@ func decompressLocal(ctx context.Context, decompressCmd, dst, src, ext, descript
 		return err
 	}
 	defer in.Close()
-	out, err := os.OpenFile(dst, os.O_CREATE|os.O_WRONLY, 0o644)
+	out, err := os.OpenFile(dst, os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0o644)
 	if err != nil {
 		return err
 	}
