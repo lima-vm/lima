@@ -42,6 +42,14 @@ nix-env -i lima
 Nix file: <https://github.com/NixOS/nixpkgs/blob/master/pkgs/by-name/li/lima/package.nix>
 {{% /tab %}}
 
+{{% tab header="winget" %}}
+```powershell
+winget install Lima.Lima
+```
+
+Supports installing on Windows through PowerShell. Winget manifest: https://github.com/microsoft/winget-pkgs/tree/master/manifests/l/Lima/Lima
+{{% /tab %}}
+
 {{% tab header="Binary" %}}
 Download the binary archive of Lima from <https://github.com/lima-vm/lima/releases>,
 and extract it under `/usr/local` (or somewhere else).
