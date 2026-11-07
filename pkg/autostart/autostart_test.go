@@ -110,6 +110,8 @@ func TestRenderTemplate(t *testing.T) {
 	<string>launchd.stdout.log</string>
 	<key>WorkingDirectory</key>
 	<string>/some/path</string>
+	<key>ExitTimeOut</key>
+	<integer>60</integer>
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
@@ -154,6 +156,8 @@ func TestRenderTemplate(t *testing.T) {
 	<string>launchd.stdout.log</string>
 	<key>WorkingDirectory</key>
 	<string>/some/path</string>
+	<key>ExitTimeOut</key>
+	<integer>60</integer>
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
@@ -201,6 +205,8 @@ func TestRenderTemplate(t *testing.T) {
 	<string>launchd.stdout.log</string>
 	<key>WorkingDirectory</key>
 	<string>/some/path</string>
+	<key>ExitTimeOut</key>
+	<integer>60</integer>
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
@@ -250,6 +256,8 @@ func TestRenderTemplate(t *testing.T) {
 	<string>launchd.stdout.log</string>
 	<key>WorkingDirectory</key>
 	<string>/some/path</string>
+	<key>ExitTimeOut</key>
+	<integer>60</integer>
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
