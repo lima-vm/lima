@@ -367,8 +367,8 @@ func TestFillDefault(t *testing.T) {
 		GuestInstallPrefix: new("/opt"),
 		UpgradePackages:    new(true),
 		Inotify: limatype.Inotify{
-			MaxUserWatches:   new(524288),
-			MaxUserInstances: new(512),
+			MaxUserWatches:   new(2097152),
+			MaxUserInstances: new(2048),
 		},
 		Containerd: limatype.Containerd{
 			System: new(true),
@@ -553,7 +553,6 @@ func TestFillDefault(t *testing.T) {
 
 	// The user-provided default is applied when the config doesn't specify it.
 	expect.HostResolver.Enabled = dExpected.HostResolver.Enabled
-	expect.Inotify = dExpected.Inotify
 
 	// "TWO" does not exist in filledDefaults.Env, so is set from dExpected.Env
 	expect.Env["TWO"] = dExpected.Env["TWO"]
