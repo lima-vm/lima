@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: Copyright The Lima Authors
 // SPDX-License-Identifier: Apache-2.0
 
-// Package usbip implements a USB/IP server over IOKit.
+// Package usbip implements the USB/IP server over IOKit and its Linux guest client.
 // The wire format is Documentation/usb/usbip_protocol.rst, big-endian.
 package usbip
 
@@ -10,6 +10,8 @@ import (
 	"encoding/binary"
 	"io"
 )
+
+const VsockPort = 2223
 
 const protocolVersion = 0x0111
 
