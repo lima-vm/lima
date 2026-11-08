@@ -299,6 +299,8 @@ jobs:
         cache: false
     - name: Unit tests
       run: go test -v ./...
+    - name: Unit tests (USB/IP, fake IOKit)
+      run: go test -v -race -tags usbipfake ./pkg/usbip/
     - name: Make
       run: make
     - name: "Inject `no_timer_check` to kernel cmdline"
