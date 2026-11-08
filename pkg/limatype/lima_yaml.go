@@ -130,6 +130,7 @@ type QEMUOpts struct {
 type VZOpts struct {
 	Rosetta         Rosetta     `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 	DiskImageFormat *image.Type `yaml:"diskImageFormat,omitempty" json:"diskImageFormat,omitempty" jsonschema:"nullable"`
+	USB             USB         `yaml:"usb,omitempty" json:"usb,omitempty"`
 }
 
 type Rosetta struct {

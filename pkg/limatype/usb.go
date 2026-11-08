@@ -3,6 +3,20 @@
 
 package limatype
 
+import "github.com/goccy/go-yaml"
+
+// USB configures USB/IP passthrough, as vmOpts.vz.usb.
+type USB struct {
+	Enabled *bool       `yaml:"enabled,omitempty" json:"enabled,omitempty"`
+	Devices []USBDevice `yaml:"devices,omitempty" json:"devices,omitempty"`
+}
+
+// UnmarshalYAML is strict because vmOpts is any: a dropped busAddr would widen the allowlist.
+func (u *USB) UnmarshalYAML(b []byte) error {
+	type plain USB
+	return yaml.UnmarshalWithOptions(b, (*plain)(u), yaml.Strict())
+}
+
 // USBDevice selects a host USB device imported at boot.
 type USBDevice struct {
 	// Name is an optional label shown by `limactl usb list`.
