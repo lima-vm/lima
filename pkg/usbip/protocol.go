@@ -84,6 +84,12 @@ func cString(b []byte) string {
 	return string(s)
 }
 
+func readOpHeader(r io.Reader) (opHeader, error) {
+	var h opHeader
+	err := binary.Read(r, binary.BigEndian, &h)
+	return h, err
+}
+
 func writeOpHeader(w io.Writer, code uint16, status uint32) error {
 	return binary.Write(w, binary.BigEndian, opHeader{
 		Version: protocolVersion,
