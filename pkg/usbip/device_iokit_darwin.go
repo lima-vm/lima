@@ -82,6 +82,25 @@ static int hasOpenMedia(io_service_t svc) {
     return found;
 }
 
+// Writes the BSD names of the whole-disk IOMedia below svc into buf, separated by spaces.
+static void wholeDisks(io_service_t svc, char *buf, size_t len) {
+    buf[0] = 0;
+    io_iterator_t iter;
+    if (IORegistryEntryCreateIterator(svc, kIOServicePlane, kIORegistryIterateRecursively, &iter) != KERN_SUCCESS) return;
+    for (io_object_t o; (o = IOIteratorNext(iter)); IOObjectRelease(o)) {
+        if (!IOObjectConformsTo(o, "IOMedia")) continue;
+        CFTypeRef whole = regProp(o, "Whole"), name = regProp(o, "BSD Name");
+        if (whole == kCFBooleanTrue && name && CFGetTypeID(name) == CFStringGetTypeID()) {
+            if (buf[0]) strlcat(buf, " ", len);
+            size_t n = strlen(buf);
+            CFStringGetCString(name, buf + n, len - n, kCFStringEncodingUTF8);
+        }
+        if (whole) CFRelease(whole);
+        if (name) CFRelease(name);
+    }
+    IOObjectRelease(iter);
+}
+
 static IOUSBDeviceInterface320** openDeviceInterface(io_service_t svc) {
     IOCFPlugInInterface **plugin = NULL;
     SInt32 score;
@@ -265,7 +284,9 @@ import (
 	"encoding/binary"
 	"fmt"
 	"maps"
+	"os/exec"
 	"slices"
+	"strings"
 	"sync"
 	"time"
 	"unsafe"
@@ -393,6 +414,100 @@ func List() ([]DeviceInfo, error) {
 		}
 	}
 	return out, nil
+}
+
+type allowlistProvider struct {
+	instDir string
+}
+
+func NewProvider(instDir string) Provider {
+	return &allowlistProvider{instDir: instDir}
+}
+
+func (p *allowlistProvider) Devices() ([]DeviceInfo, error) {
+	allow, err := ReadAllowlist(p.instDir)
+	if err != nil {
+		return nil, err
+	}
+	if len(allow) == 0 {
+		return nil, nil
+	}
+	hosts, err := List()
+	if err != nil {
+		return nil, err
+	}
+	var out []DeviceInfo
+	for _, info := range hosts {
+		if Allowed(allow, EntryFor(info)) {
+			out = append(out, info)
+		}
+	}
+	return out, nil
+}
+
+func (p *allowlistProvider) Open(busid string) (Device, error) {
+	svcs, err := usbServices()
+	if err != nil {
+		return nil, err
+	}
+	defer releaseServices(svcs)
+	for _, svc := range svcs {
+		info, ok := readInfo(svc)
+		if !ok || info.BusID != busid {
+			continue
+		}
+		// Before the lock too, so a VM with no grant cannot touch another VM's lock.
+		if err := checkGrant(p.instDir, info); err != nil {
+			return nil, err
+		}
+		// Only now is busid safe in a path: the guest sent it, but it matched the host's.
+		holder := RealName(p.instDir)
+		lock, err := lockGranted(p.instDir, holder, info)
+		if err != nil {
+			return nil, err
+		}
+		if C.hasOpenMedia(svc) != 0 {
+			if err := unmountDisks(svc, busid); err != nil {
+				_ = lock.Close()
+				return nil, err
+			}
+		}
+		g, err := openService(svc, info)
+		if err != nil {
+			_ = lock.Close()
+			return nil, err
+		}
+		return &lockedDevice{Device: g, lock: lock, holder: holder, reenumerate: g.reenumerate}, nil
+	}
+	return nil, fmt.Errorf("usb device %s not found on host", busid)
+}
+
+func (p *allowlistProvider) Unplugged(busid string) {
+	err := UpdateAllowlist(p.instDir, func(list []AllowEntry) []AllowEntry {
+		return slices.DeleteFunc(list, func(e AllowEntry) bool { return e.Busid == busid })
+	})
+	if err != nil {
+		logrus.WithError(err).Warnf("usbip: dropping grant for %s failed", busid)
+	}
+}
+
+// unmountDisks unmounts the host volumes of a granted device: setConfiguration skips a mounted one, as
+// dropping it loses its dirty cache. diskutil flushes them, refuses while a file is open, and needs no root.
+// macOS mounts them again when the session ends and the device re-enumerates.
+func unmountDisks(svc C.io_service_t, busid string) error {
+	var buf [256]C.char
+	C.wholeDisks(svc, &buf[0], C.size_t(len(buf)))
+	for disk := range strings.FieldsSeq(C.GoString(&buf[0])) {
+		// Open has no context; the timeout keeps a stuck diskutil from holding the import.
+		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+		out, err := exec.CommandContext(ctx, "diskutil", "unmountDisk", "/dev/"+disk).CombinedOutput()
+		cancel()
+		if err != nil {
+			return fmt.Errorf("unmount /dev/%s of usb device %s on the host: %w: %s", disk, busid, err, strings.TrimSpace(string(out)))
+		}
+		logrus.Infof("usbip: unmounted the host volumes of /dev/%s for usb device %s", disk, busid)
+	}
+	return nil
 }
 
 func openService(svc C.io_service_t, info DeviceInfo) (*iokitDevice, error) {
