@@ -12,12 +12,14 @@ import (
 	"io"
 	"math"
 	"net"
+	"os"
 	"runtime"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"gotest.tools/v3/assert"
+	"gotest.tools/v3/poll"
 )
 
 // fakeDev completes transfers at once, or holds them until cancel when stalled.
@@ -57,6 +59,12 @@ func startSessionCtx(ctx context.Context, t *testing.T, dev Device) (c net.Conn,
 	return c, ch
 }
 
+func readToEOF(t *testing.T, c net.Conn) {
+	t.Helper()
+	r, err := readURBHeader(c)
+	assert.Assert(t, errors.Is(err, io.EOF), "frame %+v after the drain, err %v", r, err)
+}
+
 func sessionEnd(t *testing.T, done <-chan error) error {
 	t.Helper()
 	select {
@@ -76,6 +84,25 @@ func init() {
 func send(t *testing.T, c net.Conn, h urbHeader) {
 	t.Helper()
 	assert.NilError(t, binary.Write(c, binary.BigEndian, h))
+}
+
+// unlinkReply reads the answer to a CMD_UNLINK that found URB seq: its RET_SUBMIT, then RET_UNLINK 0.
+func unlinkReply(t *testing.T, c net.Conn, seq, unlinkSeq uint32, in bool) urbHeader {
+	t.Helper()
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Command, uint32(retSubmit), "RET_UNLINK before RET_SUBMIT")
+	assert.Equal(t, r.Seqnum, seq)
+	if in {
+		_, err = io.CopyN(io.Discard, c, int64(r.TransferBufferLength))
+		assert.NilError(t, err)
+	}
+	u, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, u.Command, uint32(retUnlink))
+	assert.Equal(t, u.Seqnum, unlinkSeq)
+	assert.Equal(t, u.TransferFlags, uint32(0))
+	return r
 }
 
 func TestSubmitRejectsInvalid(t *testing.T) {
@@ -220,6 +247,154 @@ func TestIsoURBKeepsSession(t *testing.T) {
 	}
 }
 
+// gateDev reports each transfer on started and holds it until release closes, ignoring ctx.
+type gateDev struct {
+	fakeDev
+	started chan []byte
+	release chan struct{}
+}
+
+func newGateDev() gateDev {
+	return gateDev{started: make(chan []byte, 64), release: make(chan struct{})}
+}
+
+func (d gateDev) Transfer(_ context.Context, _ uint8, _ bool, b []byte) (int, error) {
+	d.started <- b
+	<-d.release
+	return len(b), nil
+}
+
+func (d gateDev) Control(ctx context.Context, _ [8]byte, b []byte) (int, error) {
+	return d.Transfer(ctx, 0, false, b)
+}
+
+func TestQueuePerEndpoint(t *testing.T) {
+	for name, tc := range map[string]struct {
+		ep   uint32
+		wait time.Duration
+	}{
+		"bulk directions independent": {1, 10 * time.Second},
+		"ep0 serial":                  {0, 100 * time.Millisecond},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dev := newGateDev()
+			c, done := startSession(t, dev)
+			send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: tc.ep})
+			<-dev.started
+			send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirOut, Ep: tc.ep})
+			select {
+			case <-dev.started:
+				assert.Assert(t, tc.ep != 0, "ep0 OUT ran while IN was held")
+			case <-time.After(tc.wait):
+				assert.Assert(t, tc.ep == 0, "OUT blocked by pending IN")
+			}
+			close(dev.release)
+			assert.NilError(t, c.Close())
+			assert.NilError(t, sessionEnd(t, done))
+		})
+	}
+}
+
+type ctxDev struct {
+	fakeDev
+	started chan []byte
+}
+
+func (d ctxDev) Control(ctx context.Context, _ [8]byte, b []byte) (int, error) {
+	return d.Transfer(ctx, 0, false, b)
+}
+
+func (d ctxDev) Transfer(ctx context.Context, _ uint8, _ bool, b []byte) (int, error) {
+	d.started <- b
+	<-ctx.Done()
+	return 0, ctx.Err()
+}
+
+func TestUnlinkQueuedURB(t *testing.T) {
+	dev := ctxDev{started: make(chan []byte, 64)}
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, dev)
+	out := func(seq uint32, b byte) {
+		send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq, Direction: dirOut, Ep: 1, TransferBufferLength: 1})
+		_, err := c.Write([]byte{b})
+		assert.NilError(t, err)
+	}
+	out(1, 'a')
+	assert.DeepEqual(t, <-dev.started, []byte{'a'})
+	out(2, 'b')
+
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 3, TransferFlags: 2})
+	r := unlinkReply(t, c, 2, 3, false)
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
+
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 4, TransferFlags: 1})
+	r = unlinkReply(t, c, 1, 4, false)
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
+
+	// A second answer for either URB would tear down the guest's connection.
+	cancel()
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done))
+	select {
+	case b := <-dev.started:
+		assert.Assert(t, false, "unlinked OUT reached device: %q", b)
+	default:
+	}
+}
+
+func TestUnlinkInFlightWaitsForDevice(t *testing.T) {
+	dev := newGateDev()
+	c, done := startSession(t, dev)
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 2, TransferFlags: 1})
+
+	assert.NilError(t, c.SetReadDeadline(time.Now().Add(100*time.Millisecond)))
+	_, err := readURBHeader(c)
+	assert.Assert(t, errors.Is(err, os.ErrDeadlineExceeded), "reply before device call returned: %v", err)
+
+	close(dev.release)
+	assert.NilError(t, c.SetReadDeadline(time.Now().Add(10*time.Second)))
+	r := unlinkReply(t, c, 1, 2, true)
+	assert.Equal(t, r.TransferFlags, uint32(0), "the device finished first")
+	assert.Equal(t, r.TransferBufferLength, int32(8))
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 3, Direction: dirIn, Ep: 1})
+	r, err = readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(3), "endpoint dead after an unlink")
+
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+func TestReadsContinueWhileGuestNotDraining(t *testing.T) {
+	dev := &countDev{}
+	c, done := startSession(t, dev)
+	for seq := range uint32(4) {
+		send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq + 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	}
+	poll.WaitOn(t, func(poll.LogT) poll.Result {
+		if dev.calls.Load() == 4 {
+			return poll.Success()
+		}
+		return poll.Continue("reads wait for the guest")
+	}, poll.WithDelay(time.Millisecond))
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+// The length field of CMD_UNLINK is guest data with no meaning.
+func TestUnlinkLengthNotCharged(t *testing.T) {
+	c, done := startSession(t, fakeDev{})
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 1, TransferFlags: 1, TransferBufferLength: maxBacklog * 2})
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Command, uint32(retUnlink))
+	assert.Equal(t, r.TransferFlags, uint32(0), "an unknown URB unlinks fine")
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
 func TestCancelledSubmitSkipsDevice(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
@@ -285,6 +460,46 @@ type cancelDev struct {
 func (d cancelDev) Transfer(context.Context, uint8, bool, []byte) (int, error) {
 	d.cancel()
 	return 0, urbErrno(errnoEPROTO)
+}
+
+func TestRetUnlinkNeverPrecedesRetSubmit(t *testing.T) {
+	const pairs = 5000
+	c, s := net.Pipe()
+	t.Cleanup(func() { _ = c.Close() })
+	assert.NilError(t, c.SetDeadline(time.Now().Add(2*time.Minute)))
+	done := make(chan error, 1)
+	go func() { done <- urbLoop(t.Context(), s, fakeDev{}) }()
+
+	go func() {
+		for i := range uint32(pairs) {
+			n := 2*i + 1
+			if binary.Write(c, binary.BigEndian, urbHeader{Command: cmdSubmit, Seqnum: n, Direction: dirIn, Ep: 1, TransferBufferLength: 64}) != nil ||
+				binary.Write(c, binary.BigEndian, urbHeader{Command: cmdUnlink, Seqnum: n + 1, TransferFlags: n}) != nil {
+				return
+			}
+		}
+	}()
+
+	submitted, unlinked := map[uint32]bool{}, map[uint32]bool{}
+	for unlinks := 0; unlinks < pairs; {
+		r, err := readURBHeader(c)
+		assert.NilError(t, err)
+		switch r.Command {
+		case retSubmit:
+			assert.Assert(t, !submitted[r.Seqnum], "second RET_SUBMIT for %d", r.Seqnum)
+			submitted[r.Seqnum] = true
+			_, err = io.CopyN(io.Discard, c, int64(r.TransferBufferLength))
+			assert.NilError(t, err)
+		case retUnlink:
+			unlinks++
+			assert.Assert(t, !unlinked[r.Seqnum], "second RET_UNLINK for %d", r.Seqnum)
+			unlinked[r.Seqnum] = true
+			assert.Assert(t, submitted[r.Seqnum-1], "RET_UNLINK %d before RET_SUBMIT", r.Seqnum)
+			assert.Equal(t, r.TransferFlags, uint32(0), "seq %d", r.Seqnum)
+		}
+	}
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
 }
 
 type zlpDev struct {
