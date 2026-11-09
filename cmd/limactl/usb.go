@@ -12,6 +12,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"maps"
 	"os"
 	"os/exec"
 	"slices"
@@ -42,6 +43,14 @@ func newUsbCommand() *cobra.Command {
 	usbCommand := &cobra.Command{
 		Use:   "usb",
 		Short: "Live USB passthrough management (vz only)",
+		Example: `  List host USB devices and the instance holding each:
+  $ limactl usb list
+
+  Attach a host USB device to a running instance:
+  $ limactl usb attach INSTANCE --vendor 0bda --product 8812
+
+  Detach it again:
+  $ limactl usb detach INSTANCE --vendor 0bda --product 8812`,
 		// Cobra runs only the nearest persistent hook, so call root's.
 		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
 			err := cmd.Root().PersistentPreRunE(cmd, args)
@@ -53,6 +62,7 @@ func newUsbCommand() *cobra.Command {
 	usbCommand.AddCommand(
 		newUsbListCommand(),
 		newUsbAttachCommand(),
+		newUsbDetachCommand(),
 	)
 	return usbCommand
 }
@@ -87,6 +97,20 @@ next guest boot if usb.devices matches it.`,
 	cmd.Flags().String("product", "", "product ID in hex, e.g. 8812")
 	cmd.MarkFlagsRequiredTogether("vendor", "product")
 	cmd.Flags().String("name", "", "friendly name for a new grant, ignored if the device is already allowed")
+	return cmd
+}
+
+func newUsbDetachCommand() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:               "detach INSTANCE [BUSID]",
+		Short:             "Detach a USB device from a vz instance",
+		Args:              WrapArgsError(cobra.RangeArgs(1, 2)),
+		RunE:              usbDetachAction,
+		ValidArgsFunction: usbBusidComplete,
+	}
+	cmd.Flags().String("vendor", "", "vendor ID in hex, e.g. 0bda")
+	cmd.Flags().String("product", "", "product ID in hex, e.g. 8812")
+	cmd.MarkFlagsRequiredTogether("vendor", "product")
 	return cmd
 }
 
@@ -244,6 +268,79 @@ func removeGrant(inst *limatype.Instance, grant usbip.AllowEntry, before []usbip
 		}
 		return list
 	})
+}
+
+func usbDetachAction(cmd *cobra.Command, args []string) error {
+	busid, vendor, product, err := usbTarget(cmd, args)
+	if err != nil {
+		return err
+	}
+	inst, err := inspectVZInstance(cmd.Context(), args[0])
+	if err != nil {
+		return err
+	}
+	hosts, err := usbip.List()
+	if err != nil {
+		return fmt.Errorf("enumerating host USB devices: %w", err)
+	}
+	return detachDevice(inst, hosts, busid, vendor, product)
+}
+
+// detachDevice runs on the host alone, so it works for an unplugged device, a stopped VM and a hostile guest.
+func detachDevice(inst *limatype.Instance, hosts []usbip.DeviceInfo, busid, vendor, product string) error {
+	list, err := usbip.ReadAllowlist(inst.Dir)
+	if err != nil {
+		return err
+	}
+	match := func(e usbip.AllowEntry) bool { return e.Busid == busid }
+	if busid == "" {
+		vid, pid, err := parseVIDPID(vendor, product)
+		if err != nil {
+			return err
+		}
+		want := []usbip.AllowEntry{{VendorID: fmt.Sprintf("%04x", vid), ProductID: fmt.Sprintf("%04x", pid)}}
+		match = func(e usbip.AllowEntry) bool { return usbip.Allowed(want, e) }
+	}
+
+	targets := map[string]usbip.AllowEntry{}
+	for _, e := range list {
+		if e.Busid != "" && match(e) {
+			targets[e.Busid] = e
+		}
+	}
+	for _, h := range hosts {
+		if holder, held := usbip.Holder(h.BusID); held && holder == inst.Name && match(usbip.EntryFor(h)) {
+			targets[h.BusID] = usbip.EntryFor(h)
+		}
+	}
+	if len(targets) == 0 {
+		logrus.Warnf("usb: device is not attached to instance %q", inst.Name)
+		return nil
+	}
+	if len(targets) > 1 {
+		return errors.New("multiple devices match; specify a BUSID")
+	}
+
+	target := slices.Collect(maps.Values(targets))[0]
+	err = usbip.UpdateAllowlist(inst.Dir, func(list []usbip.AllowEntry) []usbip.AllowEntry {
+		list = usbip.RemoveEntry(list, target)
+		if usbip.Allowed(list, target) {
+			// A YAML wildcard still matches. No Busid: Unplugged and detach act on those.
+			list = append(list, usbip.AllowEntry{VendorID: target.VendorID, ProductID: target.ProductID, BusAddr: target.BusAddr, Denied: true})
+		}
+		return list
+	})
+	if err != nil {
+		return err
+	}
+	if err := usbip.Revoke(target.Busid, inst.Name); err != nil {
+		return err
+	}
+	logrus.Infof("usb: detached %s from instance %q", target.Busid, inst.Name)
+	if usbip.Allowed(usbip.ConfigEntries(inst.Config.USB.Devices), target) {
+		logrus.Warnf("usb: %s is in usb.devices of instance %q and returns at next VM start unless removed from its YAML", target.Busid, inst.Name)
+	}
+	return nil
 }
 
 func parseVIDPID(vendor, product string) (vid, pid uint16, err error) {
