@@ -85,3 +85,89 @@ func TestLockSurvivesHolderProbe(t *testing.T) {
 	assert.NilError(t, err, "a probe must not refuse an import")
 	assert.NilError(t, f.Close())
 }
+
+func TestRevokeLeavesOtherHolder(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	assert.NilError(t, Revoke(testBusid, "vm1"), "not held")
+
+	f, err := lockBusid(testBusid, "vm2")
+	assert.NilError(t, err)
+	defer f.Close()
+	assert.NilError(t, Revoke(testBusid, "vm1"))
+	name, held := Holder(testBusid)
+	assert.Assert(t, held)
+	assert.Equal(t, name, "vm2")
+}
+
+func TestRevokeWaitIsBounded(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	revokeWait = 100 * time.Millisecond
+	t.Cleanup(func() { revokeWait = 10 * time.Second })
+	f, err := lockBusid(testBusid, "vm1")
+	assert.NilError(t, err)
+	defer f.Close()
+	assert.ErrorContains(t, Revoke(testBusid, "vm1"), "still held")
+}
+
+func TestLockGrantedSeesDetach(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	dir := t.TempDir()
+	info := DeviceInfo{Busid: testBusid, Vendor: 0x403, Product: 0x6015}
+	_, err := lockGranted(dir, "vm1", info)
+	assert.ErrorContains(t, err, "not permitted")
+	_, held := Holder(testBusid)
+	assert.Assert(t, !held, "refused import kept the lock")
+
+	assert.NilError(t, WriteAllowlist(dir, []AllowEntry{EntryFor(info)}))
+	f, err := lockGranted(dir, "vm1", info)
+	assert.NilError(t, err)
+	assert.NilError(t, f.Close())
+}
+
+func TestLockedDeviceGone(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	f, err := lockBusid(testBusid, "vm1")
+	assert.NilError(t, err)
+	d := &lockedDevice{Device: goneDev{gone: func() bool { return false }}, lock: f, holder: "vm1", reenumerate: func() {}}
+	defer d.Close()
+	assert.Assert(t, !d.Gone())
+
+	path, err := lockPath(testBusid)
+	assert.NilError(t, err)
+	assert.NilError(t, os.Truncate(path, 0))
+	assert.Assert(t, d.Gone())
+
+	d.Device = goneDev{gone: func() bool { return true }}
+	_, err = f.WriteAt([]byte("vm1"), 0)
+	assert.NilError(t, err)
+	assert.Assert(t, d.Gone(), "a real unplug still counts")
+}
+
+// heldAtClose records whether the lock still stood when the device closed.
+type heldAtClose struct {
+	fakeDev
+	held *bool
+}
+
+func (d heldAtClose) Close() error {
+	_, *d.held = Holder(testBusid)
+	return nil
+}
+
+func TestLockedDeviceClose(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	for _, revoked := range []bool{false, true} {
+		f, err := lockBusid(testBusid, "vm1")
+		assert.NilError(t, err)
+		calls, held := 0, false
+		d := &lockedDevice{Device: heldAtClose{held: &held}, lock: f, holder: "vm1", reenumerate: func() { calls++ }}
+		if revoked {
+			assert.NilError(t, f.Truncate(0))
+		}
+		assert.NilError(t, d.Close())
+		assert.Equal(t, calls == 1, revoked, "re-enumerate after Revoke only")
+		assert.Assert(t, held, "next holder could open a device still in use")
+		_, held = Holder(testBusid)
+		assert.Assert(t, !held)
+	}
+}
