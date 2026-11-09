@@ -14,6 +14,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -775,4 +776,125 @@ func TestDrainAnswersSubmitBehindHungCall(t *testing.T) {
 	assert.NilError(t, err)
 	readToEOF(t, c)
 	assert.NilError(t, sessionEnd(t, done))
+}
+
+type testProvider struct {
+	mu  sync.Mutex
+	log []string
+	dev Device
+}
+
+func (p *testProvider) record(s string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.log = append(p.log, s)
+}
+
+func (p *testProvider) events() []string {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return slices.Clone(p.log)
+}
+
+func (*testProvider) Devices() ([]DeviceInfo, error) { return nil, nil }
+
+func (p *testProvider) Open(string) (Device, error) {
+	p.record("open")
+	dev := p.dev
+	if dev == nil {
+		dev = fakeDev{}
+	}
+	return &loggedDev{Device: dev, p: p}, nil
+}
+
+func (p *testProvider) Unplugged(busid string) { p.record("unplugged " + busid) }
+
+type loggedDev struct {
+	Device
+	p *testProvider
+}
+
+func (d *loggedDev) Close() error {
+	d.p.record("close")
+	return nil
+}
+
+func importBusid(t *testing.T, s *Server, busid string) (c net.Conn, status uint32, done <-chan error) {
+	t.Helper()
+	c, srv := net.Pipe()
+	t.Cleanup(func() { _ = c.Close() })
+	assert.NilError(t, c.SetDeadline(time.Now().Add(30*time.Second)))
+	ch := make(chan error, 1)
+	go func() {
+		ch <- s.Serve(t.Context(), srv)
+		_ = srv.Close()
+	}()
+	assert.NilError(t, writeOpHeader(c, opReqImport, 0))
+	var b [32]byte
+	copy(b[:], busid)
+	_, err := c.Write(b[:])
+	assert.NilError(t, err)
+	h, err := readOpHeader(c)
+	assert.NilError(t, err)
+	if h.Status == 0 {
+		var desc usbDeviceDesc
+		assert.NilError(t, binary.Read(c, binary.BigEndian, &desc))
+	}
+	return c, h.Status, ch
+}
+
+func TestReimportSupersedesStaleSession(t *testing.T) {
+	dev := ctxDev{started: make(chan []byte, 8)}
+	p := &testProvider{dev: dev}
+	s := NewServer(p)
+
+	// The old guest never closes c1, and a URB is in flight.
+	c1, status, done1 := importBusid(t, s, "1-1")
+	assert.Equal(t, status, uint32(0))
+	send(t, c1, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+
+	c2, status, done2 := importBusid(t, s, "1-1")
+	assert.Equal(t, status, uint32(0))
+	assert.DeepEqual(t, p.events(), []string{"open", "close", "open"})
+	assert.NilError(t, sessionEnd(t, done1), "a superseded session is no failure")
+
+	assert.NilError(t, c2.Close())
+	assert.NilError(t, sessionEnd(t, done2))
+	assert.DeepEqual(t, p.events(), []string{"open", "close", "open", "close"})
+}
+
+func TestReimportOfOtherBusidLeavesSession(t *testing.T) {
+	p := &testProvider{}
+	s := NewServer(p)
+	c1, _, done1 := importBusid(t, s, "1-1")
+	c2, _, done2 := importBusid(t, s, "1-2")
+	assert.DeepEqual(t, p.events(), []string{"open", "open"})
+	assert.NilError(t, c1.Close())
+	assert.NilError(t, c2.Close())
+	assert.NilError(t, sessionEnd(t, done1))
+	assert.NilError(t, sessionEnd(t, done2))
+}
+
+func TestReimportRefusedWhenOldSessionWedged(t *testing.T) {
+	supersedeWait = 50 * time.Millisecond
+	t.Cleanup(func() { supersedeWait = 10 * time.Second })
+	hook := logrustest.NewGlobal()
+	dev := newGateDev()
+	p := &testProvider{dev: dev}
+	s := NewServer(p)
+
+	c1, _, done1 := importBusid(t, s, "1-1")
+	send(t, c1, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+
+	_, status, _ := importBusid(t, s, "1-1")
+	assert.Equal(t, status, uint32(1))
+	assert.DeepEqual(t, p.events(), []string{"open"})
+	assert.Assert(t, hook.LastEntry().Level == logrus.WarnLevel)
+
+	close(dev.release)
+	_ = sessionEnd(t, done1)
+	_, status, _ = importBusid(t, s, "1-1")
+	assert.Equal(t, status, uint32(0))
 }
