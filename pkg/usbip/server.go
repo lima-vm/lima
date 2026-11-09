@@ -5,6 +5,7 @@ package usbip
 
 import (
 	"context"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io"
@@ -43,6 +44,32 @@ var (
 	drainQuiet = 200 * time.Millisecond
 	drainMax   = 2 * time.Second
 )
+
+func deviceDescWire(info DeviceInfo) usbDeviceDesc {
+	var d usbDeviceDesc
+	copy(d.Busid[:], info.Busid)
+	d.Busnum = info.BusNum
+	d.Devnum = info.DevNum
+	d.Speed = info.Speed
+	d.IDVendor = info.Vendor
+	d.IDProduct = info.Product
+	return d
+}
+
+func writeDevlist(conn io.Writer, infos []DeviceInfo) error {
+	if err := writeOpHeader(conn, opRepDevlist, 0); err != nil {
+		return err
+	}
+	if err := binary.Write(conn, binary.BigEndian, uint32(len(infos))); err != nil {
+		return err
+	}
+	for _, info := range infos {
+		if err := binary.Write(conn, binary.BigEndian, deviceDescWire(info)); err != nil {
+			return err
+		}
+	}
+	return nil
+}
 
 type inflight struct {
 	cancel   context.CancelFunc
