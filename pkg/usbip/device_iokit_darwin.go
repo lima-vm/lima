@@ -46,16 +46,122 @@ static void regString(io_service_t svc, const char *key, char *buf, int size) {
     CFRelease(v);
 }
 
+// A leaf IOMedia below svc with a client, such as a mounted volume. An error counts as yes.
+static int hasOpenMedia(io_service_t svc) {
+    io_iterator_t iter;
+    if (IORegistryEntryCreateIterator(svc, kIOServicePlane, kIORegistryIterateRecursively, &iter) != KERN_SUCCESS) return 1;
+    int found = 0;
+    for (io_object_t o; !found && (o = IOIteratorNext(iter)); IOObjectRelease(o)) {
+        if (!IOObjectConformsTo(o, "IOMedia")) continue;
+        CFTypeRef leaf = regProp(o, "Leaf"), open = regProp(o, "Open");
+        found = leaf == kCFBooleanTrue && open == kCFBooleanTrue;
+        if (leaf) CFRelease(leaf);
+        if (open) CFRelease(open);
+    }
+    IOObjectRelease(iter);
+    return found;
+}
+
+static IOUSBDeviceInterface320** openDeviceInterface(io_service_t svc) {
+    IOCFPlugInInterface **plugin = NULL;
+    SInt32 score;
+    kern_return_t kr = IOCreatePlugInInterfaceForService(svc,
+        kIOUSBDeviceUserClientTypeID, kIOCFPlugInInterfaceID, &plugin, &score);
+    if (kr != KERN_SUCCESS || !plugin) return NULL;
+
+    IOUSBDeviceInterface320 **iface = NULL;
+    HRESULT res = (*plugin)->QueryInterface(plugin,
+        CFUUIDGetUUIDBytes(kIOUSBDeviceInterfaceID320), (LPVOID *)&iface);
+    (*plugin)->Release(plugin);
+    return (res == 0 && iface) ? iface : NULL;
+}
+
+static int deviceOpen(IOUSBDeviceInterface320 **dev) {
+    return (*dev)->USBDeviceOpen(dev);
+}
+
+static int deviceClose(IOUSBDeviceInterface320 **dev) {
+    return (*dev)->USBDeviceClose(dev);
+}
+
+static int deviceGetSpeed(IOUSBDeviceInterface320 **dev, uint8_t *speed) {
+    return (*dev)->GetDeviceSpeed(dev, speed);
+}
+
+static int deviceInterfaceIterator(IOUSBDeviceInterface320 **dev, io_iterator_t *iter) {
+    IOUSBFindInterfaceRequest req;
+    req.bInterfaceClass = req.bInterfaceSubClass = req.bInterfaceProtocol = req.bAlternateSetting = kIOUSBFindInterfaceDontCare;
+    return (*dev)->CreateInterfaceIterator(dev, &req, iter);
+}
+
+static void releaseDeviceInterface(IOUSBDeviceInterface320 **dev) {
+    if (dev && *dev) {
+        (*dev)->Release(dev);
+    }
+}
+
+static IOUSBInterfaceInterface300** openInterfaceInterface(io_service_t svc) {
+    IOCFPlugInInterface **plugin = NULL;
+    SInt32 score;
+    kern_return_t kr = IOCreatePlugInInterfaceForService(svc,
+        kIOUSBInterfaceUserClientTypeID, kIOCFPlugInInterfaceID, &plugin, &score);
+    if (kr != KERN_SUCCESS || !plugin) return NULL;
+
+    IOUSBInterfaceInterface300 **iface = NULL;
+    HRESULT res = (*plugin)->QueryInterface(plugin,
+        CFUUIDGetUUIDBytes(kIOUSBInterfaceInterfaceID300), (LPVOID *)&iface);
+    (*plugin)->Release(plugin);
+    return (res == 0 && iface) ? iface : NULL;
+}
+
+static int interfaceClose(IOUSBInterfaceInterface300 **intf) {
+    return (*intf)->USBInterfaceClose(intf);
+}
+
+static void releaseInterfaceInterface(IOUSBInterfaceInterface300 **intf) {
+    if (intf && *intf) {
+        (*intf)->Release(intf);
+    }
+}
+
 #pragma clang diagnostic pop
 */
 import "C"
 
 import (
 	"fmt"
+	"maps"
+	"slices"
+	"sync"
 	"unsafe"
+
+	"github.com/sirupsen/logrus"
 
 	"github.com/lima-vm/lima/v2/pkg/strutil"
 )
+
+type pipe struct {
+	ref       C.uint8_t
+	intf      **C.IOUSBInterfaceInterface300
+	maxPacket C.uint16_t
+}
+
+func linkSpeed(dev **C.IOUSBDeviceInterface320) (uint32, error) {
+	var s C.uint8_t
+	if ret := C.deviceGetSpeed(dev, &s); ret != C.kIOReturnSuccess {
+		return 0, fmt.Errorf("get device speed: IOReturn 0x%08x", uint32(ret))
+	}
+	switch s {
+	case C.kUSBDeviceSpeedLow:
+		return usbipSpeedLow, nil
+	case C.kUSBDeviceSpeedFull:
+		return usbipSpeedFull, nil
+	case C.kUSBDeviceSpeedHigh:
+		return usbipSpeedHigh, nil
+	}
+	// vhci treats every SuperSpeed variant alike.
+	return usbipSpeedSuper, nil
+}
 
 func busidLocationID(loc uint32) string {
 	return fmt.Sprintf("%d-0x%08x", loc>>24, loc)
@@ -142,4 +248,131 @@ func List() ([]DeviceInfo, error) {
 		}
 	}
 	return out, nil
+}
+
+func openService(svc C.io_service_t, info DeviceInfo) (*iokitDevice, error) {
+	devIf := C.openDeviceInterface(svc)
+	if devIf == nil {
+		return nil, fmt.Errorf("failed to get device interface for %s", info.BusID)
+	}
+	g, err := newDevice(svc, devIf, info)
+	if err != nil {
+		C.releaseDeviceInterface(devIf)
+		return nil, err
+	}
+	return g, nil
+}
+
+type iokitDevice struct {
+	info    DeviceInfo
+	ptr     **C.IOUSBDeviceInterface320
+	service C.io_service_t
+	opened  bool
+
+	// Replaced by the fake backend.
+	nubs     func() []**C.IOUSBInterfaceInterface300
+	services func() ([]C.io_service_t, error)
+	mounted  func() bool
+
+	mu      sync.Mutex
+	ifaces  map[uint8]**C.IOUSBInterfaceInterface300
+	pipes   map[uint8]pipe // by endpoint address, active alt settings only
+	refused map[uint8]bool
+}
+
+func newDevice(svc C.io_service_t, devIf **C.IOUSBDeviceInterface320, info DeviceInfo) (*iokitDevice, error) {
+	speed, err := linkSpeed(devIf)
+	if err != nil {
+		return nil, err
+	}
+	info.Speed = speed
+
+	opened := false
+	if ret := C.deviceOpen(devIf); ret != C.kIOReturnSuccess {
+		if ret == C.kIOReturnExclusiveAccess {
+			logrus.Debugf("usbip: device %s held by kernel driver (open=0x%08x), proceeding without USBDeviceOpen",
+				info.BusID, uint32(ret))
+		} else {
+			return nil, fmt.Errorf("failed to open device %s: 0x%08x", info.BusID, uint32(ret))
+		}
+	} else {
+		logrus.Debugf("usbip: device %s opened normally", info.BusID)
+		opened = true
+	}
+
+	C.IOObjectRetain(svc)
+	g := &iokitDevice{
+		info:     info,
+		ptr:      devIf,
+		service:  svc,
+		opened:   opened,
+		services: usbServices,
+		ifaces:   map[uint8]**C.IOUSBInterfaceInterface300{},
+		pipes:    map[uint8]pipe{},
+		refused:  map[uint8]bool{},
+	}
+	g.nubs = g.openNubs
+	g.mounted = func() bool { return C.hasOpenMedia(g.service) != 0 }
+	return g, nil
+}
+
+func (g *iokitDevice) Info() DeviceInfo {
+	return g.info
+}
+
+// A replug creates a new registry entry, and a terminated entry stops matching.
+func (g *iokitDevice) Gone() bool {
+	svcs, err := g.services()
+	if err != nil {
+		logrus.WithError(err).Debug("usbip: presence check failed")
+		return false
+	}
+	defer releaseServices(svcs)
+	return !slices.ContainsFunc(svcs, func(svc C.io_service_t) bool {
+		return C.IOObjectIsEqualTo(svc, g.service) != 0
+	})
+}
+
+func (g *iokitDevice) Close() error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	g.releaseLocked()
+	if g.opened {
+		C.deviceClose(g.ptr)
+	}
+	C.releaseDeviceInterface(g.ptr)
+	C.IOObjectRelease(g.service)
+	return nil
+}
+
+func (g *iokitDevice) releaseLocked() {
+	for num := range g.ifaces {
+		g.dropInterfaceLocked(num)
+	}
+}
+
+func (g *iokitDevice) dropInterfaceLocked(num uint8) {
+	intf := g.ifaces[num]
+	maps.DeleteFunc(g.pipes, func(_ uint8, p pipe) bool { return p.intf == intf })
+	C.interfaceClose(intf)
+	C.releaseInterfaceInterface(intf)
+	delete(g.ifaces, num)
+}
+
+func (g *iokitDevice) openNubs() []**C.IOUSBInterfaceInterface300 {
+	var iter C.io_iterator_t
+	if ret := C.deviceInterfaceIterator(g.ptr, &iter); ret != C.kIOReturnSuccess {
+		logrus.Debugf("usbip: %s: interface iterator: IOReturn 0x%08x", g.info.BusID, uint32(ret))
+		return nil
+	}
+	defer C.IOObjectRelease(iter)
+
+	var intfs []**C.IOUSBInterfaceInterface300
+	for svc := C.IOIteratorNext(iter); svc != 0; svc = C.IOIteratorNext(iter) {
+		if intf := C.openInterfaceInterface(svc); intf != nil {
+			intfs = append(intfs, intf)
+		}
+		C.IOObjectRelease(svc)
+	}
+	return intfs
 }
