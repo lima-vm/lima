@@ -11,7 +11,9 @@ import (
 	"io"
 	"net"
 	"os"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -20,6 +22,9 @@ import (
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/poll"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/registry"
 	"github.com/lima-vm/lima/v2/pkg/usbip"
 )
 
@@ -136,5 +141,108 @@ func TestAcceptUSBIPCapsConnections(t *testing.T) {
 			break
 		}
 		assert.Assert(t, time.Now().Before(deadline), "slot never freed: %v", err)
+	}
+}
+
+func TestStartUSBIPServerSkips(t *testing.T) {
+	for name, set := range map[string]func(*limatype.LimaYAML){
+		"plain":     func(y *limatype.LimaYAML) { y.Plain = new(true) },
+		"not Linux": func(y *limatype.LimaYAML) { y.Plain, y.OS = new(false), new(limatype.DARWIN) },
+	} {
+		t.Run(name, func(t *testing.T) {
+			cfg := &limatype.LimaYAML{USB: limatype.USB{Enabled: new(true)}}
+			set(cfg)
+			var m *virtualMachineWrapper // Serving would dereference it.
+			stop, err := m.startUSBIPServer(t.Context(), &limatype.Instance{Dir: t.TempDir(), Config: cfg})
+			assert.NilError(t, err)
+			assert.Assert(t, stop == nil)
+		})
+	}
+}
+
+// Stop resets the allowlist to the YAML entries, so runtime grants end with the VM.
+func TestStopUSBIP(t *testing.T) {
+	grant := usbip.EntryFor(usbip.DeviceInfo{Vendor: 0x403, Product: 0x6015, BusID: "1-0x01100000"})
+	for name, tc := range map[string]struct {
+		devices []limatype.USBDevice
+		want    []usbip.AllowEntry
+	}{
+		"no yaml": {nil, []usbip.AllowEntry{}},
+		"yaml": {
+			[]limatype.USBDevice{{Name: "uart", VendorID: "0403", ProductID: "6015"}},
+			[]usbip.AllowEntry{{Name: "uart", VendorID: "0403", ProductID: "6015"}},
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			inst := &limatype.Instance{Dir: t.TempDir(), Config: &limatype.LimaYAML{USB: limatype.USB{Devices: tc.devices}}}
+			assert.NilError(t, usbip.WriteAllowlist(inst.Dir, []usbip.AllowEntry{grant}))
+			d := &usbDriver{LimaVzDriver: &LimaVzDriver{Instance: inst}}
+			d.stopUSBIP() // USB never started
+			stopped := false
+			d.usbip = func() { stopped = true }
+			d.stopUSBIP()
+			assert.Assert(t, stopped)
+			got, err := usbip.ReadAllowlist(inst.Dir)
+			assert.NilError(t, err)
+			assert.DeepEqual(t, got, tc.want)
+		})
+	}
+}
+
+func TestSeedAllowlistIgnoresUnparsableFile(t *testing.T) {
+	inst := &limatype.Instance{Dir: t.TempDir(), Config: &limatype.LimaYAML{}}
+	assert.NilError(t, os.WriteFile(filepath.Join(inst.Dir, "usbip-allow.json"), []byte("{"), 0o600))
+	assert.NilError(t, seedAllowlist(inst))
+	got, err := usbip.ReadAllowlist(inst.Dir)
+	assert.NilError(t, err)
+	assert.Equal(t, len(got), 0)
+}
+
+func TestWarnUnmatchedDevices(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	uart := usbip.DeviceInfo{Vendor: 0x403, Product: 0x6015, BusID: "1-0x01100000"}
+	warnUnmatchedDevices([]usbip.DeviceInfo{uart}, []limatype.USBDevice{
+		{VendorID: "0403", ProductID: "6015"},
+		{VendorID: "0403", ProductID: "6015", BusAddr: uart.BusID},
+		{VendorID: "0403", ProductID: "6015", BusAddr: "2-0x02100000"},
+		{VendorID: "0bda", ProductID: "8812"},
+	})
+	var got []string
+	for _, e := range hook.AllEntries() {
+		got = append(got, e.Message)
+	}
+	assert.DeepEqual(t, got, []string{
+		"usbip: no host USB device matches usb.devices entry 0403:6015",
+		"usbip: no host USB device matches usb.devices entry 0bda:8812",
+	})
+}
+
+// The vz registration must be the USB wrapper, and Configure must not warn that it ignores usb.
+func TestUSBDriverConfigure(t *testing.T) {
+	for usb, wantErr := range map[string]string{
+		`{devices: [{vendorID: "0403", productID: "6015"}]}`: "",
+		`{devices: [{vendorID: 0x0403, productID: "6015"}]}`: "vendorID` must be 4 hex digits in quotes, got 1027",
+	} {
+		t.Run(usb, func(t *testing.T) {
+			_, d, _ := registry.Get("vz")
+			dir := t.TempDir()
+			y := "{images: [{location: /}], vmType: vz, mountType: virtiofs, usb: " + usb + "}"
+			cfg, err := limayaml.Load(t.Context(), []byte(y), filepath.Join(dir, "lima.yaml"))
+			assert.NilError(t, err)
+			hook := logrustest.NewGlobal()
+			cd, err := d.Configure(t.Context(), &limatype.Instance{Dir: dir, Config: cfg})
+			assert.NilError(t, err)
+			for _, e := range hook.AllEntries() {
+				assert.Assert(t, !strings.Contains(e.Message, "ignoring"), e.Message)
+			}
+			_, ok := cd.Driver.(*usbDriver)
+			assert.Assert(t, ok)
+			err = limayaml.Validate(cfg, false)
+			if wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, wantErr)
+			}
+		})
 	}
 }
