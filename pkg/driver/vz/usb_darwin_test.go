@@ -11,6 +11,7 @@ import (
 	"io"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -243,6 +244,61 @@ func TestUSBDriverConfigure(t *testing.T) {
 			} else {
 				assert.ErrorContains(t, err, wantErr)
 			}
+		})
+	}
+}
+
+func TestUSBIPBootScript(t *testing.T) {
+	scripts, err := New().BootScripts(t.Context())
+	assert.NilError(t, err)
+	script, ok := scripts["boot.Linux/34-usbip-attach.sh"]
+	assert.Assert(t, ok)
+
+	stubs := map[string]string{
+		"lima-guestagent": `echo "ga $*" >>"$LOG"`,
+		"modprobe":        `echo modprobe >>"$LOG"; [ -e "$DIR/module" ]`,
+		"timeout":         `echo "timeout $1" >>"$LOG"; shift; exec "$@"`,
+		"apt-get":         `echo "apt-get $1" >>"$LOG"; [ "$1" = update ] || touch "$DIR/module"`,
+		"uname":           `echo 6.8.0`,
+	}
+	const ubuntu, debian = "ID=ubuntu", "ID=debian"
+	apt := "modprobe,timeout 120,apt-get update,apt-get install,modprobe"
+	for name, tc := range map[string]struct {
+		osRelease, skip string
+		module, warn    bool
+		want            string
+	}{
+		"module present": {osRelease: ubuntu, module: true, want: "modprobe"},
+		"ubuntu":         {osRelease: ubuntu, want: apt},
+		"debian":         {osRelease: debian, warn: true, want: "modprobe"},
+		"ubuntu, skip":   {osRelease: ubuntu, skip: "1", warn: true, want: "modprobe"},
+		"no os-release":  {warn: true, want: "modprobe"},
+	} {
+		t.Run(name, func(t *testing.T) {
+			dir := t.TempDir()
+			assert.NilError(t, os.Mkdir(filepath.Join(dir, "bin"), 0o755))
+			for stub, body := range stubs {
+				assert.NilError(t, os.WriteFile(filepath.Join(dir, "bin", stub), []byte("#!/bin/sh\n"+body+"\n"), 0o755))
+			}
+			if tc.module {
+				assert.NilError(t, os.WriteFile(filepath.Join(dir, "module"), nil, 0o644))
+			}
+			osRelease := filepath.Join(dir, "os-release")
+			if tc.osRelease != "" {
+				assert.NilError(t, os.WriteFile(osRelease, []byte(tc.osRelease), 0o644))
+			}
+			log := filepath.Join(dir, "log")
+			cmd := exec.CommandContext(t.Context(), "/bin/sh", "-c", strings.ReplaceAll(string(script), "/etc/os-release", osRelease))
+			cmd.Env = []string{
+				"PATH=" + filepath.Join(dir, "bin") + ":/usr/bin:/bin", "DIR=" + dir, "LOG=" + log,
+				"LIMA_CIDATA_GUEST_INSTALL_PREFIX=" + dir, "LIMA_CIDATA_SKIP_DEFAULT_DEPENDENCY_RESOLUTION=" + tc.skip,
+			}
+			out, err := cmd.CombinedOutput()
+			assert.NilError(t, err, string(out))
+			assert.Equal(t, strings.Contains(string(out), "WARNING: no vhci-hcd"), tc.warn, string(out))
+			calls, err := os.ReadFile(log)
+			assert.NilError(t, err)
+			assert.Equal(t, strings.ReplaceAll(strings.TrimSpace(string(calls)), "\n", ","), "ga usbip probe,"+tc.want+",ga usbip attach --all")
 		})
 	}
 }
