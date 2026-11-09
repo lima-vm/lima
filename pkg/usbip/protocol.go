@@ -11,6 +11,8 @@ import (
 	"io"
 )
 
+const VsockPort = 2223
+
 const protocolVersion = 0x0111
 
 const (
