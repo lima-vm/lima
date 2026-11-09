@@ -16,6 +16,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"github.com/spf13/cobra"
 	"golang.org/x/sys/unix"
@@ -163,6 +164,113 @@ func TestAttachKeepsYAMLBusAddr(t *testing.T) {
 	}
 }
 
+func TestDetach(t *testing.T) {
+	grant := usbip.EntryFor(uart)
+	hook := logrustest.NewGlobal()
+	run := func(t *testing.T, inst *limatype.Instance, hosts []usbip.DeviceInfo, args ...string) string {
+		t.Helper()
+		args = append(args, "", "", "")
+		hook.Reset()
+		assert.NilError(t, detachDevice(inst, hosts, args[0], args[1], args[2]))
+		var msgs []string
+		for _, e := range hook.AllEntries() {
+			msgs = append(msgs, e.Message)
+		}
+		return strings.Join(msgs, "\n")
+	}
+
+	t.Run("nothing attached is one line", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		out := run(t, inst, []usbip.DeviceInfo{uart}, uartBusid)
+		assert.Equal(t, out, `usb: device is not attached to instance "vm1"`)
+		assert.Equal(t, run(t, inst, nil, "", "0403", "6015"), out)
+	})
+
+	t.Run("held runtime grant", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		other := usbip.AllowEntry{VendorID: "1111", ProductID: "2222"}
+		assert.NilError(t, usbip.WriteAllowlist(inst.Dir, []usbip.AllowEntry{other, grant}))
+		endOnRevoke(holdDevice(t, uartBusid, "vm1"))
+
+		out := run(t, inst, []usbip.DeviceInfo{uart}, "", "403", "6015")
+		assert.Equal(t, out, "usb: detached "+uartBusid+` from instance "vm1"`)
+		_, held := usbip.Holder(uartBusid)
+		assert.Assert(t, !held)
+		list, err := usbip.ReadAllowlist(inst.Dir)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, list, []usbip.AllowEntry{other})
+	})
+
+	t.Run("unplugged device with stale grant", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		assert.NilError(t, usbip.WriteAllowlist(inst.Dir, []usbip.AllowEntry{grant}))
+		assert.Assert(t, strings.HasPrefix(run(t, inst, nil, "", "0403", "6015"), "usb: detached"))
+		list, err := usbip.ReadAllowlist(inst.Dir)
+		assert.NilError(t, err)
+		assert.Equal(t, len(list), 0)
+	})
+
+	t.Run("stopped VM holds no lock", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		assert.NilError(t, usbip.WriteAllowlist(inst.Dir, []usbip.AllowEntry{grant}))
+		assert.Assert(t, strings.HasPrefix(run(t, inst, []usbip.DeviceInfo{uart}, uartBusid), "usb: detached"))
+	})
+
+	t.Run("yaml device held", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1", limatype.USBDevice{VendorID: "0403", ProductID: "6015"})
+		seed := usbip.ConfigEntries(inst.Config.USB.Devices)
+		assert.NilError(t, usbip.WriteAllowlist(inst.Dir, seed))
+		endOnRevoke(holdDevice(t, uartBusid, "vm1"))
+
+		out := run(t, inst, []usbip.DeviceInfo{uart}, "", "0403", "6015")
+		assert.Assert(t, strings.HasPrefix(out, "usb: detached "+uartBusid), out)
+		assert.Assert(t, strings.Contains(out, "returns at next VM start unless removed"), out)
+		assert.Equal(t, hook.LastEntry().Level, logrus.WarnLevel)
+		list, err := usbip.ReadAllowlist(inst.Dir)
+		assert.NilError(t, err)
+		assert.Assert(t, !usbip.Allowed(list, usbip.EntryFor(uart)), "guest root can re-import")
+		twin := uart
+		twin.BusID = "1-0x01200000"
+		assert.Assert(t, usbip.Allowed(list, usbip.EntryFor(twin)))
+
+		assert.Assert(t, strings.Contains(run(t, inst, []usbip.DeviceInfo{uart}, "", "0403", "6015"), "not attached"))
+	})
+
+	t.Run("other instance keeps its device", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		holdDevice(t, uartBusid, "vm2")
+		assert.Assert(t, strings.Contains(run(t, inst, []usbip.DeviceInfo{uart}, uartBusid), "not attached"))
+	})
+
+	t.Run("identical devices need a busid", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		twin := uart
+		twin.BusID = "1-0x01200000"
+		assert.NilError(t, usbip.WriteAllowlist(inst.Dir, []usbip.AllowEntry{grant, usbip.EntryFor(twin)}))
+
+		assert.ErrorContains(t, detachDevice(inst, nil, "", "0403", "6015"), "multiple devices")
+
+		run(t, inst, nil, twin.BusID)
+		list, err := usbip.ReadAllowlist(inst.Dir)
+		assert.NilError(t, err)
+		assert.DeepEqual(t, list, []usbip.AllowEntry{grant})
+	})
+
+	t.Run("bad arguments", func(t *testing.T) {
+		t.Setenv("LIMA_HOME", t.TempDir())
+		inst := newUSBTestInstance(t, "vm1")
+		assert.ErrorContains(t, detachDevice(inst, nil, "", "", ""), "specify a BUSID")
+		assert.ErrorContains(t, detachDevice(inst, nil, "", "zz", "6015"), "invalid --vendor")
+	})
+}
+
 func TestUSBListShowsHolderWithoutGuest(t *testing.T) {
 	t.Setenv("LIMA_HOME", t.TempDir())
 	inst := newUSBTestInstance(t, "vm1")
@@ -231,6 +339,25 @@ func TestUSBCommandsRunRootHookAndWarnOnce(t *testing.T) {
 	assert.Assert(t, !strings.Contains(out.String(), "BUSID"), "--json printed a table")
 }
 
+func TestBusidRefusesVendorAndProduct(t *testing.T) {
+	for _, cmd := range []*cobra.Command{newUsbAttachCommand(), newUsbDetachCommand()} {
+		cmd.SilenceUsage, cmd.SilenceErrors = true, true
+		cmd.SetArgs([]string{"vm1", uartBusid, "--vendor", "0403", "--product", "6015"})
+		assert.ErrorContains(t, cmd.Execute(), "not both")
+	}
+}
+
+func TestMissingInstance(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	for _, cmd := range []*cobra.Command{newUsbListCommand(), newUsbAttachCommand(), newUsbDetachCommand()} {
+		cmd.SilenceUsage, cmd.SilenceErrors = true, true
+		cmd.SetArgs([]string{"nope"})
+		err := cmd.Execute()
+		assert.ErrorContains(t, err, "does not exist")
+		assert.Assert(t, !strings.Contains(err.Error(), "lima.yaml"), err.Error())
+	}
+}
+
 func TestBusidCompletions(t *testing.T) {
 	t.Setenv("LIMA_HOME", t.TempDir())
 	free := usbip.DeviceInfo{Vendor: 0x1111, Product: 0x2222, BusID: "2-0x02100000"}
@@ -277,6 +404,18 @@ func newStoppedInstance(t *testing.T, config string) *limatype.Instance {
 	yaml := config + "\nimages: [{location: /nonexistent.img}]\n"
 	assert.NilError(t, os.WriteFile(filepath.Join(inst.Dir, "lima.yaml"), []byte(yaml), 0o644))
 	return inst
+}
+
+func TestDetachCommandOnStoppedVM(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	inst := newStoppedInstance(t, "vmType: vz\nusb: {enabled: true}")
+	assert.NilError(t, usbip.WriteAllowlist(inst.Dir, []usbip.AllowEntry{usbip.EntryFor(uart)}))
+
+	hook := logrustest.NewGlobal()
+	cmd := newUsbDetachCommand()
+	cmd.SetArgs([]string{"vm1", uartBusid})
+	assert.NilError(t, cmd.Execute())
+	assert.Assert(t, strings.HasPrefix(hook.LastEntry().Message, "usb: detached "+uartBusid), hook.LastEntry().Message)
 }
 
 func TestRequireVZUSBInstanceGates(t *testing.T) {
