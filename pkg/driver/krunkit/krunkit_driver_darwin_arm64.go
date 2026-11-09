@@ -251,7 +251,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return fmt.Errorf("unsupported arch: %#q (krunkit requires native arch)", *cfg.Arch)
 	}
 	if _, err := exec.LookPath(vmType); err != nil {
-		return errors.New("krunkit CLI not found in PATH. Install it via:\nbrew tap slp/krun\nbrew install krunkit")
+		return errors.New("krunkit CLI not found in PATH. Install it via:\nbrew install krunkit")
 	}
 	// Also check if krunkit version >= 1.2.1 because of the vsock forwarder feature
 	if err := checkKrunkitVersion(); err != nil {

@@ -13,10 +13,9 @@ Krunkit runs super‑light VMs on macOS/ARM64 with a focus on GPU access. It bui
 
 ## Install krunkit (host)
 ```bash
-brew tap slp/krun
 brew install krunkit
 ```
-For reference: https://github.com/slp/homebrew-krun/blob/master/Formula/krunkit.rb
+For reference: https://github.com/Homebrew/homebrew-core/blob/main/Formula/k/krunkit.rb
 
 
 ## Using the driver with Lima
