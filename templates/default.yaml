@@ -511,6 +511,21 @@ video:
     # 🟢 Builtin default: "127.0.0.1:0,to=9"
     display: null
 
+# EXPERIMENTAL
+# Pass host USB devices to the guest over USB/IP on vsock.
+# Currently implemented only by `vmType: vz`. Needs a Linux guest; ignored with `plain: true`.
+# usb:
+#   # Enable USB passthrough. `devices` alone implies true.
+#   # 🟢 Builtin default: false
+#   enabled: null
+#   # Host USB devices to import at boot.
+#   # 🟢 Builtin default: []
+#   devices:
+#   - vendorID: "0403"        # 4 hex digits, in quotes
+#     productID: "6015"       # 4 hex digits, in quotes
+#     name: "serial"          # optional label
+#     busAddr: "1-0x01100000" # optional BUSID, picks one of several identical devices
+
 # The instance can get routable IP addresses from the vmnet framework using
 # https://github.com/lima-vm/socket_vmnet.
 # 🟢 Builtin default: []
