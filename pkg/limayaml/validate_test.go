@@ -834,3 +834,13 @@ func TestValidateMountRelativePathWithoutMountPoint(t *testing.T) {
 	assert.ErrorContains(t, err, "field `mounts[0].location` must be an absolute path")
 	assert.ErrorContains(t, err, "field `mounts[0].mountPoint` must be specified explicitly")
 }
+
+func TestValidateAudioInterfaceKeepsOtherErrors(t *testing.T) {
+	y, err := Load(t.Context(), []byte("arch: bogus-arch\n"), "lima.yaml")
+	assert.NilError(t, err)
+	y.Audio.Interface = new("bogus-audio")
+	err = Validate(y, false)
+	assert.ErrorContains(t, err, "field `arch` must be one of")
+	assert.ErrorContains(t, err, "field `images` must be set")
+	assert.ErrorContains(t, err, "field `audio.interface` must be `hda` or `virtio`; got `bogus-audio`")
+}

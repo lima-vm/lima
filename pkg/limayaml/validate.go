@@ -518,7 +518,7 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 
 	if y.Audio.Interface != nil {
 		if *y.Audio.Interface != "" && *y.Audio.Interface != "hda" && *y.Audio.Interface != "virtio" {
-			return fmt.Errorf("invalid audio.interface %q, must be \"hda\" or \"virtio\"", *y.Audio.Interface)
+			errs = errors.Join(errs, fmt.Errorf("field `audio.interface` must be %#q or %#q; got %#q", "hda", "virtio", *y.Audio.Interface))
 		}
 	}
 
