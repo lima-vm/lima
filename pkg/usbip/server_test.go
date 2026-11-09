@@ -898,3 +898,72 @@ func TestReimportRefusedWhenOldSessionWedged(t *testing.T) {
 	_, status, _ = importBusid(t, s, "1-1")
 	assert.Equal(t, status, uint32(0))
 }
+
+func setHandshakeWait(t *testing.T, d time.Duration) {
+	t.Helper()
+	old := handshakeWait
+	handshakeWait = d
+	t.Cleanup(func() { handshakeWait = old })
+}
+
+func TestSilentConnTimesOut(t *testing.T) {
+	setHandshakeWait(t, 50*time.Millisecond)
+	c, srv := net.Pipe()
+	t.Cleanup(func() { _ = c.Close() })
+	err := NewServer(&testProvider{}).Serve(t.Context(), srv)
+	assert.Assert(t, errors.Is(err, os.ErrDeadlineExceeded), "got %v", err)
+}
+
+func TestClosedConnIsNoError(t *testing.T) {
+	c, srv := net.Pipe()
+	assert.NilError(t, c.Close())
+	assert.NilError(t, NewServer(&testProvider{}).Serve(t.Context(), srv))
+}
+
+func TestIdleSessionOutlivesHandshake(t *testing.T) {
+	setHandshakeWait(t, 50*time.Millisecond)
+	c, status, done := importBusid(t, NewServer(&testProvider{}), "1-1")
+	assert.Equal(t, status, uint32(0))
+	time.Sleep(150 * time.Millisecond)
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirOut, Ep: 1})
+	_, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+func TestUnplugDropsGrantBeforeRelease(t *testing.T) {
+	for name, dev := range map[string]Device{
+		"gone poll": goneDev{gone: func() bool { return true }},
+		"enodev":    errDev{err: ErrDeviceGone},
+	} {
+		t.Run(name, func(t *testing.T) {
+			hook := logrustest.NewGlobal()
+			p := &testProvider{dev: dev}
+			c, status, done := importBusid(t, NewServer(p), "1-1")
+			assert.Equal(t, status, uint32(0))
+			if _, isGone := dev.(goneDev); !isGone {
+				send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+				_, err := readURBHeader(c)
+				assert.NilError(t, err)
+			}
+
+			_, err := readURBHeader(c)
+			assert.Assert(t, errors.Is(err, io.EOF), "guest port frees on EOF, got %v", err)
+			assert.Assert(t, errors.Is(sessionEnd(t, done), ErrDeviceGone))
+			assert.DeepEqual(t, p.events(), []string{"open", "unplugged 1-1", "close"})
+			assert.Equal(t, unplugWarnings(hook), 1)
+			assert.Assert(t, strings.Contains(hook.LastEntry().Message, "1-1"), hook.LastEntry().Message)
+		})
+	}
+}
+
+func TestGuestCloseAfterUnplugDropsGrant(t *testing.T) {
+	var unplugged atomic.Bool
+	p := &testProvider{dev: goneDev{gone: unplugged.Load}}
+	c, _, done := importBusid(t, NewServer(p), "1-1")
+	unplugged.Store(true)
+	assert.NilError(t, c.Close())
+	_ = sessionEnd(t, done)
+	assert.DeepEqual(t, p.events(), []string{"open", "unplugged 1-1", "close"})
+}
