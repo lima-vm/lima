@@ -18,6 +18,10 @@ Unix: The directory can not be located on an NFS file system, it needs to be loc
 Raw/block aliases and partitions share the whole-disk lock. The files remain after
 the VM stops so another VM cannot lock a different inode for the same disk.
 
+`_usbip-<busid>.lock` files let one instance at a time hold a host USB device for
+[USB passthrough]({{< ref "/docs/config/usb" >}}). A held file contains the name
+of the holding instance.
+
 ### Config directory (`${LIMA_HOME}/_config`)
 
 The config directory contains global lima settings that apply to all instances.
@@ -77,6 +81,11 @@ VZ:
 - `vz-guest-os-build-version`: build number of that restore image, e.g. `26A428`
 - `vz-aux`: Auxiliary storage for a Mac VM
 - `vz-efi`: EFIVariable store file for a VM
+
+USB/IP:
+
+The internal `vz` driver serves USB/IP on vsock port 2223 when `usb` is enabled.
+- `usbip-allow.json`: USB devices the USB/IP server may export to this instance. Reset to `usb.devices` at VM start and stop; `limactl usb attach` and `limactl usb detach` edit it.
 
 Serial:
 - `serial.log`: default serial log (QEMU and HCS), for debugging
