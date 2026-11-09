@@ -12,6 +12,7 @@ import (
 	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
 )
 
@@ -38,6 +39,16 @@ func EntryFor(info DeviceInfo) AllowEntry {
 		Busid:      info.BusID,
 		RegistryID: info.RegistryID,
 	}
+}
+
+func ConfigEntries(devs []limatype.USBDevice) []AllowEntry {
+	list := []AllowEntry{}
+	// AddEntry keeps the last duplicate, and a template's entry precedes its base's.
+	for _, d := range slices.Backward(devs) {
+		list = AddEntry(list, AllowEntry{Name: d.Name, VendorID: fmt.Sprint(d.VendorID), ProductID: fmt.Sprint(d.ProductID), BusAddr: d.BusAddr})
+	}
+	slices.Reverse(list)
+	return list
 }
 
 func ReadAllowlist(instDir string) ([]AllowEntry, error) {

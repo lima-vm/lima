@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"gotest.tools/v3/assert"
+
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 )
 
 func TestWriteReadRoundTrip(t *testing.T) {
@@ -75,4 +77,16 @@ func TestDeniedOverridesWildcard(t *testing.T) {
 		assert.Assert(t, Allowed(list, twin))
 		assert.Assert(t, Allowed(AddEntry(list, dev), dev), "a grant lifts the deny")
 	}
+}
+
+func TestConfigEntries(t *testing.T) {
+	got := ConfigEntries([]limatype.USBDevice{
+		{Name: "a", VendorID: "0403", ProductID: "6015"},
+		{VendorID: "0403", ProductID: "6015", BusAddr: "1-1"},
+		{Name: "duplicate", VendorID: "0403", ProductID: "6015"},
+	})
+	assert.DeepEqual(t, got, []AllowEntry{
+		{Name: "a", VendorID: "0403", ProductID: "6015"},
+		{VendorID: "0403", ProductID: "6015", BusAddr: "1-1"},
+	})
 }
