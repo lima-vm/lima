@@ -166,6 +166,44 @@ local_setup() {
     assert_output --partial "contains invalid character"
 }
 
+@test '--block-env implies --preserve-env and appends to the builtin block list' {
+    export FOO=foo
+    export BAR=bar
+    export SSH_FOO=ssh_foo
+    run -0 limactl shell --block-env FOO "$INSTANCE" printenv
+    refute_line --regexp '^FOO='
+    refute_line --regexp '^SSH_FOO='
+    assert_line BAR=bar
+}
+
+@test '--block-env appends to LIMA_SHELLENV_BLOCK' {
+    export LIMA_SHELLENV_BLOCK=BAR
+    export FOO=foo
+    export BAR=bar
+    export SSH_FOO=ssh_foo
+    run -0 limactl shell --block-env FOO "$INSTANCE" printenv
+    refute_line --regexp '^FOO='
+    refute_line --regexp '^BAR='
+    assert_line SSH_FOO=ssh_foo
+}
+
+@test '--allow-env implies --preserve-env and appends to LIMA_SHELLENV_ALLOW' {
+    export LIMA_SHELLENV_ALLOW=SSH_FOO
+    export SSH_FOO=ssh_foo
+    export SSH_BAR=ssh_bar
+    export SSH_BAZ=ssh_baz
+    run -0 limactl shell --allow-env SSH_BAR "$INSTANCE" printenv
+    assert_line SSH_FOO=ssh_foo
+    assert_line SSH_BAR=ssh_bar
+    refute_line --regexp '^SSH_BAZ='
+}
+
+@test 'invalid characters in --block-env patterns cause an error' {
+    run ! limactl shell --block-env FOO-BAR "$INSTANCE" printenv
+    assert_output --partial "invalid --block-env pattern"
+    assert_output --partial "contains invalid character"
+}
+
 @test 'limactl info includes the default block list' {
     run -0 limactl info
     run -0 limactl yq '.shellEnvBlock[]' <<<"$output"

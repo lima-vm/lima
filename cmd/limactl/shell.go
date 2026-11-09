@@ -51,6 +51,8 @@ Environment Variables:
   --preserve-env: Propagates host environment variables to the guest instance.
                   Use LIMA_SHELLENV_BLOCK to specify variables to block (prefix with + to extend the default blocklist).
                   Use LIMA_SHELLENV_ALLOW to exempt specific variables from the blocklist.
+  --allow-env, --block-env: Append patterns to LIMA_SHELLENV_ALLOW and LIMA_SHELLENV_BLOCK
+                  (or to the default blocklist) for this command only. Both imply --preserve-env.
 
 Hint: try --debug to show the detailed logs, if it seems hanging (mostly due to some SSH issue).
 `
@@ -76,6 +78,8 @@ func newShellCommand() *cobra.Command {
 	shellCmd.Flags().String("workdir", "", "Working directory")
 	shellCmd.Flags().Bool("reconnect", false, "Reconnect to the SSH session")
 	shellCmd.Flags().Bool("preserve-env", false, "Propagate environment variables to the shell")
+	shellCmd.Flags().StringSlice("allow-env", []string{}, "Comma-separated list of additional environment variable patterns to allow (implies --preserve-env)")
+	shellCmd.Flags().StringSlice("block-env", []string{}, "Comma-separated list of additional environment variable patterns to block (implies --preserve-env)")
 	shellCmd.Flags().Bool("start", false, "Start the instance if it is not already running")
 	shellCmd.Flags().String("sync", "", "Copy a host directory to the guest and vice-versa upon exit")
 	shellCmd.Flags().StringArray("sync-exclude", nil, "Exclude pattern for --sync (can be specified multiple times)")
@@ -366,8 +370,25 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	allowEnv, err := cmd.Flags().GetStringSlice("allow-env")
+	if err != nil {
+		return err
+	}
+	if err := envutil.ValidatePatterns(allowEnv); err != nil {
+		return fmt.Errorf("invalid --allow-env pattern: %w", err)
+	}
+	blockEnv, err := cmd.Flags().GetStringSlice("block-env")
+	if err != nil {
+		return err
+	}
+	if err := envutil.ValidatePatterns(blockEnv); err != nil {
+		return fmt.Errorf("invalid --block-env pattern: %w", err)
+	}
+	if len(allowEnv) > 0 || len(blockEnv) > 0 {
+		preserveEnv = true
+	}
 	if preserveEnv {
-		filteredEnv := envutil.FilterEnvironment()
+		filteredEnv := envutil.FilterEnvironment(allowEnv, blockEnv)
 		if len(filteredEnv) > 0 {
 			envPrefix = "env "
 			for _, envVar := range filteredEnv {
