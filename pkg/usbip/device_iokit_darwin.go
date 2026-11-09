@@ -7,15 +7,35 @@
 package usbip
 
 /*
-#cgo LDFLAGS: -framework IOKit -framework CoreFoundation
+#cgo CFLAGS: -x objective-c
+#cgo LDFLAGS: -framework IOKit -framework CoreFoundation -framework Foundation -framework IOUSBHost
+#import <Foundation/Foundation.h>
+#import <IOUSBHost/IOUSBHost.h>
 #include <IOKit/IOKitLib.h>
 #include <IOKit/usb/IOUSBLib.h>
 #include <IOKit/IOCFPlugIn.h>
 #include <CoreFoundation/CoreFoundation.h>
+#include <pthread.h>
+#include <signal.h>
 #include <stdlib.h>
 
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
+// A signal on a thread blocked in IOKit aborts the call. Faults stay deliverable.
+static void blockAsyncSignals(sigset_t *old) {
+    sigset_t set;
+    sigfillset(&set);
+    sigdelset(&set, SIGSEGV);
+    sigdelset(&set, SIGBUS);
+    sigdelset(&set, SIGFPE);
+    sigdelset(&set, SIGILL);
+    sigdelset(&set, SIGABRT);
+    sigdelset(&set, SIGTRAP);
+    pthread_sigmask(SIG_BLOCK, &set, old);
+}
+
+#define MASKED(call) ({ sigset_t old_; blockAsyncSignals(&old_); int ret_ = (call); pthread_sigmask(SIG_SETMASK, &old_, NULL); ret_; })
 
 static kern_return_t usbDeviceIterator(io_iterator_t *iter) {
     CFMutableDictionaryRef match = IOServiceMatching("IOUSBHostDevice");
@@ -88,6 +108,61 @@ static int deviceGetSpeed(IOUSBDeviceInterface320 **dev, uint8_t *speed) {
     return (*dev)->GetDeviceSpeed(dev, speed);
 }
 
+// Sets cfg with interface matching off, so macOS drivers such as mass storage do not take the interfaces back.
+// IOUSBLib has no such option. IOUSBHost's seize needs no root; the IOUSBLib open is closed around it.
+static int deviceConfigureNoMatch(io_service_t svc, IOUSBDeviceInterface320 **dev, uint8_t cfg) {
+    (*dev)->USBDeviceClose(dev);
+    int ret = 0;
+    @autoreleasepool {
+        NSError *err = nil;
+        dispatch_queue_t q = dispatch_queue_create("lima.usbip.configure", NULL);
+        IOUSBHostDevice *d = [[IOUSBHostDevice alloc] initWithIOService:svc options:IOUSBHostObjectInitOptionsDeviceSeize
+                                                                  queue:q error:&err interestHandler:nil];
+        if (!d) {
+            ret = -1;
+        } else {
+            // Setting the active configuration again is a no-op, so drop to 0 first.
+            if (![d configureWithValue:0 matchInterfaces:NO error:&err] || ![d configureWithValue:cfg matchInterfaces:NO error:&err]) ret = -1;
+            // Surrender: no reset, and drivers are not re-registered for matching.
+            [d destroyWithOptions:IOUSBHostObjectDestroyOptionsDeviceSurrender];
+            [d release];
+        }
+        dispatch_release(q);
+    }
+    IOReturn r = (*dev)->USBDeviceOpen(dev);
+    return ret != 0 ? ret : (int)r;
+}
+
+static int deviceSetConfiguration(IOUSBDeviceInterface320 **dev, uint8_t cfg) {
+    return MASKED((*dev)->SetConfiguration(dev, cfg));
+}
+
+static int deviceGetConfiguration(IOUSBDeviceInterface320 **dev, uint8_t *cfg) {
+    return (*dev)->GetConfiguration(dev, cfg);
+}
+
+static int deviceControlRequest(IOUSBDeviceInterface320 **dev,
+    uint8_t bmReqType, uint8_t bReq, uint16_t wVal, uint16_t wIdx,
+    void *data, uint16_t wLen, uint32_t timeoutMs, uint32_t *done) {
+    IOUSBDevRequestTO req;
+    req.bmRequestType = bmReqType;
+    req.bRequest = bReq;
+    req.wValue = wVal;
+    req.wIndex = wIdx;
+    req.wLength = wLen;
+    req.pData = data;
+    req.wLenDone = 0;
+    req.noDataTimeout = 0;
+    req.completionTimeout = timeoutMs;
+    int ret = MASKED((*dev)->DeviceRequestTO(dev, &req));
+    *done = req.wLenDone;
+    return ret;
+}
+
+static int deviceAbortPipeZero(IOUSBDeviceInterface320 **dev) {
+    return (*dev)->USBDeviceAbortPipeZero(dev);
+}
+
 static int deviceInterfaceIterator(IOUSBDeviceInterface320 **dev, io_iterator_t *iter) {
     IOUSBFindInterfaceRequest req;
     req.bInterfaceClass = req.bInterfaceSubClass = req.bInterfaceProtocol = req.bAlternateSetting = kIOUSBFindInterfaceDontCare;
@@ -114,8 +189,47 @@ static IOUSBInterfaceInterface300** openInterfaceInterface(io_service_t svc) {
     return (res == 0 && iface) ? iface : NULL;
 }
 
+static int interfaceOpen(IOUSBInterfaceInterface300 **intf) {
+    return (*intf)->USBInterfaceOpen(intf);
+}
+
 static int interfaceClose(IOUSBInterfaceInterface300 **intf) {
     return (*intf)->USBInterfaceClose(intf);
+}
+
+static int interfaceSetAltSetting(IOUSBInterfaceInterface300 **intf, uint8_t alt) {
+    return MASKED((*intf)->SetAlternateInterface(intf, alt));
+}
+
+static int interfaceGetNumEndpoints(IOUSBInterfaceInterface300 **intf, uint8_t *num) {
+    return (*intf)->GetNumEndpoints(intf, num);
+}
+
+static int interfaceGetPipeProperties(IOUSBInterfaceInterface300 **intf,
+    uint8_t pipeRef, uint8_t *direction, uint8_t *number,
+    uint8_t *transferType, uint16_t *maxPacketSize, uint8_t *interval) {
+    return (*intf)->GetPipeProperties(intf, pipeRef, direction, number,
+        transferType, maxPacketSize, interval);
+}
+
+// GetPipeProperties scales its size with burst and SetPipePolicy; this is the raw wMaxPacketSize.
+static void interfaceRawMaxPacket(IOUSBInterfaceInterface300 **intf, uint8_t dir, uint8_t num, uint16_t *mps) {
+    UInt8 alt, type, interval;
+    if ((*intf)->GetAlternateSetting(intf, &alt) == kIOReturnSuccess) {
+        (*intf)->GetEndpointProperties(intf, alt, num, dir, &type, mps, &interval);
+    }
+}
+
+static int interfaceClearStall(IOUSBInterfaceInterface300 **intf, uint8_t pipeRef) {
+    return MASKED((*intf)->ClearPipeStallBothEnds(intf, pipeRef));
+}
+
+static int interfaceNumber(IOUSBInterfaceInterface300 **intf, uint8_t *num) {
+    return (*intf)->GetInterfaceNumber(intf, num);
+}
+
+static void retainInterfaceInterface(IOUSBInterfaceInterface300 **intf) {
+    (*intf)->AddRef(intf);
 }
 
 static void releaseInterfaceInterface(IOUSBInterfaceInterface300 **intf) {
@@ -129,10 +243,13 @@ static void releaseInterfaceInterface(IOUSBInterfaceInterface300 **intf) {
 import "C"
 
 import (
+	"context"
+	"encoding/binary"
 	"fmt"
 	"maps"
 	"slices"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/sirupsen/logrus"
@@ -145,6 +262,14 @@ type pipe struct {
 	intf      **C.IOUSBInterfaceInterface300
 	maxPacket C.uint16_t
 }
+
+const (
+	reqClearFeature     = 0x01
+	reqSetConfiguration = 0x09
+	reqSetInterface     = 0x0b
+)
+
+const abortRetry = 50 * time.Millisecond
 
 func linkSpeed(dev **C.IOUSBDeviceInterface320) (uint32, error) {
 	var s C.uint8_t
@@ -273,6 +398,8 @@ type iokitDevice struct {
 	nubs     func() []**C.IOUSBInterfaceInterface300
 	services func() ([]C.io_service_t, error)
 	mounted  func() bool
+	// reconfigure sets a configuration with macOS driver matching off; false falls back to SetConfiguration.
+	reconfigure func(num uint8) bool
 
 	mu      sync.Mutex
 	ifaces  map[uint8]**C.IOUSBInterfaceInterface300
@@ -313,6 +440,7 @@ func newDevice(svc C.io_service_t, devIf **C.IOUSBDeviceInterface320, info Devic
 	}
 	g.nubs = g.openNubs
 	g.mounted = func() bool { return C.hasOpenMedia(g.service) != 0 }
+	g.reconfigure = func(num uint8) bool { return C.deviceConfigureNoMatch(g.service, g.ptr, C.uint8_t(num)) == 0 }
 	return g, nil
 }
 
@@ -359,6 +487,139 @@ func (g *iokitDevice) dropInterfaceLocked(num uint8) {
 	delete(g.ifaces, num)
 }
 
+// kIOReturnNotResponding is not gone: a hang must not end the session, and the Gone poll catches an unplug.
+func ioReturnErr(ret C.int) error {
+	var e urbErrno
+	switch ret {
+	case C.kIOReturnNoDevice:
+		return fmt.Errorf("%w: IOKit 0x%08x", ErrDeviceGone, uint32(ret))
+	case C.kIOUSBPipeStalled, C.kUSBHostReturnPipeStalled:
+		e = errnoEPIPE
+	case C.kIOUSBTransactionTimeout, C.kIOReturnTimeout:
+		e = errnoETIME
+	case C.kIOReturnOverrun:
+		e = errnoEOVERFLOW
+	default:
+		e = errnoEPROTO
+	}
+	return fmt.Errorf("IOKit 0x%08x: %w", uint32(ret), e)
+}
+
+// IOKit calls have no timeout, and an abort landing before the call is queued is lost, so repeat it.
+func abortOnCancel(ctx context.Context, abort func()) (join func()) {
+	done, exited := make(chan struct{}), make(chan struct{})
+	stop := context.AfterFunc(ctx, func() {
+		defer close(exited)
+		for {
+			abort()
+			select {
+			case <-done:
+				return
+			case <-time.After(abortRetry):
+			}
+		}
+	})
+	return func() {
+		close(done)
+		if !stop() {
+			<-exited
+		}
+	}
+}
+
+func controlSetup(setup [8]byte) (rType, request uint8, value, index uint16) {
+	le := binary.LittleEndian
+	return setup[0], setup[1], le.Uint16(setup[2:]), le.Uint16(setup[4:])
+}
+
+func (g *iokitDevice) Control(ctx context.Context, setup [8]byte, data []byte) (int, error) {
+	rType, request, value, index := controlSetup(setup)
+
+	switch {
+	case rType == 0x00 && request == reqSetConfiguration:
+		return 0, g.setConfiguration(uint8(value))
+	case rType == 0x01 && request == reqSetInterface:
+		return 0, g.setInterface(uint8(index), uint8(value))
+	case rType == 0x02 && request == reqClearFeature && value == 0:
+		// No pipe means ep0 or an unclaimed interface: forward the request as is.
+		if p, err := g.findPipe(uint8(index), index&0x80 != 0); err == nil {
+			defer C.releaseInterfaceInterface(p.intf)
+			if ret := C.interfaceClearStall(p.intf, p.ref); ret != C.kIOReturnSuccess {
+				return 0, fmt.Errorf("clear halt %#02x: %w", index, ioReturnErr(ret))
+			}
+			return 0, nil
+		}
+	}
+
+	var ptr unsafe.Pointer
+	if len(data) > 0 {
+		ptr = unsafe.Pointer(&data[0])
+	}
+
+	// USBDeviceAbortPipeZero refuses an unopened device, so only a timeout can free the call.
+	// This cuts a request over 5 s on such a device, as no abort route exists there.
+	var timeout C.uint32_t
+	if !g.opened {
+		timeout = C.kUSBDefaultControlNoDataTimeoutMS
+	}
+	defer abortOnCancel(ctx, func() { C.deviceAbortPipeZero(g.ptr) })()
+	var done C.uint32_t
+	ret := C.deviceControlRequest(g.ptr,
+		C.uint8_t(rType), C.uint8_t(request),
+		C.uint16_t(value), C.uint16_t(index),
+		ptr, C.uint16_t(len(data)), timeout, &done)
+	if ret != C.kIOReturnSuccess {
+		return 0, fmt.Errorf("control transfer: %w", ioReturnErr(ret))
+	}
+	return min(int(done), len(data)), nil
+}
+
+func (g *iokitDevice) setConfiguration(num uint8) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	// SetConfiguration terminates every macOS driver, and that loses a mounted volume's dirty cache.
+	if g.opened && !g.mounted() {
+		g.releaseLocked()
+		if !g.reconfigure(num) {
+			if ret := C.deviceSetConfiguration(g.ptr, C.uint8_t(num)); ret != C.kIOReturnSuccess {
+				return fmt.Errorf("set configuration %d: %w", num, ioReturnErr(ret))
+			}
+		}
+	} else {
+		// Without SetConfiguration only the active configuration can succeed.
+		var cur C.uint8_t
+		if ret := C.deviceGetConfiguration(g.ptr, &cur); ret != C.kIOReturnSuccess {
+			return fmt.Errorf("get configuration: %w", ioReturnErr(ret))
+		}
+		if uint8(cur) != num {
+			return fmt.Errorf("set configuration %d: device stays at %d: %w", num, uint8(cur), urbErrno(errnoEPIPE))
+		}
+	}
+	g.claimLocked()
+	return nil
+}
+
+func (g *iokitDevice) setInterface(num, alt uint8) error {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	intf, ok := g.ifaces[num]
+	if !ok {
+		g.claimLocked()
+		if intf, ok = g.ifaces[num]; !ok {
+			return fmt.Errorf("set interface %d alt %d: interface not claimed", num, alt)
+		}
+	}
+	if ret := C.interfaceSetAltSetting(intf, C.uint8_t(alt)); ret != C.kIOReturnSuccess {
+		// Pipes may be gone after a failure. The next miss reopens the interface.
+		g.dropInterfaceLocked(num)
+		return fmt.Errorf("set interface %d alt %d: %w", num, alt, ioReturnErr(ret))
+	}
+	g.mapPipesLocked(intf)
+	return nil
+}
+
 func (g *iokitDevice) openNubs() []**C.IOUSBInterfaceInterface300 {
 	var iter C.io_iterator_t
 	if ret := C.deviceInterfaceIterator(g.ptr, &iter); ret != C.kIOReturnSuccess {
@@ -375,4 +636,72 @@ func (g *iokitDevice) openNubs() []**C.IOUSBInterfaceInterface300 {
 		C.IOObjectRelease(svc)
 	}
 	return intfs
+}
+
+// Runs at SET_CONFIGURATION to beat host apps, and on a pipe miss for late nubs.
+// Each miss opens a plugin per nub; cache refused nubs if a guest hot loop shows up.
+func (g *iokitDevice) claimLocked() {
+	for _, intf := range g.nubs() {
+		var cnum C.uint8_t
+		ret := C.interfaceNumber(intf, &cnum)
+		num := uint8(cnum)
+		if _, held := g.ifaces[num]; ret != C.kIOReturnSuccess || held {
+			C.releaseInterfaceInterface(intf)
+			continue
+		}
+		if ret := C.interfaceOpen(intf); ret != C.kIOReturnSuccess {
+			C.releaseInterfaceInterface(intf)
+			if !g.refused[num] {
+				g.refused[num] = true
+				logrus.Warnf("usbip: %s: claim interface %d: IOReturn 0x%08x; macOS or another process may hold it",
+					g.info.BusID, num, uint32(ret))
+			}
+			continue
+		}
+		g.ifaces[num] = intf
+		g.mapPipesLocked(intf)
+	}
+}
+
+func (g *iokitDevice) mapPipesLocked(intf **C.IOUSBInterfaceInterface300) {
+	maps.DeleteFunc(g.pipes, func(_ uint8, p pipe) bool { return p.intf == intf })
+
+	var n C.uint8_t
+	if C.interfaceGetNumEndpoints(intf, &n) != C.kIOReturnSuccess {
+		return
+	}
+	for ref := 1; ref <= int(n); ref++ {
+		var dir, num, xferType, interval C.uint8_t
+		var maxPkt C.uint16_t
+		if C.interfaceGetPipeProperties(intf, C.uint8_t(ref), &dir, &num, &xferType, &maxPkt, &interval) != C.kIOReturnSuccess {
+			continue
+		}
+		C.interfaceRawMaxPacket(intf, dir, num, &maxPkt)
+		addr := uint8(num)
+		if dir == C.kUSBIn {
+			addr |= 0x80
+		}
+		g.pipes[addr] = pipe{ref: C.uint8_t(ref), intf: intf, maxPacket: maxPkt}
+	}
+}
+
+// The caller releases the pin: SET_CONFIGURATION can drop the interface mid-call.
+func (g *iokitDevice) findPipe(ep uint8, in bool) (pipe, error) {
+	addr := ep & 0x0f
+	if in {
+		addr |= 0x80
+	}
+
+	g.mu.Lock()
+	defer g.mu.Unlock()
+
+	p, ok := g.pipes[addr]
+	if !ok {
+		g.claimLocked()
+		if p, ok = g.pipes[addr]; !ok {
+			return pipe{}, fmt.Errorf("no interface provides endpoint %#02x", addr)
+		}
+	}
+	C.retainInterfaceInterface(p.intf)
+	return p, nil
 }

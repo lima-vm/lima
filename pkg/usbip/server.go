@@ -24,6 +24,7 @@ const (
 	errnoEPIPE      = 32
 	errnoETIME      = 62
 	errnoEPROTO     = 71
+	errnoEOVERFLOW  = 75
 	errnoECONNRESET = 104
 	errnoESHUTDOWN  = 108
 )

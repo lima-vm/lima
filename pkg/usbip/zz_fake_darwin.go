@@ -414,11 +414,12 @@ func newFakeDevice(n int) *iokitDevice {
 			}
 			return intfs
 		},
-		services: func() ([]C.io_service_t, error) { return nil, errors.New("no fake registry") },
-		mounted:  func() bool { return false },
-		ifaces:   map[uint8]**C.IOUSBInterfaceInterface300{},
-		pipes:    map[uint8]pipe{},
-		refused:  map[uint8]bool{},
+		services:    func() ([]C.io_service_t, error) { return nil, errors.New("no fake registry") },
+		mounted:     func() bool { return false },
+		reconfigure: func(uint8) bool { return false },
+		ifaces:      map[uint8]**C.IOUSBInterfaceInterface300{},
+		pipes:       map[uint8]pipe{},
+		refused:     map[uint8]bool{},
 	}
 }
 
