@@ -9,6 +9,7 @@ weight: 95
 Lima passes host USB devices to a Linux guest over USB/IP on vsock.
 
 Requires `vmType: vz` and `user.passwordlessSudo: true`. Ignored with `plain: true`.
+Not available when Lima is built with `make ADDITIONAL_DRIVERS=vz`, as the external vz driver has no USB/IP server.
 
 ```yaml
 usb:
