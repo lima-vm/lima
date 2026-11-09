@@ -14,6 +14,7 @@ The following features are experimental and subject to change:
 - `audio.device`, `audio.interface`, and `audio.microphone`
 - `mountInotify: true`
 - `tpm: true`
+- [`usb`]({{< ref "/docs/config/usb" >}})
 - `user.passwordlessSudo: false` (See [Sudo]({{< ref "/docs/config/sudo" >}}))
 - `External drivers`: building and using drivers as separate executables (see [Virtual Machine Drivers]({{< ref "/docs/dev/drivers" >}}))
 - [`vmType: krunkit`]({{< ref "/docs/config/vmtype/krunkit" >}})
@@ -30,6 +31,7 @@ The following commands are experimental and subject to change:
 - `limactl template *`
 - `limactl mcp *`
 - `limactl menu`
+- `limactl usb *`
 
 ## Graduated
 
