@@ -32,3 +32,10 @@ type Device interface {
 	Gone() bool
 	Close() error
 }
+
+type Provider interface {
+	Devices() ([]DeviceInfo, error)
+	Open(busid string) (Device, error)
+	// Unplugged is called when a session of busid ends because its device is gone.
+	Unplugged(busid string)
+}

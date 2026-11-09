@@ -39,11 +39,53 @@ const (
 )
 
 var (
+	supersedeWait = 10 * time.Second
+	// Longer than supersedeWait, which runs inside the handshake.
+	handshakeWait = 30 * time.Second
 	// vhci_hcd clears URB_DMA_MAP_SG only on RET_SUBMIT, and any other giveback of a
 	// scatter-gather URB oopses the guest. So a session answers every URB before it closes.
 	drainQuiet = 200 * time.Millisecond
 	drainMax   = 2 * time.Second
 )
+
+// Server serves the USB/IP connections of one VM.
+type Server struct {
+	p        Provider
+	mu       sync.Mutex
+	sessions map[string]*session
+}
+
+type session struct {
+	end  context.CancelFunc
+	done chan struct{}
+}
+
+func NewServer(p Provider) *Server {
+	return &Server{p: p, sessions: map[string]*session{}}
+}
+
+func (s *Server) Serve(ctx context.Context, conn net.Conn) error {
+	_ = conn.SetDeadline(time.Now().Add(handshakeWait))
+	op, err := readOpHeader(conn)
+	if err != nil {
+		if errors.Is(err, io.EOF) {
+			return nil
+		}
+		return fmt.Errorf("reading op header: %w", err)
+	}
+	switch op.Code {
+	case opReqDevlist:
+		infos, err := s.p.Devices()
+		if err != nil {
+			return fmt.Errorf("listing devices: %w", err)
+		}
+		return writeDevlist(conn, infos)
+	case opReqImport:
+		return s.handleImport(ctx, conn)
+	default:
+		return fmt.Errorf("unsupported op code %#04x", op.Code)
+	}
+}
 
 func deviceDescWire(info DeviceInfo) usbDeviceDesc {
 	var d usbDeviceDesc
@@ -69,6 +111,76 @@ func writeDevlist(conn io.Writer, infos []DeviceInfo) error {
 		}
 	}
 	return nil
+}
+
+// claim ends the session it replaces: a rebooted guest's old conn never gets EOF, and vsock is per VM.
+func (s *Server) claim(busid string, end context.CancelFunc) (release func(), err error) {
+	me := &session{end: end, done: make(chan struct{})}
+	for {
+		s.mu.Lock()
+		old, busy := s.sessions[busid]
+		if !busy {
+			s.sessions[busid] = me
+		}
+		s.mu.Unlock()
+		if !busy {
+			return func() {
+				s.mu.Lock()
+				delete(s.sessions, busid)
+				s.mu.Unlock()
+				close(me.done)
+			}, nil
+		}
+		old.end()
+		select {
+		case <-old.done:
+		case <-time.After(supersedeWait):
+			return nil, fmt.Errorf("old session did not end within %s", supersedeWait)
+		}
+	}
+}
+
+func refuseImport(conn io.Writer, busid string, err error) error {
+	logrus.WithError(err).Warnf("usbip: import for busid %q rejected", busid)
+	return writeOpHeader(conn, opRepImport, 1)
+}
+
+func (s *Server) handleImport(ctx context.Context, conn net.Conn) error {
+	var busid [32]byte
+	if _, err := io.ReadFull(conn, busid[:]); err != nil {
+		return fmt.Errorf("reading import busid: %w", err)
+	}
+	requested := cString(busid[:])
+
+	ctx, end := context.WithCancel(ctx)
+	defer end()
+	release, err := s.claim(requested, end)
+	if err != nil {
+		return refuseImport(conn, requested, err)
+	}
+	defer release()
+
+	dev, err := s.p.Open(requested)
+	if err != nil {
+		return refuseImport(conn, requested, err)
+	}
+	defer dev.Close()
+	if err := writeOpHeader(conn, opRepImport, 0); err != nil {
+		return err
+	}
+	if err := binary.Write(conn, binary.BigEndian, deviceDescWire(dev.Info())); err != nil {
+		return err
+	}
+	_ = conn.SetDeadline(time.Time{})
+	err = urbLoop(ctx, conn, dev)
+	// Before dev.Close, which frees the device for a new import whose state Unplugged must not touch.
+	if errors.Is(err, ErrDeviceGone) || dev.Gone() {
+		s.p.Unplugged(requested)
+	}
+	if ctx.Err() != nil {
+		return nil // superseded or VM stop
+	}
+	return err
 }
 
 type inflight struct {
