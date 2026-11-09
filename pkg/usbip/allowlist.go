@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"slices"
+	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
@@ -20,6 +22,22 @@ type AllowEntry struct {
 	VendorID  string `json:"vendorID"`
 	ProductID string `json:"productID"`
 	BusAddr   string `json:"busAddr,omitempty"`
+	Busid     string `json:"busid,omitempty"`
+	// RegistryID ends a runtime grant at unplug even with no session to notice it.
+	RegistryID uint64 `json:"registryID,omitempty"`
+	// Denied overrides a wildcard for one device.
+	Denied bool `json:"denied,omitempty"`
+}
+
+// EntryFor sets Busid, which only runtime grants have.
+func EntryFor(info DeviceInfo) AllowEntry {
+	return AllowEntry{
+		VendorID:   fmt.Sprintf("%04x", info.Vendor),
+		ProductID:  fmt.Sprintf("%04x", info.Product),
+		BusAddr:    info.Busid,
+		Busid:      info.Busid,
+		RegistryID: info.RegistryID,
+	}
 }
 
 func ReadAllowlist(instDir string) ([]AllowEntry, error) {
@@ -53,5 +71,42 @@ func UpdateAllowlist(instDir string, fn func([]AllowEntry) []AllowEntry) error {
 			return err
 		}
 		return WriteAllowlist(instDir, fn(list))
+	})
+}
+
+// An empty BusAddr is a wildcard, so only Allowed may use this: list edits would overwrite entries.
+func sameDevice(a, b AllowEntry) bool {
+	if !strings.EqualFold(a.VendorID, b.VendorID) || !strings.EqualFold(a.ProductID, b.ProductID) {
+		return false
+	}
+	if a.RegistryID != 0 && b.RegistryID != 0 && a.RegistryID != b.RegistryID {
+		return false
+	}
+	if a.BusAddr != "" && b.BusAddr != "" {
+		return a.BusAddr == b.BusAddr
+	}
+	return true
+}
+
+func Allowed(list []AllowEntry, dev AllowEntry) bool {
+	allowed := false
+	for _, e := range list {
+		if sameDevice(e, dev) {
+			if e.Denied {
+				return false
+			}
+			allowed = true
+		}
+	}
+	return allowed
+}
+
+func AddEntry(list []AllowEntry, entry AllowEntry) []AllowEntry {
+	return append(RemoveEntry(list, entry), entry)
+}
+
+func RemoveEntry(list []AllowEntry, dev AllowEntry) []AllowEntry {
+	return slices.DeleteFunc(list, func(e AllowEntry) bool {
+		return strings.EqualFold(e.VendorID, dev.VendorID) && strings.EqualFold(e.ProductID, dev.ProductID) && e.BusAddr == dev.BusAddr
 	})
 }
