@@ -4,7 +4,8 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Import the host USB devices this instance may use.
-# The vz hostagent listens on the USB/IP port only with `usb.enabled`, so the probe is the switch.
+# The vz hostagent listens on the USB/IP port only when `usb` is enabled
+# (`enabled: true`, or `devices` without `enabled: false`), so the probe is the switch.
 
 set -eu
 
