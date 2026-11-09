@@ -45,7 +45,7 @@ require (
 	github.com/mattn/go-isatty v0.0.24 // gomodjail:unconfined
 	github.com/mattn/go-shellwords v1.0.16 // gomodjail:unconfined
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
-	github.com/mdlayher/vsock v1.3.0 // gomodjail:unconfined
+	github.com/mdlayher/vsock v1.4.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
 	github.com/mikefarah/yq/v4 v4.54.1 // gomodjail:unconfined
 	github.com/modelcontextprotocol/go-sdk v1.8.0 // gomodjail:unconfined
@@ -124,7 +124,7 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-runewidth v0.0.27 // indirect
 	// gomodjail:unconfined
-	github.com/mdlayher/socket v0.6.0 // indirect
+	github.com/mdlayher/socket v0.8.0 // indirect
 	github.com/mgutz/ansi v0.0.0-20170206155736-9520e82c474b // indirect
 	github.com/mitchellh/go-wordwrap v1.0.1 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
