@@ -108,6 +108,10 @@ static int deviceGetSpeed(IOUSBDeviceInterface320 **dev, uint8_t *speed) {
     return (*dev)->GetDeviceSpeed(dev, speed);
 }
 
+static int deviceReEnumerate(IOUSBDeviceInterface320 **dev) {
+    return MASKED((*dev)->USBDeviceReEnumerate(dev, 0));
+}
+
 // Sets cfg with interface matching off, so macOS drivers such as mass storage do not take the interfaces back.
 // IOUSBLib has no such option. IOUSBHost's seize needs no root; the IOUSBLib open is closed around it.
 static int deviceConfigureNoMatch(io_service_t svc, IOUSBDeviceInterface320 **dev, uint8_t cfg) {
@@ -284,6 +288,8 @@ const (
 )
 
 const abortRetry = 50 * time.Millisecond
+
+var reenumerateWait = 2 * time.Second
 
 func linkSpeed(dev **C.IOUSBDeviceInterface320) (uint32, error) {
 	var s C.uint8_t
@@ -485,6 +491,30 @@ func (g *iokitDevice) Close() error {
 	C.releaseDeviceInterface(g.ptr)
 	C.IOObjectRelease(g.service)
 	return nil
+}
+
+// reenumerate clears device state, as the kernel stub's reset does at session end. ResetDevice does nothing on macOS.
+// It waits so that an attach right after Revoke finds the new registry entry.
+func (g *iokitDevice) reenumerate() {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	// Like setConfiguration: re-enumerating drops a mounted volume and its dirty cache.
+	if !g.opened || g.mounted() {
+		return
+	}
+	g.releaseLocked()
+	if ret := C.deviceReEnumerate(g.ptr); ret != C.kIOReturnSuccess {
+		logrus.Debugf("usbip: %s: re-enumerate: IOReturn 0x%08x", g.info.BusID, uint32(ret))
+		return
+	}
+	for deadline := time.Now().Add(reenumerateWait); time.Now().Before(deadline); time.Sleep(abortRetry) {
+		hosts, err := List()
+		if err == nil && slices.ContainsFunc(hosts, func(h DeviceInfo) bool {
+			return h.BusID == g.info.BusID && h.RegistryID != g.info.RegistryID
+		}) {
+			return
+		}
+	}
 }
 
 func (g *iokitDevice) releaseLocked() {
