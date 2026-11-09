@@ -5,6 +5,7 @@ package usbip
 
 import (
 	"bytes"
+	"encoding/binary"
 	"encoding/hex"
 	"testing"
 
@@ -37,4 +38,27 @@ func TestWriteRetSubmitPayload(t *testing.T) {
 		assert.Equal(t, r.TransferBufferLength, int32(2))
 		assert.DeepEqual(t, out.Bytes(), want)
 	}
+}
+
+func TestDevlistWrite(t *testing.T) {
+	info := DeviceInfo{
+		BusID:   "20-3",
+		BusNum:  20,
+		DevNum:  3,
+		Speed:   usbipSpeedHigh,
+		Vendor:  0x0bda,
+		Product: 0x8812,
+	}
+	var out bytes.Buffer
+	assert.NilError(t, writeDevlist(&out, []DeviceInfo{info}))
+
+	b := out.Bytes()
+	assert.Equal(t, len(b), 8+4+312)
+	assert.Equal(t, binary.BigEndian.Uint16(b[2:]), uint16(opRepDevlist))
+	assert.Equal(t, binary.BigEndian.Uint32(b[8:]), uint32(1))
+	// Offsets from OP_REP_DEVLIST in usbip_protocol.rst.
+	assert.Equal(t, cString(b[0x10c:0x12c]), info.BusID)
+	assert.Equal(t, binary.BigEndian.Uint32(b[0x12c:]), info.BusNum)
+	assert.Equal(t, binary.BigEndian.Uint32(b[0x130:]), info.DevNum)
+	assert.Equal(t, binary.BigEndian.Uint32(b[0x134:]), info.Speed)
 }

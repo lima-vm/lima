@@ -6,8 +6,18 @@
 package usbip
 
 import (
+	"bytes"
 	"encoding/binary"
 	"io"
+)
+
+const protocolVersion = 0x0111
+
+const (
+	opReqDevlist = 0x8005
+	opRepDevlist = 0x0005
+	opReqImport  = 0x8003
+	opRepImport  = 0x0003
 )
 
 const (
@@ -24,6 +34,37 @@ const (
 
 const urbZeroPacket = 0x0040
 
+// Values of enum usb_device_speed.
+const (
+	usbipSpeedLow   = 1
+	usbipSpeedFull  = 2
+	usbipSpeedHigh  = 3
+	usbipSpeedSuper = 5
+)
+
+type opHeader struct {
+	Version uint16
+	Code    uint16
+	Status  uint32
+}
+
+type usbDeviceDesc struct {
+	Path                [256]byte
+	Busid               [32]byte
+	Busnum              uint32
+	Devnum              uint32
+	Speed               uint32
+	IDVendor            uint16
+	IDProduct           uint16
+	BcdDevice           uint16
+	BDeviceClass        uint8
+	BDeviceSubClass     uint8
+	BDeviceProtocol     uint8
+	BConfigurationValue uint8
+	BNumConfigurations  uint8
+	BNumInterfaces      uint8
+}
+
 type urbHeader struct {
 	Command              uint32
 	Seqnum               uint32
@@ -36,6 +77,19 @@ type urbHeader struct {
 	NumberOfPackets      int32
 	Interval             int32
 	Setup                [8]byte
+}
+
+func cString(b []byte) string {
+	s, _, _ := bytes.Cut(b, []byte{0})
+	return string(s)
+}
+
+func writeOpHeader(w io.Writer, code uint16, status uint32) error {
+	return binary.Write(w, binary.BigEndian, opHeader{
+		Version: protocolVersion,
+		Code:    code,
+		Status:  status,
+	})
 }
 
 func readURBHeader(r io.Reader) (urbHeader, error) {
