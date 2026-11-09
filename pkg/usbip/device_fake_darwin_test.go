@@ -6,12 +6,17 @@
 package usbip
 
 import (
+	"context"
 	"errors"
+	"runtime"
 	"strings"
+	"syscall"
 	"testing"
+	"time"
 
 	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
+	"gotest.tools/v3/poll"
 )
 
 var (
@@ -19,8 +24,49 @@ var (
 	getDesc    = [8]byte{0x80, 0x06, 0, 0x03, 0, 0, 255, 0}
 )
 
+func waitBlocked(t *testing.T) {
+	t.Helper()
+	poll.WaitOn(t, func(poll.LogT) poll.Result {
+		if fakeStats().blocked > 0 {
+			return poll.Success()
+		}
+		return poll.Continue("call not blocked yet")
+	}, poll.WithDelay(time.Millisecond))
+}
+
 func setInterfaceSetup(num, alt byte) [8]byte {
 	return [8]byte{0x01, reqSetInterface, alt, 0, num}
+}
+
+func TestZeroPacketReachesPipe(t *testing.T) {
+	g := newFakeDevice(1)
+	_, err := g.Control(t.Context(), setConfig1, nil)
+	assert.NilError(t, err)
+	assert.Equal(t, g.OutMaxPacket(2), 64)
+	assert.Equal(t, g.OutMaxPacket(9), 0, "unknown endpoint")
+
+	h := urbHeader{Direction: dirOut, Ep: 2, TransferFlags: urbZeroPacket, TransferBufferLength: 64}
+	status, actual, _ := doSubmit(t.Context(), g, h, make([]byte, 64))
+	assert.Equal(t, status, int32(0))
+	assert.Equal(t, actual, int32(64))
+	s := fakeStats()
+	assert.Equal(t, int(s.writes), 2)
+	assert.Equal(t, int(s.lastSize), 0)
+	assert.Equal(t, int(s.lastBufNull), 1)
+
+	// The terminator is a pipe call like any other, so an abort must free it.
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	fakeArmBlock(1)
+	done := make(chan error, 1)
+	go func() {
+		_, err := g.Transfer(ctx, 2, false, nil)
+		done <- err
+	}()
+	waitBlocked(t)
+	cancel()
+	assert.ErrorContains(t, <-done, "0xe00002eb")
+	assert.NilError(t, g.Close())
 }
 
 func TestDeconfigureReleasesInterfaces(t *testing.T) {
@@ -262,6 +308,240 @@ func TestMountedVolumeSkipsSetConfiguration(t *testing.T) {
 	assert.Equal(t, setConfigStatus(t, g, 1), int32(0))
 	assert.Equal(t, int(fakeStats().setConfigs), 1, "an ejected disk takes the normal path")
 	assert.NilError(t, g.Close())
+}
+
+func TestHeldDeviceHungControlEnds(t *testing.T) {
+	d := heldDevice(t, 0, 1)
+	c, done := startSession(t, d)
+	fakeArmBlock(0)
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, TransferBufferLength: 255, Setup: getDesc})
+	waitBlocked(t)
+
+	assert.NilError(t, c.SetReadDeadline(time.Now().Add(5*time.Second)))
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 2, TransferFlags: 1})
+	r := unlinkReply(t, c, 1, 2, true)
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
+
+	s := fakeStats()
+	assert.Assert(t, s.abortZeros > 0)
+	bound := time.Duration(s.completionTimeout) * time.Millisecond
+	assert.Assert(t, bound > 0 && bound < supersedeWait && bound < revokeWait, "bound %s", bound)
+
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+func TestIOReturnStatus(t *testing.T) {
+	for _, tc := range []struct {
+		ret    uint32
+		want   int32
+		clears int
+	}{
+		{0xe000404f, -errnoEPIPE, 0}, // a device stall is the guest's to clear
+		{0xe0005000, -errnoEPIPE, 0},
+		{0xe0004051, -errnoETIME, 1},
+		{0xe00002d6, -errnoETIME, 1},
+		{0xe00002e8, -errnoEOVERFLOW, 1},
+		{0xe00002ed, -errnoEPROTO, 1},
+		{0xe00002eb, -errnoEPROTO, 0},
+		{0xe00002c5, -errnoEPROTO, 1},
+		{0xe00002c0, -errnoENODEV, 0},
+	} {
+		g := newFakeDevice(1)
+		_, err := g.Control(t.Context(), setConfig1, nil)
+		assert.NilError(t, err)
+
+		fakeSetRets(tc.ret, 0, 0, 0)
+		status, _, _ := doSubmit(t.Context(), g, urbHeader{Direction: dirIn, Ep: 1}, nil)
+		assert.Equal(t, status, tc.want, "bulk 0x%08x", tc.ret)
+		assert.Equal(t, int(fakeStats().clears), tc.clears, "bulk 0x%08x", tc.ret)
+
+		fakeSetRets(0, 0, 0, tc.ret)
+		status, _, _ = doSubmit(t.Context(), g, urbHeader{Direction: dirIn, Setup: getDesc}, nil)
+		assert.Equal(t, status, tc.want, "control 0x%08x", tc.ret)
+	}
+}
+
+func TestReenumerateNeedsOpenDevice(t *testing.T) {
+	old := reenumerateWait
+	reenumerateWait = 0
+	defer func() { reenumerateWait = old }()
+
+	g := newFakeDevice(1)
+	_, err := g.Control(t.Context(), setConfig1, nil)
+	assert.NilError(t, err)
+	g.reenumerate()
+	assert.Equal(t, int(fakeStats().reenums), 1)
+	assert.Equal(t, int(fakeStats().closes), 1, "interfaces close first")
+
+	g = newFakeDevice(1)
+	g.opened = false
+	g.reenumerate()
+	assert.Equal(t, int(fakeStats().reenums), 0)
+
+	g = newFakeDevice(1)
+	g.mounted = func() bool { return true }
+	g.reenumerate()
+	assert.Equal(t, int(fakeStats().reenums), 0, "a mounted volume is not re-enumerated away")
+}
+
+func TestBlockingCallsMaskAsyncSignals(t *testing.T) {
+	old := reenumerateWait
+	reenumerateWait = 0
+	defer func() { reenumerateWait = old }()
+
+	control := func(setup [8]byte) func(*iokitDevice) error {
+		return func(g *iokitDevice) error {
+			_, err := g.Control(t.Context(), setup, nil)
+			return err
+		}
+	}
+	for name, call := range map[string]func(*iokitDevice) error{
+		"read": func(g *iokitDevice) error {
+			_, err := g.Transfer(t.Context(), 1, true, nil)
+			return err
+		},
+		"write": func(g *iokitDevice) error {
+			_, err := g.Transfer(t.Context(), 2, false, nil)
+			return err
+		},
+		"control":           control(getDesc),
+		"set configuration": control(setConfig1),
+		"set interface":     control(setInterfaceSetup(0, 0)),
+		"clear halt":        control([8]byte{0x02, reqClearFeature, 0, 0, 0x81}),
+		"re-enumerate": func(g *iokitDevice) error {
+			g.reenumerate()
+			return nil
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			g := newFakeDevice(1)
+			_, err := g.Control(t.Context(), setConfig1, nil)
+			assert.NilError(t, err)
+			runtime.LockOSThread()
+			defer runtime.UnlockOSThread()
+			assert.Assert(t, !fakeThreadBlocks(syscall.SIGCHLD))
+			assert.NilError(t, call(g))
+			for _, sig := range []syscall.Signal{syscall.SIGCHLD, syscall.SIGURG, syscall.SIGPROF, syscall.SIGTERM} {
+				assert.Assert(t, fakeIOBlocked(sig), "%v not blocked during call", sig)
+			}
+			for _, sig := range []syscall.Signal{syscall.SIGSEGV, syscall.SIGBUS, syscall.SIGFPE, syscall.SIGILL, syscall.SIGABRT, syscall.SIGTRAP} {
+				assert.Assert(t, !fakeIOBlocked(sig), "%v blocked during call", sig)
+			}
+			assert.Assert(t, !fakeThreadBlocks(syscall.SIGCHLD), "mask not restored")
+		})
+	}
+}
+
+func TestUnlinkInFlightMissedAbort(t *testing.T) {
+	g := newFakeDevice(1)
+	c, done := startSession(t, g)
+	fakeArmBlock(2)
+	submit := urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, TransferBufferLength: 255, Setup: getDesc}
+	send(t, c, submit)
+	waitBlocked(t)
+
+	assert.NilError(t, c.SetReadDeadline(time.Now().Add(5*time.Second)))
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 2, TransferFlags: 1})
+	r := unlinkReply(t, c, 1, 2, true)
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
+	assert.Assert(t, fakeStats().abortZeros >= 3)
+
+	submit.Seqnum = 3
+	send(t, c, submit)
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Command, uint32(retSubmit))
+	assert.Equal(t, r.Seqnum, uint32(3))
+
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+	assert.NilError(t, g.Close())
+}
+
+func TestPinDuringSetConfiguration(t *testing.T) {
+	g := newFakeDevice(1)
+	_, err := g.Control(t.Context(), setConfig1, nil)
+	assert.NilError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	fakeArmBlock(1 << 30)
+	read := make(chan error, 1)
+	go func() {
+		_, err := g.Transfer(ctx, 1, true, make([]byte, 8))
+		read <- err
+	}()
+	waitBlocked(t)
+	cancel()
+
+	_, err = g.Control(t.Context(), setConfig1, nil)
+	assert.NilError(t, err)
+	s := fakeStats()
+	assert.Equal(t, int(s.closes), 1)
+	assert.Equal(t, int(s.finalReleases), 0, "interface released under a running pipe call")
+
+	before := s.aborts
+	poll.WaitOn(t, func(poll.LogT) poll.Result {
+		if fakeStats().aborts >= before+2 {
+			return poll.Success()
+		}
+		return poll.Continue("abort loop not retrying")
+	}, poll.WithDelay(5*time.Millisecond))
+	assert.Equal(t, int(fakeStats().afterRelease), 0)
+
+	fakeSetMissAborts(0)
+	select {
+	case err := <-read:
+		assert.ErrorContains(t, err, "0xe00002eb")
+	case <-time.After(5 * time.Second):
+		assert.Assert(t, false, "read still blocked")
+	}
+	s = fakeStats()
+	assert.Equal(t, int(s.afterRelease), 0)
+	assert.Equal(t, int(s.finalReleases), 1)
+
+	assert.NilError(t, g.Close())
+	s = fakeStats()
+	assert.Equal(t, int(s.afterRelease), 0)
+	assert.Equal(t, int(s.finalReleases), 2)
+}
+
+func TestAbortJoinedBeforeRelease(t *testing.T) {
+	g := newFakeDevice(1)
+	_, err := g.Control(t.Context(), setConfig1, nil)
+	assert.NilError(t, err)
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	fakeArmBlock(1 << 30)
+	read := make(chan error, 1)
+	go func() {
+		_, err := g.Transfer(ctx, 1, true, make([]byte, 8))
+		read <- err
+	}()
+	waitBlocked(t)
+
+	// The pin is now the only reference to the old interface.
+	_, err = g.Control(t.Context(), setConfig1, nil)
+	assert.NilError(t, err)
+	const slow = 100 * time.Millisecond
+	fakeSetSlowAbort(slow)
+	cancel()
+	poll.WaitOn(t, func(poll.LogT) poll.Result {
+		if fakeStats().aborts > 0 {
+			return poll.Success()
+		}
+		return poll.Continue("no abort yet")
+	}, poll.WithDelay(time.Millisecond))
+	fakeUnblock()
+	assert.NilError(t, <-read)
+
+	aborts := fakeStats().aborts
+	time.Sleep(slow + 3*abortRetry)
+	s := fakeStats()
+	assert.Equal(t, int(s.afterRelease), 0, "abort still running after final release")
+	assert.Equal(t, s.aborts, aborts, "abort loop outlived the call")
 }
 
 func TestDeviceInfoFromRegistry(t *testing.T) {
