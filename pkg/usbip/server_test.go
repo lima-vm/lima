@@ -14,10 +14,15 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
+	"sync"
 	"sync/atomic"
+	"syscall"
 	"testing"
 	"time"
 
+	"github.com/sirupsen/logrus"
+	logrustest "github.com/sirupsen/logrus/hooks/test"
 	"gotest.tools/v3/assert"
 	"gotest.tools/v3/poll"
 )
@@ -367,6 +372,18 @@ func TestUnlinkInFlightWaitsForDevice(t *testing.T) {
 	assert.NilError(t, sessionEnd(t, done))
 }
 
+func TestSessionEndStopsQueuedIO(t *testing.T) {
+	dev := ctxDev{started: make(chan []byte, 64)}
+	c, done := startSession(t, dev)
+	for seq := range uint32(8) {
+		send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq + 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	}
+	<-dev.started
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+	assert.Equal(t, len(dev.started), 0, "queued URB reached device after session end")
+}
+
 func TestReadsContinueWhileGuestNotDraining(t *testing.T) {
 	dev := &countDev{}
 	c, done := startSession(t, dev)
@@ -392,6 +409,37 @@ func TestUnlinkLengthNotCharged(t *testing.T) {
 	assert.Equal(t, r.Command, uint32(retUnlink))
 	assert.Equal(t, r.TransferFlags, uint32(0), "an unknown URB unlinks fine")
 	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+// partialConn writes half of its second Write, the first reply's payload, then lets writes through.
+type partialConn struct {
+	net.Conn
+	writes atomic.Int32
+}
+
+func (c *partialConn) Write(b []byte) (int, error) {
+	if c.writes.Add(1) == 2 {
+		n, _ := c.Conn.Write(b[:len(b)/2])
+		return n, syscall.ENOBUFS
+	}
+	return c.Conn.Write(b)
+}
+
+func TestWriteErrorEndsSession(t *testing.T) {
+	c, s := net.Pipe()
+	t.Cleanup(func() { _ = c.Close() })
+	assert.NilError(t, c.SetDeadline(time.Now().Add(2*time.Second)))
+	done := make(chan error, 1)
+	go func() { done <- urbLoop(t.Context(), &partialConn{Conn: s}, fakeDev{}) }()
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 96})
+	go func() {
+		_ = binary.Write(c, binary.BigEndian, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, Ep: 1, TransferBufferLength: 96})
+	}()
+	got, err := io.ReadAll(c)
+	assert.NilError(t, err)
+	assert.Equal(t, len(got), urbHeaderSize+48, "bytes followed a partial frame")
 	assert.NilError(t, sessionEnd(t, done))
 }
 
@@ -502,6 +550,40 @@ func TestRetUnlinkNeverPrecedesRetSubmit(t *testing.T) {
 	assert.NilError(t, sessionEnd(t, done))
 }
 
+type goneDev struct {
+	fakeDev
+	gone func() bool
+}
+
+func (d goneDev) Gone() bool { return d.gone() }
+
+func unplugWarnings(hook *logrustest.Hook) int {
+	n := 0
+	for _, e := range hook.AllEntries() {
+		if e.Level == logrus.WarnLevel && strings.Contains(e.Message, "unplugged") {
+			n++
+		}
+	}
+	return n
+}
+
+func TestGoneAfterSessionEndIsIgnored(t *testing.T) {
+	hook := logrustest.NewGlobal()
+	called, release := make(chan struct{}), make(chan struct{})
+	notify := sync.OnceFunc(func() { close(called) })
+	c, done := startSession(t, goneDev{gone: func() bool {
+		notify()
+		<-release
+		return true
+	}})
+	<-called
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+	close(release)
+	time.Sleep(50 * time.Millisecond)
+	assert.Equal(t, unplugWarnings(hook), 0)
+}
+
 type zlpDev struct {
 	fakeDev
 	mps    int
@@ -567,4 +649,130 @@ func TestZeroPacket(t *testing.T) {
 		status, _, _ := doSubmit(ctx, &zlpDev{mps: 64, block: true}, h, make([]byte, 64))
 		assert.Equal(t, status, int32(-errnoECONNRESET))
 	})
+}
+
+// vhci_hcd oopses giving back a scatter-gather URB at disconnect, so none may be pending at close.
+func TestSessionEndAnswersEveryURB(t *testing.T) {
+	dev := ctxDev{started: make(chan []byte, 64)}
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, dev)
+
+	for seq := range uint32(3) {
+		send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq + 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	}
+	<-dev.started
+	cancel()
+	// Submitted before the guest learns of the session end.
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 4, Direction: dirIn, Ep: 2, TransferBufferLength: 8})
+
+	got := map[uint32]int32{}
+	for range 4 {
+		r, err := readURBHeader(c)
+		assert.NilError(t, err)
+		assert.Equal(t, r.Command, uint32(retSubmit))
+		assert.Equal(t, r.TransferBufferLength, int32(0))
+		got[r.Seqnum] = int32(r.TransferFlags)
+	}
+	e := int32(-errnoESHUTDOWN)
+	assert.DeepEqual(t, got, map[uint32]int32{1: e, 2: e, 3: e, 4: e})
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done))
+	assert.Equal(t, len(dev.started), 0, "URB reached the device after session end")
+}
+
+// mt76 resets the device on a control -ESHUTDOWN, so control fails with -ENODEV. A drain is no unplug.
+func TestDrainFailsControlAsRemoved(t *testing.T) {
+	dev := ctxDev{started: make(chan []byte, 64)}
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, dev)
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, TransferBufferLength: 4})
+	<-dev.started
+	cancel()
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, TransferBufferLength: 4})
+	for range 2 {
+		r, err := readURBHeader(c)
+		assert.NilError(t, err)
+		assert.Equal(t, int32(r.TransferFlags), int32(-errnoENODEV), "seq %d", r.Seqnum)
+	}
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done), "the drain reported the device gone")
+}
+
+// A guest reacting to its last reply within drainQuiet still gets an answer.
+func TestDrainWaitsForQuietGuest(t *testing.T) {
+	old := drainQuiet
+	drainQuiet = 500 * time.Millisecond
+	t.Cleanup(func() { drainQuiet = old })
+	dev := ctxDev{started: make(chan []byte, 64)}
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, dev)
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+	cancel()
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
+
+	time.Sleep(100 * time.Millisecond) // nothing pending, guest resubmits
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	r, err = readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(2))
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+// Quiet counts from the last reply the guest read, so a slow reader can still react to it.
+func TestDrainWaitsForSlowReader(t *testing.T) {
+	oldQuiet, oldMax := drainQuiet, drainMax
+	drainQuiet, drainMax = 300*time.Millisecond, 5*time.Second
+	t.Cleanup(func() { drainQuiet, drainMax = oldQuiet, oldMax })
+	dev := ctxDev{started: make(chan []byte, 64)}
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, dev)
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+	cancel()
+	time.Sleep(2 * drainQuiet) // the reply waits in the writer
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(1))
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	r, err = readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(2))
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+// A submit during the drain must not queue behind a device call that ignores cancel.
+func TestDrainAnswersSubmitBehindHungCall(t *testing.T) {
+	dev := newGateDev()
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, dev)
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+	cancel()
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	assert.NilError(t, c.SetReadDeadline(time.Now().Add(500*time.Millisecond)))
+	r, err := readURBHeader(c)
+	assert.NilError(t, err, "late submit waited behind the hung call")
+	assert.Equal(t, r.Seqnum, uint32(2))
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
+
+	close(dev.release)
+	assert.NilError(t, c.SetReadDeadline(time.Now().Add(10*time.Second)))
+	r, err = readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(1))
+	_, err = io.CopyN(io.Discard, c, int64(r.TransferBufferLength))
+	assert.NilError(t, err)
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done))
 }
