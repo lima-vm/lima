@@ -220,6 +220,20 @@ static void interfaceRawMaxPacket(IOUSBInterfaceInterface300 **intf, uint8_t dir
     }
 }
 
+static int interfaceReadPipe(IOUSBInterfaceInterface300 **intf,
+    uint8_t pipeRef, void *buf, uint32_t *size) {
+    return MASKED((*intf)->ReadPipe(intf, pipeRef, buf, size));
+}
+
+static int interfaceWritePipe(IOUSBInterfaceInterface300 **intf,
+    uint8_t pipeRef, void *buf, uint32_t size) {
+    return MASKED((*intf)->WritePipe(intf, pipeRef, buf, size));
+}
+
+static int interfaceAbortPipe(IOUSBInterfaceInterface300 **intf, uint8_t pipeRef) {
+    return (*intf)->AbortPipe(intf, pipeRef);
+}
+
 static int interfaceClearStall(IOUSBInterfaceInterface300 **intf, uint8_t pipeRef) {
     return MASKED((*intf)->ClearPipeStallBothEnds(intf, pipeRef));
 }
@@ -704,4 +718,41 @@ func (g *iokitDevice) findPipe(ep uint8, in bool) (pipe, error) {
 	}
 	C.retainInterfaceInterface(p.intf)
 	return p, nil
+}
+
+func (g *iokitDevice) OutMaxPacket(ep uint8) int {
+	g.mu.Lock()
+	defer g.mu.Unlock()
+	return int(g.pipes[ep&0x0f].maxPacket)
+}
+
+func (g *iokitDevice) Transfer(ctx context.Context, ep uint8, in bool, buf []byte) (int, error) {
+	p, err := g.findPipe(ep, in)
+	if err != nil {
+		return 0, err
+	}
+	defer C.releaseInterfaceInterface(p.intf)
+	defer abortOnCancel(ctx, func() { C.interfaceAbortPipe(p.intf, p.ref) })()
+
+	var ptr unsafe.Pointer
+	if len(buf) > 0 {
+		ptr = unsafe.Pointer(&buf[0])
+	}
+	size := C.uint32_t(len(buf))
+	var ret C.int
+	if in {
+		ret = C.interfaceReadPipe(p.intf, p.ref, ptr, &size)
+	} else {
+		ret = C.interfaceWritePipe(p.intf, p.ref, ptr, size)
+	}
+	if ret != C.kIOReturnSuccess {
+		switch ret {
+		case C.kIOUSBPipeStalled, C.kUSBHostReturnPipeStalled, C.kIOReturnAborted, C.kIOReturnNoDevice:
+		default:
+			// An overrun leaves the macOS pipe halted, and only a device stall is the guest's to clear.
+			C.interfaceClearStall(p.intf, p.ref)
+		}
+		return 0, fmt.Errorf("transfer on ep %#02x: %w", ep, ioReturnErr(ret))
+	}
+	return int(size), nil
 }
