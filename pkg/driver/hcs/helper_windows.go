@@ -13,13 +13,16 @@ import (
 	"net"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 	"syscall"
 
 	"github.com/Microsoft/hcsshim/hcn"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limayaml"
+	"github.com/lima-vm/lima/v2/pkg/lockutil"
 )
 
 const (
@@ -198,12 +201,57 @@ func ensureEndpoint(network *hcn.HostComputeNetwork, name, instDir string) (*hcn
 	return endpoint.Create()
 }
 
-func networkName(instName string) string {
-	return "lima-" + instName + "-net"
+func networkName() string {
+	return "lima-net"
 }
 
 func endpointName(instName string) string {
 	return "lima-" + instName + "-ep"
+}
+
+func withHCNNetworkLock(fn func() error) error {
+	home, err := dirnames.LimaDir()
+	if err != nil {
+		return err
+	}
+	return lockutil.WithDirLock(filepath.Join(home, "_hcs_network"), fn)
+}
+
+func (l *LimaHcsDriver) networkCleanup() error {
+	err := withHCNNetworkLock(func() error {
+		if endpoint, err := hcn.GetEndpointByName(endpointName(l.Instance.Name)); err == nil {
+			if err := endpoint.Delete(); err != nil {
+				return fmt.Errorf("failed to delete the HCN endpoint: %w", err)
+			}
+		} else if !hcn.IsNotFoundError(err) {
+			return fmt.Errorf("failed to get the HCN endpoint: %w", err)
+		}
+
+		network, err := hcn.GetNetworkByName(networkName())
+		if hcn.IsNotFoundError(err) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("failed to get hcn network: %w", err)
+		}
+
+		endpoints, err := hcn.ListEndpointsOfNetwork(network.Id)
+		if err != nil {
+			return fmt.Errorf("failed to get the endpoints for hcn: %w", err)
+		}
+
+		if len(endpoints) != 0 {
+			return nil
+		}
+
+		if err := network.Delete(); err != nil {
+			return fmt.Errorf("failed to delete the HCN network: %w", err)
+		}
+
+		return nil
+	})
+
+	return err
 }
 
 // hnsMACAddress converts MAC address notation saved in limayaml struct to the one HNS expects.

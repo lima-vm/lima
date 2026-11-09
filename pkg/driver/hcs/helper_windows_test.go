@@ -25,8 +25,7 @@ const (
 	testMemoryMiB  = 2048
 )
 
-func TestNetworkAndEndpointName(t *testing.T) {
-	assert.Equal(t, networkName("test"), "lima-test-net")
+func TestEndpointName(t *testing.T) {
 	assert.Equal(t, endpointName("test"), "lima-test-ep")
 }
 
