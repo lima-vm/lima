@@ -14,6 +14,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/httputil"
 )
@@ -85,6 +86,12 @@ func readAtMost(r io.Reader, maxBytes int) ([]byte, error) {
 // HTTPStatusErrorBodyMaxLength specifies the maximum length of HTTPStatusError.Body.
 const HTTPStatusErrorBodyMaxLength = 64 * 1024
 
+// httpStatusErrorBodyMaxPrintLength specifies the maximum length of the body
+// that is included in the message returned by HTTPStatusError.Error.
+// The body of an error response is often an HTML page, and printing all of
+// HTTPStatusErrorBodyMaxLength would flood the terminal.
+const httpStatusErrorBodyMaxPrintLength = 256
+
 // HTTPStatusError is created from non-2XX HTTP response.
 type HTTPStatusError struct {
 	// StatusCode is non-2XX status code
@@ -95,7 +102,8 @@ type HTTPStatusError struct {
 
 // Error implements error.
 // If e.Body is a marshalled string of httputil.ErrorJSON, Error returns ErrorJSON.Message .
-// Otherwise Error returns a human-readable string that contains e.StatusCode and e.Body.
+// Otherwise Error returns a human-readable string that contains e.StatusCode and
+// e.Body, with e.Body truncated to httpStatusErrorBodyMaxPrintLength.
 func (e *HTTPStatusError) Error() string {
 	if e.Body != "" && len(e.Body) < HTTPStatusErrorBodyMaxLength {
 		var ej httputil.ErrorJSON
@@ -103,7 +111,11 @@ func (e *HTTPStatusError) Error() string {
 			return ej.Message
 		}
 	}
-	return fmt.Sprintf("unexpected HTTP status %s, body=%#q", http.StatusText(e.StatusCode), e.Body)
+	body := e.Body
+	if len(body) > httpStatusErrorBodyMaxPrintLength {
+		body = strings.ToValidUTF8(body[:httpStatusErrorBodyMaxPrintLength], "") + "..."
+	}
+	return fmt.Sprintf("unexpected HTTP status %s, body=%#q", http.StatusText(e.StatusCode), body)
 }
 
 func Successful(resp *http.Response) error {
