@@ -73,6 +73,10 @@ func (s *ServiceWatcher) attemptToStartKubectl(ctx context.Context) {
 		return
 	}
 	kubeconfig := chooseKubeconfig()
+	if kubeconfig == "" {
+		logrus.Debug("No kubeconfig found; skipping kubernetes service watcher")
+		return
+	}
 	// TODO: ensure that kubeconfig points to a local cluster
 	if err := canGetServices(ctx, kubectl, kubeconfig); err != nil {
 		logrus.WithError(err).Debugf("kubectl auth can-i ... failed; will retry")
@@ -89,16 +93,21 @@ func (s *ServiceWatcher) attemptToStartKubectl(ctx context.Context) {
 	}
 }
 
+var candidateKubeconfigs = []string{
+	"/etc/rancher/k3s/k3s.yaml",
+	"/root/.kube/config.localhost", // Created by template:k8s
+	"/root/.kube/config",
+}
+
 func chooseKubeconfig() string {
+	return chooseKubeconfigFrom(candidateKubeconfigs)
+}
+
+func chooseKubeconfigFrom(candidates []string) string {
 	if kubeconfig := os.Getenv("KUBECONFIG"); kubeconfig != "" {
 		return kubeconfig
 	}
-	candidateKubeConfigs := []string{
-		"/etc/rancher/k3s/k3s.yaml",
-		"/root/.kube/config.localhost", // Created by template:k8s
-		"/root/.kube/config",
-	}
-	for _, kc := range candidateKubeConfigs {
+	for _, kc := range candidates {
 		if _, err := os.Stat(kc); !errors.Is(err, os.ErrNotExist) {
 			return kc
 		}
