@@ -212,8 +212,12 @@ elif command -v pacman >/dev/null 2>&1; then
 	fi
 	# other dependencies are preinstalled on Arch Linux
 	if [ -n "${pkgs}" ]; then
+		# Arch supports only full upgrades. A package installed without one can
+		# need a newer library than the image has, and then fails to start.
+		# Upgrading the kernel would delete the running kernel's modules, so the
+		# guest could not load another module until it reboots.
 		# shellcheck disable=SC2086
-		pacman -Sy --noconfirm ${pkgs}
+		pacman -Syu --noconfirm --ignore linux ${pkgs}
 	fi
 elif command -v zypper >/dev/null 2>&1; then
 	pkgs=""
