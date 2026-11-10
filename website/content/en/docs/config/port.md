@@ -77,6 +77,22 @@ LIMA_SSH_PORT_FORWARDER=false limactl start
 - No additional child process for port forwarding
 
 
+## Disabling port forwarding
+
+To stop Lima from forwarding any port (except for SSH), add a single catch-all `ignore` rule:
+
+```yaml
+portForwards:
+- guestIP: 0.0.0.0
+  guestIPMustBeZero: false
+  proto: any
+  ignore: true
+```
+
+`guestIPMustBeZero: false` is needed here. Since Lima v2.0 the default of `guestIPMustBeZero` is
+`true` when `guestIP` is `0.0.0.0`, and the rule would then only match ports that are bound to
+`0.0.0.0` in the guest, leaving ports bound to `127.0.0.1` or `::1` still forwarded.
+
 ## Accessing ports by IP address
 
 To access a guest's ports by its IP address, connect the guest to the `vzNAT` or the `lima:shared` network.
