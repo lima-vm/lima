@@ -223,7 +223,7 @@ install_socat_in_guest() {
         if command -v apt-get >/dev/null; then sudo apt-get install -y socat
         elif command -v dnf >/dev/null; then sudo dnf install -y socat
         elif command -v apk >/dev/null; then sudo apk add socat
-        elif command -v pacman >/dev/null; then sudo pacman -Sy --noconfirm socat
+        elif command -v pacman >/dev/null; then sudo pacman -Syu --noconfirm --ignore linux socat
         elif command -v zypper >/dev/null; then sudo zypper in -y socat
         else echo "do not know how to install socat in the guest" >&2; exit 1
         fi'
