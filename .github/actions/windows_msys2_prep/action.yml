@@ -1,8 +1,8 @@
 name: 'windows msys2 prep'
 description: >
   Adds C:\msys64\usr\bin to PATH for the rest of the job, unit tests and
-  make included, and installs the MSYS2 packages the Windows integration
-  jobs need.
+  make included, upgrades MSYS2, and installs the packages that the Windows
+  integration jobs need.
 runs:
   using: composite
   steps:
@@ -13,12 +13,21 @@ runs:
     run: | # zizmor: ignore[github-env]
       $ErrorActionPreference = 'Stop'
       Add-Content -Path $env:GITHUB_PATH -Value 'C:\msys64\usr\bin'
+      $pacman = 'C:\msys64\usr\bin\pacman.exe'
+      # MSYS2 supports only full upgrades. A package installed without one can
+      # need a newer library than the image has, and its programs then fail to
+      # start with 0xc0000135 (DLL not found). An update of MSYS2's core
+      # packages can end the first upgrade early and leave MSYS2 processes
+      # behind, so kill those and upgrade again in the install command below,
+      # as msys2/setup-msys2 does.
+      & $pacman -Syu --noconfirm
+      taskkill /F /FI 'MODULES eq msys-2.0.dll'
       # rsync: without it the copy test skips its rsync backend, so the Windows
       # path conversion that backend performs goes unexercised.
       # openssh: keeps a Cygwin ssh ahead of %SystemRoot%\System32\OpenSSH, so
       # these jobs cover the Cygwin toolchain and the plain jobs the native one.
       # xorriso: provides xorrisofs for the Windows Joliet ISO unit test.
-      & 'C:\msys64\usr\bin\pacman.exe' -Sy --noconfirm diffutils jq openssh rsync socat w3m xorriso
+      & $pacman -Syu --needed --noconfirm diffutils jq openssh rsync socat w3m xorriso
       if ($LASTEXITCODE -ne 0) { throw "pacman failed: $LASTEXITCODE" }
       # Lima's ssh selection skips an ssh.exe without scp.exe and ssh-keygen.exe
       # beside it, and reverse-sshfs takes the sftp-server from the same install.
