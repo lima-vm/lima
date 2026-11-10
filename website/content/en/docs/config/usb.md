@@ -7,6 +7,7 @@ weight: 95
 > `usb` and `limactl usb` are experimental
 
 Lima passes host USB devices to a Linux guest over USB/IP on vsock.
+The [design page]({{< ref "/docs/dev/usb" >}}) explains why.
 
 Currently implemented only by `vmType: vz`. Other vmTypes ignore `usb` with a warning. Ignored with `plain: true`.
 Not available when Lima is built with `make ADDITIONAL_DRIVERS=vz`, as the external vz driver has no USB/IP server.
