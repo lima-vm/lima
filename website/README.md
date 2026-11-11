@@ -14,7 +14,7 @@ host files. Keep credentials, personal paths, and unrelated windows out of view.
 Prepare images, packages, and containers before recording. For the landing demo,
 stop the prepared default instance, record `limactl start default`, and finish
 with `lima uname -a`. Keep actual startup output and the final result readable.
-For use cases, aim for 15–30 seconds and show the operation succeeding, not just
+For use cases, aim for 5–10 seconds and show the operation succeeding, not just
 the setup. Run Kubernetes commands on the host, show the restricted project mount
 for an agent inside the VM, and show a guest tool result for an MCP demonstration.
 
