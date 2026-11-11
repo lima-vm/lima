@@ -8,7 +8,7 @@ package vz
 import (
 	"fmt"
 
-	"github.com/Code-Hex/vz/v3"
+	"github.com/Code-Hex/vz/v4"
 	"github.com/coreos/go-semver/semver"
 	"github.com/sirupsen/logrus"
 

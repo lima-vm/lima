@@ -8,7 +8,7 @@ package vz
 import (
 	"context"
 
-	"github.com/Code-Hex/vz/v3"
+	"github.com/Code-Hex/vz/v4"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 )

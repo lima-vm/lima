@@ -123,6 +123,28 @@ service Driver {
   // It is called right after Start returns (boot initiated, the guest is not
   // necessarily up yet), before the first SSH connection.
   rpc AdditionalSetupForSSH(google.protobuf.Empty) returns (google.protobuf.Empty);
+
+  // ListUSBDevices returns the host USB devices the driver can attach.
+  // Drivers without driver.USBPassthrough return UNIMPLEMENTED.
+  rpc ListUSBDevices(google.protobuf.Empty) returns (ListUSBDevicesResponse);
+
+  // AttachUSBDevice attaches a host USB device to the running VM.
+  rpc AttachUSBDevice(USBDeviceRequest) returns (google.protobuf.Empty);
+
+  // DetachUSBDevice detaches a host USB device from the running VM.
+  rpc DetachUSBDevice(USBDeviceRequest) returns (google.protobuf.Empty);
+}
+
+// ListUSBDevicesResponse carries the host USB devices.
+message ListUSBDevicesResponse {
+  // JSON-encoded []driver.USBDevice.
+  bytes devices_json = 1;
+}
+
+// USBDeviceRequest identifies a host USB device.
+message USBDeviceRequest {
+  // driver.USBDevice.RegistryID.
+  uint64 registry_id = 1;
 }
 
 // BootScriptsResponse carries the boot scripts injected into the VM.
@@ -158,6 +180,9 @@ message StartResponse {
   bool success = 1;
   // Error message when success is false; empty otherwise.
   string error = 2;
+  // Progress message sent before the initial response, only to clients that
+  // set the "lima-start-progress" metadata. Success and error are then unset.
+  string progress = 3;
 }
 
 // SetConfigRequest carries the instance configuration for Configure.

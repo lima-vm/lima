@@ -431,6 +431,25 @@ vmOpts:
       # Register rosetta to /proc/sys/fs/binfmt_misc
       # 🟢 Builtin default: false
       binfmt: null
+    # USB passthrough of host devices.
+    # Requires macOS 27 or later, and a vz driver signed with the
+    # `com.apple.developer.accessory-access.usb` entitlement; otherwise the
+    # instance starts without USB devices.
+    # See https://lima-vm.io/docs/config/usb/
+    usb:
+      # Add a USB controller to which `limactl usb attach` can attach host devices.
+      # 🟢 Builtin default: true if `devices` is not empty, otherwise false
+      enabled: null
+      # Host USB devices to attach at boot, and when they become available later.
+      # macOS gives Lima only the devices assigned to it in the
+      # "Virtual Machine Accessories" menu bar item.
+      # Every field set in an entry must match.
+      # Use `limactl usb list INSTANCE` to find the IDs.
+      # 🟢 Builtin default: []
+      devices:
+      # - vendorID: 0x2cf0
+      #   productID: 0x5250
+      #   serial: "0123456789abcdef"
 
 # OS: "Linux".
 # 🟢 Builtin default: "Linux"

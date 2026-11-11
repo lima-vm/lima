@@ -1,6 +1,11 @@
 
- 
-driver.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto"Ž
+í
+driver.protogoogle/protobuf/empty.protogoogle/protobuf/timestamp.proto";
+ListUSBDevicesResponse!
+devices_json (RdevicesJson"3
+USBDeviceRequest
+registry_id (R
+registryId"Ž
 BootScriptsResponse;
 scripts (2!.BootScriptsResponse.ScriptsEntryRscripts:
 ScriptsEntry
@@ -9,10 +14,11 @@
 SSHAddressResponse
 address (	Raddress"+
 InfoResponse
-	info_json (RinfoJson"?
+	info_json (RinfoJson"[
 StartResponse
 success (Rsuccess
-error (	Rerror"D
+error (	Rerror
+progress (	Rprogress"D
 SetConfigRequest0
 instance_config_json (RinstanceConfigJson"E
 SetConfigResponse0
@@ -37,7 +43,7 @@ created_at (2.google.protobuf.TimestampR	createdAt"F
 ListSnapshotsResponse'
 	snapshots (2	.SnapshotR	snapshotsJ"B
 ForwardGuestAgentResponse%
-should_forward (RshouldForward2î	
+should_forward (RshouldForward2­
 Driver:
 Validate.google.protobuf.Empty.google.protobuf.Empty8
 Create.google.protobuf.Empty.google.protobuf.Empty<
@@ -60,4 +66,7 @@ CreateDisk.google.protobuf.Empty.google.protobuf.Empty1
 Info.google.protobuf.Empty.InfoResponse9
 
 SSHAddress.google.protobuf.Empty.SSHAddressResponseG
-AdditionalSetupForSSH.google.protobuf.Empty.google.protobuf.EmptyB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalbproto3
+AdditionalSetupForSSH.google.protobuf.Empty.google.protobuf.EmptyA
+ListUSBDevices.google.protobuf.Empty.ListUSBDevicesResponse<
+AttachUSBDevice.USBDeviceRequest.google.protobuf.Empty<
+DetachUSBDevice.USBDeviceRequest.google.protobuf.EmptyB0Z.github.com/lima-vm/lima/v2/pkg/driver/externalbproto3

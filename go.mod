@@ -19,7 +19,7 @@ require (
 require (
 	al.essio.dev/pkg/shellescape v1.6.1
 	github.com/AlecAivazis/survey/v2 v2.3.7 // gomodjail:unconfined
-	github.com/Code-Hex/vz/v3 v3.8.0 // gomodjail:unconfined
+	github.com/Code-Hex/vz/v4 v4.0.0-20261107060947-64cc34bcd7d0 // gomodjail:unconfined
 	github.com/Microsoft/go-winio v0.6.4 // gomodjail:unconfined
 	github.com/Microsoft/hcsshim v0.15.0
 	github.com/apparentlymart/go-cidr v1.1.1
@@ -38,6 +38,7 @@ require (
 	github.com/gdamore/tcell/v2 v2.13.10 // gomodjail:unconfined
 	github.com/goccy/go-yaml v1.19.2 // gomodjail:unconfined
 	github.com/google/go-cmp v0.7.0
+	github.com/google/uuid v1.6.0
 	github.com/google/yamlfmt v0.21.0 // gomodjail:unconfined
 	github.com/inetaf/tcpproxy v0.0.0-20260515195445-c159a6051109 // gomodjail:unconfined
 	github.com/invopop/jsonschema v0.14.0 // gomodjail:unconfined
@@ -70,7 +71,7 @@ require (
 
 //gosocialcheck:trusted
 require (
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	// gomodjail:unconfined
 	golang.org/x/oauth2 v0.36.0 // indirect
 	// gomodjail:unconfined
@@ -80,7 +81,6 @@ require (
 )
 
 require (
-	github.com/Code-Hex/go-infinity-channel v1.0.0 // indirect
 	github.com/VividCortex/ewma v1.2.0 // indirect
 	github.com/a8m/envsubst v1.4.3 // indirect
 	github.com/agext/levenshtein v1.2.1 // indirect
@@ -155,9 +155,9 @@ require (
 	github.com/apparentlymart/go-textseg/v17 v17.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/clipperhouse/uax29/v2 v2.2.0 // indirect
+	github.com/ebitengine/purego v0.11.3 // indirect
 	github.com/go-logr/logr v1.4.4 // indirect
 	github.com/go-logr/stdr v1.2.2 // indirect
-	github.com/google/uuid v1.6.0 // indirect
 	github.com/pb33f/go-yaml v0.1.0 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect

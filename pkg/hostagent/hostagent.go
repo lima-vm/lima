@@ -291,6 +291,12 @@ func New(ctx context.Context, instName string, stdout io.Writer, signalCh chan o
 		})
 	}
 
+	if reporter, ok := limaDriver.Driver.(driver.StartProgressReporter); ok {
+		reporter.SetStartProgressCallback(func(message string) {
+			logrus.Info(message)
+		})
+	}
+
 	return a, nil
 }
 

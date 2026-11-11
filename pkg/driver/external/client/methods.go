@@ -68,18 +68,27 @@ func (d *DriverClient) CreateDisk(ctx context.Context) error {
 func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 	d.logger.Debug("Starting driver instance")
 
-	stream, err := d.DriverSvc.Start(ctx, &emptypb.Empty{})
+	stream, err := d.DriverSvc.Start(metadata.AppendToOutgoingContext(ctx, pb.StartProgressMetadataKey, "true"), &emptypb.Empty{})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to start driver instance")
 		return nil, err
 	}
 
 	// Blocking to receive an initial response to ensure Start() is initiated
-	// at the server-side.
-	initialResp, err := stream.Recv()
-	if err != nil {
-		d.logger.WithError(err).Error("Error receiving initial response from driver start")
-		return nil, err
+	// at the server-side. Progress messages may come first.
+	var initialResp *pb.StartResponse
+	for {
+		initialResp, err = stream.Recv()
+		if err != nil {
+			d.logger.WithError(err).Error("Error receiving initial response from driver start")
+			return nil, err
+		}
+		if initialResp.Progress == "" {
+			break
+		}
+		if d.onStartProgress != nil {
+			d.onStartProgress(initialResp.Progress)
+		}
 	}
 	if !initialResp.Success {
 		return nil, errors.New(initialResp.Error)
@@ -143,9 +152,7 @@ func (d *DriverClient) Delete(ctx context.Context) error {
 func (d *DriverClient) RunGUI(ctx context.Context) error {
 	d.logger.Debug("Running GUI for the driver instance")
 
-	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
-	defer cancel()
-
+	// No timeout: RunGUI returns only after the VM terminates.
 	_, err := d.DriverSvc.RunGUI(ctx, &emptypb.Empty{})
 	if err != nil {
 		d.logger.WithError(err).Error("Failed to run GUI")

@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -98,7 +99,69 @@ func (b *Backend) GetScreenshot(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write(data)
 }
 
+func usbErrorCode(err error) int {
+	if errors.Is(err, driver.ErrDriverNotUSBPassthrough) {
+		return http.StatusNotImplemented
+	}
+	return http.StatusInternalServerError
+}
+
+// GetUSBDevices is the handler for GET /v1/usb/devices.
+func (b *Backend) GetUSBDevices(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", "GET")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	devs, err := b.Agent.ListUSBDevices(r.Context())
+	if err != nil {
+		b.onError(w, err, usbErrorCode(err))
+		return
+	}
+	if devs == nil {
+		devs = []driver.USBDevice{}
+	}
+	m, err := json.Marshal(devs)
+	if err != nil {
+		b.onError(w, err, http.StatusInternalServerError)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	_, _ = w.Write(m)
+}
+
+// PostUSBDevice is the handler for POST /v1/usb/devices/{registryID}/{attach,detach}.
+func (b *Backend) PostUSBDevice(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", "POST")
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	registryID, err := strconv.ParseUint(r.PathValue("registryID"), 0, 64)
+	if err != nil {
+		b.onError(w, fmt.Errorf("invalid USB device registry ID: %w", err), http.StatusBadRequest)
+		return
+	}
+	switch action := r.PathValue("action"); action {
+	case "attach":
+		err = b.Agent.AttachUSBDevice(r.Context(), registryID)
+	case "detach":
+		err = b.Agent.DetachUSBDevice(r.Context(), registryID)
+	default:
+		b.onError(w, fmt.Errorf("unknown action %q: must be attach or detach", action), http.StatusNotFound)
+		return
+	}
+	if err != nil {
+		b.onError(w, err, usbErrorCode(err))
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func AddRoutes(r *http.ServeMux, b *Backend) {
 	r.Handle("/v1/info", http.HandlerFunc(b.GetInfo))
 	r.Handle("/v1/screenshot", http.HandlerFunc(b.GetScreenshot))
+	r.Handle("/v1/usb/devices", http.HandlerFunc(b.GetUSBDevices))
+	r.Handle("/v1/usb/devices/{registryID}/{action}", http.HandlerFunc(b.PostUSBDevice))
 }

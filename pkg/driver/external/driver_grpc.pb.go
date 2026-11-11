@@ -40,6 +40,9 @@ const (
 	Driver_Info_FullMethodName                  = "/Driver/Info"
 	Driver_SSHAddress_FullMethodName            = "/Driver/SSHAddress"
 	Driver_AdditionalSetupForSSH_FullMethodName = "/Driver/AdditionalSetupForSSH"
+	Driver_ListUSBDevices_FullMethodName        = "/Driver/ListUSBDevices"
+	Driver_AttachUSBDevice_FullMethodName       = "/Driver/AttachUSBDevice"
+	Driver_DetachUSBDevice_FullMethodName       = "/Driver/DetachUSBDevice"
 )
 
 // DriverClient is the client API for Driver service.
@@ -145,6 +148,13 @@ type DriverClient interface {
 	// It is called right after Start returns (boot initiated, the guest is not
 	// necessarily up yet), before the first SSH connection.
 	AdditionalSetupForSSH(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// ListUSBDevices returns the host USB devices the driver can attach.
+	// Drivers without driver.USBPassthrough return UNIMPLEMENTED.
+	ListUSBDevices(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListUSBDevicesResponse, error)
+	// AttachUSBDevice attaches a host USB device to the running VM.
+	AttachUSBDevice(ctx context.Context, in *USBDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	// DetachUSBDevice detaches a host USB device from the running VM.
+	DetachUSBDevice(ctx context.Context, in *USBDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
 }
 
 type driverClient struct {
@@ -364,6 +374,36 @@ func (c *driverClient) AdditionalSetupForSSH(ctx context.Context, in *emptypb.Em
 	return out, nil
 }
 
+func (c *driverClient) ListUSBDevices(ctx context.Context, in *emptypb.Empty, opts ...grpc.CallOption) (*ListUSBDevicesResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(ListUSBDevicesResponse)
+	err := c.cc.Invoke(ctx, Driver_ListUSBDevices_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *driverClient) AttachUSBDevice(ctx context.Context, in *USBDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Driver_AttachUSBDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *driverClient) DetachUSBDevice(ctx context.Context, in *USBDeviceRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(emptypb.Empty)
+	err := c.cc.Invoke(ctx, Driver_DetachUSBDevice_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // DriverServer is the server API for Driver service.
 // All implementations must embed UnimplementedDriverServer
 // for forward compatibility.
@@ -467,6 +507,13 @@ type DriverServer interface {
 	// It is called right after Start returns (boot initiated, the guest is not
 	// necessarily up yet), before the first SSH connection.
 	AdditionalSetupForSSH(context.Context, *emptypb.Empty) (*emptypb.Empty, error)
+	// ListUSBDevices returns the host USB devices the driver can attach.
+	// Drivers without driver.USBPassthrough return UNIMPLEMENTED.
+	ListUSBDevices(context.Context, *emptypb.Empty) (*ListUSBDevicesResponse, error)
+	// AttachUSBDevice attaches a host USB device to the running VM.
+	AttachUSBDevice(context.Context, *USBDeviceRequest) (*emptypb.Empty, error)
+	// DetachUSBDevice detaches a host USB device from the running VM.
+	DetachUSBDevice(context.Context, *USBDeviceRequest) (*emptypb.Empty, error)
 	mustEmbedUnimplementedDriverServer()
 }
 
@@ -536,6 +583,15 @@ func (UnimplementedDriverServer) SSHAddress(context.Context, *emptypb.Empty) (*S
 }
 func (UnimplementedDriverServer) AdditionalSetupForSSH(context.Context, *emptypb.Empty) (*emptypb.Empty, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method AdditionalSetupForSSH not implemented")
+}
+func (UnimplementedDriverServer) ListUSBDevices(context.Context, *emptypb.Empty) (*ListUSBDevicesResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ListUSBDevices not implemented")
+}
+func (UnimplementedDriverServer) AttachUSBDevice(context.Context, *USBDeviceRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method AttachUSBDevice not implemented")
+}
+func (UnimplementedDriverServer) DetachUSBDevice(context.Context, *USBDeviceRequest) (*emptypb.Empty, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method DetachUSBDevice not implemented")
 }
 func (UnimplementedDriverServer) mustEmbedUnimplementedDriverServer() {}
 func (UnimplementedDriverServer) testEmbeddedByValue()                {}
@@ -911,6 +967,60 @@ func _Driver_AdditionalSetupForSSH_Handler(srv interface{}, ctx context.Context,
 	return interceptor(ctx, in, info, handler)
 }
 
+func _Driver_ListUSBDevices_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(emptypb.Empty)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).ListUSBDevices(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_ListUSBDevices_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).ListUSBDevices(ctx, req.(*emptypb.Empty))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Driver_AttachUSBDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(USBDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).AttachUSBDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_AttachUSBDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).AttachUSBDevice(ctx, req.(*USBDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _Driver_DetachUSBDevice_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(USBDeviceRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(DriverServer).DetachUSBDevice(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: Driver_DetachUSBDevice_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(DriverServer).DetachUSBDevice(ctx, req.(*USBDeviceRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // Driver_ServiceDesc is the grpc.ServiceDesc for Driver service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -993,6 +1103,18 @@ var Driver_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "AdditionalSetupForSSH",
 			Handler:    _Driver_AdditionalSetupForSSH_Handler,
+		},
+		{
+			MethodName: "ListUSBDevices",
+			Handler:    _Driver_ListUSBDevices_Handler,
+		},
+		{
+			MethodName: "AttachUSBDevice",
+			Handler:    _Driver_AttachUSBDevice_Handler,
+		},
+		{
+			MethodName: "DetachUSBDevice",
+			Handler:    _Driver_DetachUSBDevice_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
