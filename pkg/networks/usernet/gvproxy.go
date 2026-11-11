@@ -316,11 +316,45 @@ func muxWithExtension(n *virtualnetwork.VirtualNetwork) *http.ServeMux {
 	return m
 }
 
+// macOS resolver(5) limits the search list to six domains with a total of 256 characters.
+const (
+	darwinMaxSearchDomains    = 6
+	darwinMaxSearchListLength = 256
+)
+
 func searchDomains() []string {
-	if runtime.GOOS != "windows" {
-		return resolveSearchDomain("/etc/resolv.conf")
+	if runtime.GOOS == "windows" {
+		return nil
 	}
-	return nil
+	domains := resolveSearchDomain("/etc/resolv.conf")
+	if runtime.GOOS == "darwin" {
+		// The DHCP server sends every search domain to the guest. A list over the macOS limit can make
+		// the DHCP reply larger than the guest accepts, and the guest then gets no IP address.
+		// See https://github.com/lima-vm/lima/issues/5791.
+		limited := limitSearchDomains(domains, darwinMaxSearchDomains, darwinMaxSearchListLength)
+		if len(limited) < len(domains) {
+			logrus.Warnf("Using only the first %d of %d host search domains: macOS limits the search list to %d domains and %d characters",
+				len(limited), len(domains), darwinMaxSearchDomains, darwinMaxSearchListLength)
+		}
+		domains = limited
+	}
+	return domains
+}
+
+// limitSearchDomains returns the leading domains that fit within maxDomains domains
+// and, joined with spaces, within maxLength characters.
+func limitSearchDomains(domains []string, maxDomains, maxLength int) []string {
+	length := 0
+	for i, domain := range domains {
+		if i > 0 {
+			length++ // space separator
+		}
+		length += len(domain)
+		if i >= maxDomains || length > maxLength {
+			return domains[:i]
+		}
+	}
+	return domains
 }
 
 func resolveSearchDomain(file string) []string {
@@ -335,7 +369,7 @@ func resolveSearchDomain(file string) []string {
 	for sc.Scan() {
 		if after, ok := strings.CutPrefix(sc.Text(), searchPrefix); ok {
 			searchDomains := strings.Split(after, " ")
-			logrus.Debugf("Using search domains: %v", searchDomains)
+			logrus.Debugf("Found search domains: %v", searchDomains)
 			return searchDomains
 		}
 	}

@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"os"
 	"path"
+	"strings"
 	"testing"
 
 	"gotest.tools/v3/assert"
@@ -34,6 +35,47 @@ nameserver 8.8.8.8`)
 		var expected []string
 		assert.DeepEqual(t, dns, expected)
 	})
+}
+
+func TestLimitSearchDomains(t *testing.T) {
+	domain63 := strings.Repeat("a", 59) + ".com"
+	domain64 := strings.Repeat("b", 60) + ".com"
+	sevenDomains := []string{"d1.test", "d2.test", "d3.test", "d4.test", "d5.test", "d6.test", "d7.test"}
+	tests := []struct {
+		name    string
+		domains []string
+		want    []string
+	}{
+		{
+			name: "no domains",
+		},
+		{
+			name:    "within the limits",
+			domains: []string{"test.com", "lima.net"},
+			want:    []string{"test.com", "lima.net"},
+		},
+		{
+			name:    "more than six domains",
+			domains: sevenDomains,
+			want:    sevenDomains[:6],
+		},
+		{
+			name:    "exactly 256 characters",
+			domains: []string{domain63, domain63, domain63, domain64},
+			want:    []string{domain63, domain63, domain63, domain64},
+		},
+		{
+			name:    "more than 256 characters",
+			domains: []string{domain63, domain63, domain63, domain64, "x.test"},
+			want:    []string{domain63, domain63, domain63, domain64},
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := limitSearchDomains(tt.domains, darwinMaxSearchDomains, darwinMaxSearchListLength)
+			assert.DeepEqual(t, got, tt.want)
+		})
+	}
 }
 
 func TestNATTable(t *testing.T) {
