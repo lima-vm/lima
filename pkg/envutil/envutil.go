@@ -56,10 +56,12 @@ func validatePattern(pattern string) error {
 }
 
 // getBlockList returns the list of environment variable patterns to be blocked.
-func getBlockList() []string {
+// The extra patterns are appended to the list built from LIMA_SHELLENV_BLOCK,
+// or to the default block list when LIMA_SHELLENV_BLOCK is empty.
+func getBlockList(extra []string) []string {
 	blockEnv := os.Getenv("LIMA_SHELLENV_BLOCK")
 	if blockEnv == "" {
-		return defaultBlockList
+		return slices.Concat(defaultBlockList, extra)
 	}
 
 	shouldAppend := strings.HasPrefix(blockEnv, "+")
@@ -72,16 +74,20 @@ func getBlockList() []string {
 	}
 
 	if shouldAppend {
-		return slices.Concat(defaultBlockList, patterns)
+		return slices.Concat(defaultBlockList, patterns, extra)
 	}
-	return patterns
+	return slices.Concat(patterns, extra)
 }
 
 // getAllowList returns the list of environment variable patterns to be allowed.
-func getAllowList() []string {
+// The extra patterns are appended to the list built from LIMA_SHELLENV_ALLOW.
+func getAllowList(extra []string) []string {
 	allowEnv := os.Getenv("LIMA_SHELLENV_ALLOW")
 	if allowEnv == "" {
-		return nil
+		if len(extra) == 0 {
+			return nil
+		}
+		return slices.Clone(extra)
 	}
 
 	patterns := parseEnvList(allowEnv)
@@ -92,7 +98,18 @@ func getAllowList() []string {
 		}
 	}
 
-	return patterns
+	return slices.Concat(patterns, extra)
+}
+
+// ValidatePatterns returns an error if any of the patterns contains characters
+// other than letters, digits, underscores and asterisks.
+func ValidatePatterns(patterns []string) error {
+	for _, pattern := range patterns {
+		if err := validatePattern(pattern); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func parseEnvList(envList string) []string {
@@ -130,12 +147,13 @@ func matchesAnyPattern(name string, patterns []string) bool {
 
 // FilterEnvironment filters environment variables based on configuration from environment variables.
 // It returns a slice of environment variables that are not blocked by the current configuration.
-// The filtering is controlled by LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW environment variables.
-func FilterEnvironment() []string {
+// The filtering is controlled by LIMA_SHELLENV_BLOCK and LIMA_SHELLENV_ALLOW environment variables,
+// extended with the extraAllow and extraBlock patterns.
+func FilterEnvironment(extraAllow, extraBlock []string) []string {
 	return filterEnvironmentWithLists(
 		os.Environ(),
-		getAllowList(),
-		getBlockList(),
+		getAllowList(extraAllow),
+		getBlockList(extraBlock),
 	)
 }
 
