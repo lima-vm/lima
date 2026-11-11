@@ -30,7 +30,7 @@ import (
 // fakeDev completes transfers at once, or holds them until cancel when stalled.
 type fakeDev struct{ stalled bool }
 
-func (fakeDev) Info() DeviceInfo { return DeviceInfo{Busid: "1-1"} }
+func (fakeDev) Info() DeviceInfo { return DeviceInfo{BusID: "1-1"} }
 
 func (fakeDev) Control(_ context.Context, _ [8]byte, b []byte) (int, error) { return len(b), nil }
 
@@ -82,13 +82,30 @@ func sessionEnd(t *testing.T, done <-chan error) error {
 }
 
 func init() {
-	// Every session end drains, so keep it short.
-	drainQuiet, drainMax = 50*time.Millisecond, time.Second
+	// A session the host ends drains for all of drainMax, so keep it short.
+	drainMax = time.Second
 }
 
 func send(t *testing.T, c net.Conn, h urbHeader) {
 	t.Helper()
 	assert.NilError(t, binary.Write(c, binary.BigEndian, h))
+}
+
+// assertHeapBelow fails when the live heap reaches limit bytes.
+func assertHeapBelow(t *testing.T, limit uint64) {
+	t.Helper()
+	runtime.GC()
+	var m runtime.MemStats
+	runtime.ReadMemStats(&m)
+	assert.Assert(t, m.HeapAlloc < limit, "HeapAlloc %d MiB", m.HeapAlloc>>20)
+}
+
+// sendOut submits an OUT URB on endpoint 1.
+func sendOut(t *testing.T, c net.Conn, seq uint32, payload []byte) {
+	t.Helper()
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq, Direction: dirOut, Ep: 1, TransferBufferLength: int32(len(payload))})
+	_, err := c.Write(payload)
+	assert.NilError(t, err)
 }
 
 // unlinkReply reads the answer to a CMD_UNLINK that found URB seq: its RET_SUBMIT, then RET_UNLINK 0.
@@ -172,15 +189,113 @@ func TestFloodEndsSession(t *testing.T) {
 					assert.NilError(t, err)
 				}
 			}
-			runtime.GC()
-			var m runtime.MemStats
-			runtime.ReadMemStats(&m)
-			assert.Assert(t, m.HeapAlloc < 80<<20, "HeapAlloc %d MiB", m.HeapAlloc>>20)
+			assertHeapBelow(t, 80<<20)
 			h.Seqnum++
 			send(t, c, h)
 			assert.ErrorContains(t, sessionEnd(t, done), "backlog")
 		})
 	}
+}
+
+// Overflowing the backlog ends the session, but the guest still gets every URB back.
+func TestBacklogOverflowAnswersEveryURB(t *testing.T) {
+	c, done := startSession(t, fakeDev{stalled: true})
+	in := urbHeader{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength}
+	n := uint32(maxBacklog / urbCost(in))
+	for seq := range n {
+		in.Seqnum = seq + 1
+		send(t, c, in)
+	}
+	// This one overflows. Its payload is discarded, and the frame after it still parses.
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 1, Direction: dirOut, Ep: 2, TransferBufferLength: maxTransferLength})
+	_, err := c.Write(make([]byte, maxTransferLength))
+	assert.NilError(t, err)
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 2, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+
+	got := map[uint32]int32{}
+	for range n + 2 {
+		r, err := readURBHeader(c)
+		assert.NilError(t, err)
+		assert.Equal(t, r.Command, uint32(retSubmit))
+		got[r.Seqnum] = int32(r.TransferFlags)
+	}
+	assert.Equal(t, len(got), int(n+2))
+	for seq, status := range got {
+		assert.Equal(t, status, int32(-errnoESHUTDOWN), "seq %d", seq)
+	}
+	readToEOF(t, c)
+	assert.ErrorContains(t, sessionEnd(t, done), "backlog")
+}
+
+// Over the cap, reads wait until a reply frees the backlog, whichever command overflowed it.
+func TestBacklogOverflowPausesReads(t *testing.T) {
+	for name, last := range map[string]urbHeader{
+		"submit": {Command: cmdSubmit, Direction: dirIn, Ep: 2, TransferBufferLength: 8},
+		"unlink": {Command: cmdUnlink, TransferFlags: 999},
+	} {
+		t.Run(name, func(t *testing.T) {
+			c, done := startSession(t, fakeDev{stalled: true})
+			big := urbHeader{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength}
+			n := uint32(maxBacklog / urbCost(big))
+			for seq := range n {
+				big.Seqnum = seq + 1
+				send(t, c, big)
+			}
+			// Leave less room than the last frame costs.
+			fill := maxBacklog - int64(n)*urbCost(big) - urbCost(urbHeader{}) - 1000
+			send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 1, Direction: dirIn, Ep: 1, TransferBufferLength: int32(fill)})
+			last.Seqnum = n + 2
+			send(t, c, last)
+
+			assert.NilError(t, c.SetWriteDeadline(time.Now().Add(200*time.Millisecond)))
+			next := urbHeader{Command: cmdSubmit, Seqnum: n + 3, Direction: dirIn, Ep: 3, TransferBufferLength: 8}
+			err := binary.Write(c, binary.BigEndian, next)
+			assert.Assert(t, errors.Is(err, os.ErrDeadlineExceeded), "a read went on over the cap: %v", err)
+			assert.NilError(t, c.SetWriteDeadline(time.Now().Add(30*time.Second)))
+
+			got := map[uint32]bool{}
+			r, err := readURBHeader(c)
+			assert.NilError(t, err)
+			got[r.Seqnum] = true
+			send(t, c, next) // only a resumed read takes this
+			for range n + 2 {
+				r, err := readURBHeader(c)
+				assert.NilError(t, err)
+				got[r.Seqnum] = true
+			}
+			assert.Equal(t, len(got), int(n+3))
+			readToEOF(t, c)
+			assert.ErrorContains(t, sessionEnd(t, done), "backlog")
+		})
+	}
+}
+
+// Hung calls pin the backlog until the close, and the URB that overflowed it is still answered.
+func TestBacklogOverflowAnswersBehindHungCalls(t *testing.T) {
+	dev := newGateDev()
+	c, done := startSession(t, dev)
+	big := urbHeader{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength}
+	n := uint32(maxBacklog / urbCost(big))
+	for seq := range n {
+		big.Seqnum = seq + 1
+		send(t, c, big)
+	}
+	<-dev.started
+	// Leave less room than one more URB costs even with its payload discarded.
+	fill := maxBacklog - int64(n)*urbCost(big) - urbCost(urbHeader{}) - 1000
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 1, Direction: dirIn, Ep: 1, TransferBufferLength: int32(fill)})
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 2, Direction: dirIn, Ep: 2, TransferBufferLength: 8})
+
+	got := map[uint32]bool{}
+	for range n + 2 {
+		r, err := readURBHeader(c)
+		assert.NilError(t, err)
+		got[r.Seqnum] = true
+	}
+	assert.Equal(t, len(got), int(n+2))
+	readToEOF(t, c)
+	close(dev.release)
+	assert.ErrorContains(t, sessionEnd(t, done), "backlog")
 }
 
 // One seqnum throughout: a reply frees it too.
@@ -319,21 +434,22 @@ func TestUnlinkQueuedURB(t *testing.T) {
 	dev := ctxDev{started: make(chan []byte, 64)}
 	ctx, cancel := context.WithCancel(t.Context())
 	c, done := startSessionCtx(ctx, t, dev)
-	out := func(seq uint32, b byte) {
-		send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq, Direction: dirOut, Ep: 1, TransferBufferLength: 1})
-		_, err := c.Write([]byte{b})
-		assert.NilError(t, err)
-	}
-	out(1, 'a')
+	sendOut(t, c, 1, []byte{'a'})
 	assert.DeepEqual(t, <-dev.started, []byte{'a'})
-	out(2, 'b')
+	sendOut(t, c, 2, []byte{'b'})
 
 	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 3, TransferFlags: 2})
 	r := unlinkReply(t, c, 2, 3, false)
 	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
 
-	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 4, TransferFlags: 1})
-	r = unlinkReply(t, c, 1, 4, false)
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 4, TransferFlags: 2})
+	u, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, u.Command, uint32(retUnlink), "a repeat unlink answered seq 2 again")
+	assert.Equal(t, u.Seqnum, uint32(4))
+
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 5, TransferFlags: 1})
+	r = unlinkReply(t, c, 1, 5, false)
 	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
 
 	// A second answer for either URB would tear down the guest's connection.
@@ -345,6 +461,56 @@ func TestUnlinkQueuedURB(t *testing.T) {
 		assert.Assert(t, false, "unlinked OUT reached device: %q", b)
 	default:
 	}
+}
+
+// An unlinked queued URB is gone at once: its seqnum is free, and the worker never sees it.
+func TestUnlinkQueuedRetiresURB(t *testing.T) {
+	dev := newGateDev()
+	c, done := startSession(t, dev)
+	sendOut(t, c, 1, []byte{'a'})
+	assert.DeepEqual(t, <-dev.started, []byte{'a'})
+	sendOut(t, c, 2, []byte{'b'})
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 3, TransferFlags: 2})
+	r := unlinkReply(t, c, 2, 3, false)
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET))
+
+	sendOut(t, c, 2, []byte{'c'}) // no duplicate: seq 2 is free again
+	dev.release <- struct{}{}
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(1))
+	assert.DeepEqual(t, <-dev.started, []byte{'c'}) // not the unlinked 'b'
+
+	// Had the worker dropped the new seq 2 along with the old one, this unlink would find nothing.
+	send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 4, TransferFlags: 2})
+	dev.release <- struct{}{}
+	r = unlinkReply(t, c, 2, 4, false)
+	assert.Equal(t, r.TransferFlags, uint32(0))
+
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+// An unlinked queued URB gives its charge and its payload back with the reply,
+// not when the hung call ahead returns.
+func TestUnlinkQueuedFreesBacklog(t *testing.T) {
+	dev := newGateDev()
+	c, done := startSession(t, dev)
+	payload := make([]byte, 4<<20)
+	sendOut(t, c, 1, payload)
+	<-dev.started
+	for i := range uint32(2 * maxBacklog / len(payload)) {
+		seq := 2*i + 2
+		sendOut(t, c, seq, payload)
+		send(t, c, urbHeader{Command: cmdUnlink, Seqnum: seq + 1, TransferFlags: seq})
+		r := unlinkReply(t, c, seq, seq+1, false)
+		assert.Equal(t, int32(r.TransferFlags), int32(-errnoECONNRESET), "seq %d met the backlog cap", seq)
+	}
+	// The charges are free, so nothing else bounds payloads left in the queue.
+	assertHeapBelow(t, maxBacklog)
+	close(dev.release)
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
 }
 
 func TestUnlinkInFlightWaitsForDevice(t *testing.T) {
@@ -469,12 +635,15 @@ func (d *countDev) Transfer(context.Context, uint8, bool, []byte) (int, error) {
 	return 0, nil
 }
 
+// errDev fails each transfer after moving part of it.
 type errDev struct {
 	fakeDev
 	err error
 }
 
-func (d errDev) Transfer(context.Context, uint8, bool, []byte) (int, error) { return 0, d.err }
+func (d errDev) Transfer(_ context.Context, _ uint8, _ bool, b []byte) (int, error) {
+	return copy(b, "part"), d.err
+}
 
 func TestSubmitErrorStatus(t *testing.T) {
 	h := urbHeader{Direction: dirIn, Ep: 1, TransferBufferLength: 8}
@@ -487,16 +656,18 @@ func TestSubmitErrorStatus(t *testing.T) {
 		"gone":  {fmt.Errorf("x: %w", ErrDeviceGone), -errnoENODEV},
 	} {
 		t.Run(name, func(t *testing.T) {
-			status, _, _ := doSubmit(t.Context(), errDev{err: tc.err}, h, nil)
+			status, actual, data := doSubmit(t.Context(), errDev{err: tc.err}, h, nil)
 			assert.Equal(t, status, tc.want)
+			assert.Equal(t, string(data[:actual]), "part", "a failed IN URB keeps the bytes that moved")
 		})
 	}
 
 	t.Run("cancelled mid call", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		dev := cancelDev{cancel: cancel}
-		status, _, _ := doSubmit(ctx, dev, h, nil)
+		status, actual, data := doSubmit(ctx, dev, h, nil)
 		assert.Equal(t, status, int32(-errnoECONNRESET))
+		assert.Equal(t, string(data[:actual]), "part")
 	})
 }
 
@@ -505,9 +676,9 @@ type cancelDev struct {
 	cancel context.CancelFunc
 }
 
-func (d cancelDev) Transfer(context.Context, uint8, bool, []byte) (int, error) {
+func (d cancelDev) Transfer(_ context.Context, _ uint8, _ bool, b []byte) (int, error) {
 	d.cancel()
-	return 0, urbErrno(errnoEPROTO)
+	return copy(b, "part"), urbErrno(errnoEPROTO)
 }
 
 func TestRetUnlinkNeverPrecedesRetSubmit(t *testing.T) {
@@ -638,8 +809,9 @@ func TestZeroPacket(t *testing.T) {
 	t.Run("terminator failure is reported", func(t *testing.T) {
 		dev := &zlpDev{mps: 64, zlpErr: urbErrno(errnoEPROTO)}
 		h := urbHeader{Direction: dirOut, Ep: 2, TransferFlags: urbZeroPacket, TransferBufferLength: 64}
-		status, _, _ := doSubmit(t.Context(), dev, h, make([]byte, 64))
+		status, actual, _ := doSubmit(t.Context(), dev, h, make([]byte, 64))
 		assert.Equal(t, status, int32(-errnoEPROTO))
+		assert.Equal(t, actual, int32(64), "the data stage still reached the device")
 	})
 
 	t.Run("cancel releases a blocked terminator", func(t *testing.T) {
@@ -699,37 +871,8 @@ func TestDrainFailsControlAsRemoved(t *testing.T) {
 	assert.NilError(t, sessionEnd(t, done), "the drain reported the device gone")
 }
 
-// A guest reacting to its last reply within drainQuiet still gets an answer.
-func TestDrainWaitsForQuietGuest(t *testing.T) {
-	old := drainQuiet
-	drainQuiet = 500 * time.Millisecond
-	t.Cleanup(func() { drainQuiet = old })
-	dev := ctxDev{started: make(chan []byte, 64)}
-	ctx, cancel := context.WithCancel(t.Context())
-	c, done := startSessionCtx(ctx, t, dev)
-
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
-	<-dev.started
-	cancel()
-	r, err := readURBHeader(c)
-	assert.NilError(t, err)
-	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
-
-	time.Sleep(100 * time.Millisecond) // nothing pending, guest resubmits
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
-	r, err = readURBHeader(c)
-	assert.NilError(t, err)
-	assert.Equal(t, r.Seqnum, uint32(2))
-	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
-	readToEOF(t, c)
-	assert.NilError(t, sessionEnd(t, done))
-}
-
-// Quiet counts from the last reply the guest read, so a slow reader can still react to it.
+// net.Pipe has no buffer, so the reply waits in the writer until the guest reads it.
 func TestDrainWaitsForSlowReader(t *testing.T) {
-	oldQuiet, oldMax := drainQuiet, drainMax
-	drainQuiet, drainMax = 300*time.Millisecond, 5*time.Second
-	t.Cleanup(func() { drainQuiet, drainMax = oldQuiet, oldMax })
 	dev := ctxDev{started: make(chan []byte, 64)}
 	ctx, cancel := context.WithCancel(t.Context())
 	c, done := startSessionCtx(ctx, t, dev)
@@ -737,7 +880,7 @@ func TestDrainWaitsForSlowReader(t *testing.T) {
 	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
 	<-dev.started
 	cancel()
-	time.Sleep(2 * drainQuiet) // the reply waits in the writer
+	time.Sleep(drainMax / 2)
 	r, err := readURBHeader(c)
 	assert.NilError(t, err)
 	assert.Equal(t, r.Seqnum, uint32(1))
@@ -748,6 +891,45 @@ func TestDrainWaitsForSlowReader(t *testing.T) {
 	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
 	readToEOF(t, c)
 	assert.NilError(t, sessionEnd(t, done))
+}
+
+// A socket takes the reply at once, so the drain cannot tell a stalled guest from one that is done.
+// It answers until the guest closes.
+func TestDrainWaitsForStalledGuest(t *testing.T) {
+	old := drainMax
+	drainMax = 10 * time.Second
+	t.Cleanup(func() { drainMax = old })
+	l, err := (&net.ListenConfig{}).Listen(t.Context(), "tcp", "127.0.0.1:0")
+	assert.NilError(t, err)
+	defer l.Close()
+	c, err := (&net.Dialer{}).DialContext(t.Context(), "tcp", l.Addr().String())
+	assert.NilError(t, err)
+	t.Cleanup(func() { _ = c.Close() })
+	assert.NilError(t, c.SetDeadline(time.Now().Add(30*time.Second)))
+	s, err := l.Accept()
+	assert.NilError(t, err)
+	dev := ctxDev{started: make(chan []byte, 64)}
+	ctx, cancel := context.WithCancel(t.Context())
+	done := make(chan error, 1)
+	go func() { done <- urbLoop(ctx, s, dev) }()
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	<-dev.started
+	cancel()
+	time.Sleep(time.Second) // the reply is written, and nobody has read it
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(1))
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 2, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	r, err = readURBHeader(c)
+	assert.NilError(t, err, "the drain closed on a stalled guest")
+	assert.Equal(t, r.Seqnum, uint32(2))
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
+
+	closed := time.Now()
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+	assert.Assert(t, time.Since(closed) < drainMax/2, "the drain outlasted the guest")
 }
 
 // A submit during the drain must not queue behind a device call that ignores cancel.
@@ -773,6 +955,89 @@ func TestDrainAnswersSubmitBehindHungCall(t *testing.T) {
 	assert.Equal(t, r.Seqnum, uint32(1))
 	_, err = io.CopyN(io.Discard, c, int64(r.TransferBufferLength))
 	assert.NilError(t, err)
+	readToEOF(t, c)
+	assert.NilError(t, sessionEnd(t, done))
+}
+
+// sentConn counts each RET_SUBMIT urbLoop writes, or tries to after the close, per seqnum.
+type sentConn struct {
+	net.Conn
+	mu  sync.Mutex
+	ret map[uint32]int
+}
+
+func (c *sentConn) Write(b []byte) (int, error) {
+	if len(b) == urbHeaderSize && binary.BigEndian.Uint32(b) == retSubmit {
+		c.mu.Lock()
+		c.ret[binary.BigEndian.Uint32(b[4:])]++
+		c.mu.Unlock()
+	}
+	return c.Conn.Write(b)
+}
+
+// A device call that outlasts drainMax still gets its URB, and the one queued behind it, answered once.
+func TestDrainDeadlineAnswersHungCall(t *testing.T) {
+	for name, unlinked := range map[string]bool{"plain": false, "unlinked": true} {
+		t.Run(name, func(t *testing.T) {
+			dev := newGateDev()
+			c, s := net.Pipe()
+			t.Cleanup(func() { _ = c.Close() })
+			assert.NilError(t, c.SetDeadline(time.Now().Add(30*time.Second)))
+			sc := &sentConn{Conn: s, ret: map[uint32]int{}}
+			ctx, cancel := context.WithCancel(t.Context())
+			done := make(chan error, 1)
+			go func() { done <- urbLoop(ctx, sc, dev) }()
+
+			for seq := range uint32(2) {
+				send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq + 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+			}
+			<-dev.started
+			if unlinked {
+				// The unlink answers queued seq 2. The drain answers hung seq 1, then its unlink.
+				send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 3, TransferFlags: 2})
+				unlinkReply(t, c, 2, 3, false)
+				send(t, c, urbHeader{Command: cmdUnlink, Seqnum: 4, TransferFlags: 1})
+				cancel()
+				r := unlinkReply(t, c, 1, 4, false)
+				assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
+			} else {
+				cancel()
+				got := map[uint32]int32{}
+				for range 2 {
+					r, err := readURBHeader(c)
+					assert.NilError(t, err)
+					assert.Equal(t, r.Command, uint32(retSubmit))
+					got[r.Seqnum] = int32(r.TransferFlags)
+				}
+				e := int32(-errnoESHUTDOWN)
+				assert.DeepEqual(t, got, map[uint32]int32{1: e, 2: e})
+			}
+			readToEOF(t, c)
+			close(dev.release) // the late completions must not even try to write
+			assert.NilError(t, sessionEnd(t, done))
+			sc.mu.Lock()
+			defer sc.mu.Unlock()
+			assert.DeepEqual(t, sc.ret, map[uint32]int{1: 1, 2: 1})
+		})
+	}
+}
+
+// A submit whose payload is still arriving when the session ends gets an answer too.
+func TestDrainWaitsForPayload(t *testing.T) {
+	ctx, cancel := context.WithCancel(t.Context())
+	c, done := startSessionCtx(ctx, t, fakeDev{})
+
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirOut, Ep: 1, TransferBufferLength: 2})
+	_, err := c.Write([]byte{0})
+	assert.NilError(t, err)
+	cancel()
+	time.Sleep(150 * time.Millisecond)
+	_, err = c.Write([]byte{0})
+	assert.NilError(t, err, "the drain closed mid-frame")
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.Seqnum, uint32(1))
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN))
 	readToEOF(t, c)
 	assert.NilError(t, sessionEnd(t, done))
 }

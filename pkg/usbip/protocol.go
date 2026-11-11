@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 // Package usbip implements the USB/IP protocol.
-// The wire format is Documentation/usb/usbip_protocol.rst, big-endian.
+// The wire format, big-endian, is the Linux kernel's https://docs.kernel.org/usb/usbip_protocol.html.
 package usbip
 
 import (
