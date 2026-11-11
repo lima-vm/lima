@@ -13,7 +13,7 @@ var ErrDeviceGone = errors.New("usb device disconnected")
 type DeviceInfo struct {
 	BusNum      uint32
 	DevNum      uint32
-	Busid       string
+	BusID       string
 	RegistryID  uint64
 	Speed       uint32
 	Vendor      uint16

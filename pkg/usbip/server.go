@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"slices"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -37,12 +38,9 @@ const (
 	maxBacklog = 64 << 20
 )
 
-var (
-	// vhci_hcd clears URB_DMA_MAP_SG only on RET_SUBMIT, and any other giveback of a
-	// scatter-gather URB oopses the guest. So a session answers every URB before it closes.
-	drainQuiet = 200 * time.Millisecond
-	drainMax   = 2 * time.Second
-)
+// vhci_hcd clears URB_DMA_MAP_SG only on RET_SUBMIT, and any other giveback of a
+// scatter-gather URB oopses the guest. So a session answers every URB before it closes.
+var drainMax = 2 * time.Second
 
 type inflight struct {
 	cancel   context.CancelFunc
@@ -51,6 +49,7 @@ type inflight struct {
 	started  bool
 	unlinked bool
 	unlink   urbHeader
+	answered bool // by the drain, before the device call returned
 }
 
 type urbJob struct {
@@ -59,6 +58,14 @@ type urbJob struct {
 	outData []byte
 	isoDesc []byte
 	entry   *inflight
+}
+
+// Endpoint 0 is one bidirectional pipe.
+func epKey(h urbHeader) uint32 {
+	if h.Ep == 0 {
+		return 0
+	}
+	return h.Ep<<1 | h.Direction&1
 }
 
 // The fixed part makes header floods reach maxBacklog too.
@@ -84,6 +91,13 @@ func (q *queue[T]) push(j T) {
 	q.mu.Lock()
 	q.jobs = append(q.jobs, j)
 	q.cond.Signal()
+	q.mu.Unlock()
+}
+
+// ponytail: linear scan, bounded by maxBacklog; index the jobs if unlink floods show up in profiles.
+func (q *queue[T]) drop(match func(T) bool) {
+	q.mu.Lock()
+	q.jobs = slices.DeleteFunc(q.jobs, match)
 	q.mu.Unlock()
 }
 
@@ -126,7 +140,7 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 	sessionCtx, endSession := context.WithCancel(ctx)
 	deviceGone := func() {
 		if gone.CompareAndSwap(false, true) {
-			logrus.Warnf("usbip: host device %s unplugged, re-enumerated or detached; ending session", dev.Info().Busid)
+			logrus.Warnf("usbip: host device %s unplugged, re-enumerated or detached; ending session", dev.Info().BusID)
 		}
 		endSession()
 	}
@@ -149,17 +163,13 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 		}
 	}()
 
-	// The drain waits until the guest has read every reply and then stayed quiet, on the monotonic clock.
-	start := time.Now()
-	var lastIO, unsent atomic.Int64
-	stamp := func() { lastIO.Store(int64(time.Since(start))) }
+	// A socket buffers writes, so a written reply and a silent conn do not show that the guest read it.
+	// A reply it reads late can still make it resubmit. So only the end of reading ends the drain early.
+	var readDone atomic.Bool
 
 	// One writer: a guest slow to read must not delay the next device read.
 	replies := newQueue[func()]()
-	reply := func(send func()) {
-		unsent.Add(1)
-		replies.push(send)
-	}
+	reply := replies.push
 	writerDone := make(chan struct{})
 	go func() {
 		defer close(writerDone)
@@ -169,8 +179,6 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 				return
 			}
 			send()
-			unsent.Add(-1)
-			stamp()
 		}
 	}()
 	defer func() {
@@ -196,20 +204,37 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 		return err
 	}
 
-	// After the session ends, answer what is pending and what the guest still sends, then close.
+	// After the session ends, answer what is pending and what the guest still sends.
+	// Close once the guest has, or after drainMax.
 	closed := make(chan struct{})
 	context.AfterFunc(sessionCtx, func() {
 		defer close(closed)
 		deadline := time.Now().Add(drainMax)
 		for time.Now().Before(deadline) {
 			stateMu.Lock()
-			busy := len(pending) > 0
+			// Unlike pending, the backlog also holds a URB whose payload is still arriving,
+			// and each reply until it is written.
+			busy := backlog > 0
 			stateMu.Unlock()
-			if !busy && unsent.Load() == 0 && time.Since(start)-time.Duration(lastIO.Load()) >= drainQuiet {
+			if !busy && readDone.Load() {
 				break
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+		// A device call can outlast the drain, so answer its URB and those queued behind it now.
+		stateMu.Lock()
+		for _, p := range pending {
+			p.answered = true
+			e := *p
+			reply(func() {
+				err := retSubmit(e.h, e.isoDesc, drainStatus(e.h), 0, nil)
+				if err == nil && e.unlinked {
+					err = writeRetUnlink(conn, e.unlink, 0)
+				}
+				wrote(err, 0) // the worker frees the charge once the call returns
+			})
+		}
+		stateMu.Unlock()
 		flushed := make(chan struct{})
 		reply(func() { close(flushed) })
 		select {
@@ -219,8 +244,35 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 		_ = conn.Close()
 	})
 
+	// Over the cap the session ends, but its URBs are answered as in any drain.
+	// Reads pause until replies free the backlog, so a guest that stops reading cannot grow it.
+	var backlogErr error
+	defer func() {
+		if backlogErr != nil {
+			err = backlogErr
+		}
+	}()
+	overflow := func() {
+		if sessionCtx.Err() == nil {
+			backlogErr = fmt.Errorf("urb backlog exceeds %d bytes", maxBacklog)
+			endSession()
+		}
+	}
+	throttle := func() {
+		for {
+			stateMu.Lock()
+			over := backlog > maxBacklog
+			stateMu.Unlock()
+			if !over {
+				return
+			}
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
 	defer wg.Wait()
 	defer func() {
+		readDone.Store(true)
 		endSession()
 		<-closed
 		stateMu.Lock()
@@ -242,8 +294,12 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 				job.entry.cancel()
 			}
 			stateMu.Lock()
-			job.entry.started = !job.entry.unlinked
+			retired := job.entry.unlinked // popped as the unlink answered it and freed its charge
+			job.entry.started = !retired
 			stateMu.Unlock()
+			if retired {
+				continue
+			}
 
 			status, actual, inData := doSubmit(job.ctx, dev, job.h, job.outData)
 
@@ -257,13 +313,10 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			}
 			reply(func() {
 				var err error
-				switch {
-				case !entry.unlinked:
-					err = retSubmit(job.h, job.isoDesc, status, actual, inData)
-				case entry.started:
+				if !entry.answered {
 					// RET_SUBMIT first, so the guest gives the URB back on that path.
 					err = retSubmit(job.h, job.isoDesc, status, actual, inData)
-					if err == nil {
+					if err == nil && entry.unlinked {
 						err = writeRetUnlink(conn, entry.unlink, 0)
 					}
 				}
@@ -286,7 +339,6 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			}
 			return fmt.Errorf("reading urb header: %w", err)
 		}
-		stamp()
 
 		switch h.Command {
 		case cmdSubmit:
@@ -299,20 +351,32 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 
 			stateMu.Lock()
 			_, dup := pending[h.Seqnum]
-			backlog += urbCost(h)
-			over := backlog > maxBacklog
+			cost := urbCost(h)
+			// The URB that would overflow is the first one the drain answers.
+			draining := sessionCtx.Err() != nil || backlog+cost > maxBacklog
+			if draining {
+				cost = urbCost(urbHeader{NumberOfPackets: h.NumberOfPackets}) // the payload is discarded
+			}
+			backlog += cost
 			stateMu.Unlock()
 			if dup {
+				wrote(nil, cost)
 				return fmt.Errorf("duplicate seqnum %d", h.Seqnum)
 			}
-			if over {
-				return fmt.Errorf("urb backlog exceeds %d bytes", maxBacklog)
+			if draining {
+				overflow()
 			}
 
 			var outData []byte
 			if h.Direction == dirOut && h.TransferBufferLength > 0 {
-				outData = make([]byte, h.TransferBufferLength)
-				if _, err := io.ReadFull(conn, outData); err != nil {
+				if draining {
+					_, err = io.CopyN(io.Discard, conn, int64(h.TransferBufferLength))
+				} else {
+					outData = make([]byte, h.TransferBufferLength)
+					_, err = io.ReadFull(conn, outData)
+				}
+				if err != nil {
+					wrote(nil, cost)
 					return fmt.Errorf("reading urb out data: %w", err)
 				}
 			}
@@ -320,30 +384,27 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			if h.NumberOfPackets > 0 {
 				isoDesc = make([]byte, int(h.NumberOfPackets)*16)
 				if _, err := io.ReadFull(conn, isoDesc); err != nil {
+					wrote(nil, cost)
 					return fmt.Errorf("reading iso descriptors: %w", err)
 				}
 			}
 
-			if sessionCtx.Err() != nil {
-				reply(func() { wrote(retSubmit(h, isoDesc, drainStatus(h), 0, nil), urbCost(h)) })
+			if draining || sessionCtx.Err() != nil {
+				reply(func() { wrote(retSubmit(h, isoDesc, drainStatus(h), 0, nil), cost) })
+				// Queued before the pause, so the close cannot overtake this reply.
+				throttle()
 				continue
 			}
 
 			urbCtx, cancel := context.WithCancel(sessionCtx)
 			entry := &inflight{cancel: cancel, h: h, isoDesc: isoDesc}
 
-			// Endpoint 0 is one bidirectional pipe.
-			key := h.Ep << 1
-			if h.Ep != 0 {
-				key |= h.Direction & 1
-			}
-
 			stateMu.Lock()
 			pending[h.Seqnum] = entry
-			q, ok := workers[key]
+			q, ok := workers[epKey(h)]
 			if !ok {
 				q = newQueue[*urbJob]()
-				workers[key] = q
+				workers[epKey(h)] = q
 				wg.Add(1)
 				go worker(q)
 			}
@@ -354,6 +415,10 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 		case cmdUnlink:
 			stateMu.Lock()
 			entry, found := pending[h.TransferFlags] // unlink_seqnum shares this offset
+			// The drain answered the URB, or a first unlink left that to the worker.
+			if found && (entry.unlinked || entry.answered) {
+				found = false
+			}
 			started := false
 			if found {
 				started = entry.started
@@ -368,14 +433,16 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 				cost := urbCost(urbHeader{})
 				backlog += cost
 				over = backlog > maxBacklog
-				var sub *inflight
 				if found {
-					sub = entry
+					// Retire the URB now: its seqnum, payload and charge must not wait for the worker.
+					delete(pending, entry.h.Seqnum)
+					workers[epKey(entry.h)].drop(func(j *urbJob) bool { return j.entry == entry })
+					cost += urbCost(entry.h)
 				}
 				reply(func() {
 					var err error
-					if sub != nil {
-						err = retSubmit(sub.h, sub.isoDesc, -errnoECONNRESET, 0, nil)
+					if found {
+						err = retSubmit(entry.h, entry.isoDesc, -errnoECONNRESET, 0, nil)
 					}
 					if err == nil {
 						err = writeRetUnlink(conn, h, 0)
@@ -385,7 +452,8 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			}
 			stateMu.Unlock()
 			if over {
-				return fmt.Errorf("urb backlog exceeds %d bytes", maxBacklog)
+				overflow()
+				throttle()
 			}
 
 		default:
@@ -435,19 +503,21 @@ func doSubmit(ctx context.Context, dev Device, h urbHeader, outData []byte) (sta
 		}
 	}
 
+	// actual_length counts what moved even when the URB fails.
+	actual = int32(n)
 	if err != nil {
 		if ctx.Err() != nil {
-			return -errnoECONNRESET, 0, nil
+			return -errnoECONNRESET, actual, buf
 		}
 		if errors.Is(err, ErrDeviceGone) {
 			logrus.WithError(err).Debugf("usbip: device gone on ep %d", h.Ep)
-			return -errnoENODEV, 0, nil
+			return -errnoENODEV, actual, buf
 		}
 		logrus.WithError(err).Debugf("usbip: transfer failed on ep %d", h.Ep)
 		if e, ok := errors.AsType[urbErrno](err); ok {
-			return -int32(e), 0, nil
+			return -int32(e), actual, buf
 		}
-		return -errnoEPIPE, 0, nil
+		return -errnoEPIPE, actual, buf
 	}
-	return 0, int32(n), buf
+	return 0, actual, buf
 }
