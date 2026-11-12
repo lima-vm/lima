@@ -69,6 +69,7 @@ func Start(ctx context.Context, name string) error {
 			return err
 		}
 
+		var exited <-chan *os.ProcessState
 		err = lockutil.WithDirLock(usernetDir, func() error {
 			self, err := os.Executable()
 			if err != nil {
@@ -110,6 +111,12 @@ func Start(ctx context.Context, name string) error {
 			if err := cmd.Start(); err != nil {
 				return fmt.Errorf("failed to run %v: %w (Hint: check %s/usernet.*.log)", cmd.Args, err, usernetDir)
 			}
+			ch := make(chan *os.ProcessState, 1)
+			go func() {
+				_ = cmd.Wait()
+				ch <- cmd.ProcessState
+			}()
+			exited = ch
 			return nil
 		})
 		if err != nil {
@@ -119,7 +126,13 @@ func Start(ctx context.Context, name string) error {
 			if _, err := os.Stat(fdSock); !errors.Is(err, os.ErrNotExist) {
 				break
 			}
-			time.Sleep(500 * time.Millisecond)
+			select {
+			case state := <-exited:
+				return fmt.Errorf("usernet daemon for network %q exited before it was ready (%s) (Hint: check %s/usernet.*.log)", name, state, usernetDir)
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(500 * time.Millisecond):
+			}
 		}
 	}
 	return nil
