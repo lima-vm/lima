@@ -3,10 +3,14 @@ title: Snapshots
 weight: 5
 ---
 
-| ⚡ Requirement | Lima >= v0.16.0, QEMU or krunkit |
-|----------------|---------------------------------|
+| ⚡ Requirement | Lima >= v0.16.0 (QEMU), Lima >= v2.3.0 (krunkit), Lima >= v2.4.0 (VZ) |
+|----------------|-----------------------------------------------------------------------|
 
 A snapshot captures the complete state of an instance's disk at a specific point in time. This allows you to quickly restore the virtual machine to a known, working state if a risky operation (such as an OS upgrade, configuration test, etc.) fails.
+
+With VZ and krunkit, a snapshot is an APFS clone of the instance's boot disk, so the instance directory has to be on an APFS volume.
+With VZ, the snapshot also includes the EFI variables, and the auxiliary storage of macOS guests.
+Additional disks are not included.
 
 {{% alert title="Warning" color="danger" %}}
 The **limactl snapshot** feature is currently **experimental** and may change in future releases. The instance **must be stopped** before creating, applying, or deleting a snapshot.

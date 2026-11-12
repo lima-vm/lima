@@ -656,20 +656,24 @@ func (l *LimaVzDriver) DisplayConnection(_ context.Context) (string, error) {
 	return "", nil
 }
 
-func (l *LimaVzDriver) CreateSnapshot(_ context.Context, _ string) error {
-	return errUnimplemented
+// snapshotExtraFiles hold the boot state of the guest: the EFI variables, and the
+// auxiliary storage of macOS guests. A snapshot keeps them together with the disk.
+var snapshotExtraFiles = []string{filenames.VzEfi, filenames.VzAux}
+
+func (l *LimaVzDriver) CreateSnapshot(_ context.Context, tag string) error {
+	return driverutil.CreateDiskSnapshot(l.Instance, tag, snapshotExtraFiles...)
 }
 
-func (l *LimaVzDriver) ApplySnapshot(_ context.Context, _ string) error {
-	return errUnimplemented
+func (l *LimaVzDriver) ApplySnapshot(_ context.Context, id string) error {
+	return driverutil.ApplyDiskSnapshot(l.Instance, id, snapshotExtraFiles...)
 }
 
-func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, _ string) error {
-	return errUnimplemented
+func (l *LimaVzDriver) DeleteSnapshot(_ context.Context, id string) error {
+	return driverutil.DeleteDiskSnapshot(l.Instance, id)
 }
 
 func (l *LimaVzDriver) ListSnapshots(_ context.Context) ([]driver.Snapshot, error) {
-	return nil, errUnimplemented
+	return driverutil.ListDiskSnapshots(l.Instance)
 }
 
 func (l *LimaVzDriver) ForwardGuestAgent(_ context.Context) bool {
