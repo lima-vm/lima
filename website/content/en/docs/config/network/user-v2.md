@@ -108,3 +108,20 @@ expects the same HTTP API on the `-e` socket. `--subnet` is the network address
 Lima runs the daemon with your privileges, so like `paths.socketVMNet` it must
 be a regular executable file that, together with every parent directory, is
 owned by root and not writable by anyone else.
+
+Because such a daemon decides all of the guest's network access, an instance
+using it is rejected if it would give the guest another way out:
+
+- the network must be the instance's only entry in `networks`;
+- `portForwards` must not use `reverse: true`;
+- no mount may contain, or be inside, `LIMA_HOME`, where the guest could read the
+  daemon's state or rewrite `networks.yaml`. The default `~` mount is therefore
+  refused; mount specific directories instead:
+
+```yaml
+networks:
+  - lima: vpn
+mounts:
+  - location: "~/src"
+    writable: true
+```

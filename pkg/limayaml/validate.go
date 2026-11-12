@@ -24,6 +24,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/blockdevice"
 	"github.com/lima-vm/lima/v2/pkg/identifiers"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/localpathutil"
 	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
@@ -460,6 +461,9 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 	if err != nil {
 		errs = errors.Join(errs, err)
 	}
+	if err := validateExternalUsernetDaemon(y); err != nil {
+		errs = errors.Join(errs, err)
+	}
 
 	if warn {
 		warnExperimental(y)
@@ -659,6 +663,65 @@ func validateNetwork(y *limatype.LimaYAML) error {
 	}
 
 	return errs
+}
+
+func validateExternalUsernetDaemon(y *limatype.LimaYAML) error {
+	if !slices.ContainsFunc(y.Networks, func(nw limatype.Network) bool { return nw.Lima != "" }) {
+		return nil
+	}
+	nwCfg, err := networks.LoadConfig()
+	if err != nil {
+		return err
+	}
+	limaDir, err := dirnames.LimaDir()
+	if err != nil {
+		return err
+	}
+	return checkExternalUsernetDaemon(y, nwCfg, limaDir)
+}
+
+// checkExternalUsernetDaemon rejects settings that give the guest a way around an
+// external usernet daemon. Such a daemon decides all of the guest's network
+// access, so any other path out of the guest defeats it: another interface, a
+// host socket forwarded into the guest, or a mount exposing LIMA_HOME, where the
+// guest could read the daemon's state or rewrite networks.yaml to replace it.
+func checkExternalUsernetDaemon(y *limatype.LimaYAML, nwCfg networks.Config, limaDir string) error {
+	i := slices.IndexFunc(y.Networks, func(nw limatype.Network) bool {
+		return nw.Lima != "" && nwCfg.Networks[nw.Lima].Daemon != ""
+	})
+	if i < 0 {
+		return nil
+	}
+	name := y.Networks[i].Lima
+	var errs error
+	if len(y.Networks) > 1 {
+		errs = errors.Join(errs, fmt.Errorf("field `networks[%d].lima` refers to network %q, which is served by an external daemon, so it must be the only network", i, name))
+	}
+	for j, rule := range y.PortForwards {
+		if rule.Reverse {
+			errs = errors.Join(errs, fmt.Errorf("field `portForwards[%d].reverse` must be false: network %q is served by an external daemon, and a reverse forward gives the guest a host socket", j, name))
+		}
+	}
+	for j, m := range y.Mounts {
+		loc, err := localpathutil.Expand(m.Location)
+		if err != nil {
+			continue // reported by Validate
+		}
+		if resolved, err := filepath.EvalSymlinks(loc); err == nil {
+			loc = resolved
+		}
+		if isWithin(loc, limaDir) || isWithin(limaDir, loc) {
+			errs = errors.Join(errs, fmt.Errorf("field `mounts[%d].location` %q exposes LIMA_HOME (%q) to the guest, which must not see it while network %q is served by an external daemon; mount specific directories instead of %q",
+				j, m.Location, limaDir, name, m.Location))
+		}
+	}
+	return errs
+}
+
+// isWithin reports whether p is dir or inside it.
+func isWithin(dir, p string) bool {
+	rel, err := filepath.Rel(dir, p)
+	return err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
 }
 
 // validateParamIsUsed checks if the keys in the `param` field are used in any script, probe, copyToHost, or portForward.
