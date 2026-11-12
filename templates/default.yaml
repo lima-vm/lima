@@ -560,9 +560,11 @@ networks:
 # # default: guestPortRange: [1, 65535]
 # # default: hostPortRange: [1, 65535]
 #
-# - guestIP: 0.0.0.0 # otherwise defaults to 127.0.0.1
-#   proto: any       # tcp and udp
-#   ignore: true     # don't forward these ports (guestPortRange, in this case 1-65535)
+# # Disable port forwarding (except for SSH)
+# - guestIP: 0.0.0.0          # otherwise defaults to 127.0.0.1
+#   guestIPMustBeZero: false  # otherwise only ports bound to 0.0.0.0 in the guest are matched
+#   proto: any                # tcp and udp
+#   ignore: true              # don't forward these ports (guestPortRange, in this case 1-65535)
 #
 # - guestPort: 7443
 #   guestIP: "0.0.0.0"        # Will match *any* interface
