@@ -122,6 +122,22 @@ func (c *Config) Validate() error {
 	return nil
 }
 
+// validateExecutablePath checks that path is a regular executable file that,
+// together with every parent directory, only root can modify.
+func validateExecutablePath(path string) error {
+	if err := validatePath(path, false); err != nil {
+		return err
+	}
+	fi, err := os.Stat(path)
+	if err != nil {
+		return err
+	}
+	if !fi.Mode().IsRegular() || fi.Mode()&0o111 == 0 {
+		return fmt.Errorf("file %q is not an executable regular file", path)
+	}
+	return nil
+}
+
 // findBaseDirectory removes non-existing directories from the end of the path.
 func findBaseDirectory(path string) string {
 	if _, err := os.Lstat(path); errors.Is(err, os.ErrNotExist) {

@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
+	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -69,20 +70,32 @@ func Start(ctx context.Context, name string) error {
 			return err
 		}
 
+		nwCfg, err := networks.LoadConfig()
+		if err != nil {
+			return err
+		}
+
 		var exited <-chan *os.ProcessState
 		err = lockutil.WithDirLock(usernetDir, func() error {
-			self, err := os.Executable()
-			if err != nil {
-				return err
-			}
-			leasesString := mapToCliString(leases)
 			args := []string{
-				"usernet", "-p", pidFile,
+				"-p", pidFile,
 				"-e", endpointSock,
 				"--listen-qemu", qemuSock,
 				"--listen", fdSock,
 				"--subnet", subnet.String(),
 			}
+			// An external daemon takes the same flags as `limactl usernet`.
+			self, err := nwCfg.UsernetDaemon(name)
+			if err != nil {
+				return err
+			}
+			if self == "" {
+				if self, err = os.Executable(); err != nil {
+					return err
+				}
+				args = append([]string{"usernet"}, args...)
+			}
+			leasesString := mapToCliString(leases)
 			if leasesString != "" {
 				args = append(args, "--leases", leasesString)
 			}
