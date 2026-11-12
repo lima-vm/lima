@@ -5,3 +5,7 @@ weight: 10
 
 Starting with Lima v2.0, Lima provides Model Context Protocol (MCP) tools
 for reading, writing, and executing local files using a VM sandbox.
+
+## See also
+
+- [Agent Skills]({{< ref "/docs/config/ai/skills" >}})
