@@ -43,109 +43,123 @@ func Start(ctx context.Context, name string) error {
 	if err != nil {
 		return err
 	}
+	nwCfg, err := networks.LoadConfig()
+	if err != nil {
+		return err
+	}
+	daemon, err := nwCfg.UsernetDaemon(name)
+	if err != nil {
+		return err
+	}
+	// daemonFile records the daemon that was started, so that a running daemon
+	// is not reused once the network is configured with another one.
+	daemonFile := filepath.Join(usernetDir, "usernet_daemon")
 	pid, _ := store.ReadPIDFile(pidFile)
-	if pid == 0 {
-		qemuSock, err := Sock(name, QEMUSock)
-		if err != nil {
+	if pid != 0 {
+		running, err := os.ReadFile(daemonFile)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
 			return err
 		}
-
-		fdSock, err := Sock(name, FDSock)
-		if err != nil {
-			return err
+		if string(running) != daemon {
+			return fmt.Errorf("usernet daemon for network %q (pid %d) is not the one the network is configured with; stop the instances using the network to restart it", name, pid)
 		}
+		return nil
+	}
+	qemuSock, err := Sock(name, QEMUSock)
+	if err != nil {
+		return err
+	}
 
-		endpointSock, err := Sock(name, EndpointSock)
-		if err != nil {
-			return err
+	fdSock, err := Sock(name, FDSock)
+	if err != nil {
+		return err
+	}
+
+	endpointSock, err := Sock(name, EndpointSock)
+	if err != nil {
+		return err
+	}
+
+	subnet, err := SubnetCIDR(name)
+	if err != nil {
+		return err
+	}
+
+	leases, err := readLeases(name)
+	if err != nil {
+		return err
+	}
+
+	var exited <-chan *os.ProcessState
+	err = lockutil.WithDirLock(usernetDir, func() error {
+		args := []string{
+			"-p", pidFile,
+			"-e", endpointSock,
+			"--listen-qemu", qemuSock,
+			"--listen", fdSock,
+			"--subnet", subnet.String(),
 		}
-
-		subnet, err := SubnetCIDR(name)
-		if err != nil {
-			return err
-		}
-
-		leases, err := readLeases(name)
-		if err != nil {
-			return err
-		}
-
-		nwCfg, err := networks.LoadConfig()
-		if err != nil {
-			return err
-		}
-
-		var exited <-chan *os.ProcessState
-		err = lockutil.WithDirLock(usernetDir, func() error {
-			args := []string{
-				"-p", pidFile,
-				"-e", endpointSock,
-				"--listen-qemu", qemuSock,
-				"--listen", fdSock,
-				"--subnet", subnet.String(),
-			}
-			// An external daemon takes the same flags as `limactl usernet`.
-			self, err := nwCfg.UsernetDaemon(name)
-			if err != nil {
+		// An external daemon takes the same flags as `limactl usernet`.
+		self := daemon
+		if self == "" {
+			if self, err = os.Executable(); err != nil {
 				return err
 			}
-			if self == "" {
-				if self, err = os.Executable(); err != nil {
-					return err
-				}
-				args = append([]string{"usernet"}, args...)
-			}
-			leasesString := mapToCliString(leases)
-			if leasesString != "" {
-				args = append(args, "--leases", leasesString)
-			}
-			cmd := exec.CommandContext(ctx, self, args...)
-			cmd.SysProcAttr = executil.BackgroundSysProcAttr
+			args = append([]string{"usernet"}, args...)
+		}
+		leasesString := mapToCliString(leases)
+		if leasesString != "" {
+			args = append(args, "--leases", leasesString)
+		}
+		cmd := exec.CommandContext(ctx, self, args...)
+		cmd.SysProcAttr = executil.BackgroundSysProcAttr
 
-			stdoutPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stdout"))
-			stderrPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stderr"))
-			if err := os.RemoveAll(stdoutPath); err != nil {
-				return err
-			}
-			if err := os.RemoveAll(stderrPath); err != nil {
-				return err
-			}
+		stdoutPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stdout"))
+		stderrPath := filepath.Join(usernetDir, fmt.Sprintf("%s.%s.%s.log", "usernet", name, "stderr"))
+		if err := os.RemoveAll(stdoutPath); err != nil {
+			return err
+		}
+		if err := os.RemoveAll(stderrPath); err != nil {
+			return err
+		}
 
-			cmd.Stdout, err = os.Create(stdoutPath)
-			if err != nil {
-				return err
-			}
-			cmd.Stderr, err = os.Create(stderrPath)
-			if err != nil {
-				return err
-			}
-
-			logrus.Debugf("Starting usernet network: %v", cmd.Args)
-			if err := cmd.Start(); err != nil {
-				return fmt.Errorf("failed to run %v: %w (Hint: check %s/usernet.*.log)", cmd.Args, err, usernetDir)
-			}
-			ch := make(chan *os.ProcessState, 1)
-			go func() {
-				_ = cmd.Wait()
-				ch <- cmd.ProcessState
-			}()
-			exited = ch
-			return nil
-		})
+		cmd.Stdout, err = os.Create(stdoutPath)
 		if err != nil {
 			return err
 		}
-		for {
-			if _, err := os.Stat(fdSock); !errors.Is(err, os.ErrNotExist) {
-				break
-			}
-			select {
-			case state := <-exited:
-				return fmt.Errorf("usernet daemon for network %q exited before it was ready (%s) (Hint: check %s/usernet.*.log)", name, state, usernetDir)
-			case <-ctx.Done():
-				return ctx.Err()
-			case <-time.After(500 * time.Millisecond):
-			}
+		cmd.Stderr, err = os.Create(stderrPath)
+		if err != nil {
+			return err
+		}
+
+		if err := os.WriteFile(daemonFile, []byte(daemon), 0o644); err != nil {
+			return err
+		}
+		logrus.Debugf("Starting usernet network: %v", cmd.Args)
+		if err := cmd.Start(); err != nil {
+			return fmt.Errorf("failed to run %v: %w (Hint: check %s/usernet.*.log)", cmd.Args, err, usernetDir)
+		}
+		ch := make(chan *os.ProcessState, 1)
+		go func() {
+			_ = cmd.Wait()
+			ch <- cmd.ProcessState
+		}()
+		exited = ch
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	for {
+		if _, err := os.Stat(fdSock); !errors.Is(err, os.ErrNotExist) {
+			break
+		}
+		select {
+		case state := <-exited:
+			return fmt.Errorf("usernet daemon for network %q exited before it was ready (%s) (Hint: check %s/usernet.*.log)", name, state, usernetDir)
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(500 * time.Millisecond):
 		}
 	}
 	return nil

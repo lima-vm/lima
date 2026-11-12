@@ -109,6 +109,10 @@ Lima runs the daemon with your privileges, so like `paths.socketVMNet` it must
 be a regular executable file that, together with every parent directory, is
 owned by root and not writable by anyone else.
 
+A network's daemon keeps running while instances use it. If `daemon` is
+changed in the meantime, instances on the network fail to start until the
+running daemon has been stopped, by stopping the instances that use it.
+
 Because such a daemon decides all of the guest's network access, an instance
 using it is rejected if it would give the guest another way out:
 
