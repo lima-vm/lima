@@ -136,6 +136,43 @@ The network daemon is started automatically when the first instance referencing 
 and will stop automatically once the last instance has stopped. Daemon logs will be stored in the
 `$LIMA_HOME/_networks` directory.
 
+### Modes
+
+The `mode` of a network in `networks.yaml` selects the vmnet.framework mode that
+`socket_vmnet` is started with (`--vmnet-mode`). One `socket_vmnet` daemon runs
+per network.
+
+#### shared (192.168.105.0/24)
+
+Guests reach the host, the other guests on the same network, and the outside world through NAT provided by
+macOS. The host is the gateway (`192.168.105.1`), and guests get an address up to
+`dhcpEnd` from macOS's `bootpd`. The guests are reachable from the host, but not
+from other hosts on the LAN.
+
+#### host (192.168.106.0/24)
+
+Guests reach the host and the other guests on the same network, but the network is not routed to the
+outside world.
+
+Note that an instance also has the default user-mode network, which still
+provides outbound connectivity. The `host` network only adds an address that is
+reachable from the host and from the other guests on the same network.
+
+#### bridged
+
+Attaches the instance to the physical host interface named by `interface`
+(default: `en0`), so that it gets an address from the outside network's DHCP
+server and is reachable from the LAN. For that reason a `bridged` network has no
+`gateway`, `dhcpEnd` or `netmask`.
+
+Unlike on Linux, `interface` names a physical interface rather than an existing
+bridge; no bridge has to be created beforehand. Set it to the interface that is
+connected to the LAN if that is not `en0` (see `networksetup -listallhardwareports`).
+
+> **Warning**
+>
+> A bridged instance is exposed to every host on the LAN.
+
 Since the commands to start and stop the `socket_vmnet` daemon requires root, the user either must
 have password-less `sudo` enabled, or add the required commands to a `sudoers` file. This can
 be done via:
