@@ -13,7 +13,7 @@ import (
 	"regexp"
 	"strings"
 
-	vzapi "github.com/Code-Hex/vz/v3"
+	vzapi "github.com/Code-Hex/vz/v4"
 	"golang.org/x/sys/unix"
 
 	"github.com/lima-vm/lima/v2/pkg/blockdevice"
