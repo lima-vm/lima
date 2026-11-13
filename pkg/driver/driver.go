@@ -30,6 +30,15 @@ type Screenshotter interface {
 	CaptureScreenshot(format string) ([]byte, error)
 }
 
+// GuestSSHHostKeysReader is an optional interface for drivers that can read the SSH host public keys
+// of the guest through a channel other than SSH, so that the host agent can tell the guest's SSH server
+// from another SSH server listening on the same address and port.
+type GuestSSHHostKeysReader interface {
+	// GuestSSHHostKeys returns the SSH host public keys of the guest in the authorized_keys format.
+	// The result is empty, without an error, when the guest has not generated the keys yet.
+	GuestSSHHostKeys(ctx context.Context) ([]byte, error)
+}
+
 // Lifecycle defines basic lifecycle operations.
 type Lifecycle interface {
 	// Validate returns error if the current driver isn't support for given config
