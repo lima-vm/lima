@@ -3,6 +3,12 @@ title: Breaking changes
 weight: 20
 ---
 
+## v2.4.0
+- `net.ipv4.ip_unprivileged_port_start` in the guest was changed from `0` to `23`, so only root can bind ports 1-22,
+  including the SSH port. Rootless containers can no longer publish these ports; to get the old behavior back, run
+  `sysctl -w net.ipv4.ip_unprivileged_port_start=0` in a `system` provisioning script.
+  Instances created with an older version of Lima keep `0`.
+
 ## v2.3.0
 - The experimental `_LIMA_WINDOWS_EXTRA_PATH` environment variable was removed. It prepended directories to
   `limactl.exe`'s own PATH on Windows hosts, leaving the calling shell's PATH untouched. Put them on `PATH`
