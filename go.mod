@@ -47,7 +47,7 @@ require (
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
 	github.com/mdlayher/vsock v1.4.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
-	github.com/mikefarah/yq/v4 v4.54.1 // gomodjail:unconfined
+	github.com/mikefarah/yq/v4 v4.54.2 // gomodjail:unconfined
 	github.com/modelcontextprotocol/go-sdk v1.8.0 // gomodjail:unconfined
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
@@ -70,7 +70,7 @@ require (
 
 //gosocialcheck:trusted
 require (
-	golang.org/x/mod v0.41.0 // indirect
+	golang.org/x/mod v0.42.0 // indirect
 	// gomodjail:unconfined
 	golang.org/x/oauth2 v0.36.0 // indirect
 	// gomodjail:unconfined
@@ -94,7 +94,7 @@ require (
 	github.com/containerd/log v0.1.0 // indirect
 	// gomodjail:unconfined
 	github.com/digitalocean/go-libvirt v0.0.0-20220804181439-8648fbde413e // indirect
-	github.com/dimchansky/utfbom v1.1.1 // indirect
+	github.com/dimchansky/utfbom v1.2.0 // indirect
 	// gomodjail:unconfined
 	github.com/djherbis/times v1.6.0 // indirect
 	github.com/elliotchance/orderedmap v1.8.0 // indirect
@@ -105,7 +105,7 @@ require (
 	github.com/gdamore/encoding v1.0.1 // indirect
 	// gomodjail:unconfined
 	github.com/go-ini/ini v1.67.0 // indirect
-	github.com/goccy/go-json v0.10.6 // indirect
+	github.com/goccy/go-json v0.12.0 // indirect
 	github.com/google/btree v1.1.3 // indirect
 	github.com/google/gopacket v1.1.19 // indirect
 	github.com/google/jsonschema-go v0.4.3 // indirect
@@ -144,7 +144,7 @@ require (
 	github.com/yuin/gopher-lua v1.1.2 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
+	go.yaml.in/yaml/v4 v4.0.0-rc.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
 	// gomodjail:unconfined
