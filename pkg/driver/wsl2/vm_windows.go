@@ -293,6 +293,8 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 }
 
 // GetSSHAddress runs a hostname command to get the IP from inside of a wsl2 VM.
+// In WSL2 mirrored mode, this should return 127.0.0.1 per Microsoft docs
+// https://learn.microsoft.com/en-us/windows/wsl/networking
 //
 // Expected output (whitespace preserved, [] for optional):
 // PS > wsl -d <distroName> bash -c hostname -I | cut -d' ' -f1
@@ -301,9 +303,31 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 // hostname: unrecognized option: I
 func getSSHAddress(ctx context.Context, instName string) (string, error) {
 	distroName := "lima-" + instName
-	// Ubuntu
-	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+
+	// Mirrored mode
+	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "command", "-v", "wslinfo")
 	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("failed to check for existence of wslinfo for instance %s: %w", distroName, err)
+	}
+
+	// Windows 10 doesn't have wslinfo command.
+	// Windows 10 also doesn't support mirrored networking, so assume we are on NAT networking then.
+	if strings.TrimSpace(string(out)) != "" {
+		cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "wslinfo", "--networking-mode")
+		out, err = cmd.CombinedOutput()
+		if err != nil {
+			return "", fmt.Errorf("failed to check networking mode for instance %s: %w", distroName, err)
+		}
+	}
+
+	if strings.TrimSpace(string(out)) == "mirrored" {
+		return "127.0.0.1", nil
+	}
+
+	// Ubuntu
+	cmd = exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "bash", "-c", `hostname -I | cut -d ' ' -f1`)
+	out, err = cmd.CombinedOutput()
 	if err == nil {
 		if addr := routableGuestIP(out); addr != "" {
 			return addr, nil
