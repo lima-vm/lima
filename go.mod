@@ -8,7 +8,7 @@ go 1.26.8
 require (
 	github.com/lima-vm/go-qcow2reader v0.8.0 // gomodjail:unconfined
 	github.com/lima-vm/sshocker v0.3.11 // gomodjail:unconfined
-	golang.org/x/crypto v0.58.0 // gomodjail:unconfined
+	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2 // gomodjail:unconfined
 	golang.org/x/image v0.47.0
 	golang.org/x/net v0.62.0 // gomodjail:unconfined
 	golang.org/x/sync v0.25.0
@@ -112,7 +112,7 @@ require (
 	github.com/hashicorp/hcl/v2 v2.25.0 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	// gomodjail:unconfined
-	github.com/insomniacslk/dhcp v0.0.0-20240710054256-ddd8a41251c9 // indirect
+	github.com/insomniacslk/dhcp v0.0.0-20260719225207-c76316d4aa82 // indirect
 	github.com/jinzhu/copier v0.4.0 // indirect
 	github.com/kballard/go-shellquote v0.0.0-20180428030007-95032a82bc51 // indirect
 	// gomodjail:unconfined
@@ -144,6 +144,7 @@ require (
 	github.com/yuin/gopher-lua v1.1.2 // indirect
 	github.com/zclconf/go-cty v1.19.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
+	// gomodjail:unconfined
 	go.yaml.in/yaml/v4 v4.0.0-rc.7 // indirect
 	google.golang.org/genproto/googleapis/rpc v0.0.0-20260928230214-8a89bd6388cc // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
