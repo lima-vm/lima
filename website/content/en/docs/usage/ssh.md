@@ -54,3 +54,8 @@ If the host key of the guest was changed intentionally (e.g., by reinstalling th
 remove `~/.lima/<instance>/ssh.known_hosts` and restart the instance to pin the new key.
 
 For an instance created with Lima prior to v2.3, the key is pinned on the first boot with Lima v2.3 or later.
+
+With the internal WSL2 driver, Lima connects to the SSH server of the guest on `127.0.0.1:22`.
+Until that server starts, another SSH server on the host, such as the Windows OpenSSH Server, can answer there instead.
+So Lima pins only a key that the guest also has in `/etc/ssh/ssh_host_*_key.pub`; before it has pinned one, it keeps waiting while it sees any other key.
+If those files lack the key that the SSH server of the guest presents, Lima cannot pin it, so an instance without a pinned key fails to start.

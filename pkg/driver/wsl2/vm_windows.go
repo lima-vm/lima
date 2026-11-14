@@ -292,6 +292,18 @@ func getWslStatus(ctx context.Context, instName string) (string, error) {
 	return instState, nil
 }
 
+// readGuestSSHHostKeys returns the SSH host public keys that the distro has in /etc/ssh/ssh_host_*_key.pub, in the authorized_keys format.
+func readGuestSSHHostKeys(ctx context.Context, distroName string) ([]byte, error) {
+	// Until the guest has generated its keys, the glob does not match a file, and the command succeeds with empty output.
+	// grep prints each line with a newline, so that a file without a final newline does not merge with the key in the next file.
+	cmd := exec.CommandContext(ctx, "wsl.exe", "-d", distroName, "sh", "-c", `grep -h '' /etc/ssh/ssh_host_*_key.pub 2>/dev/null; true`)
+	out, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to run `wsl.exe -d %s`: %w", distroName, err)
+	}
+	return out, nil
+}
+
 // GetSSHAddress runs a hostname command to get the IP from inside of a wsl2 VM.
 //
 // Expected output (whitespace preserved, [] for optional):

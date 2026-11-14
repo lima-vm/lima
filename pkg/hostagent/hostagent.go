@@ -80,6 +80,7 @@ type HostAgent struct {
 
 	sshHostKeyPinned         bool // set by pinSSHHostKey
 	sshHostKeyMismatchWarned bool // set by pinSSHHostKey
+	sshHostKeyNotGuestLogged bool // set by pinSSHHostKey
 
 	clientMu sync.RWMutex
 	client   *guestagentclient.GuestAgentClient
@@ -570,13 +571,17 @@ func (a *HostAgent) startRoutinesAndWait(ctx context.Context, errCh <-chan error
 	return stopErr
 }
 
-func (a *HostAgent) Screenshot(ctx context.Context, format string) ([]byte, error) {
-	// ConfiguredDriver wraps the concrete driver; unwrap to reach optional interfaces.
-	inner := a.driver
+// concreteDriver returns the driver that driver.ConfiguredDriver wraps, so that type assertions reach
+// the optional driver interfaces.
+func (a *HostAgent) concreteDriver() driver.Driver {
 	if cd, ok := a.driver.(*driver.ConfiguredDriver); ok {
-		inner = cd.Driver
+		return cd.Driver
 	}
-	s, ok := inner.(driver.Screenshotter)
+	return a.driver
+}
+
+func (a *HostAgent) Screenshot(ctx context.Context, format string) ([]byte, error) {
+	s, ok := a.concreteDriver().(driver.Screenshotter)
 	if !ok {
 		return nil, fmt.Errorf("driver %q: %w", a.driver.Info(ctx).Name, driver.ErrDriverNotScreenshotter)
 	}
