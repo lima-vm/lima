@@ -21,6 +21,7 @@
 package lockutil
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"syscall"
@@ -67,6 +68,10 @@ func WithDirLock(dir string, fn func() error) error {
 			logrus.WithError(err).Errorf("failed to unlock %#q", dir)
 		}
 	}()
+	// The lock file outlives dir, so dir may have been removed while waiting.
+	if _, err := os.Stat(dir); errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %#q", ErrDirRemoved, dir)
+	}
 	return fn()
 }
 
