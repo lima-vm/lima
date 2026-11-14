@@ -1407,6 +1407,8 @@ func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 		candidates = append(candidates, "/usr/share/AAVMF/AAVMF_CODE.fd")
 		// Debian package "qemu-efi-aarch64" (unpadded, backwards compatibility)
 		candidates = append(candidates, "/usr/share/qemu-efi-aarch64/QEMU_EFI.fd")
+		// openSUSE package "qemu-uefi-aarch64"
+		candidates = append(candidates, "/usr/share/qemu/aavmf-aarch64-code.bin")
 	case limatype.ARMV7L:
 		// Archlinux package "edk2-arm"
 		// @see: https://archlinux.org/packages/extra/any/edk2-arm/files
@@ -1433,7 +1435,7 @@ func getFirmware(qemuExe string, arch limatype.Arch) (string, error) {
 		return "", fmt.Errorf("could not find firmware for %#q (hint: try setting `firmware.legacyBIOS` to `true`)", arch)
 	}
 	qemuArch := strings.TrimPrefix(filepath.Base(qemuExe), "qemu-system-")
-	return "", fmt.Errorf("could not find firmware for %#q (hint: try copying the `edk-%s-code.fd` firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
+	return "", fmt.Errorf("could not find firmware for %#q (hint: try copying the `edk2-%s-code.fd` firmware to $HOME/.local/share/qemu/)", arch, qemuArch)
 }
 
 var hasSMEDarwin = sync.OnceValue(func() bool {
