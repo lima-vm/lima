@@ -77,3 +77,55 @@ func TestPlistTemplatesOmitOptionalValues(t *testing.T) {
 		})
 	}
 }
+
+// TestPlistTemplatesSetExitTimeOut checks that both templates set ExitTimeOut. Without it
+// launchd SIGKILLs the job 5 seconds after SIGTERM, which cuts a vz guest off mid-shutdown.
+// TestPlistExitTimeOutExceedsGracefulStopTimeout in pkg/driver/vz checks the value against
+// the driver's stop timeout.
+func TestPlistTemplatesSetExitTimeOut(t *testing.T) {
+	vars := map[string]string{
+		"Instance": "default",
+		"UserName": "user",
+		"LimaHome": "/Users/user/.lima",
+		"Binary":   "/usr/local/bin/limactl",
+		"WorkDir":  "/Users/user/.lima/default",
+	}
+	for _, tt := range []struct {
+		name string
+		tmpl string
+	}{
+		{"LaunchAgent", Template},
+		{"LaunchDaemon", DaemonTemplate},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			out, err := textutil.ExecuteTemplate(tt.tmpl, vars)
+			assert.NilError(t, err)
+			dec := xml.NewDecoder(bytes.NewReader(out))
+			var key string
+			found := false
+			for {
+				tok, err := dec.Token()
+				if errors.Is(err, io.EOF) {
+					break
+				}
+				assert.NilError(t, err)
+				se, ok := tok.(xml.StartElement)
+				if !ok {
+					continue
+				}
+				switch se.Name.Local {
+				case "key":
+					assert.NilError(t, dec.DecodeElement(&key, &se))
+				case "integer":
+					var v int
+					assert.NilError(t, dec.DecodeElement(&v, &se))
+					if key == "ExitTimeOut" {
+						found = true
+						assert.Assert(t, v > 0, "ExitTimeOut must be positive, got %d", v)
+					}
+				}
+			}
+			assert.Assert(t, found, "plist has no ExitTimeOut:\n%s", out)
+		})
+	}
+}

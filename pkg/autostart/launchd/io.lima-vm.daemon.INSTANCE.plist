@@ -37,6 +37,8 @@
 	<string>launchd.stdout.log</string>
 	<key>WorkingDirectory</key>
 	<string>{{ .WorkDir | xml }}</string>
+	<key>ExitTimeOut</key>
+	<integer>60</integer>
 	<key>ProcessType</key>
 	<string>Background</string>
 </dict>
