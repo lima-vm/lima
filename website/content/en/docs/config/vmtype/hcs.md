@@ -38,7 +38,7 @@ dns:
 - Only plain mode is supported (no file mount, no dynamic port-forwarding).
 - The user must be a member of the Hyper-V Administrators group; see [Setup for HCS driver](#setup-for-hcs-driver)
 - `limactl` should be run from a shell opened with Administrator privileges.
-- Currently, only one instance can run using hcs at a time, beucause the HCN network subnet is fixed and cannot be shared by multiple instances.
+- Multiple HCS instances can run concurrently. They share one HCN network, with a separate endpoint for each instance. The network uses the fixed `192.168.10.0/24` subnet; startup can fail if another HCN network already uses that subnet.
 - A DNS server has to be specified explicitly.
 
 

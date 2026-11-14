@@ -193,7 +193,7 @@ func (l *LimaHcsDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 			return inst.Status
 		}
 		inst.Status = limatype.StatusBroken
-		inst.Errors = append(inst.Errors, fmt.Errorf("failed to inspect HCS sompute system: %w", err))
+		inst.Errors = append(inst.Errors, fmt.Errorf("failed to inspect HCS compute system: %w", err))
 		return inst.Status
 	}
 	if state == "Running" {
@@ -220,32 +220,43 @@ func (l *LimaHcsDriver) InspectStatus(ctx context.Context, inst *limatype.Instan
 }
 
 func (l *LimaHcsDriver) Delete(_ context.Context) error {
-	if endpoint, err := hcn.GetEndpointByName(endpointName(l.Instance.Name)); err == nil {
-		if err := endpoint.Delete(); err != nil {
-			return fmt.Errorf("failed to delete the HCN endpoint: %w", err)
-		}
-	}
-	if network, err := hcn.GetNetworkByName(networkName(l.Instance.Name)); err == nil {
-		if err := network.Delete(); err != nil {
-			return fmt.Errorf("failed to delete the HCN network: %w", err)
-		}
-	}
-	return nil
+	return l.networkCleanup()
 }
 
-func (l *LimaHcsDriver) Start(ctx context.Context) (chan error, error) {
+func (l *LimaHcsDriver) Start(ctx context.Context) (_ chan error, retErr error) {
 	inst := l.Instance
 	diskPath := filepath.Join(inst.Dir, filenames.Disk) + ".vhdx"
 	isoPath := filepath.Join(inst.Dir, filenames.CIDataISO)
 
-	network, err := ensureNetwork(networkName(inst.Name))
-	if err != nil {
-		return nil, err
+	var endpoint *hcn.HostComputeEndpoint
+	var err error
+
+	if err = withHCNNetworkLock(func() error {
+		network, err := ensureNetwork(networkName())
+		if err != nil {
+			return err
+		}
+		endpoint, err = ensureEndpoint(network, endpointName(inst.Name), inst.Dir)
+		if err != nil {
+			return err
+		}
+		return nil
+	}); err != nil {
+		return nil, fmt.Errorf("network setup failed for hcn: %w", err)
 	}
-	endpoint, err := ensureEndpoint(network, endpointName(inst.Name), inst.Dir)
-	if err != nil {
-		return nil, err
-	}
+	defer func() {
+		if retErr == nil {
+			return
+		}
+		if l.system != 0 {
+			retErr = errors.Join(retErr, l.Stop(ctx))
+			return
+		}
+		if l.serialListener != nil {
+			_ = l.serialListener.Close()
+		}
+		retErr = errors.Join(retErr, l.networkCleanup())
+	}()
 
 	pipeName := `\\.\pipe\lima-` + inst.Name + `-com1`
 	ln, err := winio.ListenPipe(pipeName, nil)
@@ -327,19 +338,7 @@ func (l *LimaHcsDriver) Stop(ctx context.Context) error {
 		_ = l.serialListener.Close()
 	}
 
-	if endpoint, err := hcn.GetEndpointByName(endpointName(l.Instance.Name)); err == nil {
-		if err = endpoint.Delete(); err != nil {
-			return fmt.Errorf("failed to delete the HCN endpoint: %w", err)
-		}
-	}
-
-	if network, err := hcn.GetNetworkByName(networkName(l.Instance.Name)); err == nil {
-		if err := network.Delete(); err != nil {
-			return fmt.Errorf("failed to delete the HCN network %w", err)
-		}
-	}
-
-	return nil
+	return l.networkCleanup()
 }
 
 // GuestAgentConn returns the guest agent connection, or nil (if forwarded by ssh).
