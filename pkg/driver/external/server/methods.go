@@ -9,8 +9,10 @@ import (
 	"maps"
 	"net"
 	"path/filepath"
+	"sync"
 
 	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/metadata"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/emptypb"
 	"google.golang.org/protobuf/types/known/timestamppb"
@@ -24,7 +26,32 @@ import (
 
 func (s *DriverServer) Start(_ *emptypb.Empty, stream pb.Driver_StartServer) error {
 	s.logger.Debug("Received Start request")
+	stopProgress := func() {}
+	if reporter, ok := s.driver.(driver.StartProgressReporter); ok {
+		md, _ := metadata.FromIncomingContext(stream.Context())
+		acceptsProgress := len(md.Get(pb.StartProgressMetadataKey)) > 0
+		// The client expects progress only before the initial response.
+		var mu sync.Mutex
+		starting := true
+		reporter.SetStartProgressCallback(func(message string) {
+			mu.Lock()
+			defer mu.Unlock()
+			if !starting || !acceptsProgress {
+				s.logger.Info(message)
+				return
+			}
+			if err := stream.Send(&pb.StartResponse{Progress: message}); err != nil {
+				s.logger.WithError(err).Warn("Failed to send progress")
+			}
+		})
+		stopProgress = func() {
+			mu.Lock()
+			starting = false
+			mu.Unlock()
+		}
+	}
 	errChan, err := s.driver.Start(stream.Context())
+	stopProgress()
 	if err != nil {
 		s.logger.WithError(err).Error("Start failed")
 		if sendErr := stream.Send(&pb.StartResponse{Success: false, Error: err.Error()}); sendErr != nil {

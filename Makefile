@@ -143,6 +143,7 @@ help-targets:
 	@echo  '- limactl-plugins           : Build limactl-* CLI plugins'
 	@echo  '- lima-privileged-net       : Build the privileged network helper (Linux only)'
 	@echo  '- lima-privileged-block-device: Build the privileged block-device helper (macOS only)'
+	@echo  '- vz-usb-app                : Build the vz driver as a signed app for USB passthrough (macOS 27+)'
 	@echo
 	@echo  'Targets for files in _output/share/lima/:'
 	@echo  '- guestagents               : Build guestagents'
@@ -376,6 +377,15 @@ additional-drivers:
 			codesign -f -v --entitlements vz.entitlements -s - $(LIBEXEC_LIMA)/lima-driver-vz; \
 		fi; \
 	done
+
+# See website/content/en/docs/config/usb.md.
+VZ_USB_PROVISIONING_PROFILE ?=
+VZ_USB_SIGNING_IDENTITY ?=
+
+.PHONY: vz-usb-app
+vz-usb-app:
+	$(MAKE) ADDITIONAL_DRIVERS=vz limactl native-guestagent additional-drivers
+	./hack/vz-usb-app.sh "$(LIBEXEC_LIMA)" "$(VZ_USB_PROVISIONING_PROFILE)" "$(VZ_USB_SIGNING_IDENTITY)"
 
 LIMA_CMDS = $(sort lima lima$(bat)) # $(sort ...) deduplicates the list
 LIMA_DEPS = $(addprefix _output/bin/,$(LIMA_CMDS))

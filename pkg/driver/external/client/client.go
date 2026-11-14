@@ -11,6 +11,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 )
 
@@ -19,6 +20,15 @@ type DriverClient struct {
 	Conn       *grpc.ClientConn
 	DriverSvc  pb.DriverClient
 	logger     *logrus.Logger
+
+	onStartProgress func(message string)
+}
+
+var _ driver.StartProgressReporter = (*DriverClient)(nil)
+
+// SetStartProgressCallback implements driver.StartProgressReporter.
+func (d *DriverClient) SetStartProgressCallback(callback func(message string)) {
+	d.onStartProgress = callback
 }
 
 func NewDriverClient(socketPath string, logger *logrus.Logger) (*DriverClient, error) {

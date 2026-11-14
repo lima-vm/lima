@@ -15,6 +15,7 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/api"
 	"github.com/lima-vm/lima/v2/pkg/httpclientutil"
 )
@@ -24,6 +25,12 @@ type HostAgentClient interface {
 	Info(context.Context) (*api.Info, error)
 	// Screenshot captures the VM display. format is "png" or "bmp" (default "png").
 	Screenshot(context.Context, string) ([]byte, error)
+	// ListUSBDevices returns the host USB devices that can be attached to the VM.
+	ListUSBDevices(context.Context) ([]driver.USBDevice, error)
+	// AttachUSBDevice attaches the host USB device with the given IORegistry ID.
+	AttachUSBDevice(context.Context, uint64) error
+	// DetachUSBDevice detaches the host USB device with the given IORegistry ID.
+	DetachUSBDevice(context.Context, uint64) error
 }
 
 // NewHostAgentClient creates a client.
@@ -106,4 +113,43 @@ func (c *client) Screenshot(ctx context.Context, format string) ([]byte, error) 
 		return nil, fmt.Errorf("screenshot response exceeds %d MB limit", maxScreenshotSize>>20)
 	}
 	return data, nil
+}
+
+// usbError explains the HTTP errors of the USB endpoints.
+func usbError(err error) error {
+	if httpErr, ok := errors.AsType[*httpclientutil.HTTPStatusError](err); ok && httpErr.StatusCode == http.StatusNotFound {
+		return errors.New("hostagent does not support USB passthrough — restart the instance to pick up the latest hostagent binary")
+	}
+	return err
+}
+
+func (c *client) ListUSBDevices(ctx context.Context) ([]driver.USBDevice, error) {
+	u := fmt.Sprintf("http://%s/%s/usb/devices", c.dummyHost, c.version)
+	resp, err := httpclientutil.Get(ctx, c.HTTPClient(), u)
+	if err != nil {
+		return nil, usbError(err)
+	}
+	defer resp.Body.Close()
+	var devs []driver.USBDevice
+	if err := json.NewDecoder(resp.Body).Decode(&devs); err != nil {
+		return nil, err
+	}
+	return devs, nil
+}
+
+func (c *client) AttachUSBDevice(ctx context.Context, registryID uint64) error {
+	return c.postUSBDevice(ctx, registryID, "attach")
+}
+
+func (c *client) DetachUSBDevice(ctx context.Context, registryID uint64) error {
+	return c.postUSBDevice(ctx, registryID, "detach")
+}
+
+func (c *client) postUSBDevice(ctx context.Context, registryID uint64, action string) error {
+	u := fmt.Sprintf("http://%s/%s/usb/devices/%d/%s", c.dummyHost, c.version, registryID, action)
+	resp, err := httpclientutil.Post(ctx, c.HTTPClient(), u, http.NoBody)
+	if err != nil {
+		return usbError(err)
+	}
+	return resp.Body.Close()
 }

@@ -24,10 +24,43 @@ type VsockEventEmitter interface {
 	SetVsockEventCallback(callback func(*events.VsockEvent))
 }
 
+// StartProgressReporter is an optional interface for drivers that report
+// progress while Start is blocked.
+type StartProgressReporter interface {
+	SetStartProgressCallback(callback func(message string))
+}
+
 // Screenshotter is an optional interface for drivers that can capture the VM display.
 // format is "png" or "bmp"; an empty string defaults to "png".
 type Screenshotter interface {
 	CaptureScreenshot(format string) ([]byte, error)
+}
+
+// ErrDriverNotUSBPassthrough is returned when the active driver does not implement USBPassthrough.
+var ErrDriverNotUSBPassthrough = errors.New("driver does not support USB passthrough")
+
+// USBDevice is a host USB device that can be passed through to the guest.
+type USBDevice struct {
+	// RegistryID is the IORegistry entry ID. It changes when the device reconnects.
+	RegistryID   uint64 `json:"registryID"`
+	VendorID     uint16 `json:"vendorID"`
+	ProductID    uint16 `json:"productID"`
+	Serial       string `json:"serial,omitempty"`
+	Manufacturer string `json:"manufacturer,omitempty"`
+	Product      string `json:"product,omitempty"`
+	// LocationID identifies the host USB port of the device.
+	LocationID uint32 `json:"locationID,omitempty"`
+	// Attached reports that the device is attached to this instance.
+	Attached bool `json:"attached"`
+}
+
+// USBPassthrough is an optional interface for drivers that can attach host USB
+// devices to a running VM.
+type USBPassthrough interface {
+	// ListUSBDevices returns the host USB devices the driver can attach.
+	ListUSBDevices(ctx context.Context) ([]USBDevice, error)
+	AttachUSBDevice(ctx context.Context, registryID uint64) error
+	DetachUSBDevice(ctx context.Context, registryID uint64) error
 }
 
 // Lifecycle defines basic lifecycle operations.
@@ -172,4 +205,7 @@ type DriverFeatures struct {
 	// in CreateDisk should list every format it can convert from, not just the
 	// format it ultimately boots.
 	SupportedImageFormats []string `json:"supportedImageFormats,omitempty"`
+	// USBPassthrough reports that the driver can attach host USB devices.
+	USBPassthrough                  bool   `json:"usbPassthrough,omitempty"`
+	USBPassthroughUnavailableReason string `json:"usbPassthroughUnavailableReason,omitempty"`
 }

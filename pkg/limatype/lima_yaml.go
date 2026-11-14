@@ -130,6 +130,21 @@ type QEMUOpts struct {
 type VZOpts struct {
 	Rosetta         Rosetta     `yaml:"rosetta,omitempty" json:"rosetta,omitempty"`
 	DiskImageFormat *image.Type `yaml:"diskImageFormat,omitempty" json:"diskImageFormat,omitempty" jsonschema:"nullable"`
+	USB             VZUSB       `yaml:"usb,omitempty" json:"usb,omitempty"`
+}
+
+// VZUSB configures USB passthrough of host devices (macOS 27+).
+type VZUSB struct {
+	// Enabled defaults to whether Devices is non-empty.
+	Enabled *bool            `yaml:"enabled,omitempty" json:"enabled,omitempty" jsonschema:"nullable"`
+	Devices []USBDeviceMatch `yaml:"devices,omitempty" json:"devices,omitempty"`
+}
+
+// USBDeviceMatch selects host USB devices. Every field that is set must match.
+type USBDeviceMatch struct {
+	VendorID  *uint16 `yaml:"vendorID,omitempty" json:"vendorID,omitempty" jsonschema:"nullable"`
+	ProductID *uint16 `yaml:"productID,omitempty" json:"productID,omitempty" jsonschema:"nullable"`
+	Serial    string  `yaml:"serial,omitempty" json:"serial,omitempty"`
 }
 
 type Rosetta struct {

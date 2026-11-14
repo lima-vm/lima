@@ -19,7 +19,7 @@ import (
 	"sync"
 	"syscall"
 
-	"github.com/Code-Hex/vz/v3"
+	"github.com/Code-Hex/vz/v4"
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
@@ -116,22 +116,19 @@ func (s *startSignals) fail(err error) {
 	s.errCh <- err
 }
 
-func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
+func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent), usbController bool, usbDevices []vz.USBDeviceConfiguration) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
-	retainedFDs := newRetainedFileDescriptors()
-	machine, err := createVM(ctx, inst, retainedFDs)
-	if err != nil {
-		retainedFDs.CloseAll()
-		return nil, nil, nil, err
+	machine, retainedFDs, stateCh, stopStateNotify, err := createAndStartVM(ctx, inst, usbController, usbDevices)
+	if err != nil && len(usbDevices) > 0 {
+		// A USB device may have been disconnected since it was configured.
+		logrus.WithError(err).Warn("Failed to start the VM with USB devices; retrying without them")
+		machine, retainedFDs, stateCh, stopStateNotify, err = createAndStartVM(ctx, inst, usbController, nil)
 	}
-
-	err = machine.Start()
 	if err != nil {
-		retainedFDs.CloseAll()
 		return nil, nil, nil, err
 	}
 
@@ -141,6 +138,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	go func() {
 		// Handle errors via errCh and handle stop vm during context close
 		defer func() {
+			stopStateNotify()
 			retainedFDs.CloseAll()
 		}()
 		for {
@@ -151,7 +149,7 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 					_, err := machine.RequestStop()
 					logrus.Errorf("Error while stopping the VM %#q", err)
 				}
-			case newState := <-machine.StateChangedNotify():
+			case newState := <-stateCh:
 				switch newState {
 				case vz.VirtualMachineStateRunning:
 					pidFile := filepath.Join(inst.Dir, filenames.PIDFile(*inst.Config.VMType))
@@ -243,6 +241,30 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 	return wrapper, signals.sshPortAccessible, signals.errCh, err
 }
 
+func createAndStartVM(ctx context.Context, inst *limatype.Instance, usbController bool, usbDevices []vz.USBDeviceConfiguration) (machine *vz.VirtualMachine, retainedFDs *retainedFileDescriptors, stateCh chan vz.VirtualMachineState, stopStateNotify func(), err error) {
+	retainedFDs = newRetainedFileDescriptors()
+	machine, err = createVM(ctx, inst, retainedFDs, usbController, usbDevices)
+	if err != nil {
+		retainedFDs.CloseAll()
+		return nil, nil, nil, nil, err
+	}
+
+	// vz does not replay past notifications, and drops those the channel cannot receive.
+	stateCh = make(chan vz.VirtualMachineState, 8)
+	stopStateNotify, err = machine.StateChangedNotify(stateCh)
+	if err != nil {
+		retainedFDs.CloseAll()
+		return nil, nil, nil, nil, err
+	}
+
+	if err = machine.Start(); err != nil {
+		stopStateNotify()
+		retainedFDs.CloseAll()
+		return nil, nil, nil, nil, err
+	}
+	return machine, retainedFDs, stateCh, stopStateNotify, nil
+}
+
 // gvisorNetstackOpts returns the options of the instance's in-process gvisor-tap-vsock network.
 func gvisorNetstackOpts(inst *limatype.Instance, endpointSock, fdSock string) *usernet.GVisorNetstackOpts {
 	return &usernet.GVisorNetstackOpts{
@@ -284,7 +306,7 @@ func startUsernet(ctx context.Context, inst *limatype.Instance) (*usernet.Client
 	return usernet.NewClient(endpointSock, subnetIP), cancel, err
 }
 
-func createVM(ctx context.Context, inst *limatype.Instance, retainedFDs *retainedFileDescriptors) (*vz.VirtualMachine, error) {
+func createVM(ctx context.Context, inst *limatype.Instance, retainedFDs *retainedFileDescriptors, usbController bool, usbDevices []vz.USBDeviceConfiguration) (*vz.VirtualMachine, error) {
 	vmConfig, err := createInitialConfig(inst)
 	if err != nil {
 		return nil, err
@@ -322,12 +344,27 @@ func createVM(ctx context.Context, inst *limatype.Instance, retainedFDs *retaine
 		return nil, err
 	}
 
+	if usbController {
+		if err = attachUSBController(vmConfig, usbDevices); err != nil {
+			return nil, err
+		}
+	}
+
 	validated, err := vmConfig.Validate()
 	if !validated || err != nil {
 		return nil, err
 	}
 
 	return vz.NewVirtualMachine(vmConfig)
+}
+
+func attachUSBController(vmConfig *vz.VirtualMachineConfiguration, devices []vz.USBDeviceConfiguration) error {
+	controller, err := vz.NewXHCIControllerConfiguration(vz.WithUSBDevices(devices...))
+	if err != nil {
+		return err
+	}
+	vmConfig.SetUSBControllersVirtualMachineConfiguration([]vz.USBControllerConfiguration{controller})
+	return nil
 }
 
 // createVMForMacInstaller is similar to createVM but only used for VZMacOSInstaller.

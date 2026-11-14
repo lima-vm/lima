@@ -15,9 +15,10 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"time"
 
-	"github.com/Code-Hex/vz/v3"
+	"github.com/Code-Hex/vz/v4"
 	"github.com/coreos/go-semver/semver"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader/image"
@@ -97,16 +98,30 @@ type LimaVzDriver struct {
 	rosettaEnabled  bool
 	rosettaBinFmt   bool
 	diskImageFormat image.Type
+	usbEnabled      bool
+	usbRules        []limatype.USBDeviceMatch
 
 	machine                    *virtualMachineWrapper
 	waitSSHLocalPortAccessible <-chan any
 
-	onVsockEvent func(*events.VsockEvent)
+	onVsockEvent    func(*events.VsockEvent)
+	onStartProgress func(message string)
+
+	usbMu     sync.Mutex
+	usbCtx    context.Context
+	usbCancel context.CancelFunc
+	usb       *usbPassthrough
+	// usbStarting is closed when the USB passthrough being started is published.
+	usbStarting chan struct{}
+	// usbApp reports that the driver runs its own AppKit event loop.
+	usbApp bool
 }
 
 var (
-	_ driver.Driver            = (*LimaVzDriver)(nil)
-	_ driver.VsockEventEmitter = (*LimaVzDriver)(nil)
+	_ driver.Driver                = (*LimaVzDriver)(nil)
+	_ driver.VsockEventEmitter     = (*LimaVzDriver)(nil)
+	_ driver.USBPassthrough        = (*LimaVzDriver)(nil)
+	_ driver.StartProgressReporter = (*LimaVzDriver)(nil)
 )
 
 // SetVsockEventCallback implements driver.VsockEventEmitter.
@@ -161,6 +176,8 @@ func (l *LimaVzDriver) Configure(_ context.Context, inst *limatype.Instance) (*d
 	} else {
 		l.diskImageFormat = raw.Type
 	}
+	l.usbEnabled = usbEnabled(vzOpts.USB)
+	l.usbRules = vzOpts.USB.Devices
 
 	return &driver.ConfiguredDriver{
 		Driver: l,
@@ -388,7 +405,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	if len(cfg.BlockDevices) > 0 && macOSProductVersion.LessThan(*semver.New("14.0.0")) {
 		return fmt.Errorf("field `blockDevices` requires macOS 14 or higher to run, got %q", macOSProductVersion)
 	}
-	return nil
+	return validateUSB(vzOpts.USB)
 }
 
 func (l *LimaVzDriver) Create(_ context.Context) error {
@@ -487,17 +504,158 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 
 func (l *LimaVzDriver) Start(ctx context.Context) (chan error, error) {
 	logrus.Infof("Starting VZ (hint: to watch the boot progress, see %#q)", filepath.Join(l.Instance.Dir, "serial*.log"))
-	vm, waitSSHLocalPortAccessible, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort, l.onVsockEvent)
+	usbAvailable := l.usbEnabled && usbPassthroughUnavailableReason() == ""
+	if l.usbEnabled {
+		if reason := usbPassthroughUnavailableReason(); reason != "" {
+			l.reportStartProgress(fmt.Sprintf("Ignoring `vmOpts.vz.usb`: %s", reason))
+		} else if !hasGraphicSession() {
+			l.reportStartProgress("USB passthrough is enabled, but macOS gives USB devices only to processes of a graphical " +
+				"login session, not to an instance started over SSH; start it from a terminal on the Mac")
+		}
+	}
+	l.usbMu.Lock()
+	if l.usbCancel != nil {
+		l.usbCancel()
+	}
+	l.usbCtx, l.usbCancel = context.WithCancel(ctx)
+	usbCtx := l.usbCtx
+	var usbStarting chan struct{}
+	if usbAvailable {
+		usbStarting = make(chan struct{})
+		l.usbStarting = usbStarting
+	}
+	l.usbMu.Unlock()
+
+	var (
+		usb        *usbPassthrough
+		usbDevices []vz.USBDeviceConfiguration
+	)
+	if usbStarting != nil {
+		var err error
+		usb, usbDevices, err = l.registerUSBPassthroughForBoot(usbCtx)
+		if err != nil {
+			l.finishUSBStart(usbStarting, nil)
+			l.stopUSBPassthrough()
+			return nil, err
+		}
+	}
+
+	vm, waitSSHLocalPortAccessible, errCh, err := startVM(ctx, l.Instance, l.SSHLocalPort, l.onVsockEvent, usbAvailable, usbDevices)
 	if err != nil {
+		if usb != nil {
+			usb.stop()
+		}
+		l.finishUSBStart(usbStarting, nil)
+		l.stopUSBPassthrough()
 		if errors.Is(err, vz.ErrUnsupportedOSVersion) {
 			return nil, fmt.Errorf("vz driver requires macOS 13 or higher to run: %w", err)
 		}
 		return nil, err
 	}
+	l.usbMu.Lock()
 	l.machine = vm
+	l.usbMu.Unlock()
 	l.waitSSHLocalPortAccessible = waitSSHLocalPortAccessible
 
+	if usb != nil {
+		if err := usb.bind(usbCtx, vm.VirtualMachine); err != nil {
+			logrus.WithError(err).Warn("Failed to start USB passthrough")
+			usb.stop()
+			usb = nil
+		}
+	}
+	l.finishUSBStart(usbStarting, usb)
 	return errCh, nil
+}
+
+func (l *LimaVzDriver) finishUSBStart(starting chan struct{}, usb *usbPassthrough) {
+	if starting == nil {
+		return
+	}
+	l.usbMu.Lock()
+	defer l.usbMu.Unlock()
+	l.usbStarting = nil
+	close(starting)
+	if usb == nil {
+		return
+	}
+	if l.usbCtx == nil || l.usbCtx.Err() != nil {
+		// Stopped meanwhile.
+		usb.stop()
+		return
+	}
+	l.usb = usb
+}
+
+// registerUSBPassthroughForBoot returns the devices to attach at boot. On
+// failure, the VM starts without USB devices. Registering also shows the
+// Virtual Machine Accessories menu bar item, which is needed to assign devices.
+func (l *LimaVzDriver) registerUSBPassthroughForBoot(ctx context.Context) (*usbPassthrough, []vz.USBDeviceConfiguration, error) {
+	if len(l.usbRules) > 0 {
+		l.reportStartProgress("Waiting for the USB devices of `vmOpts.vz.usb.devices`")
+	}
+	// The VM window, which would run the event loop, does not exist until RunGUI.
+	l.usbMu.Lock()
+	appRunning := l.startUSBApplicationLocked()
+	l.usbMu.Unlock()
+	keepApp := appRunning && !l.canRunGUI()
+	defer func() {
+		// RunGUI needs the main thread, and a failed start must not leave a Dock icon.
+		if !keepApp {
+			l.usbMu.Lock()
+			l.stopUSBApplicationLocked()
+			l.usbMu.Unlock()
+		}
+	}()
+	// Without the event loop, macOS gives Lima no device, and the registration may never complete.
+	if !appRunning {
+		l.reportStartProgress("Starting without USB devices: the AppKit event loop is not running")
+		return nil, nil, nil
+	}
+
+	registerCtx, cancel := context.WithTimeout(ctx, usbRegisterTimeout)
+	usb, err := registerUSBPassthrough(registerCtx, l.usbRules)
+	cancel()
+	if err != nil {
+		keepApp = false
+		if ctx.Err() != nil {
+			return nil, nil, err
+		}
+		l.reportStartProgress(fmt.Sprintf("Starting without USB devices: %v", err))
+		return nil, nil, nil
+	}
+	if unmatched := usb.waitForDevices(ctx, usbBootWaitTimeout); unmatched > 0 {
+		if ctx.Err() != nil {
+			keepApp = false
+			usb.stop()
+			return nil, nil, ctx.Err()
+		}
+		l.reportStartProgress(fmt.Sprintf("%d of the %d entries of `vmOpts.vz.usb.devices` match no available device; "+
+			"such devices are attached when they become available. "+
+			"To let Lima use a connected device, choose it in the Virtual Machine Accessories menu bar item",
+			unmatched, len(l.usbRules)))
+	}
+	configs := usb.bootDeviceConfigurations()
+	if len(l.usbRules) > 0 {
+		l.reportStartProgress(fmt.Sprintf("Attaching %d USB device(s) at boot", len(configs)))
+	}
+	return usb, configs, nil
+}
+
+// macOS reports the devices assigned to Lima within about a second.
+const usbBootWaitTimeout = 5 * time.Second
+
+// SetStartProgressCallback implements driver.StartProgressReporter.
+func (l *LimaVzDriver) SetStartProgressCallback(callback func(message string)) {
+	l.onStartProgress = callback
+}
+
+func (l *LimaVzDriver) reportStartProgress(message string) {
+	if l.onStartProgress != nil {
+		l.onStartProgress(message)
+		return
+	}
+	logrus.Info(message)
 }
 
 func (l *LimaVzDriver) canRunGUI() bool {
@@ -512,7 +670,11 @@ func (l *LimaVzDriver) canRunGUI() bool {
 func (l *LimaVzDriver) RunGUI(_ context.Context) error {
 	if l.canRunGUI() {
 		title := fmt.Sprintf("Lima: %s", l.Instance.Name)
-		return l.machine.StartGraphicApplication(1920, 1200, vz.WithWindowTitle(title))
+		var err error
+		onMainThread(func() {
+			err = l.machine.StartGraphicApplication(1920, 1200, vz.WithWindowTitle(title))
+		})
+		return err
 	}
 	return fmt.Errorf("RunGUI is not supported for the given driver '%s' and display '%s'", "vz", *l.Instance.Config.Video.Display)
 }
@@ -539,6 +701,8 @@ const gracefulStopTimeout = 30 * time.Second
 func (l *LimaVzDriver) Stop(ctx context.Context) error {
 	logrus.Info("Shutting down VZ")
 	defer l.removePIDFile()
+	// Released devices reconnect to the host and would match the rules again.
+	l.stopUSBPassthrough()
 
 	requested := false
 	if l.machine.CanRequestStop() {
@@ -625,6 +789,11 @@ func (l *LimaVzDriver) Info(_ context.Context) driver.Info {
 		RosettaBinFmt:         l.rosettaBinFmt,
 		SupportedImageFormats: []string{string(raw.Type), string(asif.Type)},
 	}
+	if reason := usbPassthroughUnavailableReason(); reason != "" {
+		info.Features.USBPassthroughUnavailableReason = reason
+	} else {
+		info.Features.USBPassthrough = true
+	}
 	return info
 }
 
@@ -680,4 +849,141 @@ func (l *LimaVzDriver) ForwardGuestAgent(_ context.Context) bool {
 func (l *LimaVzDriver) AdditionalSetupForSSH(_ context.Context) error {
 	<-l.waitSSHLocalPortAccessible
 	return nil
+}
+
+// ensureUSBPassthrough starts USB passthrough for the running VM, if not started yet.
+func (l *LimaVzDriver) ensureUSBPassthrough(ctx context.Context) (*usbPassthrough, error) {
+	if reason := usbPassthroughUnavailableReason(); reason != "" {
+		return nil, fmt.Errorf("%w: %s", driver.ErrDriverNotUSBPassthrough, reason)
+	}
+	if !l.usbEnabled {
+		return nil, fmt.Errorf("%w: USB passthrough is not enabled for the instance; set `vmOpts.vz.usb.enabled` to true",
+			driver.ErrDriverNotUSBPassthrough)
+	}
+	for {
+		l.usbMu.Lock()
+		if l.usb != nil {
+			usb := l.usb
+			l.usbMu.Unlock()
+			return usb, nil
+		}
+		if l.machine == nil || l.usbCtx == nil {
+			l.usbMu.Unlock()
+			return nil, errors.New("the VM is not running")
+		}
+		if starting := l.usbStarting; starting != nil {
+			l.usbMu.Unlock()
+			select {
+			case <-starting:
+				continue
+			case <-ctx.Done():
+				return nil, ctx.Err()
+			}
+		}
+		starting := make(chan struct{})
+		l.usbStarting = starting
+		usbCtx, machine := l.usbCtx, l.machine.VirtualMachine
+		if !l.canRunGUI() {
+			// Otherwise the VM window runs the event loop.
+			l.startUSBApplicationLocked()
+		}
+		l.usbMu.Unlock()
+
+		registerCtx, cancel := context.WithTimeout(usbCtx, usbRegisterTimeout)
+		usb, err := registerUSBPassthrough(registerCtx, l.usbRules)
+		cancel()
+		if err == nil {
+			if err = usb.bind(usbCtx, machine); err != nil {
+				usb.stop()
+			}
+		}
+		if err != nil {
+			l.usbMu.Lock()
+			l.stopUSBApplicationLocked()
+			l.usbMu.Unlock()
+			l.finishUSBStart(starting, nil)
+			return nil, err
+		}
+		l.finishUSBStart(starting, usb)
+	}
+}
+
+const (
+	usbRegisterTimeout    = 30 * time.Second
+	usbApplicationTimeout = 5 * time.Second
+)
+
+// startUSBApplicationLocked runs the AppKit event loop as a Dock application,
+// which AccessoryAccess requires.
+func (l *LimaVzDriver) startUSBApplicationLocked() bool {
+	if l.usbApp {
+		return true
+	}
+	name := l.Instance.Name
+	if !goMainThread(func() { runRegularApplication(name) }) {
+		logrus.Warn("The vz driver is running inside the host agent, so it cannot appear in the Dock, " +
+			"which USB passthrough requires; use the external vz driver")
+		return false
+	}
+	// Set even on timeout, so that stopUSBApplicationLocked stops the event loop once it runs.
+	l.usbApp = true
+	if !waitApplicationRunning(usbApplicationTimeout) {
+		logrus.Warn("The AppKit event loop for USB passthrough did not start")
+		return false
+	}
+	return true
+}
+
+func (l *LimaVzDriver) stopUSBApplicationLocked() {
+	if !l.usbApp {
+		return
+	}
+	l.usbApp = false
+	if !stopApplication(usbApplicationTimeout) {
+		logrus.Warn("The AppKit event loop for USB passthrough did not stop")
+	}
+}
+
+func (l *LimaVzDriver) stopUSBPassthrough() {
+	l.usbMu.Lock()
+	cancel := l.usbCancel
+	usb := l.usb
+	l.usbCtx, l.usbCancel, l.usb = nil, nil, nil
+	l.usbMu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
+	if usb != nil {
+		usb.stop()
+	}
+	l.usbMu.Lock()
+	l.stopUSBApplicationLocked()
+	l.usbMu.Unlock()
+}
+
+// ListUSBDevices implements driver.USBPassthrough.
+func (l *LimaVzDriver) ListUSBDevices(ctx context.Context) ([]driver.USBDevice, error) {
+	p, err := l.ensureUSBPassthrough(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return p.list(), nil
+}
+
+// AttachUSBDevice implements driver.USBPassthrough.
+func (l *LimaVzDriver) AttachUSBDevice(ctx context.Context, registryID uint64) error {
+	p, err := l.ensureUSBPassthrough(ctx)
+	if err != nil {
+		return err
+	}
+	return p.attachByUser(registryID)
+}
+
+// DetachUSBDevice implements driver.USBPassthrough.
+func (l *LimaVzDriver) DetachUSBDevice(ctx context.Context, registryID uint64) error {
+	p, err := l.ensureUSBPassthrough(ctx)
+	if err != nil {
+		return err
+	}
+	return p.detachByUser(registryID)
 }
