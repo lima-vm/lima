@@ -62,6 +62,7 @@ type LimaYAML struct {
 	User                 User    `yaml:"user,omitempty" json:"user,omitempty"`
 	TPM                  *bool   `yaml:"tpm,omitempty" json:"tpm,omitempty" jsonschema:"nullable"`
 	OsOpts               OsOpts  `yaml:"osOpts,omitempty" json:"osOpts,omitempty"`
+	Meta                 Meta    `yaml:"meta,omitempty" json:"meta,omitempty"`
 }
 
 type BaseTemplates []LocatorWithDigest
@@ -448,3 +449,6 @@ func DefaultDriver() VMType {
 func DefaultNonNativeArchDriver() VMType {
 	return QEMU
 }
+
+// Meta holds arbitrary user and tool annotations. Lima itself never reads it.
+type Meta map[string]any

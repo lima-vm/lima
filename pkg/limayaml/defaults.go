@@ -155,6 +155,7 @@ func defaultGuestInstallPrefix() string {
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
+//   - Meta maps are merged recursively; any other Meta value (including a list) replaces the lower priority one
 func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath string, warn bool) {
 	instDir := filepath.Dir(filePath)
 
@@ -868,6 +869,8 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 	maps.Copy(param, y.Param)
 	maps.Copy(param, o.Param)
 	y.Param = param
+
+	y.Meta = mergeMeta(mergeMeta(d.Meta, y.Meta), o.Meta)
 
 	vmOpts := make(limatype.VMOpts)
 	maps.Copy(vmOpts, d.VMOpts)

@@ -205,6 +205,7 @@ func (tmpl *Template) mergeBase(base *Template) error {
 //
 // It also handles these special cases:
 // * dns lists are not merged and only copied when the template doesn't have any dns entries at all.
+// * meta maps are merged recursively, but all other meta values are replaced, never appended.
 // * probes and provision scripts are appended in reverse order.
 // * mountTypesUnsupported have duplicate values removed.
 // * base is removed from the template.
@@ -227,6 +228,13 @@ const mergeDocuments = `
 # Delete base DNS entries if the template list is not empty.
 | $b | select($a.dns | length > 0) | del(.dns)
 | $c | select($a.dns | length > 0) | del(.dns)
+
+# meta holds arbitrary user data: maps are merged recursively, and any other value
+# (scalar, list, or null) in the template replaces the base value of any type.
+# The yq "*" operator implements exactly this, so meta is excluded from the generic merge.
+| $a | select((.meta | tag == "!!map") and ($b.meta | tag == "!!map")) | .meta = ($b.meta * .meta)
+| $b | select($a.meta | tag == "!!map") | del(.meta)
+| $c | select($a.meta | tag == "!!map") | del(.meta)
 
 # Mark all new list fields with a custom tag. This is needed to avoid appending
 # newly copied lists to themselves again when we merge lists.
