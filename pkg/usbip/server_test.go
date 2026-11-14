@@ -953,6 +953,7 @@ func TestDrainAnswersSubmitBehindHungCall(t *testing.T) {
 	r, err = readURBHeader(c)
 	assert.NilError(t, err)
 	assert.Equal(t, r.Seqnum, uint32(1))
+	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN), "a call that ends after the session must not succeed")
 	_, err = io.CopyN(io.Discard, c, int64(r.TransferBufferLength))
 	assert.NilError(t, err)
 	readToEOF(t, c)
