@@ -11,5 +11,6 @@ func addRootCommands(rootCmd *cobra.Command) {
 	rootCmd.AddCommand(
 		newDaemonCommand(),
 		newInstallSystemdCommand(),
+		newUsbipCommand(),
 	)
 }
