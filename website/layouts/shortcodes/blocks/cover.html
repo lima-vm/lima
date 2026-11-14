@@ -1,6 +1,10 @@
 {{ $col_id := .Get "color" | default "dark" }}
 {{/* Height can be one of: auto, min, med, max, full. */}}
 {{ $height := .Get "height" | default "max"  }}
+{{ $castURL := "casts/demo.cast" | relURL }}
+
+<link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/asciinema-player@3.6.3/dist/bundle/asciinema-player.css" />
+
 <section
   class="row td-cover-block td-cover-block--height-{{ $height }} js-td-cover td-overlay td-overlay--light -bg-{{ $col_id }}">
   <div class="container td-overlay__inner">
@@ -14,7 +18,18 @@
         </div>
       </div>
       <div class="col-lg-6">
-        <img src="/images/demo.gif" alt="demo" class="img-fluid" />
+        <div class="shadow-sm rounded overflow-hidden border"
+          style="background-color: #1e1e1e; display: flex; flex-direction: column;">
+          <div class="d-flex align-items-center px-3 py-2"
+            style="background-color: #2d2d2d; border-bottom: 1px solid #444; position: relative;">
+            <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #ff5f56;"></div>
+            <div class="rounded-circle me-2" style="width: 12px; height: 12px; background-color: #ffbd2e;"></div>
+            <div class="rounded-circle" style="width: 12px; height: 12px; background-color: #27c93f;"></div>
+            <div
+              style="font-size: 0.8rem; font-family: monospace; color: #e0e0e0; position: absolute; left: 50%; transform: translateX(-50%); font-weight: bold;">lima</div>
+          </div>
+          <div id="lima-demo" data-cast="{{ $castURL }}" style="min-height: 250px;"></div>
+        </div>
       </div>
       <div class="col-12 pt-3">
         <div class="pt-3 lead text-center">
@@ -24,3 +39,22 @@
     </div>
   </div>
 </section>
+
+<script defer src="https://cdn.jsdelivr.net/npm/asciinema-player@3.6.3/dist/bundle/asciinema-player.min.js"></script>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const container = document.getElementById("lima-demo");
+
+    if (container && window.AsciinemaPlayer) {
+      AsciinemaPlayer.create(container.dataset.cast, container, {
+        autoPlay: true,
+        loop: true,
+        controls: false,
+        theme: "monokai",
+        fit: "width",
+        terminalFontFamily: "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"
+      });
+    }
+  });
+</script>
