@@ -39,7 +39,7 @@ const (
 )
 
 // vhci_hcd clears URB_DMA_MAP_SG only on RET_SUBMIT, and any other giveback of a
-// scatter-gather URB oopses the guest. So a session answers every URB before it closes.
+// scatter-gather URB oopses the guest. So a session answers every URB it reads before drainMax runs out.
 var drainMax = 2 * time.Second
 
 type inflight struct {
@@ -212,8 +212,7 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 		deadline := time.Now().Add(drainMax)
 		for time.Now().Before(deadline) {
 			stateMu.Lock()
-			// Unlike pending, the backlog also holds a URB whose payload is still arriving,
-			// and each reply until it is written.
+			// Unlike pending, the backlog also holds each reply until it is written.
 			busy := backlog > 0
 			stateMu.Unlock()
 			if !busy && readDone.Load() {
@@ -221,6 +220,7 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			}
 			time.Sleep(10 * time.Millisecond)
 		}
+		// A URB still arriving here goes unanswered, like one sent after the close.
 		// A device call can outlast the drain, so answer its URB and those queued behind it now.
 		stateMu.Lock()
 		for _, p := range pending {
@@ -308,8 +308,8 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			entry := *job.entry
 			delete(pending, job.h.Seqnum)
 			gone := status == -errnoENODEV
-			if !entry.unlinked && status == -errnoECONNRESET && sessionCtx.Err() != nil {
-				status = drainStatus(job.h) // the session ended, not the guest
+			if !entry.unlinked && sessionCtx.Err() != nil {
+				status = drainStatus(job.h) // even a success could prompt a resubmit after the close
 			}
 			reply(func() {
 				var err error
