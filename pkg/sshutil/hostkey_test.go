@@ -4,6 +4,7 @@
 package sshutil
 
 import (
+	"context"
 	"crypto/ed25519"
 	"crypto/rand"
 	"crypto/rsa"
@@ -71,7 +72,7 @@ func TestPinHostKeyWithoutEd25519(t *testing.T) {
 	assert.NilError(t, err)
 	address, port := startSSHServer(t, hostKey)
 	instDir := t.TempDir()
-	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port))
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, nil))
 	pinned, err := ReadPinnedHostKey(instDir)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, pinned.Marshal(), hostKey.PublicKey().Marshal())
@@ -93,15 +94,15 @@ func TestPinHostKey(t *testing.T) {
 	assert.Equal(t, len(b), 0)
 
 	// The first boot pins the key.
-	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port))
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, nil))
 	pinned, err = ReadPinnedHostKey(instDir)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, pinned.Marshal(), hostKey.PublicKey().Marshal())
 
 	// The later boots verify the key.
-	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port))
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, nil))
 	otherAddress, otherPort := startSSHServer(t, generateHostKey(t))
-	assert.ErrorIs(t, PinHostKey(t.Context(), instDir, "foo", otherAddress, otherPort), ErrHostKeyMismatch)
+	assert.ErrorIs(t, PinHostKey(t.Context(), instDir, "foo", otherAddress, otherPort, nil), ErrHostKeyMismatch)
 	pinned, err = ReadPinnedHostKey(instDir)
 	assert.NilError(t, err)
 	assert.DeepEqual(t, pinned.Marshal(), hostKey.PublicKey().Marshal())
@@ -144,7 +145,7 @@ func TestRefreshKnownHostsFile(t *testing.T) {
 
 	hostKey := generateHostKey(t)
 	address, port := startSSHServer(t, hostKey)
-	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port))
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, nil))
 	assert.NilError(t, RefreshKnownHostsFile(instDir, "foo", "127.0.0.1", 60023))
 	callback, err := knownhosts.New(knownHostsPath)
 	assert.NilError(t, err)
@@ -165,7 +166,7 @@ func TestRemoveKnownHostsFileUnlessPinned(t *testing.T) {
 
 	hostKey := generateHostKey(t)
 	address, port := startSSHServer(t, hostKey)
-	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port))
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, nil))
 	assert.NilError(t, RemoveKnownHostsFileUnlessPinned(instDir))
 	pinned, err := ReadPinnedHostKey(instDir)
 	assert.NilError(t, err)
@@ -212,4 +213,64 @@ func TestHostKeyOpts(t *testing.T) {
 	assert.Assert(t, !strings.Contains(opts[idx], "/dev/null"), opts[idx])
 	assert.Assert(t, strings.Contains(opts[idx], filepath.ToSlash(filepath.Join("a", filenames.SSHKnownHosts))), opts[idx])
 	assert.Assert(t, strings.Contains(opts[idx], filepath.ToSlash(filepath.Join("b", filenames.SSHKnownHosts))), opts[idx])
+}
+
+func TestPinHostKeyWithGuestHostKeys(t *testing.T) {
+	guestKey := generateHostKey(t)
+	foreignKey := generateHostKey(t)
+	otherGuestKey := generateHostKey(t)
+	authorizedKey := func(s ssh.Signer) string { return string(ssh.MarshalAuthorizedKey(s.PublicKey())) }
+	// Includes a blank line, a comment and a line that fails to parse, which must not hide the other keys.
+	guestHostKeys := "\n# comment\nnot-a-key\n" + authorizedKey(otherGuestKey) + authorizedKey(guestKey)
+	testCases := []struct {
+		name          string
+		pinned        ssh.Signer // nil: nothing is pinned
+		serverKey     ssh.Signer
+		guestHostKeys string
+		wantErr       error
+		wantPinned    ssh.Signer // nil: the known_hosts file does not exist
+	}{
+		{"guest key, not pinned", nil, guestKey, guestHostKeys, nil, guestKey},
+		{"foreign key, not pinned", nil, foreignKey, guestHostKeys, ErrHostKeyNotGuest, nil},
+		{"foreign key, pinned", guestKey, foreignKey, guestHostKeys, ErrHostKeyNotGuest, guestKey},
+		{"no guest keys yet", nil, guestKey, "", ErrHostKeyNotGuest, nil},
+		{"guest key, mismatch", otherGuestKey, guestKey, guestHostKeys, ErrHostKeyMismatch, otherGuestKey},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			instDir := t.TempDir()
+			if tc.pinned != nil {
+				pinnedAddress, pinnedPort := startSSHServer(t, tc.pinned)
+				assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", pinnedAddress, pinnedPort, nil))
+			}
+			readGuestHostKeys := func(context.Context) ([]byte, error) { return []byte(tc.guestHostKeys), nil }
+			address, port := startSSHServer(t, tc.serverKey)
+			err := PinHostKey(t.Context(), instDir, "foo", address, port, readGuestHostKeys)
+			if tc.wantErr == nil {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorIs(t, err, tc.wantErr)
+			}
+			if tc.wantPinned == nil {
+				_, err := os.Stat(filepath.Join(instDir, filenames.SSHKnownHosts))
+				assert.ErrorIs(t, err, os.ErrNotExist)
+				return
+			}
+			pinned, err := ReadPinnedHostKey(instDir)
+			assert.NilError(t, err)
+			assert.DeepEqual(t, pinned.Marshal(), tc.wantPinned.PublicKey().Marshal())
+		})
+	}
+}
+
+func TestPinHostKeyPinnedKeySkipsGuestHostKeys(t *testing.T) {
+	hostKey := generateHostKey(t)
+	address, port := startSSHServer(t, hostKey)
+	instDir := t.TempDir()
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, nil))
+	readGuestHostKeys := func(context.Context) ([]byte, error) {
+		t.Error("PinHostKey read the guest's host keys although the presented key is the pinned key")
+		return nil, nil
+	}
+	assert.NilError(t, PinHostKey(t.Context(), instDir, "foo", address, port, readGuestHostKeys))
 }

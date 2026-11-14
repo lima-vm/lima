@@ -38,6 +38,7 @@ containerd:
 ### Caveats
 - "wsl2" option is only supported on newer versions of Windows (roughly anything since 2019)
 - Windows installs an OpenSSH client in `C:\Windows\System32\OpenSSH\`, and the WSL2 driver needs no other SSH binaries
+- The SSH server of a custom rootfs must use host keys whose public keys are in `/etc/ssh/ssh_host_*_key.pub`; see [Host key]({{< ref "/docs/usage/ssh#host-key" >}})
 
 ### Known Issues
 - "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.

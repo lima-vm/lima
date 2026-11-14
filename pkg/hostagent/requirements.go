@@ -18,6 +18,7 @@ import (
 	"github.com/lima-vm/sshocker/pkg/ssh"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/driver"
 	"github.com/lima-vm/lima/v2/pkg/hostagent/events"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/sshutil"
@@ -169,12 +170,26 @@ func (a *HostAgent) pinSSHHostKey(ctx context.Context) error {
 		return nil
 	}
 	sshAddress, sshPort := a.sshAddressPort()
-	if err := sshutil.PinHostKey(ctx, a.instDir, a.instName, sshAddress, sshPort); err != nil {
+	var readGuestHostKeys func(context.Context) ([]byte, error)
+	if r, ok := a.concreteDriver().(driver.GuestSSHHostKeysReader); ok {
+		readGuestHostKeys = r.GuestSSHHostKeys
+	}
+	if err := sshutil.PinHostKey(ctx, a.instDir, a.instName, sshAddress, sshPort, readGuestHostKeys); err != nil {
 		// The error is retried like other errors, as the guest might be still setting up the host keys,
 		// but it has to be visible to the user before the retries time out.
-		if errors.Is(err, sshutil.ErrHostKeyMismatch) && !a.sshHostKeyMismatchWarned {
+		switch {
+		case errors.Is(err, sshutil.ErrHostKeyMismatch) && !a.sshHostKeyMismatchWarned:
 			logrus.Warn(err)
 			a.sshHostKeyMismatchWarned = true
+		case errors.Is(err, sshutil.ErrHostKeyNotGuest):
+			// Another SSH server on the host, e.g., the Windows OpenSSH Server, can answer on the port
+			// until the guest's SSH server starts listening.
+			if a.sshHostKeyNotGuestLogged {
+				logrus.Debug(err)
+			} else {
+				logrus.Infof("Waiting for the guest's SSH server; another SSH server on the host may be answering first (%v)", err)
+				a.sshHostKeyNotGuestLogged = true
+			}
 		}
 		return err
 	}

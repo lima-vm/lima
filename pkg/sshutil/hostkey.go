@@ -13,6 +13,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -28,6 +29,10 @@ import (
 
 // ErrHostKeyMismatch is returned by PinHostKey when the guest presents a host key that differs from the pinned key.
 var ErrHostKeyMismatch = errors.New("host key mismatch")
+
+// ErrHostKeyNotGuest is returned by PinHostKey when the SSH server presents a host key that the guest does not have,
+// e.g., because another SSH server on the host listens on the same address and port.
+var ErrHostKeyNotGuest = errors.New("not a host key of the guest")
 
 // ReadPinnedHostKey returns the SSH host key pinned in the known_hosts file of the instance.
 // It returns nil when the file does not exist or pins no key yet.
@@ -100,7 +105,12 @@ func RemoveKnownHostsFileUnlessPinned(instDir string) error {
 // PinHostKey verifies the SSH host key of the guest at sshAddress:sshPort against the known_hosts file of the instance.
 // When the file pins no key yet, i.e., on the first boot after creating the instance,
 // the key presented by the guest is trusted and pinned.
-func PinHostKey(ctx context.Context, instDir, instName, sshAddress string, sshPort int) error {
+//
+// readGuestHostKeys, when not nil, returns the SSH host public keys of the guest in the authorized_keys format,
+// read through a channel other than SSH. When the presented key is not one of them, PinHostKey returns
+// ErrHostKeyNotGuest without pinning the key or reporting a mismatch.
+// readGuestHostKeys is not called when the presented key is the pinned key.
+func PinHostKey(ctx context.Context, instDir, instName, sshAddress string, sshPort int, readGuestHostKeys func(context.Context) ([]byte, error)) error {
 	hostKey, err := ScanHostKey(ctx, sshAddress, sshPort)
 	if err != nil {
 		return fmt.Errorf("failed to get the SSH host key of the guest: %w", err)
@@ -109,16 +119,46 @@ func PinHostKey(ctx context.Context, instDir, instName, sshAddress string, sshPo
 	if err != nil {
 		return err
 	}
+	if pinned != nil && bytes.Equal(hostKey.Marshal(), pinned.Marshal()) {
+		return nil
+	}
+	if readGuestHostKeys != nil {
+		b, err := readGuestHostKeys(ctx)
+		if err != nil {
+			return fmt.Errorf("failed to read the SSH host keys of the guest: %w", err)
+		}
+		if !slices.ContainsFunc(parseAuthorizedKeys(b), func(k ssh.PublicKey) bool {
+			return bytes.Equal(hostKey.Marshal(), k.Marshal())
+		}) {
+			return fmt.Errorf("%w: the SSH server at %s presented %s",
+				ErrHostKeyNotGuest, net.JoinHostPort(sshAddress, strconv.Itoa(sshPort)), ssh.FingerprintSHA256(hostKey))
+		}
+	}
 	if pinned == nil {
 		logrus.Infof("Pinning the SSH host key of the guest (%s) in %#q", ssh.FingerprintSHA256(hostKey), filenames.SSHKnownHosts)
 		return writeKnownHostsFile(instDir, instName, hostKey, sshAddress, sshPort)
 	}
-	if !bytes.Equal(hostKey.Marshal(), pinned.Marshal()) {
-		return fmt.Errorf("%w: the SSH host key of the guest (%s) does not match the key pinned in %#q (%s); "+
-			"if the host key of the guest was changed intentionally, remove the file and restart the instance",
-			ErrHostKeyMismatch, ssh.FingerprintSHA256(hostKey), filepath.Join(instDir, filenames.SSHKnownHosts), ssh.FingerprintSHA256(pinned))
+	return fmt.Errorf("%w: the SSH host key of the guest (%s) does not match the key pinned in %#q (%s); "+
+		"if the host key of the guest was changed intentionally, remove the file and restart the instance",
+		ErrHostKeyMismatch, ssh.FingerprintSHA256(hostKey), filepath.Join(instDir, filenames.SSHKnownHosts), ssh.FingerprintSHA256(pinned))
+}
+
+// parseAuthorizedKeys returns the public keys in b, which is in the authorized_keys format.
+// Blank lines, comments and lines that fail to parse are skipped, so that one bad line does not hide the other keys.
+func parseAuthorizedKeys(b []byte) []ssh.PublicKey {
+	var keys []ssh.PublicKey
+	for line := range bytes.Lines(b) {
+		if trimmed := bytes.TrimSpace(line); len(trimmed) == 0 || trimmed[0] == '#' {
+			continue
+		}
+		key, _, _, _, err := ssh.ParseAuthorizedKey(line)
+		if err != nil {
+			logrus.WithError(err).Debugf("Ignoring the line %q in the SSH host keys of the guest", line)
+			continue
+		}
+		keys = append(keys, key)
 	}
-	return nil
+	return keys
 }
 
 // ScanHostKey returns the host key of the SSH server at address:port, like ssh-keyscan, preferring ssh-ed25519.

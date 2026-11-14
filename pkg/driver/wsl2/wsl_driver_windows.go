@@ -58,7 +58,10 @@ type LimaWslDriver struct {
 	virtioPort   string
 }
 
-var _ driver.Driver = (*LimaWslDriver)(nil)
+var (
+	_ driver.Driver                 = (*LimaWslDriver)(nil)
+	_ driver.GuestSSHHostKeysReader = (*LimaWslDriver)(nil)
+)
 
 func New() *LimaWslDriver {
 	port, err := freeport.VSock()
@@ -363,6 +366,11 @@ func (l *LimaWslDriver) Info(_ context.Context) driver.Info {
 		CanRunGUI:            l.canRunGUI(),
 	}
 	return info
+}
+
+// GuestSSHHostKeys implements driver.GuestSSHHostKeysReader.
+func (l *LimaWslDriver) GuestSSHHostKeys(ctx context.Context) ([]byte, error) {
+	return readGuestSSHHostKeys(ctx, "lima-"+l.Instance.Name)
 }
 
 func (l *LimaWslDriver) SSHAddress(_ context.Context) (string, error) {
