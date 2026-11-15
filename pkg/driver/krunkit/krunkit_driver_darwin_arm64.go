@@ -251,7 +251,7 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 		return fmt.Errorf("unsupported arch: %#q (krunkit requires native arch)", *cfg.Arch)
 	}
 	if _, err := exec.LookPath(vmType); err != nil {
-		return errors.New("krunkit CLI not found in PATH. Install it via:\nbrew tap slp/krun\nbrew install krunkit")
+		return errors.New("krunkit CLI not found in PATH. Install it via:\nbrew install krunkit")
 	}
 	// Also check if krunkit version >= 1.2.1 because of the vsock forwarder feature
 	if err := checkKrunkitVersion(); err != nil {
@@ -552,7 +552,7 @@ func (l *LimaKrunkitDriver) AdditionalSetupForSSH(_ context.Context) error {
 }
 
 // Currently, Krunkit does not clean-up the vsock unix socket when the VM stops
-// Issue: https://github.com/containers/krunkit/issues/101
+// Issue: https://github.com/libkrun/krunkit/issues/101
 func (l *LimaKrunkitDriver) cleanupStaleSockets() error {
 	if l.Instance == nil || l.Instance.Dir == "" {
 		return nil

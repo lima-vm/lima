@@ -34,7 +34,7 @@ DEFAULT_ADDITIONAL_DRIVERS :=
 ifeq ($(GOOS),darwin)
 ifeq ($(GOARCH),arm64)
 ifeq ($(shell test $(MACOS_SDK_VERSION) -ge 14; echo $$?),0)
-# krunkit needs macOS 14 or later: https://github.com/containers/libkrun/blob/main/README.md#macos-efi-variant
+# krunkit needs macOS 14 or later: https://github.com/libkrun/libkrun/blob/main/docs/building.md
 DEFAULT_ADDITIONAL_DRIVERS += krunkit
 endif
 endif
