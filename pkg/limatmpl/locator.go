@@ -253,10 +253,14 @@ func InstNameFromImageURL(locator, imageArch string) string {
 	// ARM64 FreeBSD images have both "arm64" and "aarch64" in their names.
 	// "FreeBSD-16.0-CURRENT-arm64-aarch64-BASIC-CLOUDINIT-ufs.qcow2.xz"
 	name = strings.Replace(name, "arm64-aarch64", "arm64", 1)
-	// Remove imageArch as well if it is the native arch.
+	// Remove imageArch and all its aliases if it is the native arch.
 	if limatype.IsNativeArch(imageArch) {
-		re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, imageArch))
-		name = re.ReplaceAllString(name, "")
+		for keyword, arch := range archKeywords {
+			if arch == imageArch {
+				re := regexp.MustCompile(fmt.Sprintf(`[-_.]%s\b`, keyword))
+				name = re.ReplaceAllString(name, "")
+			}
+		}
 	}
 	// Remove timestamps from name: 8 digit date, optionally followed by
 	// a delimiter and one or more digits before a word boundary.
