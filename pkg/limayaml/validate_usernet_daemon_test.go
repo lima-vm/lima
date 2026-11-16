@@ -22,6 +22,8 @@ func TestCheckExternalUsernetDaemon(t *testing.T) {
 	assert.NilError(t, os.Mkdir(project, 0o755))
 	link := filepath.Join(t.TempDir(), "home-link")
 	assert.NilError(t, os.Symlink(home, link))
+	// On Windows, "/" is the root of the current drive, which may not hold home.
+	root := filepath.VolumeName(home) + string(filepath.Separator)
 
 	nwCfg := networks.Config{Networks: map[string]networks.Network{
 		"builtin": {Mode: networks.ModeUserV2},
@@ -86,10 +88,10 @@ func TestCheckExternalUsernetDaemon(t *testing.T) {
 			wantErr: []string{"field `mounts[0].location`", "exposes LIMA_HOME"},
 		},
 		{
-			name: "mount of /",
+			name: "mount of the filesystem root",
 			y: limatype.LimaYAML{
 				Networks: []limatype.Network{{Lima: "vpn"}},
-				Mounts:   []limatype.Mount{{Location: "/"}},
+				Mounts:   []limatype.Mount{{Location: root}},
 			},
 			wantErr: []string{"field `mounts[0].location`", "exposes LIMA_HOME"},
 		},
