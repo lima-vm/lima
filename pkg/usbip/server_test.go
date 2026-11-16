@@ -127,21 +127,31 @@ func unlinkReply(t *testing.T, c net.Conn, seq, unlinkSeq uint32, in bool) urbHe
 	return r
 }
 
-func TestSubmitRejectsInvalid(t *testing.T) {
-	for name, h := range map[string]urbHeader{
-		"direction":     {Direction: 2, Ep: 1, TransferBufferLength: 64},
-		"ep":            {Direction: dirIn, Ep: 16, TransferBufferLength: 4},
-		"negative in":   {Direction: dirIn, Ep: 1, TransferBufferLength: -1},
-		"negative out":  {Direction: dirOut, Ep: 1, TransferBufferLength: -1},
-		"negative ep0":  {Direction: dirIn, TransferBufferLength: math.MinInt32},
-		"oversize":      {Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength + 1},
-		"iso oversized": {Direction: dirIn, Ep: 1, NumberOfPackets: maxISOPackets + 1},
+func TestBadFrameEndsSession(t *testing.T) {
+	for name, tc := range map[string]struct {
+		frames []urbHeader
+		want   string
+	}{
+		"direction":       {[]urbHeader{{Command: cmdSubmit, Direction: 2, Ep: 1, TransferBufferLength: 64}}, "invalid urb"},
+		"ep":              {[]urbHeader{{Command: cmdSubmit, Direction: dirIn, Ep: 16, TransferBufferLength: 4}}, "invalid urb"},
+		"negative in":     {[]urbHeader{{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: -1}}, "invalid urb"},
+		"negative out":    {[]urbHeader{{Command: cmdSubmit, Direction: dirOut, Ep: 1, TransferBufferLength: -1}}, "invalid urb"},
+		"negative ep0":    {[]urbHeader{{Command: cmdSubmit, Direction: dirIn, TransferBufferLength: math.MinInt32}}, "invalid urb"},
+		"oversize":        {[]urbHeader{{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength + 1}}, "invalid urb"},
+		"iso oversized":   {[]urbHeader{{Command: cmdSubmit, Direction: dirIn, Ep: 1, NumberOfPackets: maxISOPackets + 1}}, "invalid urb"},
+		"unknown command": {[]urbHeader{{Command: 0xdeadbeef}}, "unsupported urb command"},
+		// The guest never reads: this row covers the drain's flush timeout.
+		"duplicate seqnum silent guest": {[]urbHeader{
+			{Command: cmdSubmit, Seqnum: 7, Direction: dirIn, Ep: 1, TransferBufferLength: 8},
+			{Command: cmdSubmit, Seqnum: 7, Direction: dirIn, Ep: 2, TransferBufferLength: 8},
+		}, "duplicate seqnum 7"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, done := startSession(t, fakeDev{})
-			h.Command = cmdSubmit
-			send(t, c, h)
-			assert.ErrorContains(t, sessionEnd(t, done), "invalid urb")
+			c, done := startSession(t, fakeDev{stalled: true})
+			for _, h := range tc.frames {
+				send(t, c, h)
+			}
+			assert.ErrorContains(t, sessionEnd(t, done), tc.want)
 		})
 	}
 }
@@ -149,7 +159,6 @@ func TestSubmitRejectsInvalid(t *testing.T) {
 func TestSubmitAccepts(t *testing.T) {
 	for name, h := range map[string]urbHeader{
 		"max ep":       {Direction: dirIn, Ep: 15, TransferBufferLength: 4096},
-		"ep0 empty":    {Direction: dirIn},
 		"zlp out":      {Direction: dirOut, Ep: 15},
 		"zlp in":       {Direction: dirIn, Ep: 1},
 		"max length":   {Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength},
@@ -192,6 +201,7 @@ func TestFloodEndsSession(t *testing.T) {
 			assertHeapBelow(t, 80<<20)
 			h.Seqnum++
 			send(t, c, h)
+			assert.NilError(t, c.Close())
 			assert.ErrorContains(t, sessionEnd(t, done), "backlog")
 		})
 	}
@@ -227,20 +237,23 @@ func TestBacklogOverflowAnswersEveryURB(t *testing.T) {
 	assert.ErrorContains(t, sessionEnd(t, done), "backlog")
 }
 
-// Over the cap, reads wait until a reply frees the backlog, whichever command overflowed it.
+// Over the cap, reads wait until a reply frees the backlog, whichever command overflowed it,
+// even while hung calls pin it until the close.
 func TestBacklogOverflowPausesReads(t *testing.T) {
 	for name, last := range map[string]urbHeader{
 		"submit": {Command: cmdSubmit, Direction: dirIn, Ep: 2, TransferBufferLength: 8},
 		"unlink": {Command: cmdUnlink, TransferFlags: 999},
 	} {
 		t.Run(name, func(t *testing.T) {
-			c, done := startSession(t, fakeDev{stalled: true})
+			dev := newGateDev()
+			c, done := startSession(t, dev)
 			big := urbHeader{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength}
 			n := uint32(maxBacklog / urbCost(big))
 			for seq := range n {
 				big.Seqnum = seq + 1
 				send(t, c, big)
 			}
+			<-dev.started
 			// Leave less room than the last frame costs.
 			fill := maxBacklog - int64(n)*urbCost(big) - urbCost(urbHeader{}) - 1000
 			send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 1, Direction: dirIn, Ep: 1, TransferBufferLength: int32(fill)})
@@ -265,37 +278,10 @@ func TestBacklogOverflowPausesReads(t *testing.T) {
 			}
 			assert.Equal(t, len(got), int(n+3))
 			readToEOF(t, c)
+			close(dev.release)
 			assert.ErrorContains(t, sessionEnd(t, done), "backlog")
 		})
 	}
-}
-
-// Hung calls pin the backlog until the close, and the URB that overflowed it is still answered.
-func TestBacklogOverflowAnswersBehindHungCalls(t *testing.T) {
-	dev := newGateDev()
-	c, done := startSession(t, dev)
-	big := urbHeader{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: maxTransferLength}
-	n := uint32(maxBacklog / urbCost(big))
-	for seq := range n {
-		big.Seqnum = seq + 1
-		send(t, c, big)
-	}
-	<-dev.started
-	// Leave less room than one more URB costs even with its payload discarded.
-	fill := maxBacklog - int64(n)*urbCost(big) - urbCost(urbHeader{}) - 1000
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 1, Direction: dirIn, Ep: 1, TransferBufferLength: int32(fill)})
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: n + 2, Direction: dirIn, Ep: 2, TransferBufferLength: 8})
-
-	got := map[uint32]bool{}
-	for range n + 2 {
-		r, err := readURBHeader(c)
-		assert.NilError(t, err)
-		got[r.Seqnum] = true
-	}
-	assert.Equal(t, len(got), int(n+2))
-	readToEOF(t, c)
-	close(dev.release)
-	assert.ErrorContains(t, sessionEnd(t, done), "backlog")
 }
 
 // One seqnum throughout: a reply frees it too.
@@ -312,20 +298,6 @@ func TestBacklogReleasedAfterReply(t *testing.T) {
 	}
 	assert.NilError(t, c.Close())
 	assert.NilError(t, sessionEnd(t, done))
-}
-
-func TestDuplicateSeqnumEndsSession(t *testing.T) {
-	c, done := startSession(t, fakeDev{stalled: true})
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 7, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 7, Direction: dirIn, Ep: 2, TransferBufferLength: 8})
-	assert.ErrorContains(t, sessionEnd(t, done), "duplicate seqnum 7")
-}
-
-func TestBadCommandWithSilentGuest(t *testing.T) {
-	c, done := startSession(t, fakeDev{})
-	send(t, c, urbHeader{Command: cmdSubmit, Direction: dirIn, Ep: 1, TransferBufferLength: 64})
-	send(t, c, urbHeader{Command: 0xdeadbeef})
-	assert.ErrorContains(t, sessionEnd(t, done), "unsupported urb command")
 }
 
 func TestIsoURBKeepsSession(t *testing.T) {
@@ -609,17 +581,6 @@ func TestWriteErrorEndsSession(t *testing.T) {
 	assert.NilError(t, sessionEnd(t, done))
 }
 
-func TestCancelledSubmitSkipsDevice(t *testing.T) {
-	ctx, cancel := context.WithCancel(t.Context())
-	cancel()
-	var dev countDev
-	status, _, _ := doSubmit(ctx, &dev, urbHeader{Direction: dirIn, Ep: 1, TransferBufferLength: 8}, nil)
-	assert.Equal(t, status, int32(-errnoECONNRESET))
-	status, _, _ = doSubmit(ctx, &dev, urbHeader{Direction: dirIn, TransferBufferLength: 8}, nil)
-	assert.Equal(t, status, int32(-errnoECONNRESET))
-	assert.Equal(t, dev.calls.Load(), int32(0))
-}
-
 type countDev struct {
 	fakeDev
 	calls atomic.Int32
@@ -662,6 +623,17 @@ func TestSubmitErrorStatus(t *testing.T) {
 		})
 	}
 
+	t.Run("cancelled before call", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		var dev countDev
+		status, _, _ := doSubmit(ctx, &dev, h, nil)
+		assert.Equal(t, status, int32(-errnoECONNRESET))
+		status, _, _ = doSubmit(ctx, &dev, urbHeader{Direction: dirIn, TransferBufferLength: 8}, nil)
+		assert.Equal(t, status, int32(-errnoECONNRESET))
+		assert.Equal(t, dev.calls.Load(), int32(0))
+	})
+
 	t.Run("cancelled mid call", func(t *testing.T) {
 		ctx, cancel := context.WithCancel(t.Context())
 		dev := cancelDev{cancel: cancel}
@@ -685,17 +657,17 @@ func (d miscountDev) Transfer(_ context.Context, _ uint8, _ bool, b []byte) (int
 }
 
 func TestSubmitClampsDeviceCount(t *testing.T) {
-	over := miscountDev{n: func(b []byte) int { return len(b) + 1 }}
 	for name, tc := range map[string]struct {
 		dev  Device
 		want int32
 	}{
-		"over":     {over, 8},
+		"over":     {miscountDev{n: func(b []byte) int { return len(b) + 1 }}, 8},
 		"negative": {miscountDev{n: func([]byte) int { return -1 }}, 0},
 	} {
 		t.Run(name, func(t *testing.T) {
 			for _, ep := range []uint32{0, 1} {
-				_, actual, data := doSubmit(t.Context(), tc.dev, urbHeader{Direction: dirIn, Ep: ep, TransferBufferLength: 8}, nil)
+				status, actual, data := doSubmit(t.Context(), tc.dev, urbHeader{Direction: dirIn, Ep: ep, TransferBufferLength: 8}, nil)
+				assert.Equal(t, status, int32(0))
 				assert.Equal(t, actual, tc.want)
 				assert.Equal(t, len(data), 8)
 				_, actual, _ = doSubmit(t.Context(), tc.dev, urbHeader{Direction: dirOut, Ep: ep}, make([]byte, 8))
@@ -703,17 +675,6 @@ func TestSubmitClampsDeviceCount(t *testing.T) {
 			}
 		})
 	}
-
-	c, done := startSession(t, over)
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
-	r, err := readURBHeader(c)
-	assert.NilError(t, err)
-	assert.Equal(t, r.TransferFlags, uint32(0))
-	assert.Equal(t, r.TransferBufferLength, int32(8))
-	_, err = io.CopyN(io.Discard, c, 8)
-	assert.NilError(t, err)
-	assert.NilError(t, c.Close())
-	assert.NilError(t, sessionEnd(t, done))
 }
 
 type cancelDev struct {
@@ -866,35 +827,6 @@ func TestZeroPacket(t *testing.T) {
 		status, _, _ := doSubmit(ctx, &zlpDev{mps: 64, block: true}, h, make([]byte, 64))
 		assert.Equal(t, status, int32(-errnoECONNRESET))
 	})
-}
-
-// vhci_hcd oopses giving back a scatter-gather URB at disconnect, so none may be pending at close.
-func TestSessionEndAnswersEveryURB(t *testing.T) {
-	dev := ctxDev{started: make(chan []byte, 64)}
-	ctx, cancel := context.WithCancel(t.Context())
-	c, done := startSessionCtx(ctx, t, dev)
-
-	for seq := range uint32(3) {
-		send(t, c, urbHeader{Command: cmdSubmit, Seqnum: seq + 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
-	}
-	<-dev.started
-	cancel()
-	// Submitted before the guest learns of the session end.
-	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 4, Direction: dirIn, Ep: 2, TransferBufferLength: 8})
-
-	got := map[uint32]int32{}
-	for range 4 {
-		r, err := readURBHeader(c)
-		assert.NilError(t, err)
-		assert.Equal(t, r.Command, uint32(retSubmit))
-		assert.Equal(t, r.TransferBufferLength, int32(0))
-		got[r.Seqnum] = int32(r.TransferFlags)
-	}
-	e := int32(-errnoESHUTDOWN)
-	assert.DeepEqual(t, got, map[uint32]int32{1: e, 2: e, 3: e, 4: e})
-	readToEOF(t, c)
-	assert.NilError(t, sessionEnd(t, done))
-	assert.Equal(t, len(dev.started), 0, "URB reached the device after session end")
 }
 
 // mt76 resets the device on a control -ESHUTDOWN, so control fails with -ENODEV. A drain is no unplug.

@@ -32,6 +32,9 @@ func TestWriteRetSubmitPayload(t *testing.T) {
 	for dir, want := range map[uint32][]byte{dirIn: {1, 2}, dirOut: {}} {
 		var out bytes.Buffer
 		assert.NilError(t, writeRetSubmit(&out, urbHeader{Direction: dir}, 0, 2, []byte{1, 2, 3, 4}))
-		assert.DeepEqual(t, out.Bytes()[urbHeaderSize:], want)
+		r, err := readURBHeader(&out)
+		assert.NilError(t, err)
+		assert.Equal(t, r.TransferBufferLength, int32(2))
+		assert.DeepEqual(t, out.Bytes(), want)
 	}
 }
