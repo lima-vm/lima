@@ -506,13 +506,14 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 		}
 		configurations = append(configurations, networkConfig)
 	} else {
-		vzSock, err := usernet.Sock(inst.Config.Networks[firstUsernetIndex].Lima, usernet.FDSock)
+		nwName := inst.Config.Networks[firstUsernetIndex].Lima
+		vzSock, err := usernet.Sock(nwName, usernet.FDSock)
 		if err != nil {
 			return err
 		}
 		networkConn, err := passFDToUnix(vzSock, retainedFDs)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to connect to usernet network %#q: %w", nwName, err)
 		}
 		networkConfig, err := newVirtioFileNetworkDeviceConfiguration(networkConn, limayaml.MACAddress(inst.Dir))
 		if err != nil {
@@ -551,7 +552,7 @@ func attachNetwork(ctx context.Context, inst *limatype.Instance, vmConfig *vz.Vi
 				}
 				clientFile, err := passFDToUnix(vzSock, retainedFDs)
 				if err != nil {
-					return err
+					return fmt.Errorf("failed to connect to usernet network %#q: %w", nw.Lima, err)
 				}
 				networkConfig, err := newVirtioFileNetworkDeviceConfiguration(clientFile, nw.MACAddress)
 				if err != nil {

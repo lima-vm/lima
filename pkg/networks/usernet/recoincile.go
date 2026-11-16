@@ -194,24 +194,25 @@ func isExternal(name string) (bool, error) {
 const externalProbeTimeout = 5 * time.Second
 
 // CheckExternal returns an error if the daemon of the given external usernet network is not running.
+//
+// Only the endpoint socket is checked, because it is the only part of the daemon that is used regardless of
+// the VM type. The data socket (e.g., the fd socket for vz, the qemu socket for qemu) is dialed by the
+// driver when the VM is created, and that dial fails the start when the socket is missing or stale. Requiring
+// the data sockets here would reject daemons that only serve the transport their VM type needs.
 func CheckExternal(ctx context.Context, name string) error {
-	logrus.Warn("`external: true` in networks.yaml is experimental")
-	for _, sockType := range []SockType{FDSock, QEMUSock, EndpointSock} {
-		sock, err := Sock(name, sockType)
-		if err != nil {
-			return err
-		}
-		fi, err := os.Stat(sock)
-		if err != nil {
-			return fmt.Errorf("external usernet network %#q is not running (Lima does not start the daemon of an external network): %w", name, err)
-		}
-		if fi.Mode().Type() != os.ModeSocket {
-			return fmt.Errorf("external usernet network %#q: %#q is not a socket", name, sock)
-		}
+	sock, err := Sock(name, EndpointSock)
+	if err != nil {
+		return err
 	}
-	// The sockets are left behind when the daemon is killed, so their existence is not enough. Only the endpoint
-	// socket can be probed: connecting to the fd or qemu socket attaches a client, and `limactl usernet` panics
-	// on an fd connection that does not pass a file descriptor.
+	fi, err := os.Stat(sock)
+	if err != nil {
+		return fmt.Errorf("external usernet network %#q is not running (Lima never starts the daemon of an external network): %w", name, err)
+	}
+	if fi.Mode().Type() != os.ModeSocket {
+		return fmt.Errorf("external usernet network %#q: %#q is not a socket", name, sock)
+	}
+	// The socket is left behind when the daemon is killed, so its existence is not enough.
+	// The leases API is probed because Lima needs it anyway to resolve the IP address of the guest.
 	client := NewClientByName(name)
 	if client == nil {
 		return fmt.Errorf("external usernet network %#q: failed to create the API client", name)
@@ -219,7 +220,7 @@ func CheckExternal(ctx context.Context, name string) error {
 	ctx, cancel := context.WithTimeout(ctx, externalProbeTimeout)
 	defer cancel()
 	if _, err := client.Leases(ctx); err != nil {
-		return fmt.Errorf("external usernet network %#q is not responding: %w", name, err)
+		return fmt.Errorf("external usernet network %#q is not responding on %#q: %w", name, sock, err)
 	}
 	logrus.Debugf("External usernet network %#q is up", name)
 	return nil

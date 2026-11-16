@@ -217,6 +217,9 @@ func startNetwork(ctx context.Context, cfg *networks.Config, name string, instDi
 			// already running. Only the instance that is about to be started should fail when it is down.
 			return nil
 		}
+		if external {
+			logrus.Warnf("Network %#q has `external: true`, which is experimental", name)
+		}
 		// usernet.Start only checks that an external daemon is running, and its error already names the network
 		if err := usernet.Start(ctx, name); err != nil {
 			if external {

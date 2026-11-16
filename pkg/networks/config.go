@@ -7,11 +7,14 @@ import (
 	_ "embed"
 	"errors"
 	"fmt"
+	"maps"
 	"os"
 	"os/exec"
 	"os/user"
 	"path/filepath"
+	"reflect"
 	"runtime"
+	"slices"
 	"strings"
 	"sync"
 
@@ -129,6 +132,37 @@ func (c *Config) validateExternal() error {
 		if nw.Gateway == nil {
 			return fmt.Errorf("network %#q: `external` requires `gateway` to be set to the gateway of the external daemon", name)
 		}
+		// Without a netmask, the subnet of the network would be computed as /0.
+		if nw.NetMask == nil {
+			return fmt.Errorf("network %#q: `external` requires `netmask` to be set to the netmask of the external daemon", name)
+		}
+	}
+	return nil
+}
+
+// validateNetworkKeys returns an error if an entry under `networks` has an unknown field.
+//
+// Unknown fields elsewhere in networks.yaml are only a warning, for compatibility with fields that were
+// removed from `paths`. Inside a network entry they are an error: a misspelled `external` would otherwise
+// be ignored, and Lima would start its own daemon for a network that is meant to be served by another one.
+func validateNetworkKeys(b []byte) error {
+	var raw struct {
+		Networks map[string]map[string]any `yaml:"networks"`
+	}
+	if err := yaml.Unmarshal(b, &raw); err != nil {
+		return err
+	}
+	known := make(map[string]bool)
+	for f := range reflect.TypeFor[Network]().Fields() {
+		key, _, _ := strings.Cut(f.Tag.Get("yaml"), ",")
+		known[key] = true
+	}
+	for _, name := range slices.Sorted(maps.Keys(raw.Networks)) {
+		for _, key := range slices.Sorted(maps.Keys(raw.Networks[name])) {
+			if !known[key] {
+				return fmt.Errorf("network %#q: unknown field %#q", name, key)
+			}
+		}
 	}
 	return nil
 }
@@ -204,6 +238,10 @@ func loadCache() {
 			// Allow non-existing YAML fields, as a cfg created with Lima < v0.22 contains `vdeSwitch` and `vdeVMNet`.
 			// These fields were removed in Lima v0.22.
 			logrus.WithError(strictErr).Warn("Non-strict YAML is deprecated and will be unsupported in a future version of Lima: " + cfgFile)
+		}
+		if cache.err = validateNetworkKeys(b); cache.err != nil {
+			cache.err = fmt.Errorf("invalid %#q: %w", cfgFile, cache.err)
+			return
 		}
 		if cache.err = cache.cfg.validateExternal(); cache.err != nil {
 			cache.err = fmt.Errorf("invalid %#q: %w", cfgFile, cache.err)

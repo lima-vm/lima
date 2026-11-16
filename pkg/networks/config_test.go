@@ -57,16 +57,18 @@ func TestFillDefaultWithV2AndGateway(t *testing.T) {
 
 func TestValidateExternal(t *testing.T) {
 	gw := net.ParseIP("192.168.200.1")
+	mask := net.ParseIP("255.255.255.0")
 	tests := []struct {
 		name    string
 		nw      Network
 		wantErr string
 	}{
-		{"user-v2", Network{Mode: ModeUserV2, Gateway: gw, External: true}, ""},
+		{"user-v2", Network{Mode: ModeUserV2, Gateway: gw, NetMask: mask, External: true}, ""},
 		{"not external", Network{Mode: ModeShared}, ""},
 		{"shared", Network{Mode: ModeShared, Gateway: gw, External: true}, "only supported for mode"},
 		{"bridged", Network{Mode: ModeBridged, Interface: "en0", External: true}, "only supported for mode"},
-		{"no gateway", Network{Mode: ModeUserV2, External: true}, "requires `gateway`"},
+		{"no gateway", Network{Mode: ModeUserV2, NetMask: mask, External: true}, "requires `gateway`"},
+		{"no netmask", Network{Mode: ModeUserV2, Gateway: gw, External: true}, "requires `netmask`"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -126,4 +128,36 @@ func TestLoadConfigExternal(t *testing.T) {
 `)
 		assert.ErrorContains(t, err, "requires `gateway`")
 	})
+
+	t.Run("misspelled key", func(t *testing.T) {
+		// Ignoring the key would make Lima start its own daemon for the network.
+		_, err := loadConfig(t, `networks:
+  ext:
+    mode: user-v2
+    externl: true
+    gateway: 192.168.200.1
+    netmask: 255.255.255.0
+`)
+		assert.ErrorContains(t, err, "network `ext`: unknown field `externl`")
+	})
+
+	t.Run("unknown key outside networks", func(t *testing.T) {
+		// Fields removed from `paths` are still only a warning.
+		_, err := loadConfig(t, `paths:
+  vdeSwitch: /opt/vde/bin/vde_switch
+networks:
+  ext:
+    mode: user-v2
+    external: true
+    gateway: 192.168.200.1
+    netmask: 255.255.255.0
+`)
+		assert.NilError(t, err)
+	})
+}
+
+func TestValidateNetworkKeysDefaultConfig(t *testing.T) {
+	b, err := defaultConfigBytes()
+	assert.NilError(t, err)
+	assert.NilError(t, validateNetworkKeys(b))
 }

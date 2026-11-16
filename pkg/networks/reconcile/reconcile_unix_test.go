@@ -7,6 +7,7 @@ package reconcile
 
 import (
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -97,6 +98,32 @@ func TestExternalUsernet(t *testing.T) {
 			assert.NilError(t, os.Remove(sock(sockType)))
 		}
 		assert.ErrorContains(t, err, "external usernet network `ext` is not responding")
+		assertNotSpawned(t)
+	})
+
+	t.Run("endpoint only", func(t *testing.T) {
+		// A daemon that only serves vz guests has no qemu socket. The data socket is dialed by the driver,
+		// so only the endpoint is required here.
+		var lc net.ListenConfig
+		l, err := lc.Listen(t.Context(), "unix", sock(usernet.EndpointSock))
+		assert.NilError(t, err)
+		srv := &http.Server{
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path != "/services/dhcp/leases" {
+					http.NotFound(w, r)
+					return
+				}
+				_, _ = w.Write([]byte("{}"))
+			}),
+			ReadHeaderTimeout: time.Second,
+		}
+		go func() { _ = srv.Serve(l) }()
+		defer func() { _ = srv.Close() }()
+		for _, sockType := range []usernet.SockType{usernet.FDSock, usernet.QEMUSock} {
+			_, err := os.Stat(sock(sockType))
+			assert.Assert(t, os.IsNotExist(err))
+		}
+		assert.NilError(t, startNetwork(t.Context(), &cfg, "ext", nil, true))
 		assertNotSpawned(t)
 	})
 
