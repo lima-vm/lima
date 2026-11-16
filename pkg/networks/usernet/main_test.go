@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"runtime"
 	"testing"
 )
 
@@ -18,7 +19,11 @@ var exitingDaemon = "/usr/bin/false"
 // life of the process.
 func TestMain(m *testing.M) {
 	// Socket paths derived from os.TempDir() exceed UNIX_PATH_MAX on macOS.
-	home, err := os.MkdirTemp("/tmp", "lima-usernet-test")
+	tmp := "/tmp"
+	if runtime.GOOS == "windows" {
+		tmp = ""
+	}
+	home, err := os.MkdirTemp(tmp, "lima-usernet-test")
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
