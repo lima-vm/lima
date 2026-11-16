@@ -5,7 +5,7 @@
 # It can be accessed from the host by exporting the kubeconfig file;
 # the ports are already forwarded automatically by lima:
 #
-# $ export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
+# $ export KUBECONFIG=$(limactl list k8s --format '{{.Dir}}/copied-from-guest/kubeconfig.yaml')
 # $ kubectl get no
 # NAME       STATUS   ROLES                  AGE   VERSION
 # lima-k8s   Ready    control-plane,master   44s   v1.22.3
