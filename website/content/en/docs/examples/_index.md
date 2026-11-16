@@ -53,7 +53,7 @@ docker run -d --name nginx -p 127.0.0.1:8080:80 nginx:alpine
 {{% tab header="Kubernetes" %}}
 ```bash
 limactl start template:k8s
-export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
+export KUBECONFIG=$(limactl list k8s --format '{{.Dir}}/copied-from-guest/kubeconfig.yaml')
 kubectl create deployment nginx --image nginx:alpine
 kubectl create service nodeport nginx --node-port=31080 --tcp=80:80
 ```

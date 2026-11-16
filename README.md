@@ -54,7 +54,7 @@ docker run --rm hello-world
 To run containers with Kubernetes:
 ```bash
 limactl start template:k8s
-export KUBECONFIG=$(limactl list k8s --format 'unix://{{.Dir}}/copied-from-guest/kubeconfig.yaml')
+export KUBECONFIG=$(limactl list k8s --format '{{.Dir}}/copied-from-guest/kubeconfig.yaml')
 kubectl apply -f ...
 ```
 
