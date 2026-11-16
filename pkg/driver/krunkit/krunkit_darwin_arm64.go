@@ -47,7 +47,8 @@ func Cmdline(inst *limatype.Instance) (*exec.Cmd, error) {
 		"--cpus", fmt.Sprintf("%d", *inst.Config.CPUs),
 		"--device", fmt.Sprintf("virtio-serial,logFilePath=%s", filepath.Join(inst.Dir, filenames.SerialLog)),
 		"--krun-log-level", logLevelInfo,
-		"--restful-uri", "none://",
+		// The REST service is only used to ask the guest to shut down (see Stop).
+		"--restful-uri", "unix://" + filepath.Join(inst.Dir, restfulSock),
 
 		// First virtio-blk device is the boot disk
 		"--device", fmt.Sprintf("virtio-blk,path=%s,format=raw", filepath.Join(inst.Dir, filenames.Disk)),
