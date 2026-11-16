@@ -205,7 +205,8 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 	}
 
 	// After the session ends, answer what is pending and what the guest still sends.
-	// Close once the guest has, or after drainMax.
+	// Close once reading stops and every reply is written, or after drainMax, even when idle:
+	// vhci_hcd never closes on its own, and the guest may still read a late reply and resubmit.
 	closed := make(chan struct{})
 	context.AfterFunc(sessionCtx, func() {
 		defer close(closed)
@@ -308,8 +309,10 @@ func urbLoop(ctx context.Context, conn net.Conn, dev Device) (err error) {
 			entry := *job.entry
 			delete(pending, job.h.Seqnum)
 			gone := status == -errnoENODEV
+			// After session end, even a success could prompt a resubmit after the close,
+			// so fail it but keep actual_length.
 			if !entry.unlinked && sessionCtx.Err() != nil {
-				status = drainStatus(job.h) // even a success could prompt a resubmit after the close
+				status = drainStatus(job.h)
 			}
 			reply(func() {
 				var err error
@@ -504,6 +507,7 @@ func doSubmit(ctx context.Context, dev Device, h urbHeader, outData []byte) (sta
 	}
 
 	// actual_length counts what moved even when the URB fails.
+	n = min(max(n, 0), len(buf))
 	actual = int32(n)
 	if err != nil {
 		if ctx.Err() != nil {

@@ -22,11 +22,14 @@ type DeviceInfo struct {
 	ProductName string
 }
 
+// Device is a host USB device. Its methods may run concurrently; Gone and Info may overlap Close.
+// Control and Transfer must return once ctx is cancelled; byte counts are clamped to 0..len(buffer).
 type Device interface {
 	Info() DeviceInfo
+	// Control must bound the data stage by len(data), not setup's wLength.
 	Control(ctx context.Context, setup [8]byte, data []byte) (int, error)
 	Transfer(ctx context.Context, ep uint8, in bool, buf []byte) (int, error)
-	// OutMaxPacket is 0 if unknown.
+	// OutMaxPacket is wMaxPacketSize, not scaled by burst, or 0 if unknown.
 	OutMaxPacket(ep uint8) int
 	// Gone is true even if the device came straight back.
 	Gone() bool

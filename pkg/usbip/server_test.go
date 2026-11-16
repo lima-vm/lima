@@ -671,6 +671,51 @@ func TestSubmitErrorStatus(t *testing.T) {
 	})
 }
 
+type miscountDev struct {
+	fakeDev
+	n func(b []byte) int
+}
+
+func (d miscountDev) Control(_ context.Context, _ [8]byte, b []byte) (int, error) {
+	return d.n(b), nil
+}
+
+func (d miscountDev) Transfer(_ context.Context, _ uint8, _ bool, b []byte) (int, error) {
+	return d.n(b), nil
+}
+
+func TestSubmitClampsDeviceCount(t *testing.T) {
+	over := miscountDev{n: func(b []byte) int { return len(b) + 1 }}
+	for name, tc := range map[string]struct {
+		dev  Device
+		want int32
+	}{
+		"over":     {over, 8},
+		"negative": {miscountDev{n: func([]byte) int { return -1 }}, 0},
+	} {
+		t.Run(name, func(t *testing.T) {
+			for _, ep := range []uint32{0, 1} {
+				_, actual, data := doSubmit(t.Context(), tc.dev, urbHeader{Direction: dirIn, Ep: ep, TransferBufferLength: 8}, nil)
+				assert.Equal(t, actual, tc.want)
+				assert.Equal(t, len(data), 8)
+				_, actual, _ = doSubmit(t.Context(), tc.dev, urbHeader{Direction: dirOut, Ep: ep}, make([]byte, 8))
+				assert.Equal(t, actual, tc.want)
+			}
+		})
+	}
+
+	c, done := startSession(t, over)
+	send(t, c, urbHeader{Command: cmdSubmit, Seqnum: 1, Direction: dirIn, Ep: 1, TransferBufferLength: 8})
+	r, err := readURBHeader(c)
+	assert.NilError(t, err)
+	assert.Equal(t, r.TransferFlags, uint32(0))
+	assert.Equal(t, r.TransferBufferLength, int32(8))
+	_, err = io.CopyN(io.Discard, c, 8)
+	assert.NilError(t, err)
+	assert.NilError(t, c.Close())
+	assert.NilError(t, sessionEnd(t, done))
+}
+
 type cancelDev struct {
 	fakeDev
 	cancel context.CancelFunc
@@ -954,6 +999,7 @@ func TestDrainAnswersSubmitBehindHungCall(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, r.Seqnum, uint32(1))
 	assert.Equal(t, int32(r.TransferFlags), int32(-errnoESHUTDOWN), "a call that ends after the session must not succeed")
+	assert.Equal(t, r.TransferBufferLength, int32(8), "actual_length still counts what moved")
 	_, err = io.CopyN(io.Discard, c, int64(r.TransferBufferLength))
 	assert.NilError(t, err)
 	readToEOF(t, c)
