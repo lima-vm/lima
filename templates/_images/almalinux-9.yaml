@@ -1,16 +1,16 @@
 images:
-- location: "https://repo.almalinux.org/almalinux/9.8/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.8-20261102.x86_64.qcow2"
+- location: "https://repo.almalinux.org/almalinux/9.9/cloud/x86_64/images/AlmaLinux-9-GenericCloud-9.9-20261116.x86_64.qcow2"
   arch: "x86_64"
-  digest: "sha256:6f94881458dfe966474544b12e86d078d81a600457188045d317b0ce3c3bdca7"
-- location: "https://repo.almalinux.org/almalinux/9.8/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.8-20261102.aarch64.qcow2"
+  digest: "sha256:50e428e36083531995df84302268b95f0bf30db1d5e6b931f73dc40642dd77bb"
+- location: "https://repo.almalinux.org/almalinux/9.9/cloud/aarch64/images/AlmaLinux-9-GenericCloud-9.9-20261116.aarch64.qcow2"
   arch: "aarch64"
-  digest: "sha256:d08a0fe23b054593a5090fd26146d60dcfa0bbc0193cbc04451cb8495e590694"
-- location: "https://repo.almalinux.org/almalinux/9.8/cloud/s390x/images/AlmaLinux-9-GenericCloud-9.8-20261102.s390x.qcow2"
+  digest: "sha256:9e492c3b6729991be4bd5500eabc742ae171dd015f1f1dfa1559871c2f6b9b37"
+- location: "https://repo.almalinux.org/almalinux/9.9/cloud/s390x/images/AlmaLinux-9-GenericCloud-9.9-20261116.s390x.qcow2"
   arch: "s390x"
-  digest: "sha256:065b60dc265ec5da3201388f073f4b9b4e0d5d9d7dccdbb587ae2596034c406c"
-- location: "https://repo.almalinux.org/almalinux/9.8/cloud/ppc64le/images/AlmaLinux-9-GenericCloud-9.8-20261102.ppc64le.qcow2"
+  digest: "sha256:137acb917637510fb103c092e61066bbfa8f18e955ebe8f2f9ceddbd22110d20"
+- location: "https://repo.almalinux.org/almalinux/9.9/cloud/ppc64le/images/AlmaLinux-9-GenericCloud-9.9-20261116.ppc64le.qcow2"
   arch: "ppc64le"
-  digest: "sha256:38eb9c83e952064bd9624b96a8da53343e2dba845c3afc7058b12ec1180804ba"
+  digest: "sha256:cb6d103922c3676f19a28425bb9991fd4e0cbf716fff1e9e5d960e19cae640ad"
 # Fallback to the latest release image.
 # Hint: run `limactl prune` to invalidate the cache
 
