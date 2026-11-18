@@ -9,11 +9,11 @@ require (
 	github.com/lima-vm/go-qcow2reader v0.8.0 // gomodjail:unconfined
 	github.com/lima-vm/sshocker v0.3.11 // gomodjail:unconfined
 	golang.org/x/crypto v0.58.1-0.20261009181718-2f1f834330b2 // gomodjail:unconfined
-	golang.org/x/image v0.47.0
+	golang.org/x/image v0.48.0
 	golang.org/x/net v0.62.0 // gomodjail:unconfined
 	golang.org/x/sync v0.25.0
 	golang.org/x/sys v0.50.0 // gomodjail:unconfined
-	golang.org/x/text v0.43.0
+	golang.org/x/text v0.44.0
 )
 
 require (
@@ -76,7 +76,7 @@ require (
 	// gomodjail:unconfined
 	golang.org/x/term v0.47.0 // indirect
 	golang.org/x/time v0.15.0 // indirect
-	golang.org/x/tools v0.51.0 // indirect
+	golang.org/x/tools v0.52.0 // indirect
 )
 
 require (
