@@ -5,6 +5,7 @@ weight: 20
 
 Lima supports several modes for running Intel-on-ARM and ARM-on-Intel:
 - [System emulation](#system-emulation): runs a whole VM of a foreign architecture. Slow, but compatible.
+  - [Hybrid Hypervisor (experimental)](#hybrid-hypervisor): accelerates Intel VMs on ARM Mac.
 - [User-mode emulation](#user-mode-emulation): runs containers (or binaries) of a foreign architecture in a native VM. Faster than system emulation, but less compatible.
   - [Rosetta](#rosetta): runs Intel containers (or binaries) in an ARM VM on ARM Mac. Faster than QEMU.
 
@@ -52,6 +53,41 @@ base:
 
 Running a VM with a foreign architecture is extremely slow.
 Consider using [User-mode emulation](#user-mode-emulation) or [Rosetta](#rosetta) whenever possible.
+
+### [Hybrid Hypervisor: faster Intel VM on ARM Mac (experimental)](#hybrid-hypervisor) {#hybrid-hypervisor}
+
+| ⚡ Requirement | QEMU (patched), macOS >= 15, ARM |
+|---------------|----------------------------------|
+
+> **Warning**
+> Experimental. This uses a QEMU patched outside upstream, and it is not part of a Lima release.
+
+[lima-hybrid-hypervisor](https://github.com/lima-vm/lima-hybrid-hypervisor) runs x86_64 VMs on Apple silicon
+several times faster than QEMU's TCG emulator (e.g., about 9 times faster for compiling C code),
+using [Hybrid Hypervisor](https://github.com/nfzerox/VirtualIntelMacOnAppleSilicon) as an accelerator for QEMU.
+Hybrid Hypervisor translates x86_64 code to AArch64 like TCG, but runs the translated code inside a
+Hypervisor.framework VM.
+
+Set up:
+```bash
+brew install glib pixman libslirp ninja pkgconf
+git clone https://github.com/lima-vm/lima-hybrid-hypervisor.git
+cd lima-hybrid-hypervisor
+./build.sh
+./install.sh
+```
+
+Run:
+```bash
+export QEMU_SYSTEM_X86_64=/opt/lima-hybrid-hypervisor/bin/qemu-system-x86_64.hybrid
+limactl start --vm-type=qemu --arch=x86_64
+```
+
+The wrapper `qemu-system-x86_64.hybrid` replaces the default CPU model `max` with `Nehalem`, as the engine does not
+support AVX and several other CPU features.
+
+See [the README of lima-hybrid-hypervisor](https://github.com/lima-vm/lima-hybrid-hypervisor) for the benchmark
+results and the limitations.
 
 ## [User-mode emulation: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#user-mode-emulation) {#user-mode-emulation}
 <a id="fast-mode"></a>
