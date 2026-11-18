@@ -4,11 +4,14 @@ weight: 20
 ---
 
 Lima supports several modes for running Intel-on-ARM and ARM-on-Intel:
-- [Slow mode](#slow-mode)
-- [Fast mode](#fast-mode)
-- [Fast mode 2](#fast-mode-2)
+- [System emulation](#system-emulation): runs a whole VM of a foreign architecture. Slow, but compatible.
+- [User-mode emulation](#user-mode-emulation): runs containers (or binaries) of a foreign architecture in a native VM. Faster than system emulation, but less compatible.
+  - [Rosetta](#rosetta): runs Intel containers (or binaries) in an ARM VM on ARM Mac. Faster than QEMU.
 
-## [Slow mode: Intel VM on ARM Host / ARM VM on Intel Host](#slow-mode)
+## [System emulation: Intel VM on ARM Host / ARM VM on Intel Host](#system-emulation) {#system-emulation}
+<a id="slow-mode"></a>
+
+This mode was previously called "Slow mode" in this documentation.
 
 | ⚡ Requirement | QEMU, lima-additional-guestagents |
 |---------------|-----------------------------------|
@@ -48,9 +51,12 @@ base:
 {{< /tabpane >}}
 
 Running a VM with a foreign architecture is extremely slow.
-Consider using [Fast mode](#fast-mode) or [Fast mode 2](#fast-mode-2) whenever possible.
+Consider using [User-mode emulation](#user-mode-emulation) or [Rosetta](#rosetta) whenever possible.
 
-## [Fast mode: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#fast-mode)
+## [User-mode emulation: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#user-mode-emulation) {#user-mode-emulation}
+<a id="fast-mode"></a>
+
+This mode was previously called "Fast mode" in this documentation.
 
 This mode uses QEMU User Mode Emulation.
 QEMU User Mode Emulation is significantly faster than QEMU System Mode Emulation, but it often sacrifices compatibility.
@@ -78,7 +84,10 @@ $ lima nerdctl push --all-platforms example.com/foo:latest
 
 See also https://github.com/containerd/nerdctl/blob/main/docs/multi-platform.md
 
-## [Fast mode 2 (Rosetta): Intel containers on ARM VM on ARM Host](#fast-mode-2)
+### [Rosetta: Intel containers on ARM VM on ARM Host](#rosetta) {#rosetta}
+<a id="fast-mode-2"></a>
+
+This mode was previously called "Fast mode 2" in this documentation.
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0, ARM |
 |-------------------|----------------------------------|
@@ -105,7 +114,7 @@ rosetta:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### [Enable Rosetta AOT Caching with CDI spec](#rosetta-aot-caching)
+#### [Enable Rosetta AOT Caching with CDI spec](#rosetta-aot-caching) {#rosetta-aot-caching}
 | ⚡ Requirement | Lima >= 2.0, macOS >= 14.0, ARM |
 |-------------------|----------------------------------|
 
