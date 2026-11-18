@@ -17,6 +17,7 @@ import (
 
 	"github.com/lima-vm/lima/v2/pkg/guestagent"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/api/server"
+	"github.com/lima-vm/lima/v2/pkg/guestagent/guesttoguest"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/serialport"
 	"github.com/lima-vm/lima/v2/pkg/guestagent/ticker"
 	"github.com/lima-vm/lima/v2/pkg/portfwdserver"
@@ -58,6 +59,7 @@ func newDaemonCommand() *cobra.Command {
 	daemonCommand.Flags().Int("vsock-port", 0, "Use vsock server instead a UNIX socket")
 	daemonCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
 	daemonCommand.Flags().Int("socket-owner", 0, "UID of the main user that owns the UNIX socket (0 for root)")
+	daemonCommand.Flags().StringSlice("guest-to-guest-interfaces", nil, "Comma-separated interfaces to keep a guest-to-guest route on")
 	return daemonCommand
 }
 
@@ -87,6 +89,10 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	guestToGuestInterfaces, err := cmd.Flags().GetStringSlice("guest-to-guest-interfaces")
+	if err != nil {
+		return err
+	}
 	if tick == 0 {
 		return errors.New("tick must be specified")
 	}
@@ -112,6 +118,13 @@ func daemonAction(cmd *cobra.Command, _ []string) error {
 		<-ctx.Done()
 		logrus.Debug("Received SIGTERM, shutting down the guest agent")
 	}()
+	if len(guestToGuestInterfaces) > 0 {
+		go func() {
+			if err := guesttoguest.Run(ctx, guestToGuestInterfaces); err != nil {
+				logrus.WithError(err).Error("guest-to-guest route watcher stopped")
+			}
+		}()
+	}
 	agent, err := guestagent.New(ctx, tickerInst, runtimeDir)
 	if err != nil {
 		return err

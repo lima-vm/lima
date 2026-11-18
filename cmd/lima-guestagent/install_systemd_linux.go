@@ -30,6 +30,7 @@ func newInstallSystemdCommand() *cobra.Command {
 	installSystemdCommand.Flags().Int("vsock-port", 0, "Use vsock server on specified port")
 	installSystemdCommand.Flags().String("virtio-port", "", "Use virtio server instead a UNIX socket")
 	installSystemdCommand.Flags().Int("socket-owner", 0, "UID of the main user that owns the UNIX socket (0 for root)")
+	installSystemdCommand.Flags().StringSlice("guest-to-guest-interfaces", nil, "Comma-separated interfaces to keep a guest-to-guest route on")
 	return installSystemdCommand
 }
 
@@ -51,11 +52,15 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 	if err != nil {
 		return err
 	}
+	guestToGuestInterfaces, err := cmd.Flags().GetStringSlice("guest-to-guest-interfaces")
+	if err != nil {
+		return err
+	}
 	debug, err := cmd.Flags().GetBool("debug")
 	if err != nil {
 		return err
 	}
-	unit, err := generateSystemdUnit(vsockPort, virtioPort, socketOwner, debug)
+	unit, err := generateSystemdUnit(vsockPort, virtioPort, socketOwner, guestToGuestInterfaces, debug)
 	if err != nil {
 		return err
 	}
@@ -112,7 +117,7 @@ func installSystemdAction(cmd *cobra.Command, _ []string) error {
 //go:embed lima-guestagent.TEMPLATE.service
 var systemdUnitTemplate string
 
-func generateSystemdUnit(vsockPort int, virtioPort string, socketOwner int, debug bool) ([]byte, error) {
+func generateSystemdUnit(vsockPort int, virtioPort string, socketOwner int, guestToGuestInterfaces []string, debug bool) ([]byte, error) {
 	selfExeAbs, err := os.Executable()
 	if err != nil {
 		return nil, err
@@ -127,6 +132,9 @@ func generateSystemdUnit(vsockPort int, virtioPort string, socketOwner int, debu
 	}
 	if socketOwner > 0 {
 		args = append(args, fmt.Sprintf("--socket-owner %d", socketOwner))
+	}
+	if len(guestToGuestInterfaces) > 0 {
+		args = append(args, "--guest-to-guest-interfaces "+strings.Join(guestToGuestInterfaces, ","))
 	}
 	if debug {
 		args = append(args, "--debug")

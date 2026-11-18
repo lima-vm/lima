@@ -42,6 +42,7 @@ corresponding YAML properties are ignored:
 - **Dynamic port forwarding** (`portForwards` rules that are not `static: true`)
 - **Built-in containerd** (`containerd.system` and `containerd.user`)
 - **The guest agent daemon**
+- **Guest-to-guest routing** (`networks[].guestToGuest`)
 - **Rosetta** (`rosetta`)
 - **SSH agent forwarding** (`ssh.forwardAgent`)
 - **Host clock synchronization**

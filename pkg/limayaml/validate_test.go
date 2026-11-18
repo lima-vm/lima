@@ -844,3 +844,28 @@ func TestValidateAudioInterfaceKeepsOtherErrors(t *testing.T) {
 	assert.ErrorContains(t, err, "field `images` must be set")
 	assert.ErrorContains(t, err, "field `audio.interface` must be `hda` or `virtio`; got `bogus-audio`")
 }
+
+func TestValidateGuestToGuest(t *testing.T) {
+	images := `images: [{"location": "/"}]`
+	tests := []struct {
+		name    string
+		yaml    string
+		wantErr string
+	}{
+		{"vzNAT on Linux", `networks: [{vzNAT: true, guestToGuest: true}]`, ""},
+		{"without vzNAT", `networks: [{socket: "/nonexistent", guestToGuest: true}]`, "field `networks[0].guestToGuest` requires field `networks[0].vzNAT` to be true"},
+		{"non-Linux guest", "os: FreeBSD\nnetworks: [{vzNAT: true, guestToGuest: true}]", "field `networks[0].guestToGuest` is only supported on Linux guests; got `FreeBSD`"},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			y, err := Load(t.Context(), []byte(tt.yaml+"\n"+images), "lima.yaml")
+			assert.NilError(t, err)
+			err = Validate(y, false)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
+}

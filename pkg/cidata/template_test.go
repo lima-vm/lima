@@ -518,3 +518,21 @@ func TestExecuteTemplateWindowsISO(t *testing.T) {
 		})
 	}
 }
+
+func TestTemplateGuestToGuestInterfaces(t *testing.T) {
+	args := &TemplateArgs{
+		Name:       "default",
+		User:       "foo",
+		UID:        501,
+		Home:       "/home/foo.linux",
+		Shell:      "/bin/bash",
+		SSHPubKeys: []string{"ssh-rsa dummy foo@example.com"},
+		MountType:  "reverse-sshfs",
+	}
+	limaEnv := renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_TO_GUEST_INTERFACES=\n"))
+
+	args.GuestToGuestInterfaces = []string{"lima0", "lima1"}
+	limaEnv = renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_TO_GUEST_INTERFACES=lima0,lima1\n"))
+}

@@ -135,6 +135,7 @@ type TemplateArgs struct {
 	SSHOverVsock                    bool
 	VSockPort                       int
 	VirtioPort                      string
+	GuestToGuestInterfaces          []string
 	Plain                           bool
 	TimeZone                        string
 	NoCloudInit                     bool

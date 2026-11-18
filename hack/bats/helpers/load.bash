@@ -82,6 +82,17 @@ assert_output_lines_count() {
     assert_equal "${#lines[@]}" "$1"
 }
 
+# retry COUNT CMD [ARGS...]: retry a command with a 1 second pause until it succeeds.
+retry() {
+    local count=$1 i
+    shift
+    for ((i = 1; i < count; i++)); do
+        if "$@"; then return 0; fi
+        sleep 1
+    done
+    "$@"
+}
+
 # Use GHCR and ECR to avoid hitting Docker Hub rate limit.
 # NOTE: keep this list in sync with hack/test-templates.sh .
 declare -A -g TEST_CONTAINER_IMAGES=(

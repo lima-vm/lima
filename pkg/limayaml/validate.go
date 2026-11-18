@@ -633,6 +633,14 @@ func validateNetwork(y *limatype.LimaYAML) error {
 		default:
 			errs = errors.Join(errs, fmt.Errorf("field `%s.lima` or  field `%s.socket must be set", field, field))
 		}
+		if nw.GuestToGuest != nil && *nw.GuestToGuest {
+			if nw.VZNAT == nil || !*nw.VZNAT {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.guestToGuest` requires field `%s.vzNAT` to be true", field, field))
+			}
+			if *y.OS != limatype.LINUX {
+				errs = errors.Join(errs, fmt.Errorf("field `%s.guestToGuest` is only supported on Linux guests; got %#q", field, *y.OS))
+			}
+		}
 		if nw.MACAddress != "" {
 			hw, err := net.ParseMAC(nw.MACAddress)
 			if err != nil {

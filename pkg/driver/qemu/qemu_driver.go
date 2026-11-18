@@ -118,6 +118,9 @@ func validateConfig(cfg *limatype.LimaYAML) error {
 	}
 
 	for i, nw := range cfg.Networks {
+		if nw.GuestToGuest != nil && !*nw.GuestToGuest {
+			nw.GuestToGuest = nil
+		}
 		if unknown := reflectutil.UnknownNonEmptyFields(nw,
 			"Lima",
 			"Socket",
