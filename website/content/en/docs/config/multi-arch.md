@@ -25,7 +25,7 @@ An example configuration:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
-limactl start --vm-type=qemu --arch=x86_64 --plain
+limactl start --name=x86_64 --vm-type=qemu --arch=x86_64 --plain
 ```
 
 See the YAML tab for the explanation of the corresponding CLI flags.
@@ -80,7 +80,7 @@ cd lima-hybrid-hypervisor
 Run:
 ```bash
 export QEMU_SYSTEM_X86_64=/opt/lima-hybrid-hypervisor/bin/qemu-system-x86_64.hybrid
-limactl start --vm-type=qemu --arch=x86_64
+limactl start --name=x86_64 --vm-type=qemu --arch=x86_64
 ```
 
 The wrapper `qemu-system-x86_64.hybrid` replaces the default CPU model `max` with `Nehalem`, as the engine does not
