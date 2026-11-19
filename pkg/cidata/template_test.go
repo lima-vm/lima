@@ -275,6 +275,29 @@ func TestTemplateGuestOSVersion(t *testing.T) {
 	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_OS_BUILD_VERSION=\n"))
 }
 
+func TestTemplateGuestToGuestRoutesEnv(t *testing.T) {
+	args := &TemplateArgs{
+		Name:       "default",
+		User:       "foo",
+		UID:        501,
+		Home:       "/home/foo.guest",
+		Shell:      "/bin/bash",
+		SSHPubKeys: []string{"ssh-rsa dummy foo@example.com"},
+		MountType:  "reverse-sshfs",
+		Networks: []Network{
+			{Interface: "eth0", Metric: 200},
+			{Interface: "lima0", Metric: 100},
+		},
+	}
+	limaEnv := renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_TO_GUEST_ROUTES=\n"))
+
+	args.Networks[1].GuestToGuest = true
+	args.Networks = append(args.Networks, Network{Interface: "lima1", Metric: 300, GuestToGuest: true})
+	limaEnv = renderLimaEnv(t, args)
+	assert.Assert(t, strings.Contains(limaEnv, "LIMA_CIDATA_GUEST_TO_GUEST_ROUTES=lima0,99 lima1,299\n"))
+}
+
 func renderLimaEnv(t *testing.T, args *TemplateArgs) string {
 	t.Helper()
 	layout, err := ExecuteTemplateCIDataISO(args)

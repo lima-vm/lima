@@ -51,9 +51,10 @@ type Containerd struct {
 	Archive string
 }
 type Network struct {
-	MACAddress string
-	Interface  string
-	Metric     uint32
+	MACAddress   string
+	Interface    string
+	Metric       uint32
+	GuestToGuest bool
 }
 type Mount struct {
 	Tag        string
@@ -146,6 +147,19 @@ type TemplateArgs struct {
 	SuppressFirstLoginSetupPlist    string // empty = use built-in plist
 	GuestOSVersion                  string // macOS guests only: restore-image OS version, e.g. "27.0.0"; empty otherwise
 	GuestOSBuildVersion             string // macOS guests only: restore-image build, e.g. "26A428"; empty otherwise
+}
+
+// GuestToGuestRoutes returns one `<interface>,<metric>` entry per network that
+// sets guestToGuest, separated by spaces. The metric is one below the
+// network's own, so the route wins over the route to the connected subnet.
+func (t *TemplateArgs) GuestToGuestRoutes() string {
+	var routes []string
+	for _, nw := range t.Networks {
+		if nw.GuestToGuest {
+			routes = append(routes, fmt.Sprintf("%s,%d", nw.Interface, nw.Metric-1))
+		}
+	}
+	return strings.Join(routes, " ")
 }
 
 func (t *TemplateArgs) generateWindowsInitialPassword() error {

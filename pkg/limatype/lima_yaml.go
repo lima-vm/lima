@@ -341,6 +341,8 @@ type Network struct {
 	MACAddress string  `yaml:"macAddress,omitempty" json:"macAddress,omitempty"`
 	Interface  string  `yaml:"interface,omitempty" json:"interface,omitempty"`
 	Metric     *uint32 `yaml:"metric,omitempty" json:"metric,omitempty"`
+	// GuestToGuest adds a route that sends traffic for the vzNAT subnet through the host, so vzNAT guests that set it can reach each other. Needs vzNAT and a Linux guest.
+	GuestToGuest *bool `yaml:"guestToGuest,omitempty" json:"guestToGuest,omitempty"`
 }
 
 type HostResolver struct {

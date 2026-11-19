@@ -34,19 +34,31 @@ The range of the IP address is not specifiable.
 
 ## Guest-to-guest traffic
 
-macOS blocks direct traffic between vzNAT guests, but they can still reach each other with a route through the host. Run this in each guest, with the guest's own address in place of `192.168.64.15`. The command assumes that vzNAT is the first entry in `networks`, so its interface in the guest is `lima0`. If `ip route show dev lima0` shows another subnet or gateway, use those.
+macOS blocks direct traffic between vzNAT guests, but the host still forwards IP traffic between them. With `guestToGuest` set (available since Lima v2.3.1), Lima adds a route in the guest that sends traffic for the vzNAT subnet through the host. The guest's network service manages the route, so the route comes back whenever the guest reconfigures its network or restarts.
 
+Set the option in every vzNAT guest that talks to another. A guest without the route sends its replies directly, and macOS blocks them.
+{{< tabpane text=true >}}
+{{% tab header="CLI" %}}
 ```bash
-sudo ip route replace 192.168.64.0/24 via 192.168.64.1 dev lima0 metric 100 src 192.168.64.15
+limactl start --vm-type=vz --set '.networks = [{"vzNAT": true, "guestToGuest": true}]'
 ```
+{{% /tab %}}
+{{% tab header="YAML" %}}
+```yaml
+networks:
+- vzNAT: true
+  guestToGuest: true
+```
+{{% /tab %}}
+{{< /tabpane >}}
 
-A guest restart removes the route. So does anything that reconfigures `lima0`, such as `netplan apply` on Ubuntu or taking the link down and up. After any of these, run the command again.
+The option needs a Linux guest whose network service is systemd-networkd, NetworkManager, or Alpine's dhcpcd. openSUSE Leap 15.6 uses wicked, so the option does not work there.
 
-A guest that adds the route can send packets to any other vzNAT guest, even one without the route. So the bridge does not protect vzNAT guests from each other.
+A guest with the route can send packets to any other vzNAT guest, even one without the option. So the bridge does not protect vzNAT guests from each other.
 
-Compared to vzNAT with the route, [`user-v2`]({{< ref "/docs/config/network/user-v2" >}}) has the following pros and cons:
+Compared to vzNAT with `guestToGuest`, [`user-v2`]({{< ref "/docs/config/network/user-v2" >}}) has the following pros and cons:
 - Pros:
-  - connects guests without a route.
+  - connects guests without a route, so it also works where `guestToGuest` does not.
   - works with QEMU too.
 - Cons:
   - does not let the host reach a user-v2 guest IP directly.

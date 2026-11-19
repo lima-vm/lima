@@ -321,7 +321,7 @@ func templateArgs(ctx context.Context, bootScripts bool, instDir, name string, i
 		if i == firstUsernetIndex {
 			continue
 		}
-		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface, Metric: *nw.Metric})
+		args.Networks = append(args.Networks, Network{MACAddress: nw.MACAddress, Interface: nw.Interface, Metric: *nw.Metric, GuestToGuest: nw.GuestToGuest != nil && *nw.GuestToGuest})
 	}
 
 	args.Env, err = setupEnv(instConfig.Env, *instConfig.PropagateProxyEnv, limayaml.HostLoopbackEnabled(instConfig), args.SlirpGateway)
