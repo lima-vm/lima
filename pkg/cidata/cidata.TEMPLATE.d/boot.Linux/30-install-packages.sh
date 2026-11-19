@@ -67,6 +67,7 @@ if head -c 4 "$(command -v apt-get)" | grep -qP '\x7fELF' >/dev/null 2>&1; then
 elif command -v dnf >/dev/null 2>&1; then
 	pkgs=""
 	extrapkgs=""
+	dnf_install_flags="-y --setopt=install_weak_deps=False"
 	if ! command -v tar >/dev/null 2>&1; then
 		pkgs="${pkgs} tar"
 	fi
@@ -104,14 +105,23 @@ elif command -v dnf >/dev/null 2>&1; then
 					pkgs="${pkgs} kernel-modules-extra-${kernel_release}"
 					RELOAD_NETFILTER_MODULES=1
 				else
-					echo >&2 "WARNING: kernel-modules-extra-${kernel_release} not found; continuing without it"
+					# Once the distro publishes its next minor release, the default repos
+					# move to it and lose the packages for the image's kernel. The repos of
+					# the image's own minor release still have them.
+					# shellcheck source=/dev/null
+					image_releasever="$(. /etc/os-release && echo "${VERSION_ID}")"
+					# shellcheck disable=SC2086
+					if dnf install ${dnf_install_flags} --releasever="${image_releasever}" "kernel-modules-extra-${kernel_release}"; then
+						RELOAD_NETFILTER_MODULES=1
+					else
+						echo >&2 "WARNING: kernel-modules-extra-${kernel_release} not found; continuing without it"
+					fi
 				fi
 				;;
 			esac
 		fi
 	fi
 	if [ -n "${pkgs}" ] || [ -n "${extrapkgs}" ]; then
-		dnf_install_flags="-y --setopt=install_weak_deps=False"
 		epel_install_flags=""
 		if grep -q "Oracle Linux Server release 8" /etc/system-release; then
 			# repo flag instead of enable repo to reduce metadata syncing on slow Oracle repos
