@@ -3,6 +3,9 @@
 version: "2"
 run:
   concurrency: 6
+  # Lint the fake IOKit device in pkg/usbip. The tag only adds files.
+  build-tags:
+  - usbipfake
 linters:
   default: none
   enable:

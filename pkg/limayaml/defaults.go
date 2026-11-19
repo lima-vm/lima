@@ -364,6 +364,18 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.Video.VNC.Display = o.Video.VNC.Display
 	}
 
+	if y.USB.Enabled == nil {
+		y.USB.Enabled = d.USB.Enabled
+	}
+	if o.USB.Enabled != nil {
+		y.USB.Enabled = o.USB.Enabled
+	}
+	y.USB.Devices = slices.Concat(o.USB.Devices, y.USB.Devices, d.USB.Devices)
+	// `devices` alone implies enabled. Unset stays nil, as hcs and wsl2 warn about any non-empty field they do not know.
+	if y.USB.Enabled == nil && len(y.USB.Devices) > 0 {
+		y.USB.Enabled = new(true)
+	}
+
 	if y.Firmware.LegacyBIOS == nil {
 		y.Firmware.LegacyBIOS = d.Firmware.LegacyBIOS
 	}
