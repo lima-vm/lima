@@ -47,7 +47,7 @@ require (
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
 	github.com/mdlayher/vsock v1.4.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
-	github.com/mikefarah/yq/v4 v4.54.2 // gomodjail:unconfined
+	github.com/mikefarah/yq/v4 v4.54.3 // gomodjail:unconfined
 	github.com/modelcontextprotocol/go-sdk v1.8.0 // gomodjail:unconfined
 	github.com/nxadm/tail v1.4.11 // gomodjail:unconfined
 	github.com/opencontainers/go-digest v1.0.0
