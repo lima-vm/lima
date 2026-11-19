@@ -4,11 +4,15 @@ weight: 20
 ---
 
 Lima supports several modes for running Intel-on-ARM and ARM-on-Intel:
-- [Slow mode](#slow-mode)
-- [Fast mode](#fast-mode)
-- [Fast mode 2](#fast-mode-2)
+- [System emulation](#system-emulation): runs a whole VM of a foreign architecture. Slow, but compatible.
+  - [Hybrid Hypervisor (experimental)](#hybrid-hypervisor): accelerates Intel VMs on ARM Mac.
+- [User-mode emulation](#user-mode-emulation): runs containers (or binaries) of a foreign architecture in a native VM. Faster than system emulation, but less compatible.
+  - [Rosetta](#rosetta): runs Intel containers (or binaries) in an ARM VM on ARM Mac. Faster than QEMU.
 
-## [Slow mode: Intel VM on ARM Host / ARM VM on Intel Host](#slow-mode)
+## [System emulation: Intel VM on ARM Host / ARM VM on Intel Host](#system-emulation) {#system-emulation}
+<a id="slow-mode"></a>
+
+This mode was previously called "Slow mode" in this documentation.
 
 | ⚡ Requirement | QEMU, lima-additional-guestagents |
 |---------------|-----------------------------------|
@@ -21,7 +25,7 @@ An example configuration:
 {{< tabpane text=true >}}
 {{% tab header="CLI" %}}
 ```bash
-limactl start --vm-type=qemu --arch=x86_64 --plain
+limactl start --name=x86_64 --vm-type=qemu --arch=x86_64 --plain
 ```
 
 See the YAML tab for the explanation of the corresponding CLI flags.
@@ -48,9 +52,47 @@ base:
 {{< /tabpane >}}
 
 Running a VM with a foreign architecture is extremely slow.
-Consider using [Fast mode](#fast-mode) or [Fast mode 2](#fast-mode-2) whenever possible.
+Consider using [User-mode emulation](#user-mode-emulation) or [Rosetta](#rosetta) whenever possible.
 
-## [Fast mode: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#fast-mode)
+### [Hybrid Hypervisor: faster Intel VM on ARM Mac (experimental)](#hybrid-hypervisor) {#hybrid-hypervisor}
+
+| ⚡ Requirement | QEMU (patched), macOS >= 15, ARM |
+|---------------|----------------------------------|
+
+> **Warning**
+> Experimental. This uses a QEMU patched outside upstream, and it is not part of a Lima release.
+
+[lima-hybrid-hypervisor](https://github.com/lima-vm/lima-hybrid-hypervisor) runs x86_64 VMs on Apple silicon
+several times faster than QEMU's TCG emulator (e.g., about 9 times faster for compiling C code),
+using [Hybrid Hypervisor](https://github.com/nfzerox/VirtualIntelMacOnAppleSilicon) as an accelerator for QEMU.
+Hybrid Hypervisor translates x86_64 code to AArch64 like TCG, but runs the translated code inside a
+Hypervisor.framework VM.
+
+Set up:
+```bash
+brew install glib pixman libslirp ninja pkgconf
+git clone https://github.com/lima-vm/lima-hybrid-hypervisor.git
+cd lima-hybrid-hypervisor
+./build.sh
+./install.sh
+```
+
+Run:
+```bash
+export QEMU_SYSTEM_X86_64=/opt/lima-hybrid-hypervisor/bin/qemu-system-x86_64.hybrid
+limactl start --name=x86_64 --vm-type=qemu --arch=x86_64
+```
+
+The wrapper `qemu-system-x86_64.hybrid` replaces the default CPU model `max` with `Nehalem`, as the engine does not
+support AVX and several other CPU features.
+
+See [the README of lima-hybrid-hypervisor](https://github.com/lima-vm/lima-hybrid-hypervisor) for the benchmark
+results and the limitations.
+
+## [User-mode emulation: Intel containers on ARM VM on ARM Host / ARM containers on Intel VM on Intel Host](#user-mode-emulation) {#user-mode-emulation}
+<a id="fast-mode"></a>
+
+This mode was previously called "Fast mode" in this documentation.
 
 This mode uses QEMU User Mode Emulation.
 QEMU User Mode Emulation is significantly faster than QEMU System Mode Emulation, but it often sacrifices compatibility.
@@ -78,7 +120,10 @@ $ lima nerdctl push --all-platforms example.com/foo:latest
 
 See also https://github.com/containerd/nerdctl/blob/main/docs/multi-platform.md
 
-## [Fast mode 2 (Rosetta): Intel containers on ARM VM on ARM Host](#fast-mode-2)
+### [Rosetta: Intel containers on ARM VM on ARM Host](#rosetta) {#rosetta}
+<a id="fast-mode-2"></a>
+
+This mode was previously called "Fast mode 2" in this documentation.
 
 | ⚡ Requirement | Lima >= 0.14, macOS >= 13.0, ARM |
 |-------------------|----------------------------------|
@@ -105,7 +150,7 @@ rosetta:
 {{% /tab %}}
 {{< /tabpane >}}
 
-### [Enable Rosetta AOT Caching with CDI spec](#rosetta-aot-caching)
+#### [Enable Rosetta AOT Caching with CDI spec](#rosetta-aot-caching) {#rosetta-aot-caching}
 | ⚡ Requirement | Lima >= 2.0, macOS >= 14.0, ARM |
 |-------------------|----------------------------------|
 
