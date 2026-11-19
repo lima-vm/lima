@@ -8,7 +8,9 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"io"
 	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -37,6 +39,8 @@ import (
 const (
 	vSockPort    = 2222
 	sshVsockSock = "ssh-vsock.sock"
+	// restfulSock is krunkit's REST service, used to ask the guest to shut down.
+	restfulSock = "krunkit-restful.sock"
 )
 
 type LimaKrunkitDriver struct {
@@ -153,13 +157,18 @@ func (l *LimaKrunkitDriver) Start(ctx context.Context) (chan error, error) {
 	return l.krunkitWaitCh, nil
 }
 
-func (l *LimaKrunkitDriver) Stop(_ context.Context) error {
+func (l *LimaKrunkitDriver) Stop(ctx context.Context) error {
 	if l.krunkitCmd == nil {
 		return nil
 	}
 
-	if err := l.krunkitCmd.Process.Signal(syscall.SIGTERM); err != nil {
-		logrus.WithError(err).Warn("Failed to send interrupt signal")
+	// Ask the guest to shut down, so that it writes back its data. SIGTERM ends krunkit at once,
+	// and the guest with it, so it is only the fallback.
+	if err := requestGuestStop(ctx, filepath.Join(l.Instance.Dir, restfulSock)); err != nil {
+		logrus.WithError(err).Warn("Failed to ask the guest to shut down through the krunkit REST service, sending SIGTERM")
+		if err := l.krunkitCmd.Process.Signal(syscall.SIGTERM); err != nil {
+			logrus.WithError(err).Warn("Failed to send interrupt signal")
+		}
 	}
 
 	go func() {
@@ -183,6 +192,37 @@ func (l *LimaKrunkitDriver) Stop(_ context.Context) error {
 		_ = <-l.krunkitWaitCh
 		return nil
 	}
+}
+
+// requestGuestStop asks krunkit, through its REST service, to make the guest shut down.
+// krunkit answers before the guest has shut down, and exits when it has.
+func requestGuestStop(ctx context.Context, sock string) error {
+	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	client := &http.Client{
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, "unix", sock)
+			},
+			DisableKeepAlives: true,
+		},
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "http://krunkit/vm/state", strings.NewReader(`{"state":"Stop"}`))
+	if err != nil {
+		return err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	resp, err := client.Do(req)
+	if err != nil {
+		return err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return fmt.Errorf("krunkit REST service answered %s: %s", resp.Status, strings.TrimSpace(string(body)))
+	}
+	return nil
 }
 
 func (l *LimaKrunkitDriver) Validate(_ context.Context) error {
@@ -562,6 +602,7 @@ func (l *LimaKrunkitDriver) cleanupStaleSockets() error {
 	for _, sock := range []string{
 		filepath.Join(l.Instance.Dir, filenames.GuestAgentSock),
 		filepath.Join(l.Instance.Dir, sshVsockSock),
+		filepath.Join(l.Instance.Dir, restfulSock),
 	} {
 		if err := os.RemoveAll(sock); err != nil {
 			errs = append(errs, fmt.Errorf("failed to remove socket %#q: %w", sock, err))
