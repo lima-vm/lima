@@ -1,0 +1,163 @@
+{{/*
+  Reusable Asciinema player.
+*/}}
+
+{{ $count := .Page.Store.Get "asciinemaPlayerCount" | default 0 }}
+{{ $count = add $count 1 }}
+{{ .Page.Store.Set "asciinemaPlayerCount" $count }}
+
+{{ $id := .id | default (printf "asciinema-%d" $count) }}
+{{ $castURL := .cast | default "casts/demo.cast" | relURL }}
+
+{{ $width := .width | default "100%" }}
+{{ $minHeight := .minHeight | default "250px" }}
+
+{{ $title := .title | default "Terminal" }}
+{{ $windowBackground := .windowBackground | default "#1e1e1e" }}
+{{ $titleBarBackground := .titleBarBackground | default "#2d2d2d" }}
+{{ $borderColor := .borderColor | default "#444" }}
+{{ $titleColor := .titleColor | default "#e0e0e0" }}
+
+{{ $dotRed := .dotRed | default "#ff5f56" }}
+{{ $dotYellow := .dotYellow | default "#ffbd2e" }}
+{{ $dotGreen := .dotGreen | default "#27c93f" }}
+
+{{ $showWindowBar := true }}
+{{ if isset . "showWindowBar" }}
+  {{ $showWindowBar = .showWindowBar }}
+{{ end }}
+
+{{ $defaults := dict
+  "autoPlay" true
+  "loop" true
+  "controls" false
+  "theme" "monokai"
+  "fit" "width"
+  "terminalFontFamily" "'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace"
+}}
+
+{{ $customOptions := .playerOptions | default dict }}
+{{ $playerOptions := merge $defaults $customOptions }}
+
+{{/* Load Asciinema assets only once per page. */}}
+{{ if not (.Page.Store.Get "asciinemaPlayerAssets") }}
+  {{ .Page.Store.Set "asciinemaPlayerAssets" true }}
+
+  <link
+    rel="stylesheet"
+    type="text/css"
+    href="https://cdn.jsdelivr.net/npm/asciinema-player@3.6.3/dist/bundle/asciinema-player.css"
+    integrity="sha384-ZF5iXMbSte639lNomQX0SGpwZRe9ebAOiM7Kmf5kTUvy6jfq+ZI7IdSbFZ1htc51"
+    crossorigin="anonymous"
+  />
+
+  <script
+    defer
+    src="https://cdn.jsdelivr.net/npm/asciinema-player@3.6.3/dist/bundle/asciinema-player.min.js"
+    integrity="sha384-49BkM9wxt5zYbxuIoB7f+pryWcHGWwMtwBGeD4LuFXbn26u+4vk6slzBcK+JmSqA"
+    crossorigin="anonymous">
+  </script>
+{{ end }}
+
+<style>
+  .asciinema-window {
+    display: flex;
+    flex-direction: column;
+    width: var(--asciinema-width);
+    background-color: var(--asciinema-background);
+    border-color: var(--asciinema-border);
+  }
+
+  .asciinema-window-bar {
+    position: relative;
+    background-color: var(--asciinema-title-background);
+    border-bottom: 1px solid var(--asciinema-border);
+  }
+
+  .asciinema-window-dot-red {
+    width: 12px;
+    height: 12px;
+    background-color: var(--asciinema-dot-red);
+  }
+
+  .asciinema-window-dot-yellow {
+    width: 12px;
+    height: 12px;
+    background-color: var(--asciinema-dot-yellow);
+  }
+
+  .asciinema-window-dot-green {
+    width: 12px;
+    height: 12px;
+    background-color: var(--asciinema-dot-green);
+  }
+
+  .asciinema-window-title {
+    position: absolute;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 0.8rem;
+    font-family: monospace;
+    font-weight: bold;
+    color: var(--asciinema-title-color);
+  }
+
+  .asciinema-player-container {
+    min-height: var(--asciinema-min-height);
+  }
+</style>
+
+<div
+  class="asciinema-window shadow-sm rounded overflow-hidden border"
+  style="
+    --asciinema-width: {{ $width }};
+    --asciinema-background: {{ $windowBackground }};
+    --asciinema-border: {{ $borderColor }};
+    --asciinema-title-background: {{ $titleBarBackground }};
+    --asciinema-title-color: {{ $titleColor }};
+    --asciinema-dot-red: {{ $dotRed }};
+    --asciinema-dot-yellow: {{ $dotYellow }};
+    --asciinema-dot-green: {{ $dotGreen }};
+    --asciinema-min-height: {{ $minHeight }};
+  ">
+
+  {{ if $showWindowBar }}
+    <div class="asciinema-window-bar d-flex align-items-center px-3 py-2">
+      <div class="asciinema-window-dot-red rounded-circle me-2"></div>
+      <div class="asciinema-window-dot-yellow rounded-circle me-2"></div>
+      <div class="asciinema-window-dot-green rounded-circle"></div>
+
+      <div class="asciinema-window-title">
+        {{ $title }}
+      </div>
+    </div>
+  {{ end }}
+
+  <div
+    id="{{ $id }}"
+    data-asciinema-player
+    data-cast="{{ $castURL }}"
+    data-options='{{ $playerOptions | jsonify }}'
+    class="asciinema-player-container">
+  </div>
+</div>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    if (!window.AsciinemaPlayer) return;
+
+    document.querySelectorAll("[data-asciinema-player]").forEach(function (container) {
+      if (container.dataset.initialized === "true") return;
+
+      const options = JSON.parse(container.dataset.options);
+
+      AsciinemaPlayer.create(
+        container.dataset.cast,
+        container,
+        options
+      );
+
+      container.dataset.initialized = "true";
+    });
+  });
+</script>

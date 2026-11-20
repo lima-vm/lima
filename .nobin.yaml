@@ -27,6 +27,7 @@ skip-base64:
 - hack/bats/lib/**/*.gpg
 - pkg/limatmpl/embed_test.go
 - pkg/sshutil/sshutil_test.go
+- website/layouts/partials/asciinema-player.html
 
 block-confusables: alphanum   # "" = disabled, "alphanum" / "url" / "strict"
 skip-confusables: []
