@@ -23,7 +23,7 @@ local_teardown_file() {
 @test 'stopped snapshot restores a guest file' {
     run -0 limactl list --format '{{.VMType}}' "$NAME"
     case $output in
-    qemu | krunkit) ;;
+    qemu | krunkit | vz) ;;
     *) skip "vmType ${output} does not implement snapshots" ;;
     esac
 

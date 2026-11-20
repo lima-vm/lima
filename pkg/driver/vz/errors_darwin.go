@@ -11,5 +11,4 @@ import "errors"
 var (
 	errRosettaUnsupported    = errors.New("Rosetta is unsupported on non-ARM64 hosts")
 	errMacOSGuestUnsupported = errors.New("macOS guest is unsupported on non-ARM64 hosts")
-	errUnimplemented         = errors.New("unimplemented")
 )
