@@ -89,6 +89,18 @@ func TestCancelGuestAgentSockForward_IssuesCancel(t *testing.T) {
 	assert.Equal(t, got[0].verb, verbCancel)
 }
 
+func TestForwardGuestAgentSock_SkippedWhenStopping(t *testing.T) {
+	calls, restore := stubForwardSSH(t, nil)
+	defer restore()
+
+	a := &HostAgent{}
+	a.stopping.Store(true)
+	a.forwardGuestAgentSock(t.Context(), "/tmp/ga.sock", "/run/lima-guestagent.sock")
+
+	got := calls()
+	assert.Equal(t, len(got), 0, "no SSH forward commands should be issued when stopping")
+}
+
 func TestForwardGuestSockets(t *testing.T) {
 	for _, tc := range []struct {
 		name      string

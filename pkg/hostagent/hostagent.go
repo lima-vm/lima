@@ -20,6 +20,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/lima-vm/sshocker/pkg/ssh"
@@ -98,6 +99,8 @@ type HostAgent struct {
 
 	statusMu      sync.RWMutex
 	currentStatus events.Status
+
+	stopping atomic.Bool
 }
 
 type options struct {
@@ -815,6 +818,7 @@ func (a *HostAgent) cleanUp(fn func() error) {
 }
 
 func (a *HostAgent) close() error {
+	a.stopping.Store(true)
 	a.onCloseMu.Lock()
 	defer a.onCloseMu.Unlock()
 	logrus.Infof("Shutting down the host agent")
@@ -825,6 +829,37 @@ func (a *HostAgent) close() error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+func (a *HostAgent) isStopping() bool {
+	return a.stopping.Load()
+}
+
+func (a *HostAgent) isExpectedShutdownErr(ctx context.Context, err error) bool {
+	if err == nil {
+		return true
+	}
+	if errors.Is(err, context.Canceled) || errors.Is(ctx.Err(), context.Canceled) {
+		return true
+	}
+	if status.Code(err) == codes.Canceled {
+		return true
+	}
+	if a.isStopping() {
+		if errors.Is(err, io.EOF) || errors.Is(err, net.ErrClosed) {
+			return true
+		}
+		if code := status.Code(err); code == codes.Unavailable || code == codes.Canceled {
+			return true
+		}
+		if _, ok := errors.AsType[*net.OpError](err); ok {
+			return true
+		}
+		if strings.Contains(err.Error(), context.Canceled.Error()) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
@@ -861,6 +896,9 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		}
 		client := a.getClient()
 		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
+			if a.isStopping() || ctx.Err() != nil {
+				return
+			}
 			if a.driver.ForwardGuestAgent(ctx) {
 				a.forwardGuestAgentSock(ctx, localUnix, remoteUnix)
 			}
@@ -869,8 +907,14 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 		// the guest agent restarted). Without this, host-side file changes
 		// silently stop propagating into the guest after the first reconnect.
 		for {
-			if err := a.startInotify(ctx); err != nil && !errors.Is(err, context.Canceled) {
+			if a.isStopping() || ctx.Err() != nil {
+				return
+			}
+			if err := a.startInotify(ctx); err != nil && !a.isExpectedShutdownErr(ctx, err) {
 				logrus.WithError(err).Warn("inotify stream ended; will retry")
+			}
+			if a.isStopping() || ctx.Err() != nil {
+				return
 			}
 			select {
 			case <-ctx.Done():
@@ -894,23 +938,35 @@ func (a *HostAgent) watchGuestAgentEvents(ctx context.Context) {
 	})
 
 	for {
+		if a.isStopping() || ctx.Err() != nil {
+			return
+		}
 		client := a.getClient()
 		if client == nil || !isGuestAgentSocketAccessible(ctx, client) {
+			if a.isStopping() || ctx.Err() != nil {
+				return
+			}
 			if a.driver.ForwardGuestAgent(ctx) {
 				a.forwardGuestAgentSock(ctx, localUnix, remoteUnix)
 			}
 		}
+		if a.isStopping() || ctx.Err() != nil {
+			return
+		}
 		client, err := a.getOrCreateClient(ctx)
 		if err == nil {
 			if err := a.processGuestAgentEvents(ctx, client); err != nil {
-				if !errors.Is(err, context.Canceled) {
+				if !a.isExpectedShutdownErr(ctx, err) {
 					logrus.WithError(err).Warn("guest agent events closed unexpectedly")
 				}
 			}
 		} else {
-			if !strings.Contains(err.Error(), context.Canceled.Error()) {
+			if !a.isExpectedShutdownErr(ctx, err) {
 				logrus.WithError(err).Warn("connection to the guest agent was closed unexpectedly")
 			}
+		}
+		if a.isStopping() || ctx.Err() != nil {
+			return
 		}
 		select {
 		case <-ctx.Done():
@@ -978,8 +1034,14 @@ func (a *HostAgent) getClient() *guestagentclient.GuestAgentClient {
 }
 
 func (a *HostAgent) getOrCreateClient(ctx context.Context) (*guestagentclient.GuestAgentClient, error) {
+	if a.isStopping() || ctx.Err() != nil {
+		return nil, context.Canceled
+	}
 	a.clientMu.Lock()
 	defer a.clientMu.Unlock()
+	if a.isStopping() || ctx.Err() != nil {
+		return nil, context.Canceled
+	}
 	if a.client != nil && isGuestAgentSocketAccessible(ctx, a.client) {
 		return a.client, nil
 	}
@@ -1042,8 +1104,11 @@ func (a *HostAgent) processGuestAgentEvents(ctx context.Context, client *guestag
 	}
 
 	if err := client.Events(ctx, onEvent); err != nil {
-		if status.Code(err) == codes.Canceled {
+		if status.Code(err) == codes.Canceled || errors.Is(err, context.Canceled) {
 			return context.Canceled
+		}
+		if errors.Is(err, io.EOF) {
+			return io.EOF
 		}
 		return err
 	}
@@ -1111,12 +1176,18 @@ func executeSSH(ctx context.Context, sshConfig *ssh.SSHConfig, sshAddress string
 func (a *HostAgent) forwardGuestAgentSock(ctx context.Context, localUnix, remoteUnix string) {
 	a.gaSockForwardMu.Lock()
 	defer a.gaSockForwardMu.Unlock()
+	if a.isStopping() || ctx.Err() != nil {
+		return
+	}
 	sshAddress, sshPort := a.sshAddressPort()
 	// Best-effort teardown of any prior forward registered with the
 	// ControlMaster. Errors are expected (e.g. on the very first call when
 	// no forward exists yet) and intentionally ignored. Use ctx so shutdown
 	// can unblock this call if the ControlMaster is unresponsive.
 	_ = forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbCancel, false)
+	if a.isStopping() || ctx.Err() != nil {
+		return
+	}
 	if err := forwardSSH(ctx, a.sshConfig, sshAddress, sshPort, localUnix, remoteUnix, verbForward, false); err != nil {
 		logrus.WithError(err).Warn("failed to (re-)establish forward for the guest agent socket; will retry")
 	}
