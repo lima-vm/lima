@@ -26,8 +26,8 @@ const (
 )
 
 func TestNetworkAndEndpointName(t *testing.T) {
-	assert.Equal(t, networkName("test"), "lima-test-net")
 	assert.Equal(t, endpointName("test"), "lima-test-ep")
+	assert.Equal(t, networkName(), "lima-net")
 }
 
 func TestHNSMACAddress(t *testing.T) {
