@@ -337,17 +337,6 @@ send_from_host() {
     socat -u - "$dest" <<<"$message"
 }
 
-# retry COUNT CMD [ARGS...]: retry a command with a 1 second pause until it succeeds.
-retry() {
-    local count=$1 i
-    shift
-    for ((i = 1; i < count; i++)); do
-        if "$@"; then return 0; fi
-        sleep 1
-    done
-    "$@"
-}
-
 read_guest_outfile() {
     # The guest path must be embedded in the command string: a bare /tmp/... argument
     # would be rewritten to C:/msys64/tmp/... by MSYS2 path conversion on Windows hosts.

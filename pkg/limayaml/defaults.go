@@ -686,6 +686,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if nw.Metric != nil {
 				networks[i].Metric = nw.Metric
 			}
+			if nw.GuestToGuest != nil {
+				networks[i].GuestToGuest = nw.GuestToGuest
+			}
 		} else {
 			// unnamed network definitions are not combined/overwritten
 			if nw.Interface != "" {
@@ -706,6 +709,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		}
 		if nw.Metric == nil {
 			nw.Metric = new(uint32(100))
+		}
+		if nw.GuestToGuest == nil {
+			nw.GuestToGuest = new(false)
 		}
 	}
 

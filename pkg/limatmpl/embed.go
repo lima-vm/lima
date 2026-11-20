@@ -558,6 +558,10 @@ func (tmpl *Template) combineNetworks() {
 				tmpl.copyListEntryField(networks, dst, src, "metric")
 				dest.Metric = nw.Metric
 			}
+			if dest.GuestToGuest == nil && nw.GuestToGuest != nil {
+				tmpl.copyListEntryField(networks, dst, src, "guestToGuest")
+				dest.GuestToGuest = nw.GuestToGuest
+			}
 			if nw.Interface != "*" {
 				tmpl.copyListEntryComments(networks, dst, src, "")
 			}
