@@ -20,6 +20,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/executil"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/lockutil"
+	"github.com/lima-vm/lima/v2/pkg/networks"
 	"github.com/lima-vm/lima/v2/pkg/osutil"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -28,6 +29,12 @@ import (
 // The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`.
 func Start(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is started")
+	if external, err := isExternal(name); err != nil {
+		return err
+	} else if external {
+		// an external daemon must already be running, Lima never starts its own instead
+		return CheckExternal(ctx, name)
+	}
 	networksDir, err := dirnames.LimaNetworksDir()
 	if err != nil {
 		return err
@@ -129,6 +136,13 @@ func Start(ctx context.Context, name string) error {
 // The name parameter must point to a valid network configuration name under <LIMA_HOME>/_config/networks.yaml with `mode: user-v2`.
 func Stop(ctx context.Context, name string) error {
 	logrus.Debugf("Make sure usernet network is stopped")
+	if external, err := isExternal(name); err != nil {
+		return err
+	} else if external {
+		// the PID file of an external network is not written by Lima, so the process must not be signaled
+		logrus.Debugf("Not stopping external usernet network %#q", name)
+		return nil
+	}
 	pidFile, err := PIDFile(name)
 	if err != nil {
 		return err
@@ -165,6 +179,50 @@ func Stop(ctx context.Context, name string) error {
 		}
 		time.Sleep(500 * time.Millisecond)
 	}
+	return nil
+}
+
+func isExternal(name string) (bool, error) {
+	cfg, err := networks.LoadConfig()
+	if err != nil {
+		return false, err
+	}
+	return cfg.External(name)
+}
+
+// externalProbeTimeout is the time CheckExternal waits for the API of the daemon to respond.
+const externalProbeTimeout = 5 * time.Second
+
+// CheckExternal returns an error if the daemon of the given external usernet network is not running.
+//
+// Only the endpoint socket is checked, because it is the only part of the daemon that is used regardless of
+// the VM type. The data socket (e.g., the fd socket for vz, the qemu socket for qemu) is dialed by the
+// driver when the VM is created, and that dial fails the start when the socket is missing or stale. Requiring
+// the data sockets here would reject daemons that only serve the transport their VM type needs.
+func CheckExternal(ctx context.Context, name string) error {
+	sock, err := Sock(name, EndpointSock)
+	if err != nil {
+		return err
+	}
+	fi, err := os.Stat(sock)
+	if err != nil {
+		return fmt.Errorf("external usernet network %#q is not running (Lima never starts the daemon of an external network): %w", name, err)
+	}
+	if fi.Mode().Type() != os.ModeSocket {
+		return fmt.Errorf("external usernet network %#q: %#q is not a socket", name, sock)
+	}
+	// The socket is left behind when the daemon is killed, so its existence is not enough.
+	// The leases API is probed because Lima needs it anyway to resolve the IP address of the guest.
+	client := NewClientByName(name)
+	if client == nil {
+		return fmt.Errorf("external usernet network %#q: failed to create the API client", name)
+	}
+	ctx, cancel := context.WithTimeout(ctx, externalProbeTimeout)
+	defer cancel()
+	if _, err := client.Leases(ctx); err != nil {
+		return fmt.Errorf("external usernet network %#q is not responding on %#q: %w", name, sock, err)
+	}
+	logrus.Debugf("External usernet network %#q is up", name)
 	return nil
 }
 
