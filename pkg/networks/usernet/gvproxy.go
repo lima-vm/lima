@@ -6,7 +6,6 @@ package usernet
 import (
 	"bufio"
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
@@ -22,6 +21,8 @@ import (
 	"github.com/containers/gvisor-tap-vsock/pkg/virtualnetwork"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
+
+	"github.com/lima-vm/lima/v2/pkg/acceptloop"
 )
 
 type GVisorNetstackOpts struct {
@@ -152,33 +153,14 @@ func listenQEMU(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 	}
 
 	go func() {
-		defer listener.Close()
-		<-ctx.Done()
-	}()
-
-	go func() {
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) {
-					return
-				}
-				logrus.Error("QEMU accept failed", err)
+		err := acceptloop.Serve(ctx, listener, func(conn net.Conn) {
+			if err := vn.AcceptQemu(ctx, conn); err != nil {
+				logrus.WithError(err).Error("QEMU connection closed with error")
 			}
-
-			go func() {
-				err = vn.AcceptQemu(ctx, conn)
-				if err != nil {
-					logrus.Error("QEMU connection closed with error", err)
-				}
-				conn.Close()
-			}()
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				continue
-			}
+			conn.Close()
+		})
+		if err != nil {
+			logrus.WithError(err).Error("Stopped accepting QEMU connections")
 		}
 	}()
 
@@ -193,21 +175,7 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 	}
 
 	go func() {
-		defer listener.Close()
-		<-ctx.Done()
-	}()
-
-	go func() {
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) {
-					return
-				}
-				logrus.Error("FD accept failed", err)
-				continue // since conn is nil
-			}
-
+		err := acceptloop.Serve(ctx, listener, func(conn net.Conn) {
 			files, err := fd.Get(conn.(*net.UnixConn), 1, []string{"client"})
 			if err != nil {
 				logrus.Error("Failed to get FD via socket", err)
@@ -222,19 +190,14 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 			}
 			files[0].Close()
 
-			go func() {
-				err = vn.AcceptBess(ctx, &UDPFileConn{Conn: fileConn})
-				if err != nil {
-					logrus.Error("FD connection closed with error", err)
-				}
-				fileConn.Close()
-			}()
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				continue
+			err = vn.AcceptBess(ctx, &UDPFileConn{Conn: fileConn})
+			if err != nil {
+				logrus.WithError(err).Error("FD connection closed with error")
 			}
+			fileConn.Close()
+		})
+		if err != nil {
+			logrus.WithError(err).Error("Stopped accepting FD connections")
 		}
 	}()
 
