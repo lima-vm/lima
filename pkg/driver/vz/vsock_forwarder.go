@@ -7,11 +7,12 @@ package vz
 
 import (
 	"context"
-	"errors"
 	"net"
 
 	"github.com/inetaf/tcpproxy"
 	"github.com/sirupsen/logrus"
+
+	"github.com/lima-vm/lima/v2/pkg/acceptloop"
 )
 
 func (m *virtualMachineWrapper) startVsockForwarder(ctx context.Context, vsockPort uint32, hostAddress string) error {
@@ -31,34 +32,18 @@ func (m *virtualMachineWrapper) startVsockForwarder(ctx context.Context, vsockPo
 	if err != nil {
 		return err
 	}
-	go func() {
-		<-ctx.Done()
-		l.Close()
-	}()
 	logrus.Infof("Started vsock forwarder: %s -> vsock:%d on VM", hostAddress, vsockPort)
 	go func() {
-		defer l.Close()
-		for {
-			conn, err := l.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) {
-					return
-				}
-				logrus.WithError(err).Errorf("vsock forwarder accept error: %v", err)
-			} else {
-				p := tcpproxy.DialProxy{
-					DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
-						return m.dialVsock(ctx, vsockPort)
-					},
-				}
-				go p.HandleConn(conn)
+		err := acceptloop.Serve(ctx, l, func(conn net.Conn) {
+			p := tcpproxy.DialProxy{
+				DialContext: func(_ context.Context, _, _ string) (net.Conn, error) {
+					return m.dialVsock(ctx, vsockPort)
+				},
 			}
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				continue
-			}
+			p.HandleConn(conn)
+		})
+		if err != nil {
+			logrus.WithError(err).Errorf("Stopped vsock forwarder: %s -> vsock:%d on VM", hostAddress, vsockPort)
 		}
 	}()
 	return nil

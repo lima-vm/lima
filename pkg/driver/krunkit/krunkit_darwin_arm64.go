@@ -22,6 +22,7 @@ import (
 	"github.com/lima-vm/go-qcow2reader/image/raw"
 	"github.com/sirupsen/logrus"
 
+	"github.com/lima-vm/lima/v2/pkg/acceptloop"
 	"github.com/lima-vm/lima/v2/pkg/driver/vz"
 	"github.com/lima-vm/lima/v2/pkg/imgutil/proxyimgutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -254,35 +255,19 @@ func startVsockForwarder(ctx context.Context, unixSockPath, hostAddress string) 
 	if err != nil {
 		return err
 	}
-	go func() {
-		<-ctx.Done()
-		l.Close()
-	}()
 	logrus.Infof("Started krunkit vsock forwarder: %s -> %s", hostAddress, unixSockPath)
 	go func() {
-		defer l.Close()
-		for {
-			conn, err := l.Accept()
-			if err != nil {
-				if errors.Is(err, net.ErrClosed) {
-					return
-				}
-				logrus.WithError(err).Errorf("krunkit vsock forwarder accept error: %v", err)
-			} else {
-				p := tcpproxy.DialProxy{
-					DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
-						var d net.Dialer
-						return d.DialContext(ctx, "unix", unixSockPath)
-					},
-				}
-				go p.HandleConn(conn)
+		err := acceptloop.Serve(ctx, l, func(conn net.Conn) {
+			p := tcpproxy.DialProxy{
+				DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+					var d net.Dialer
+					return d.DialContext(ctx, "unix", unixSockPath)
+				},
 			}
-			select {
-			case <-ctx.Done():
-				return
-			default:
-				continue
-			}
+			p.HandleConn(conn)
+		})
+		if err != nil {
+			logrus.WithError(err).Errorf("Stopped krunkit vsock forwarder: %s -> %s", hostAddress, unixSockPath)
 		}
 	}()
 	return nil
