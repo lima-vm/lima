@@ -29,6 +29,9 @@ networks:
     mode: user-v2
     gateway: 192.168.104.1
     netmask: 255.255.255.0
+    # An external daemon can serve a user-v2 network instead of `limactl usernet`.
+    # It must be owned by root, like socketVMNet.
+    # daemon: /usr/local/libexec/vpn-usernet
   shared:
     mode: shared
     gateway: 192.168.105.1

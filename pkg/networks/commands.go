@@ -88,6 +88,25 @@ func (c *Config) DaemonPath(daemon string) (string, error) {
 	}
 }
 
+// UsernetDaemon returns the validated path of the external daemon serving the
+// given "user-v2" network, or "" when the network is served by `limactl usernet`.
+func (c *Config) UsernetDaemon(name string) (string, error) {
+	nw, ok := c.Networks[name]
+	if !ok {
+		return "", fmt.Errorf("network %q is not defined", name)
+	}
+	if nw.Daemon == "" {
+		return "", nil
+	}
+	if nw.Mode != ModeUserV2 {
+		return "", fmt.Errorf("network %q: field `daemon` is only supported for mode %q", name, ModeUserV2)
+	}
+	if err := validateExecutablePath(nw.Daemon); err != nil {
+		return "", fmt.Errorf("network %q: field `daemon`: %w", name, err)
+	}
+	return nw.Daemon, nil
+}
+
 // IsDaemonInstalled checks whether the daemon is installed.
 func (c *Config) IsDaemonInstalled(daemon string) (bool, error) {
 	p, err := c.DaemonPath(daemon)
