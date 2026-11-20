@@ -61,7 +61,8 @@ if [ ! -e "${sysctl_conf}" ]; then
 		echo "kernel.unprivileged_userns_clone=1" >>"${sysctl_conf}"
 	fi
 	echo "net.ipv4.ping_group_range = 0 2147483647" >>"${sysctl_conf}"
-	echo "net.ipv4.ip_unprivileged_port_start=0" >>"${sysctl_conf}"
+	# Keep port 22 privileged so that non-root users cannot bind a fake sshd.
+	echo "net.ipv4.ip_unprivileged_port_start=23" >>"${sysctl_conf}"
 	sysctl --system
 fi
 
