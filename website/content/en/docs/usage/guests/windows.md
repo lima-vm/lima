@@ -40,4 +40,5 @@ For Windows server 2025, TPM emulation is disabled by default. However, there ar
 - QEMU is the only VM driver that supports Windows guests
 - provision feature is limited support (no `boot`, `yq` modes, and `data` and `dependency` modes have limitations)
 - Only plain mode is supported (no file mount, no dynamic port-forwarding)
+- `limactl shell` does not support `--workdir` or `--preserve-env`
 - Booting Windows 11 may occasionally fail. If it fails, please delete the instance and try it again from scratch.

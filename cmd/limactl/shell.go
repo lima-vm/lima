@@ -366,6 +366,9 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if err := validateWindowsShellFlags(inst, workDir, preserveEnv); err != nil {
+		return err
+	}
 	if preserveEnv {
 		filteredEnv := envutil.FilterEnvironment()
 		if len(filteredEnv) > 0 {
@@ -565,6 +568,20 @@ func windowsQuoteShell(shell string) string {
 		return shell
 	}
 	return `"` + shell + `"`
+}
+
+// validateWindowsShellFlags verifies that flags unsupported by Windows guests are not provided.
+func validateWindowsShellFlags(inst *limatype.Instance, workDir string, preserveEnv bool) error {
+	if inst == nil || inst.Config == nil || inst.Config.OS == nil || *inst.Config.OS != limatype.WINDOWS {
+		return nil
+	}
+	if workDir != "" {
+		return errors.New("cannot use `--workdir` with a Windows guest")
+	}
+	if preserveEnv {
+		return errors.New("cannot use `--preserve-env` with a Windows guest")
+	}
+	return nil
 }
 
 // selectPrompt is uiutil.Select, replaced in tests.
