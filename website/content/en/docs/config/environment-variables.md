@@ -71,9 +71,12 @@ This page documents the environment variables used in Lima.
   export LIMA_SHELLENV_BLOCK="*"
   export LIMA_SHELLENV_ALLOW="GITHUB_TOKEN,MY_*"
   limactl shell --preserve-env default
+
+  # The same, for a single command (--allow-env and --block-env imply --preserve-env)
+  limactl shell --block-env '*' --allow-env 'GITHUB_TOKEN,MY_*' default
   ```
 - **Behavior**:
-  - **Without `--preserve-env`**: No environment variables are propagated (regardless of this setting)
+  - **Without `--preserve-env`, `--allow-env`, or `--block-env`**: No environment variables are propagated (regardless of this setting)
   - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` unset**: All variables are propagated except those in the block list
   - **With `--preserve-env` and `LIMA_SHELLENV_ALLOW` set**: Variables matching the allow list are propagated even if they also match the block list. Variables matching neither list are still propagated. Only variables that match the block list without a corresponding allow list match are blocked.
 - **Note**: Patterns support `*` wildcards anywhere in the pattern (e.g., `CUSTOM_*` matches `CUSTOM_VAR`; `*TOKEN*` matches `GITHUB_TOKEN`).
@@ -99,8 +102,11 @@ This page documents the environment variables used in Lima.
   # Extend default block list (recommended)
   export LIMA_SHELLENV_BLOCK="+SECRET_*,PRIVATE_*"
   limactl shell --preserve-env default
+
+  # Extend the block list for a single command (implies --preserve-env)
+  limactl shell --block-env 'SECRET_*,PRIVATE_*' default
   ```
-- **Note**: Patterns support `*` wildcards anywhere in the pattern (e.g., `SSH_*` matches `SSH_AUTH_SOCK`; `*TOKEN*` matches `GITHUB_TOKEN`). Use the `+` prefix to add to the default block list rather than replacing it entirely. This variable only affects the `--preserve-env` flag behavior.
+- **Note**: Patterns support `*` wildcards anywhere in the pattern (e.g., `SSH_*` matches `SSH_AUTH_SOCK`; `*TOKEN*` matches `GITHUB_TOKEN`). Use the `+` prefix to add to the default block list rather than replacing it entirely. This variable takes effect only with `--preserve-env`, which `--allow-env` and `--block-env` imply.
 
 ### `LIMACTL`
 

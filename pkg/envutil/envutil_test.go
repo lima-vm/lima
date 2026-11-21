@@ -88,8 +88,8 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "")
 		t.Setenv("LIMA_SHELLENV_ALLOW", "")
 
-		blockList := getBlockList()
-		allowList := getAllowList()
+		blockList := getBlockList(nil)
+		allowList := getAllowList(nil)
 
 		assert.Assert(t, isUsingDefaultBlockList())
 		assert.DeepEqual(t, blockList, defaultBlockList)
@@ -99,7 +99,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("custom blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "PATH,HOME")
 
-		blockList := getBlockList()
+		blockList := getBlockList(nil)
 		assert.Assert(t, !isUsingDefaultBlockList())
 		expected := []string{"PATH", "HOME"}
 		assert.DeepEqual(t, blockList, expected)
@@ -108,7 +108,7 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("additive blocklist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_BLOCK", "+CUSTOM_VAR")
 
-		blockList := getBlockList()
+		blockList := getBlockList(nil)
 		assert.Assert(t, isUsingDefaultBlockList())
 		expected := slices.Concat(GetDefaultBlockList(), []string{"CUSTOM_VAR"})
 		assert.DeepEqual(t, blockList, expected)
@@ -117,10 +117,53 @@ func TestGetBlockAndAllowLists(t *testing.T) {
 	t.Run("allowlist", func(t *testing.T) {
 		t.Setenv("LIMA_SHELLENV_ALLOW", "FOO,BAR")
 
-		allowList := getAllowList()
+		allowList := getAllowList(nil)
 		expected := []string{"FOO", "BAR"}
 		assert.DeepEqual(t, allowList, expected)
 	})
+
+	t.Run("extra block patterns extend the default blocklist", func(t *testing.T) {
+		t.Setenv("LIMA_SHELLENV_BLOCK", "")
+
+		blockList := getBlockList([]string{"PRIVATE*"})
+		expected := slices.Concat(GetDefaultBlockList(), []string{"PRIVATE*"})
+		assert.DeepEqual(t, blockList, expected)
+	})
+
+	t.Run("extra block patterns extend a custom blocklist", func(t *testing.T) {
+		t.Setenv("LIMA_SHELLENV_BLOCK", "PATH,HOME")
+
+		blockList := getBlockList([]string{"PRIVATE*"})
+		assert.DeepEqual(t, blockList, []string{"PATH", "HOME", "PRIVATE*"})
+	})
+
+	t.Run("extra block patterns extend an additive blocklist", func(t *testing.T) {
+		t.Setenv("LIMA_SHELLENV_BLOCK", "+CUSTOM_VAR")
+
+		blockList := getBlockList([]string{"PRIVATE*"})
+		expected := slices.Concat(GetDefaultBlockList(), []string{"CUSTOM_VAR", "PRIVATE*"})
+		assert.DeepEqual(t, blockList, expected)
+	})
+
+	t.Run("extra allow patterns without LIMA_SHELLENV_ALLOW", func(t *testing.T) {
+		t.Setenv("LIMA_SHELLENV_ALLOW", "")
+
+		allowList := getAllowList([]string{"GITHUB_TOKEN"})
+		assert.DeepEqual(t, allowList, []string{"GITHUB_TOKEN"})
+	})
+
+	t.Run("extra allow patterns extend LIMA_SHELLENV_ALLOW", func(t *testing.T) {
+		t.Setenv("LIMA_SHELLENV_ALLOW", "FOO,BAR")
+
+		allowList := getAllowList([]string{"GITHUB_TOKEN"})
+		assert.DeepEqual(t, allowList, []string{"FOO", "BAR", "GITHUB_TOKEN"})
+	})
+}
+
+func TestValidatePatterns(t *testing.T) {
+	assert.NilError(t, ValidatePatterns(nil))
+	assert.NilError(t, ValidatePatterns([]string{"GITHUB_TOKEN", "PRIVATE*"}))
+	assert.ErrorContains(t, ValidatePatterns([]string{"FOO", "BAR-BAZ"}), "invalid character")
 }
 
 func TestFilterEnvironment(t *testing.T) {
