@@ -60,7 +60,7 @@ func pruneAction(cmd *cobra.Command, _ []string) error {
 			logrus.Debugf("Keep %#q caching %#q", cacheKey, file.Location)
 		} else {
 			logrus.Debug("Deleting ", cacheKey)
-			if err := os.RemoveAll(cachePath); err != nil {
+			if err := downloader.RemoveCacheEntry(cachePath); err != nil {
 				logrus.Warnf("Failed to delete %#q: %v", cacheKey, err)
 				return err
 			}
