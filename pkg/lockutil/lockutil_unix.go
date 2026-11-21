@@ -23,6 +23,7 @@
 package lockutil
 
 import (
+	"errors"
 	"fmt"
 	"os"
 
@@ -44,7 +45,31 @@ func WithDirLock(dir string, fn func() error) error {
 			logrus.WithError(err).Errorf("failed to unlock %#q", dir)
 		}
 	}()
+	if err := checkLockedDir(dirFile, dir); err != nil {
+		return err
+	}
 	return fn()
+}
+
+// checkLockedDir returns ErrDirRemoved when dir no longer refers to the locked
+// directory. The lock is held on the directory inode, so it does not guard a
+// directory that was removed, and possibly recreated, while waiting for the lock.
+func checkLockedDir(dirFile *os.File, dir string) error {
+	locked, err := dirFile.Stat()
+	if err != nil {
+		return err
+	}
+	current, err := os.Stat(dir)
+	if errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("%w: %#q", ErrDirRemoved, dir)
+	}
+	if err != nil {
+		return err
+	}
+	if !os.SameFile(locked, current) {
+		return fmt.Errorf("%w: %#q", ErrDirRemoved, dir)
+	}
+	return nil
 }
 
 func Flock(f *os.File, flags int) error {
