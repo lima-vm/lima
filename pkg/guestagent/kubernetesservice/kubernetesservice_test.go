@@ -5,6 +5,8 @@ package kubernetesservice
 
 import (
 	"net"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -114,6 +116,28 @@ func TestGetPorts(t *testing.T) {
 			serviceWatcher.rwMutex.Unlock()
 		})
 	}
+}
+
+func TestChooseKubeconfig(t *testing.T) {
+	dir := t.TempDir()
+	missing := filepath.Join(dir, "missing.yaml")
+	existing := filepath.Join(dir, "existing.yaml")
+	assert.NilError(t, os.WriteFile(existing, nil, 0o600))
+
+	t.Run("returns KUBECONFIG env var when set", func(t *testing.T) {
+		t.Setenv("KUBECONFIG", "/tmp/my-kubeconfig.yaml")
+		assert.Equal(t, chooseKubeconfigFrom([]string{existing}), "/tmp/my-kubeconfig.yaml")
+	})
+
+	t.Run("returns the first existing candidate", func(t *testing.T) {
+		t.Setenv("KUBECONFIG", "")
+		assert.Equal(t, chooseKubeconfigFrom([]string{missing, existing}), existing)
+	})
+
+	t.Run("returns empty string when KUBECONFIG is unset and no candidate exists", func(t *testing.T) {
+		t.Setenv("KUBECONFIG", "")
+		assert.Equal(t, chooseKubeconfigFrom([]string{missing}), "")
+	})
 }
 
 func TestReadKubectlStream(t *testing.T) {
