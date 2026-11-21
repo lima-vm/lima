@@ -629,6 +629,18 @@ networks:
 # param:
 #   Key: value
 
+# Annotations for users and tools. Lima itself never reads this field, so the values can be
+# any YAML (scalars, lists, or maps). For example:
+#   limactl edit default --set '.meta.database = true'
+#   limactl list --yq 'select(.config.meta.database).name'
+# Maps are merged recursively with `base` templates and with default.yaml and override.yaml;
+# any other value (scalar, list, or null) replaces the lower priority value.
+# `limactl clone` copies `meta` to the new instance.
+# 🟢 Builtin default: {}
+# meta:
+#   description: Database server
+#   keywords: [mysql, database]
+
 # Lima will override the proxy environment variables with values from the current process
 # environment (the environment in effect when you run `limactl start`). It will automatically
 # replace the strings "localhost" and "127.0.0.1" with the host gateway address from inside
@@ -761,6 +773,9 @@ tpm: null
 #   name with higher priority definitions. This does not apply if the
 #  `interface` field is empty. `networks` are therefore also processed
 #  in lowest to highest priority order.
+#
+# - `meta` maps are merged recursively, but any other `meta` value (including
+#   a list) replaces the lower priority value instead of being combined.
 
 # ===================================================================== #
 # END OF TEMPLATE

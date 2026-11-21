@@ -113,6 +113,93 @@ minimumLimaVersion: 1.0.2  # or later
 		"dns: [1.1.1.1, 8.8.8.8]",
 	},
 	{
+		"meta maps are merged recursively",
+		"meta: {owner: {locked: [edit]}}",
+		"meta: {owner: {manager: x, locked: [delete]}, group: g}",
+		"meta: {owner: {manager: x, locked: [edit]}, group: g}",
+	},
+	{
+		"meta lists are replaced, not appended",
+		"meta: {tags: [a, b]}",
+		"meta: {tags: [b, c]}",
+		"meta: {tags: [a, b]}",
+	},
+	{
+		"meta template list replaces base map",
+		"meta: {k: [1, 2]}",
+		"meta: {k: {x: 1}}",
+		"meta: {k: [1, 2]}",
+	},
+	{
+		"meta template map replaces base list",
+		"meta: {k: {x: 1}}",
+		"meta: {k: [1, 2]}",
+		"meta: {k: {x: 1}}",
+	},
+	{
+		"meta template scalar replaces base map",
+		"meta: {k: s}",
+		"meta: {k: {x: 1}}",
+		"meta: {k: s}",
+	},
+	{
+		"meta template map replaces base scalar",
+		"meta: {k: {x: 1}}",
+		"meta: {k: s}",
+		"meta: {k: {x: 1}}",
+	},
+	{
+		"meta template list replaces base scalar",
+		"meta: {k: [1]}",
+		"meta: {k: s}",
+		"meta: {k: [1]}",
+	},
+	{
+		"meta template null replaces base value",
+		"meta: {k: null}",
+		"meta: {k: {x: 1}}",
+		"meta: {k: null}",
+	},
+	{
+		"meta template null replaces base meta",
+		"meta: null",
+		"meta: {k: 1}",
+		"",
+	},
+	{
+		"meta is copied from base when template has none",
+		"",
+		"meta: {k: [1], m: {x: 1}}",
+		"meta: {k: [1], m: {x: 1}}",
+	},
+	{
+		"meta from nested bases is merged with the same rules",
+		"meta: {tags: [t]}",
+		"base: base1.yaml\nmeta: {tags: [a], x: 1}\n---\nmeta: {tags: [b], x: 2, y: 2}",
+		"meta: {tags: [t], x: 1, y: 2}",
+	},
+	{
+		"meta comments are copied over as well",
+		`#
+meta:
+  # Owner
+  owner: me # mine
+`,
+		`
+meta:
+  # Group
+  group: g # base group
+  owner: base # base owner
+`,
+		`
+meta:
+  # Group
+  group: g  # base group
+  # Owner
+  owner: me  # mine
+`,
+	},
+	{
 		"Update comments on existing maps and lists that don't have comments yet",
 		`#
 additionalDisks:
