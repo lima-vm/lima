@@ -8,4 +8,5 @@ inside a VM, so as to prevent agents from directly reading, writing, or executin
 
 See also:
 - [Examples » AI]({{< ref "/docs/examples/ai" >}}).
+- [Agent Skills]({{< ref "/docs/config/ai/skills" >}})
 - [Config » GPU]({{< ref "/docs/config/gpu" >}})
