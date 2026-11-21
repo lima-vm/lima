@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 	"net"
 	"os"
 	"path"
@@ -115,6 +116,14 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 
 	if _, err := units.RAMInBytes(*y.Disk); err != nil {
 		errs = errors.Join(errs, fmt.Errorf("field `disk` has an invalid value: %w", err))
+	}
+
+	// The guest kernel accepts at most INT_MAX, and 0 would turn inotify off.
+	if v := y.Inotify.MaxUserWatches; v != nil && (*v < 1 || *v > math.MaxInt32) {
+		errs = errors.Join(errs, fmt.Errorf("field `inotify.maxUserWatches` must be between 1 and %d, got %d", math.MaxInt32, *v))
+	}
+	if v := y.Inotify.MaxUserInstances; v != nil && (*v < 1 || *v > math.MaxInt32) {
+		errs = errors.Join(errs, fmt.Errorf("field `inotify.maxUserInstances` must be between 1 and %d, got %d", math.MaxInt32, *v))
 	}
 
 	for i, disk := range y.AdditionalDisks {

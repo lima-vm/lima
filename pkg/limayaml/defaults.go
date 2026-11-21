@@ -563,6 +563,27 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.UpgradePackages = new(false)
 	}
 
+	// The builtin defaults are the values recommended by kind:
+	// https://kind.sigs.k8s.io/docs/user/known-issues/#pod-errors-due-to-too-many-open-files
+	if y.Inotify.MaxUserWatches == nil {
+		y.Inotify.MaxUserWatches = d.Inotify.MaxUserWatches
+	}
+	if o.Inotify.MaxUserWatches != nil {
+		y.Inotify.MaxUserWatches = o.Inotify.MaxUserWatches
+	}
+	if y.Inotify.MaxUserWatches == nil {
+		y.Inotify.MaxUserWatches = new(524288)
+	}
+	if y.Inotify.MaxUserInstances == nil {
+		y.Inotify.MaxUserInstances = d.Inotify.MaxUserInstances
+	}
+	if o.Inotify.MaxUserInstances != nil {
+		y.Inotify.MaxUserInstances = o.Inotify.MaxUserInstances
+	}
+	if y.Inotify.MaxUserInstances == nil {
+		y.Inotify.MaxUserInstances = new(512)
+	}
+
 	if y.Containerd.System == nil {
 		y.Containerd.System = d.Containerd.System
 	}
