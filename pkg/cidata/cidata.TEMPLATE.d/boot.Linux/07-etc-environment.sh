@@ -8,7 +8,15 @@ set -eux
 # /etc/environment must be written after boot.essential.Linux/20-persistent-data-volume.sh has run to
 # make sure the changes on a restart are applied to the persisted version.
 
-orig=$(test ! -f /etc/environment || cat /etc/environment)
+# Only the Lima block matters for deciding whether sessions must be restarted.
+# Comparing the whole file would also trigger on lines that provisioning scripts
+# appended after #LIMA-END, because the block is moved to the end on every boot.
+# https://github.com/lima-vm/lima/issues/5730
+lima_block() {
+	test ! -f /etc/environment || sed -n '/#LIMA-START/,/#LIMA-END/p' /etc/environment
+}
+
+orig=$(lima_block)
 if [ -e /etc/environment ]; then
 	sed -i '/#LIMA-START/,/#LIMA-END/d' /etc/environment
 fi
@@ -26,7 +34,7 @@ opening_sessions() {
 	done
 }
 
-if command -v loginctl >/dev/null 2>&1 && [ "${orig}" != "$(cat /etc/environment)" ]; then
+if command -v loginctl >/dev/null 2>&1 && [ "${orig}" != "$(lima_block)" ]; then
 	# systemd v255's logind spins forever, and every later login hangs, when
 	# terminate-user stops a session that is still opening.
 	# https://github.com/lima-vm/lima/issues/5570
