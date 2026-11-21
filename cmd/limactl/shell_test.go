@@ -330,6 +330,84 @@ func TestWindowsQuoteShell(t *testing.T) {
 	}
 }
 
+func TestValidateWindowsShellFlags(t *testing.T) {
+	windowsOS := limatype.WINDOWS
+	linuxOS := limatype.LINUX
+
+	windowsInst := &limatype.Instance{
+		Config: &limatype.LimaYAML{
+			OS: &windowsOS,
+		},
+	}
+	linuxInst := &limatype.Instance{
+		Config: &limatype.LimaYAML{
+			OS: &linuxOS,
+		},
+	}
+
+	tests := []struct {
+		name        string
+		inst        *limatype.Instance
+		workDir     string
+		preserveEnv bool
+		wantErr     string
+	}{
+		{
+			name:        "windows guest without flags passes",
+			inst:        windowsInst,
+			workDir:     "",
+			preserveEnv: false,
+			wantErr:     "",
+		},
+		{
+			name:        "windows guest with workdir fails",
+			inst:        windowsInst,
+			workDir:     "/c/Users",
+			preserveEnv: false,
+			wantErr:     "cannot use `--workdir` with a Windows guest",
+		},
+		{
+			name:        "windows guest with preserve-env fails",
+			inst:        windowsInst,
+			workDir:     "",
+			preserveEnv: true,
+			wantErr:     "cannot use `--preserve-env` with a Windows guest",
+		},
+		{
+			name:        "windows guest with both flags fails on workdir",
+			inst:        windowsInst,
+			workDir:     "/c/Users",
+			preserveEnv: true,
+			wantErr:     "cannot use `--workdir` with a Windows guest",
+		},
+		{
+			name:        "linux guest with both flags passes",
+			inst:        linuxInst,
+			workDir:     "/home/user",
+			preserveEnv: true,
+			wantErr:     "",
+		},
+		{
+			name:        "nil instance passes",
+			inst:        nil,
+			workDir:     "/home/user",
+			preserveEnv: true,
+			wantErr:     "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := validateWindowsShellFlags(tt.inst, tt.workDir, tt.preserveEnv)
+			if tt.wantErr == "" {
+				assert.NilError(t, err)
+			} else {
+				assert.ErrorContains(t, err, tt.wantErr)
+			}
+		})
+	}
+}
+
 // TestGetRsyncStatsMatchesSyncBack checks that the dry run behind the sync-back
 // prompt counts what the sync-back copies, for patterns that rsync anchors at the
 // top of the transfer.
