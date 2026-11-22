@@ -12,19 +12,29 @@ Lima adds a USB/IP server in the hostagent and an attach step in `lima-guestagen
 The protocol needs only a byte stream between host and guest.
 That is why the config is a top-level `usb` key, although only the `vz` driver implements it today.
 
-## Native passthrough
+## Host privileges
 
-macOS 27 adds `VZUSBPassthroughDeviceConfiguration`, which takes an `AAUSBAccessory` from the AccessoryAccess framework.
-[`AAUSBAccessoryManager`](https://developer.apple.com/documentation/accessoryaccess/aausbaccessorymanager) presents UI for the app,
-so it only works from an app that appears in the Dock and is signed with the restricted `com.apple.developer.accessory-access.usb` entitlement.
-Restricted entitlements need a [provisioning profile](https://developer.apple.com/documentation/technotes/tn3125-inside-code-signing-provisioning-profiles),
-which a standalone executable cannot carry. `limactl` is ad-hoc signed (`codesign -s -` with `vz.entitlements`).
+USB/IP needs no root on the host, no privileged helper, and no entitlement beyond `vz.entitlements`.
+`limactl` and the hostagent run as the user, and every host-side step works without root:
 
-Lima would have to ship a separately signed helper app that runs in the user's GUI session.
-Builds from source and Homebrew builds would not get it, and it would need macOS 27 or later.
+- Listing devices and opening them through IOKit.
+- Reconfiguring a device with interface matching off, through the IOUSBHost seize option.
+- `diskutil unmountDisk` for the volumes of USB storage.
+- The per-device `flock` lock files in `${LIMA_HOME}`.
+
+The cost of staying unprivileged: an interface held by a macOS driver or by another host process cannot be claimed.
+See [Caveats]({{< ref "/docs/config/usb#caveats" >}}).
+
+Root is used only inside the guest, to attach the device to `vhci-hcd`.
+
+## Why not use native passthrough
+
+macOS 27 adds `VZUSBPassthroughDeviceConfiguration`, but it needs the restricted `com.apple.developer.accessory-access.usb` entitlement.
+The process running the VM would have to be an app bundle signed with an Apple Developer account and a provisioning profile,
+as in [#5790](https://github.com/lima-vm/lima/pull/5790). Lima releases are ad-hoc signed. USB/IP needs no signed app.
 See [#2224](https://github.com/lima-vm/lima/issues/2224).
 
-## Existing servers
+## Why not use existing servers
 
 - The only Go USB/IP server that exports real macOS devices, SagerNet/sing-usbip, is GPL, and its README says macOS export needs SIP disabled.
 - The permissively licensed Go USB/IP libraries either hand the socket to the Linux kernel's `usbip-host` driver or serve emulated devices.
