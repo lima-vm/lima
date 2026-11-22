@@ -187,8 +187,8 @@ mounts:
 {{< /tabpane >}}
 
 #### Caveats
-- WSL2 file permissions may not work exactly as expected when accessing files that are natively on the Windows disk ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/file-permissions.md))
-- WSL2's disk sharing system uses a 9P protocol server, making the performance similar to [Lima's 9p](#9p) mode ([more info](https://github.com/MicrosoftDocs/WSL/blob/mattw-wsl2-explainer/WSL/wsl2-architecture.md#wsl-2-architectural-flow))
+- WSL2 file permissions may not work exactly as expected when accessing files that are natively on the Windows disk ([more info](https://learn.microsoft.com/en-us/windows/wsl/file-permissions))
+- WSL2's disk sharing system uses a 9P protocol server, making the performance similar to [Lima's 9p](#9p) mode ([more info](https://wsl.dev/technical-documentation/drvfs/#mounting-a-windows-drive))
 
 ## Mount Inotify
 > **Warning**
