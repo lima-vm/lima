@@ -74,6 +74,9 @@ func snapshotCreateAction(cmd *cobra.Command, args []string) error {
 	if err != nil {
 		return err
 	}
+	if len(inst.Errors) > 0 {
+		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
+	}
 
 	tag, err := cmd.Flags().GetString("tag")
 	if err != nil {
@@ -113,6 +116,9 @@ func snapshotDeleteAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
+	}
+	if len(inst.Errors) > 0 {
+		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
 
 	id, err := cmd.Flags().GetString("id")
@@ -166,6 +172,9 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
+	}
+	if len(inst.Errors) > 0 {
+		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
 
 	id, err := cmd.Flags().GetString("id")
@@ -254,6 +263,9 @@ func snapshotListAction(cmd *cobra.Command, args []string) error {
 	inst, err := store.Inspect(ctx, instName)
 	if err != nil {
 		return err
+	}
+	if len(inst.Errors) > 0 {
+		return fmt.Errorf("errors inspecting instance: %+v", inst.Errors)
 	}
 
 	quiet, err := cmd.Flags().GetBool("quiet")

@@ -5,12 +5,17 @@ package main
 
 import (
 	"bytes"
+	"io"
+	"os"
+	"path/filepath"
 	"testing"
 	"time"
 
+	"github.com/spf13/cobra"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
 )
 
 func TestPrintSnapshots(t *testing.T) {
@@ -70,4 +75,36 @@ func TestFindSnapshotIDByTag(t *testing.T) {
 
 	_, err = findSnapshotIDByTag(snapshots, "missing")
 	assert.ErrorContains(t, err, `snapshot tag "missing" not found`)
+}
+
+func TestSnapshotActions_InstanceErrors(t *testing.T) {
+	limaDir := t.TempDir()
+	t.Setenv("LIMA_HOME", limaDir)
+	instanceDir := filepath.Join(limaDir, "broken")
+	assert.NilError(t, os.MkdirAll(instanceDir, 0o700))
+	assert.NilError(t, os.WriteFile(filepath.Join(instanceDir, filenames.LimaYAML), []byte("cpus: [\n"), 0o600))
+
+	createCmd := newSnapshotCreateCommand()
+	createCmd.SetArgs([]string{"broken", "--tag", "snap1"})
+
+	delCmd := newSnapshotDeleteCommand()
+	delCmd.SetArgs([]string{"broken", "--tag", "snap1"})
+
+	applyCmd := newSnapshotApplyCommand()
+	applyCmd.SetArgs([]string{"broken", "--tag", "snap1"})
+
+	listCmd := newSnapshotListCommand()
+	listCmd.SetArgs([]string{"broken"})
+
+	for _, cmd := range []*cobra.Command{createCmd, delCmd, applyCmd, listCmd} {
+		cmd.SilenceUsage = true
+		cmd.SilenceErrors = true
+		cmd.SetOut(io.Discard)
+		cmd.SetErr(io.Discard)
+	}
+
+	assert.ErrorContains(t, createCmd.Execute(), "errors inspecting instance")
+	assert.ErrorContains(t, delCmd.Execute(), "errors inspecting instance")
+	assert.ErrorContains(t, applyCmd.Execute(), "errors inspecting instance")
+	assert.ErrorContains(t, listCmd.Execute(), "errors inspecting instance")
 }
