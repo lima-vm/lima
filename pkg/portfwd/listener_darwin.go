@@ -101,19 +101,25 @@ type pseudoLoopbackPacketConn struct {
 }
 
 func (pk *pseudoLoopbackPacketConn) ReadFrom(bytes []byte) (n int, addr net.Addr, err error) {
-	n, remoteAddr, err := pk.PacketConn.ReadFrom(bytes)
-	if err != nil {
-		return 0, nil, err
-	}
+	// gvisor-tap-vsock's UDPProxy stops forwarding after any ReadFrom error,
+	// so drop datagrams from non-loopback peers and keep reading.
+	for {
+		n, remoteAddr, err := pk.PacketConn.ReadFrom(bytes)
+		if err != nil {
+			return 0, nil, err
+		}
 
-	remoteAddrIP, _, err := net.SplitHostPort(remoteAddr.String())
-	if err != nil {
-		return 0, nil, err
+		remoteAddrIP, _, err := net.SplitHostPort(remoteAddr.String())
+		if err != nil {
+			logrus.WithError(err).Debugf("pseudoloopback forwarder: dropping datagram from unparsable remoteAddr %#q", remoteAddr)
+			continue
+		}
+		if !IsLoopback(remoteAddrIP) {
+			logrus.Debugf("pseudoloopback forwarder: dropping datagram from non-loopback remoteAddr %#q", remoteAddr)
+			continue
+		}
+		return n, remoteAddr, nil
 	}
-	if !IsLoopback(remoteAddrIP) {
-		return 0, nil, fmt.Errorf("pseudoloopback forwarder: rejecting non-loopback remoteAddr %#q", remoteAddr)
-	}
-	return n, remoteAddr, nil
 }
 
 func (pk *pseudoLoopbackPacketConn) WriteTo(bytes []byte, remoteAddr net.Addr) (n int, err error) {
