@@ -351,11 +351,33 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 	case "yaml":
 		format = "{{yaml .}}"
 	case "table":
+		homeDir, err := os.UserHomeDir()
+		if err != nil {
+			return err
+		}
+
 		types := map[string]int{}
 		archs := map[string]int{}
+		nameColumns := 1
+		sshColumns := 2
+		dirColumns := 2
 		for _, instance := range instances {
 			types[instance.VMType]++
 			archs[instance.Arch]++
+			if cols := (len(instance.Name) + 4 + 7) / 8; cols > nameColumns {
+				nameColumns = cols
+			}
+			ssh := fmt.Sprintf("%s:%d", instance.SSHAddress, instance.SSHLocalPort)
+			if cols := (len(ssh) + 4 + 7) / 8; cols > sshColumns {
+				sshColumns = cols
+			}
+			dir := instance.Dir
+			if strings.HasPrefix(dir, homeDir) {
+				dir = strings.Replace(dir, homeDir, "~", 1)
+			}
+			if cols := (len(dir) + 4 + 7) / 8; cols > dirColumns {
+				dirColumns = cols
+			}
 		}
 		all := options != nil && options.AllFields
 		width := 0
@@ -369,11 +391,11 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 
 		// width == 0 means the terminal width is unknown (e.g. stdout is not a TTY),
 		// in which case we treat it as unlimited and never hide any column.
-		columns := 1 // NAME
-		columns += 2 // STATUS
-		columns += 2 // SSH
-		// can we still fit the remaining columns (7)
-		if width != 0 && (columns+7)*columnWidth > width && !all {
+		columns := nameColumns // NAME
+		columns += 2           // STATUS
+		columns += sshColumns  // SSH
+		// can we still fit the remaining columns (VMTYPE, ARCH, CPUS, MEMORY, DISK, DIR)
+		if width != 0 && (columns+5+dirColumns)*columnWidth > width && !all {
 			hideType = len(types) == 1
 		}
 		if !hideType {
@@ -381,8 +403,8 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		}
 		// only hide arch if it is the same as the host arch
 		goarch := limatype.NewArch(runtime.GOARCH)
-		// can we still fit the remaining columns (6)
-		if width != 0 && (columns+6)*columnWidth > width && !all {
+		// can we still fit the remaining columns (ARCH, CPUS, MEMORY, DISK, DIR)
+		if width != 0 && (columns+4+dirColumns)*columnWidth > width && !all {
 			hideArch = len(archs) == 1 && instances[0].Arch == goarch
 		}
 		if !hideArch {
@@ -391,12 +413,12 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		columns++ // CPUS
 		columns++ // MEMORY
 		columns++ // DISK
-		// can we still fit the remaining columns (2)
-		if width != 0 && (columns+2)*columnWidth > width && !all {
+		// can we still fit the remaining columns (DIR)
+		if width != 0 && (columns+dirColumns)*columnWidth > width && !all {
 			hideDir = true
 		}
 		if !hideDir {
-			columns += 2 // DIR
+			columns += dirColumns // DIR
 		}
 		_ = columns
 
@@ -413,11 +435,6 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 			fmt.Fprint(w, "\tDIR")
 		}
 		fmt.Fprintln(w)
-
-		homeDir, err := os.UserHomeDir()
-		if err != nil {
-			return err
-		}
 
 		for _, instance := range instances {
 			dir := instance.Dir

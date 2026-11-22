@@ -208,3 +208,35 @@ func TestPrintInstanceTableTwo(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, tableTwo, buf.String())
 }
+
+// Regression test for https://github.com/lima-vm/lima/issues/4213:
+// When instances have longer names, ports, or paths, the column width budget
+// should account for them dynamically so that ARCH (and DIR) are hidden before
+// lines overflow and wrap in narrow terminals.
+func TestPrintInstanceTableDynamicWidths(t *testing.T) {
+	homeDir, err := os.UserHomeDir()
+	assert.NilError(t, err)
+	inst := limatype.Instance{
+		Name:         "ubuntu-24.04",
+		Status:       limatype.StatusRunning,
+		VMType:       vmtype,
+		Arch:         goarch,
+		Dir:          filepath.Join(homeDir, ".lima", "ubuntu-24.04"),
+		SSHAddress:   "127.0.0.1",
+		SSHLocalPort: 60001,
+		CPUs:         4,
+		Memory:       4 * 1024 * 1024 * 1024,
+		Disk:         100 * 1024 * 1024 * 1024,
+	}
+	instances := []*limatype.Instance{&inst}
+
+	// At terminal width 110, a full row with VMTYPE, ARCH, and DIR (~127 chars) would wrap.
+	// ARCH and VMTYPE must be hidden dynamically to prevent wrapping.
+	var buf bytes.Buffer
+	options := PrintOptions{TerminalWidth: 110}
+	err = PrintInstances(&buf, instances, "table", &options)
+	assert.NilError(t, err)
+	output := buf.String()
+	assert.Assert(t, !strings.Contains(output, "VMTYPE"), "expected VMTYPE to be hidden")
+	assert.Assert(t, !strings.Contains(output, "ARCH"), "expected ARCH to be hidden at width 110")
+}
