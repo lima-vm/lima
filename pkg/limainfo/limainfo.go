@@ -53,7 +53,7 @@ type GuestAgent struct {
 // the DefaultTemplate corresponding to template:default with all defaults filled in, the
 // LimaHome location, a list of all supported VMTypes, and a map of GuestAgents for each architecture.
 func New(ctx context.Context) (*LimaInfo, error) {
-	b, err := templatestore.Read(templatestore.Default)
+	b, err := templatestore.Read(ctx, templatestore.Default)
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +85,7 @@ func New(ctx context.Context) (*LimaInfo, error) {
 		HostOS:          runtime.GOOS,
 		HostArch:        limatype.NewArch(runtime.GOARCH),
 	}
-	info.Templates, err = templatestore.Templates()
+	info.Templates, err = templatestore.Templates(ctx)
 	if err != nil {
 		return nil, err
 	}

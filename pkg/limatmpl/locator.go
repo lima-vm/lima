@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"net/http"
 	"net/url"
 	"os"
@@ -28,6 +29,36 @@ import (
 )
 
 const yBytesLimit = 4 * 1024 * 1024 // 4MiB
+
+type localFSKey struct{}
+
+// WithLocalFS returns a context in which Read opens `file://` URLs and plain paths through fsys
+// instead of the host filesystem, and does not run URL plugins. The only other host file that
+// limatmpl reads is the default base file, and Embed skips it when its defaultBase argument is false.
+func WithLocalFS(ctx context.Context, fsys fs.FS) context.Context {
+	return context.WithValue(ctx, localFSKey{}, fsys)
+}
+
+func localFS(ctx context.Context) fs.FS {
+	fsys, _ := ctx.Value(localFSKey{}).(fs.FS)
+	return fsys
+}
+
+// openLocalFile opens the absolute host path filePath, or, when the context has an fs.FS from
+// WithLocalFS, the matching path in that fs.FS.
+func openLocalFile(ctx context.Context, filePath string) (io.ReadCloser, error) {
+	if fsys := localFS(ctx); fsys != nil {
+		return fsys.Open(localFSPath(filePath))
+	}
+	return os.Open(filePath)
+}
+
+// localFSPath maps an absolute host path to an fs.FS path. It drops the volume
+// (a drive letter or UNC share on Windows) and the leading slash.
+func localFSPath(filePath string) string {
+	p := filepath.ToSlash(strings.TrimPrefix(filePath, filepath.VolumeName(filePath)))
+	return strings.TrimPrefix(path.Clean(p), "/")
+}
 
 func Read(ctx context.Context, name, locator string) (*Template, error) {
 	tmpl := &Template{
@@ -55,7 +86,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 				return nil, err
 			}
 		}
-		tmpl.Bytes, err = templatestore.Read(templateName)
+		tmpl.Bytes, err = templatestore.Read(ctx, templateName)
 		if err != nil {
 			return nil, err
 		}
@@ -92,7 +123,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 		if !filepath.IsAbs(filePath) {
 			return nil, fmt.Errorf("file URL %#q is not an absolute path", locator)
 		}
-		r, err := os.Open(filePath)
+		r, err := openLocalFile(ctx, filePath)
 		if err != nil {
 			return nil, err
 		}
@@ -118,7 +149,7 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 			return nil, err
 		}
 		tmpl.Locator = locator
-		r, err := os.Open(locator)
+		r, err := openLocalFile(ctx, locator)
 		if err != nil {
 			return nil, err
 		}
@@ -358,6 +389,11 @@ func transformCustomURL(ctx context.Context, locator string) (string, error) {
 
 	if u.Scheme == "github" {
 		return transformGitHubURL(ctx, u.Opaque)
+	}
+
+	// A URL plugin is a program on the host, so don't run one when the caller has set WithLocalFS.
+	if localFS(ctx) != nil {
+		return locator, nil
 	}
 
 	plugin, err := plugins.Find("url-" + u.Scheme)

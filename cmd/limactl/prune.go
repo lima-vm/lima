@@ -95,7 +95,7 @@ func knownLocations(ctx context.Context) (map[string]limatype.File, error) {
 	}
 
 	// Collect locations from templates
-	templates, err := templatestore.Templates()
+	templates, err := templatestore.Templates(ctx)
 	if err != nil {
 		return nil, err
 	}
