@@ -337,6 +337,32 @@ func AddGlobalFields(inst *limatype.Instance) (FormatData, error) {
 	return data, nil
 }
 
+const (
+	tableColumnWidth = 8
+	tablePadWidth    = 4
+)
+
+// cellColumns returns the estimated column units (in multiples of tableColumnWidth)
+// occupied by a cell. For intermediate columns (hasNext == true), tablePadWidth spaces
+// are required before the next tab stop. For the final column on the row (hasNext == false),
+// tabwriter does not add trailing padding.
+func cellColumns(contentLen int, hasNext bool) int {
+	if hasNext {
+		contentLen += tablePadWidth
+	}
+	if contentLen <= 0 {
+		return 0
+	}
+	return (contentLen + tableColumnWidth - 1) / tableColumnWidth
+}
+
+func formatDir(dir, homeDir string) string {
+	if homeDir != "" && strings.HasPrefix(dir, homeDir) {
+		return strings.Replace(dir, homeDir, "~", 1)
+	}
+	return dir
+}
+
 type PrintOptions struct {
 	AllFields     bool
 	TerminalWidth int
@@ -364,18 +390,15 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		for _, instance := range instances {
 			types[instance.VMType]++
 			archs[instance.Arch]++
-			if cols := (len(instance.Name) + 4 + 7) / 8; cols > nameColumns {
+			if cols := cellColumns(len(instance.Name), true); cols > nameColumns {
 				nameColumns = cols
 			}
 			ssh := fmt.Sprintf("%s:%d", instance.SSHAddress, instance.SSHLocalPort)
-			if cols := (len(ssh) + 4 + 7) / 8; cols > sshColumns {
+			if cols := cellColumns(len(ssh), true); cols > sshColumns {
 				sshColumns = cols
 			}
-			dir := instance.Dir
-			if strings.HasPrefix(dir, homeDir) {
-				dir = strings.Replace(dir, homeDir, "~", 1)
-			}
-			if cols := (len(dir) + 4 + 7) / 8; cols > dirColumns {
+			dir := formatDir(instance.Dir, homeDir)
+			if cols := cellColumns(len(dir), false); cols > dirColumns {
 				dirColumns = cols
 			}
 		}
@@ -384,7 +407,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		if options != nil {
 			width = options.TerminalWidth
 		}
-		columnWidth := 8
+		columnWidth := tableColumnWidth
 		hideType := false
 		hideArch := false
 		hideDir := false
@@ -422,7 +445,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		}
 		_ = columns
 
-		w := tabwriter.NewWriter(w, 4, 8, 4, ' ', 0)
+		w := tabwriter.NewWriter(w, tablePadWidth, tableColumnWidth, tablePadWidth, ' ', 0)
 		fmt.Fprint(w, "NAME\tSTATUS\tSSH")
 		if !hideType {
 			fmt.Fprint(w, "\tVMTYPE")
@@ -437,10 +460,7 @@ func PrintInstances(w io.Writer, instances []*limatype.Instance, format string, 
 		fmt.Fprintln(w)
 
 		for _, instance := range instances {
-			dir := instance.Dir
-			if strings.HasPrefix(dir, homeDir) {
-				dir = strings.Replace(dir, homeDir, "~", 1)
-			}
+			dir := formatDir(instance.Dir, homeDir)
 			fmt.Fprintf(w, "%s\t%s\t%s",
 				instance.Name,
 				instance.Status,
