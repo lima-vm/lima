@@ -8,12 +8,16 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/coreos/go-semver/semver"
 	"gotest.tools/v3/assert"
 
+	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
+	"github.com/lima-vm/lima/v2/pkg/lockutil"
 )
 
 func TestDefaultPubKeys(t *testing.T) {
@@ -37,6 +41,57 @@ func TestDefaultPubKeys_WithoutExistingKey(t *testing.T) {
 	assert.NilError(t, err)
 	assert.Equal(t, keys[0].Filename, filepath.Join(resolvedTmp, filenames.ConfigDir, filenames.UserPublicKey))
 	assert.Assert(t, detectValidPublicKey(keys[0].Content), "generated key is not a valid public key: %#q", keys[0].Content)
+}
+
+// TestDefaultPubKeys_Concurrent tests that concurrent callers on an empty LIMA_HOME
+// all succeed and share one generated key. Only one of them may run ssh-keygen, because
+// a second run fails when the key file already exists.
+func TestDefaultPubKeys_Concurrent(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	const n = 8
+	start := make(chan struct{})
+	results := make([][]PubKey, n)
+	errs := make([]error, n)
+	var wg sync.WaitGroup
+	for i := range n {
+		wg.Go(func() {
+			<-start
+			results[i], errs[i] = DefaultPubKeys(t.Context(), false)
+		})
+	}
+	close(start)
+	wg.Wait()
+	for i := range n {
+		assert.NilError(t, errs[i])
+		assert.Equal(t, 1, len(results[i]))
+		assert.Equal(t, results[i][0].Content, results[0][0].Content)
+	}
+}
+
+// TestDefaultPubKeys_PublicKeyPending tests that DefaultPubKeys waits for the lock when
+// it finds the private key but not the public one, because another caller may still be
+// running ssh-keygen. The test holds the lock and writes the key files in ssh-keygen's
+// order, the private key first.
+func TestDefaultPubKeys_PublicKeyPending(t *testing.T) {
+	t.Setenv("LIMA_HOME", t.TempDir())
+	configDir, err := dirnames.LimaConfigDir()
+	assert.NilError(t, err)
+	assert.NilError(t, os.MkdirAll(configDir, 0o700))
+	errc := make(chan error, 1)
+	err = lockutil.WithDirLock(configDir, func() error {
+		if err := os.WriteFile(filepath.Join(configDir, filenames.UserPrivateKey), []byte("private\n"), 0o600); err != nil {
+			return err
+		}
+		go func() {
+			_, err := DefaultPubKeys(t.Context(), false)
+			errc <- err
+		}()
+		// DefaultPubKeys fails during this sleep if it reads user.pub without waiting for the lock.
+		time.Sleep(100 * time.Millisecond)
+		return os.WriteFile(filepath.Join(configDir, filenames.UserPublicKey), []byte("ssh-ed25519 AAAA lima\n"), 0o600)
+	})
+	assert.NilError(t, err)
+	assert.NilError(t, <-errc)
 }
 
 func TestParseOpenSSHVersion(t *testing.T) {
