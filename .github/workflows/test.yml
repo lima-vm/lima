@@ -735,6 +735,9 @@ jobs:
     - name: Run BATS VZ host-loopback tests
       if: matrix.template == 'default.yaml'
       run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/vz-host-loopback.bats
+    - name: Run BATS VZ guest-to-guest tests
+      if: matrix.template == 'default.yaml'
+      run: ./hack/bats/lib/bats-core/bin/bats --timing ./hack/bats/extras/vz-guest-to-guest.bats
     - if: failure()
       uses: $/.github/actions/upload_failure_logs_if_exists
       with:

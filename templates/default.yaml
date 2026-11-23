@@ -535,9 +535,14 @@ networks:
 # - socket: "/var/run/socket_vmnet"
 
 
-# The "vzNAT" IP address is accessible from the host, but not from other guests.
+# The "vzNAT" IP address is accessible from the host. Two vzNAT guests can talk to
+# each other only when both set `guestToGuest: true`.
 # Needs `vmType: vz`
 # - vzNAT: true
+#   # Route traffic to other vzNAT guests through the host, because macOS blocks
+#   # direct traffic between vzNAT guests. Linux guests only. Doesn't work on
+#   # openSUSE Leap 15.6. Defaults to false.
+#   guestToGuest: false
 
 # Port forwarding rules. Forwarding between ports 22 and ssh.localPort cannot be overridden.
 # Rules are checked sequentially until the first one matches.

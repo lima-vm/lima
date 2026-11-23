@@ -351,6 +351,25 @@ networks:
 `,
 	},
 	{
+		"networks merge guestToGuest on shared interface name",
+		`
+networks:
+- interface: lima0
+`,
+		`
+networks:
+- interface: lima0
+  vzNAT: true
+  guestToGuest: true
+`,
+		`
+networks:
+- interface: lima0
+  vzNAT: true
+  guestToGuest: true
+`,
+	},
+	{
 		"Scripts are embedded with comments moved",
 		`#
 # Hi There!
