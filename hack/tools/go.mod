@@ -19,7 +19,7 @@ tool (
 
 require (
 	github.com/AkihiroSuda/gomodjail/v2 v2.0.1
-	github.com/AkihiroSuda/gosocialcheck v0.2.1
+	github.com/AkihiroSuda/gosocialcheck v0.2.2
 	github.com/CycloneDX/cyclonedx-gomod v1.12.0
 	github.com/containerd/ltag v0.3.0
 	github.com/golangci/golangci-lint/v2 v2.15.0
@@ -243,7 +243,7 @@ require (
 	github.com/spf13/cast v1.5.0 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/jwalterweatherman v1.1.0 // indirect
-	github.com/spf13/pflag v1.0.10 // indirect
+	github.com/spf13/pflag v1.1.0 // indirect
 	github.com/spf13/viper v1.12.0 // indirect
 	github.com/ssgreg/nlreturn/v2 v2.2.1 // indirect
 	github.com/stbenjam/no-sprintf-host-port v0.3.1 // indirect
