@@ -41,7 +41,7 @@ containerd:
 - The SSH server of a custom rootfs must use host keys whose public keys are in `/etc/ssh/ssh_host_*_key.pub`; see [Host key]({{< ref "/docs/usage/ssh#host-key" >}})
 
 ### Known Issues
-- "wsl2" currently doesn't support many of Lima's options. See [this file](https://github.com/lima-vm/lima/blob/master/pkg/wsl2/wsl_driver_windows.go#L19) for the latest supported options.
+- "wsl2" currently doesn't support many of Lima's options. See `knownYamlProperties` in [`wsl_driver_windows.go`](https://github.com/lima-vm/lima/blob/master/pkg/driver/wsl2/wsl_driver_windows.go) for the latest supported options.
 - When running lima using "wsl2", `${LIMA_HOME}/<INSTANCE>/serial.log` will not contain kernel boot logs
 - WSL2 requires a `tar` formatted rootfs archive instead of a VM image. Standard VM disk images (like `.qcow2`, `.raw`, etc.) or `.squashfs` images cannot be natively imported by WSL2.
 - Lima unpacks a `.tar.gz` rootfs on its own, but a `.tar.xz`, `.tar.bz2`, or `.tar.zst` one needs the matching `xz`, `bzip2`, or `zstd` binary on your `PATH`, and Windows ships none of them.
