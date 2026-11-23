@@ -59,8 +59,8 @@ github.com/AkihiroSuda/gomoddirectivecomments v0.1.0 h1:5sKxYIkq9GGs0DTnuPNVm2Z/
 github.com/AkihiroSuda/gomoddirectivecomments v0.1.0/go.mod h1:flXOhVLWfsi4FuFhFoc9F3m7wAH2RT4aM3fVyQROKt4=
 github.com/AkihiroSuda/gomodjail/v2 v2.0.1 h1:SqgyFDrlLM7h3OAyCvxRC1pJFU1lj6iR7lzx3FUPSs0=
 github.com/AkihiroSuda/gomodjail/v2 v2.0.1/go.mod h1:It5FphTQzZYRLzIHqHhkchbTqEOUAu/BbNZ3oG+nOzE=
-github.com/AkihiroSuda/gosocialcheck v0.2.1 h1:Hzs4SeRnavXdzN0j+2F0Vgb/JGl7kroB20OcJv80VZ4=
-github.com/AkihiroSuda/gosocialcheck v0.2.1/go.mod h1:id83YD/QhgTeFHDo2IlVu7IyxHkP2/Jz7b4bGtI1mtg=
+github.com/AkihiroSuda/gosocialcheck v0.2.2 h1:34GSFZLSYkiwHy2I24Edh9mkXudUQgcOgYadt7c+Nmw=
+github.com/AkihiroSuda/gosocialcheck v0.2.2/go.mod h1:wGVTq5YVaNCBD4Y1NzwZ1EKAb1mPgj2wyfh5iT1aAMY=
 github.com/AlwxSin/noinlineerr v1.0.6 h1:KAvuxunTe9QxvqrFB7nZTdb/7Wzas4AvifslTnG0Ld8=
 github.com/AlwxSin/noinlineerr v1.0.6/go.mod h1:+QgkkoYrMH7RHvcdxdlI7vYYEdgeoFOVjU9sUhw/rQc=
 github.com/Antonboom/errname v1.1.2 h1:dxwONZJua3VB8Xh/VaCjqAcqF645sWWv7xj26zy7tdQ=
@@ -694,8 +694,8 @@ github.com/spf13/jwalterweatherman v1.1.0 h1:ue6voC5bR5F8YxI5S67j9i582FU4Qvo2bmq
 github.com/spf13/jwalterweatherman v1.1.0/go.mod h1:aNWZUN0dPAAO/Ljvb5BEdw96iTZ0EXowPYD95IqWIGo=
 github.com/spf13/pflag v1.0.5/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/pflag v1.0.9/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
-github.com/spf13/pflag v1.0.10 h1:4EBh2KAYBwaONj6b2Ye1GiHfwjqyROoF4RwYO+vPwFk=
-github.com/spf13/pflag v1.0.10/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
+github.com/spf13/pflag v1.1.0 h1:6W6MbVUrnMb8PEhjkqwsVLY7ryuzRfFHF4mQd7L94ag=
+github.com/spf13/pflag v1.1.0/go.mod h1:McXfInJRrz4CZXVZOBLb0bTZqETkiAhM9Iw0y3An2Bg=
 github.com/spf13/viper v1.12.0 h1:CZ7eSOd3kZoaYDLbXnmzgQI5RlciuXBMA+18HwHRfZQ=
 github.com/spf13/viper v1.12.0/go.mod h1:b6COn30jlNxbm/V2IqWiNWkJ+vZNiMNksliPCiuKtSI=
 github.com/ssgreg/nlreturn/v2 v2.2.1 h1:X4XDI7jstt3ySqGU86YGAURbxw3oTDPK9sPEi6YEwQ0=
