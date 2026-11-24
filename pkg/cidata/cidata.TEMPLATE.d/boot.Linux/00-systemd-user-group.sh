@@ -5,13 +5,15 @@
 
 set -eu
 
-# If the UID is in 1...999 ("system users"), add the user to the "systemd-journal"
-# group so that `journalctl --user` works out of the box, without failing with
-# "No journal files were opened due to insufficient permissions".
+# Add the user to the "systemd-journal" group so that `journalctl`
+# works out of the box without sudo (e.g. for `journalctl --user` on macOS UID 501,
+# and for streaming system unit logs such as `journalctl -u cloud-init-main.service`
+# in `limactl start --progress`).
 # https://github.com/lima-vm/lima/issues/5047
+# https://github.com/lima-vm/lima/issues/5758
 # The "systemd-journal" group only exists on systemd-based distributions,
 # so this is a no-op elsewhere.
-[ "${LIMA_CIDATA_UID}" -lt 1000 ] || exit 0
 getent group systemd-journal >/dev/null 2>&1 || exit 0
+id "${LIMA_CIDATA_USER}" >/dev/null 2>&1 || exit 0
 
 usermod -aG systemd-journal "${LIMA_CIDATA_USER}"
