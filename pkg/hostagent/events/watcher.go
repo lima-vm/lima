@@ -18,10 +18,11 @@ import (
 func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Time, propagateStderr bool, onEvent func(Event) bool) error {
 	haStdoutTail, err := tail.TailFile(haStdoutPath,
 		tail.Config{
-			Follow:    true,
-			ReOpen:    true,
-			MustExist: false,
-			Logger:    logrus.StandardLogger(),
+			Follow:        true,
+			CompleteLines: true,
+			ReOpen:        true,
+			MustExist:     false,
+			Logger:        logrus.StandardLogger(),
 		})
 	if err != nil {
 		return err
@@ -33,10 +34,11 @@ func Watch(ctx context.Context, haStdoutPath, haStderrPath string, begin time.Ti
 
 	haStderrTail, err := tail.TailFile(haStderrPath,
 		tail.Config{
-			Follow:    true,
-			ReOpen:    true,
-			MustExist: false,
-			Logger:    logrus.StandardLogger(),
+			Follow:        true,
+			CompleteLines: true,
+			ReOpen:        true,
+			MustExist:     false,
+			Logger:        logrus.StandardLogger(),
 		})
 	if err != nil {
 		return err
