@@ -1,6 +1,7 @@
 {{ $col_id := .Get "color" | default "dark" }}
 {{/* Height can be one of: auto, min, med, max, full. */}}
-{{ $height := .Get "height" | default "max"  }}
+{{ $height := .Get "height" | default "max" }}
+
 <section
   class="row td-cover-block td-cover-block--height-{{ $height }} js-td-cover td-overlay td-overlay--light -bg-{{ $col_id }}">
   <div class="container td-overlay__inner">
@@ -13,9 +14,16 @@
           <p class="display-2 mb-0">Linux Machines</p>
         </div>
       </div>
+
       <div class="col-lg-6">
-        <img src="/images/demo.gif" alt="demo" class="img-fluid" />
+        {{ partial "asciinema-player.html" (dict
+          "Page" .Page
+          "id" "lima-demo"
+          "cast" "casts/demo.cast"
+          "title" "lima"
+        ) }}
       </div>
+
       <div class="col-12 pt-3">
         <div class="pt-3 lead text-center">
           {{ .Inner }}
