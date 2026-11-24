@@ -4,22 +4,21 @@
 package ioutilx
 
 import (
-	"errors"
 	"fmt"
 	"io"
 )
 
-// ReadAtMaximum reads n at maximum.
+// ReadAtMaximum reads n bytes at maximum.
+// It returns an error if r has more than n bytes.
 func ReadAtMaximum(r io.Reader, n int64) ([]byte, error) {
-	lr := &io.LimitedReader{
-		R: r,
-		N: n,
-	}
-	b, err := io.ReadAll(lr)
+	// Read one extra byte to detect whether r exceeds the limit.
+	// io.ReadAll never returns io.EOF, so the size has to be checked explicitly.
+	b, err := io.ReadAll(io.LimitReader(r, n+1))
 	if err != nil {
-		if errors.Is(err, io.EOF) && lr.N <= 0 {
-			err = fmt.Errorf("exceeded the limit (%d bytes): %w", n, err)
-		}
+		return nil, err
 	}
-	return b, err
+	if int64(len(b)) > n {
+		return nil, fmt.Errorf("exceeded the limit (%d bytes)", n)
+	}
+	return b, nil
 }
