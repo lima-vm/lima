@@ -188,28 +188,8 @@ func shellAction(cmd *cobra.Command, args []string) error {
 	}
 	if restart && sshutil.IsControlMasterExisting(inst.Dir) {
 		logrus.Infof("Exiting ssh session for the instance %#q", instName)
-
-		sshConfig := &ssh.SSHConfig{
-			ConfigFile:     inst.SSHConfigFile,
-			Persist:        false,
-			AdditionalArgs: []string{},
-		}
-
-		if err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig); err != nil {
-			// `ssh -O exit` fails when the control socket file exists but the
-			// master process is already dead (unclean hostagent exit: kill -9,
-			// OOM, host crash). That stale state is exactly what --reconnect is
-			// meant to recover from, so only surface the error when a master is
-			// still alive; otherwise drop the stale socket and continue so a
-			// fresh master can be established.
-			removed, rmErr := sshutil.RemoveStaleControlMaster(ctx, inst.Dir)
-			if rmErr != nil {
-				return rmErr
-			}
-			if !removed {
-				return err
-			}
-			logrus.WithError(err).Warnf("Removed stale ssh control socket for the instance %#q after the master had already exited", instName)
+		if err := exitSSHMaster(ctx, inst); err != nil {
+			return err
 		}
 	}
 
@@ -1100,4 +1080,35 @@ func hasMetadataDelta(attrs string) bool {
 		}
 	}
 	return false
+}
+
+// exitSSHMaster exits the persistent SSH ControlMaster of the instance, so that
+// the next ssh command starts a new one.
+func exitSSHMaster(ctx context.Context, inst *limatype.Instance) error {
+	if !sshutil.IsControlMasterExisting(inst.Dir) {
+		return nil
+	}
+	sshConfig := &ssh.SSHConfig{
+		ConfigFile:     inst.SSHConfigFile,
+		Persist:        false,
+		AdditionalArgs: []string{},
+	}
+	err := ssh.ExitMaster(inst.Hostname, inst.SSHLocalPort, sshConfig)
+	if err == nil {
+		return nil
+	}
+	// `ssh -O exit` fails when the control socket file exists but the
+	// master process is already dead (unclean hostagent exit: kill -9,
+	// OOM, host crash). Only surface the error when a master is still
+	// alive; otherwise drop the stale socket so a fresh master can be
+	// established.
+	removed, rmErr := sshutil.RemoveStaleControlMaster(ctx, inst.Dir)
+	if rmErr != nil {
+		return rmErr
+	}
+	if !removed {
+		return err
+	}
+	logrus.WithError(err).Warnf("Removed stale ssh control socket for the instance %#q after the master had already exited", inst.Name)
+	return nil
 }

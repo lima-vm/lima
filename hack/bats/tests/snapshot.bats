@@ -50,3 +50,23 @@ local_teardown_file() {
     run -0 limactl snapshot list "$NAME" --quiet
     refute_line base
 }
+
+@test 'shell works after applying a snapshot to a running instance' {
+    vm_type=$(limactl list --format '{{.VMType}}' "$NAME")
+    [[ $vm_type == qemu ]] || skip "vmType ${vm_type} does not implement online snapshots"
+
+    limactl start --tty=false "$NAME"
+    limactl shell "$NAME" -- sh -c 'echo marker-1 >/var/tmp/snap-marker'
+    run -0 limactl snapshot create "$NAME" --tag online
+    limactl shell "$NAME" -- sh -c 'echo marker-2 >/var/tmp/snap-marker'
+
+    run -0 limactl snapshot apply "$NAME" --tag online
+    # Without resetting the ssh ControlMaster, the shell hangs after the apply.
+    # Write to a file instead of using `run`: a stuck ssh master can keep the
+    # `run` capture pipe open after `timeout` has killed the client.
+    timeout 60 limactl shell "$NAME" -- cat /var/tmp/snap-marker >"$BATS_TEST_TMPDIR/marker"
+    assert_equal "$(<"$BATS_TEST_TMPDIR/marker")" marker-1
+
+    limactl stop "$NAME"
+    run -0 limactl snapshot delete "$NAME" --tag online
+}

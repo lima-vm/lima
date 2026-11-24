@@ -15,6 +15,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
+	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/snapshot"
 	"github.com/lima-vm/lima/v2/pkg/store"
 )
@@ -189,7 +190,19 @@ func snapshotApplyAction(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	return snapshot.Load(ctx, inst, id)
+	if err := snapshot.Load(ctx, inst, id); err != nil {
+		return err
+	}
+	// Applying a snapshot to a running instance also restores the guest's TCP
+	// state, which no longer matches the connection of the persistent SSH
+	// ControlMaster, so commands that reuse the master hang.
+	// Exit the master so that the next ssh command starts a new one.
+	if inst.Status == limatype.StatusRunning {
+		if err := exitSSHMaster(ctx, inst); err != nil {
+			logrus.WithError(err).Warnf("Failed to exit the ssh session for the instance %#q; run `limactl shell --reconnect %s` if the shell hangs", instName, instName)
+		}
+	}
+	return nil
 }
 
 func findSnapshotIDByTag(snapshots []driver.Snapshot, tag string) (string, error) {
