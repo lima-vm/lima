@@ -321,15 +321,26 @@ func StartWithPaths(ctx context.Context, inst *limatype.Instance, launchHostAgen
 		return err
 	}
 
-	watchErrCh := make(chan error)
+	watchFn := func() error {
+		return watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin, showProgress)
+	}
+	var waitFn func() error
+	if haCmd != nil {
+		waitFn = haCmd.Wait
+	}
+	return awaitHostAgent(watchFn, waitFn)
+}
+
+func awaitHostAgent(watchFn, waitFn func() error) error {
+	watchErrCh := make(chan error, 1)
 	go func() {
-		watchErrCh <- watchHostAgentEvents(ctx, inst, haStdoutPath, haStderrPath, begin, showProgress)
+		watchErrCh <- watchFn()
 		close(watchErrCh)
 	}()
-	waitErrCh := make(chan error)
-	if haCmd != nil {
+	waitErrCh := make(chan error, 1)
+	if waitFn != nil {
 		go func() {
-			waitErrCh <- haCmd.Wait()
+			waitErrCh <- waitFn()
 			close(waitErrCh)
 		}()
 	} else {
