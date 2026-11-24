@@ -36,6 +36,18 @@ func TestFindSnapshotTagByID(t *testing.T) {
 	assert.ErrorContains(t, err, `snapshot ID "missing" not found`)
 }
 
+func TestHmpErrorMessage(t *testing.T) {
+	testCases := map[string]string{
+		"warning: something\r\n":            "",
+		"the word Error: inside a line\r\n": "",
+		"Error: Migration is disabled when VirtFS export path '/home/user' is mounted\r\n":      "Migration is disabled when VirtFS export path '/home/user' is mounted",
+		"warning: something\r\nError: Snapshot 'foo' does not exist in one or more devices\r\n": "Snapshot 'foo' does not exist in one or more devices",
+	}
+	for output, expected := range testCases {
+		assert.Equal(t, hmpErrorMessage(output), expected)
+	}
+}
+
 func TestArgValue(t *testing.T) {
 	type testCase struct {
 		key           string

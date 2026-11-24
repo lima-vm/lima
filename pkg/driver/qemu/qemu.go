@@ -168,7 +168,25 @@ func sendHmpCommand(cfg Config, cmd, tag string) (string, error) {
 	rawClient := raw.NewMonitor(qmpClient)
 	logrus.Infof("Sending HMP %s command", cmd)
 	hmc := fmt.Sprintf("%s %s", cmd, tag)
-	return rawClient.HumanMonitorCommand(hmc, nil)
+	out, err := rawClient.HumanMonitorCommand(hmc, nil)
+	if err != nil {
+		return out, err
+	}
+	// HMP commands such as savevm report a failure as an "Error: " line in
+	// their output, while the QMP command that carries them still succeeds.
+	if msg := hmpErrorMessage(out); msg != "" {
+		return "", fmt.Errorf("HMP %s command failed: %s", cmd, msg)
+	}
+	return out, nil
+}
+
+func hmpErrorMessage(out string) string {
+	for line := range strings.Lines(out) {
+		if msg, ok := strings.CutPrefix(line, "Error: "); ok {
+			return strings.TrimSpace(msg)
+		}
+	}
+	return ""
 }
 
 func execImgCommand(ctx context.Context, cfg Config, args ...string) (string, error) {
