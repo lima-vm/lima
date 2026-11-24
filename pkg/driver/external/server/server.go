@@ -26,6 +26,7 @@ import (
 	"github.com/lima-vm/lima/v2/pkg/driver"
 	pb "github.com/lima-vm/lima/v2/pkg/driver/external"
 	"github.com/lima-vm/lima/v2/pkg/driver/external/client"
+	"github.com/lima-vm/lima/v2/pkg/fsutil"
 	"github.com/lima-vm/lima/v2/pkg/limatype"
 	"github.com/lima-vm/lima/v2/pkg/limatype/dirnames"
 	"github.com/lima-vm/lima/v2/pkg/limatype/filenames"
@@ -221,7 +222,12 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 
 	pid := cmd.Process.Pid
 	pidFilePath := driverPIDFilePath(instanceDir, extDriver.Name)
-	if err := os.WriteFile(pidFilePath, []byte(strconv.Itoa(pid)), 0o644); err != nil {
+	if err := recordBootSession(instanceDir); err != nil {
+		_ = cmd.Process.Kill()
+		_, _ = cmd.Process.Wait()
+		return fmt.Errorf("failed to record boot session marker: %w", err)
+	}
+	if err := fsutil.WriteFileAtomic(pidFilePath, fmt.Appendf(nil, "%d\n", pid)); err != nil {
 		_ = cmd.Process.Kill()
 		_, _ = cmd.Process.Wait()
 		return fmt.Errorf("failed to write driver PID file: %w", err)
@@ -272,12 +278,61 @@ func Start(ctx context.Context, extDriver *registry.ExternalDriver, instName str
 	}
 }
 
+// removeDriverStateFiles removes *.drv.pid and *.drv.sock files in instDir.
+func removeDriverStateFiles(instDir string) {
+	pidFiles, _ := filepath.Glob(filepath.Join(instDir, "*.drv.pid"))
+	for _, pidFile := range pidFiles {
+		_ = os.Remove(pidFile)
+	}
+	sockFiles, _ := filepath.Glob(filepath.Join(instDir, "*.drv.sock"))
+	for _, sockFile := range sockFiles {
+		_ = os.Remove(sockFile)
+	}
+}
+
+// recordBootSession removes any stale driver PID/socket files from a previous boot
+// before writing the current boot session marker, so PID files written afterward
+// are bound to the active boot session.
+func recordBootSession(instDir string) error {
+	current, err := osutil.BootSessionID()
+	if errors.Is(err, osutil.ErrBootSessionNotSupported) || (err == nil && current == "") {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("failed to determine boot session ID: %w", err)
+	}
+	if isStaleBootSession(instDir) {
+		logrus.Debugf("Removing stale external driver files in %s left behind by a previous boot", instDir)
+		removeDriverStateFiles(instDir)
+	}
+	return fsutil.WriteFileAtomic(filepath.Join(instDir, filenames.BootSession), []byte(current+"\n"))
+}
+
+// isStaleBootSession reports whether dir holds a boot session marker from a previous boot.
+func isStaleBootSession(dir string) bool {
+	current, err := osutil.BootSessionID()
+	if err != nil || current == "" {
+		return false
+	}
+	b, err := os.ReadFile(filepath.Join(dir, filenames.BootSession))
+	if err != nil {
+		return false
+	}
+	return strings.TrimSpace(string(b)) != current
+}
+
 // Stop finds and stops any external driver server processes in the given
 // instance directory using PID files. If force is true, SIGKILL is sent;
 // otherwise SIGTERM is sent and we wait for the process to exit.
 // Also cleans up PID files and socket files.
 func Stop(instDir string, force bool) {
 	logrus.Debugf("Stopping external driver server in instance directory %s", instDir)
+	if isStaleBootSession(instDir) {
+		logrus.Debugf("Ignoring external driver PID files in %s left behind by a previous boot", instDir)
+		removeDriverStateFiles(instDir)
+		return
+	}
+
 	pidPattern := filepath.Join(instDir, "*.drv.pid")
 	files, _ := filepath.Glob(pidPattern)
 	for _, pidFile := range files {
