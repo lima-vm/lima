@@ -5,6 +5,8 @@ package limatmpl_test
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"runtime"
 	"testing"
 
@@ -245,4 +247,24 @@ func TestRead(t *testing.T) {
 			assert.Equal(t, tmpl.Config.Images[0].File.Arch, tt.expectedArch)
 		})
 	}
+}
+
+func TestReadHTTPStatus(t *testing.T) {
+	const content = "images: []\n"
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/found.yaml" {
+			http.NotFound(w, r)
+			return
+		}
+		_, _ = w.Write([]byte(content))
+	}))
+	t.Cleanup(srv.Close)
+
+	tmpl, err := limatmpl.Read(t.Context(), "", srv.URL+"/found.yaml")
+	assert.NilError(t, err)
+	assert.Equal(t, tmpl.Name, "found")
+	assert.Equal(t, string(tmpl.Bytes), content)
+
+	_, err = limatmpl.Read(t.Context(), "", srv.URL+"/missing.yaml")
+	assert.ErrorContains(t, err, "404 Not Found")
 }
