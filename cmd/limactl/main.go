@@ -32,6 +32,8 @@ const (
 	advancedCommand     = "advanced"
 )
 
+var isBeingRosettaTranslated = osutil.IsBeingRosettaTranslated
+
 func main() {
 	if os.Geteuid() == 0 && (len(os.Args) < 2 || os.Args[1] != "generate-doc") {
 		fmt.Fprint(os.Stderr, "limactl: must not run as the root user\n")
@@ -132,7 +134,7 @@ func newApp() *cobra.Command {
 			return err
 		}
 
-		if osutil.IsBeingRosettaTranslated() && cmd.Parent().Name() != "completion" && cmd.Name() != "generate-doc" && cmd.Name() != "validate" {
+		if isBeingRosettaTranslated() && !isAllowedUnderRosetta(cmd) {
 			// running under rosetta would provide inappropriate runtime.GOARCH info, see: https://github.com/lima-vm/lima/issues/543
 			// allow commands that are used for packaging to run under rosetta to allow cross-architecture builds
 			return errors.New("limactl is running under rosetta, please reinstall lima with native arch")
@@ -310,4 +312,15 @@ func WrapArgsError(argFn cobra.PositionalArgs) cobra.PositionalArgs {
 			cmd.UseLine(), cmd.Short,
 		)
 	}
+}
+
+func isAllowedUnderRosetta(cmd *cobra.Command) bool {
+	switch cmd.Name() {
+	case "generate-doc", "validate", "completion":
+		return true
+	}
+	if cmd.Parent() != nil && cmd.Parent().Name() == "completion" {
+		return true
+	}
+	return false
 }
