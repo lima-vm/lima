@@ -76,6 +76,9 @@ func Read(ctx context.Context, name, locator string) (*Template, error) {
 			return nil, err
 		}
 		defer resp.Body.Close()
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("failed to fetch template %#q: unexpected HTTP status %q", locator, resp.Status)
+		}
 		tmpl.Bytes, err = ioutilx.ReadAtMaximum(resp.Body, yBytesLimit)
 		if err != nil {
 			return nil, err
