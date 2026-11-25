@@ -310,6 +310,12 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 		return nil, err
 	}
 	_, err = os.Stat(filepath.Join(configDir, filenames.UserPrivateKey))
+	if err == nil {
+		// ssh-keygen writes the public key after the private key. When only the
+		// private key exists, another caller may still be running ssh-keygen, so
+		// take the lock and wait for that caller to finish.
+		_, err = os.Stat(filepath.Join(configDir, filenames.UserPublicKey))
+	}
 	if err != nil {
 		if !errors.Is(err, os.ErrNotExist) {
 			return nil, err
@@ -320,6 +326,10 @@ func DefaultPubKeys(ctx context.Context, loadDotSSH bool) ([]PubKey, error) {
 		if err := lockutil.WithDirLock(configDir, func() error {
 			// no passphrase, no user@host comment
 			privPath := filepath.Join(configDir, filenames.UserPrivateKey)
+			// Another caller may have created the key while this one waited for the lock.
+			if _, err := os.Stat(privPath); err == nil {
+				return nil
+			}
 			keygenExe := "ssh-keygen"
 			if runtime.GOOS == "windows" {
 				sshExe, sshErr := NewSSHExe()
