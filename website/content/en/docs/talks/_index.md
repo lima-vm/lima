@@ -102,3 +102,13 @@ Read the [slides](https://github.com/unsuman/unsuman/blob/main/slides/20260729%2
 [Akihiro Suda](https://github.com/AkihiroSuda) and [Ansuman Sahoo](https://github.com/unsuman) also presented Lima in the CNCF project pavilion.
 
 Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20260730%20%5BKubeCon%20JP%20Pavilion%5D%20Lima.pdf).
+
+### KubeCon + CloudNativeCon North America 2026
+
+[Akihiro Suda](https://github.com/AkihiroSuda) presented "Lima as the Universal AI Sandbox".
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20261110%20%5BKubeCon%20NA%5D%20Lima%20as%20the%20Universal%20AI%20Sandbox.pdf) or watch the [video](https://www.youtube.com/watch?v=SKwn_3OqCvM).
+
+He also presented Lima in the CNCF project pavilion.
+
+Read the [slides](https://github.com/AkihiroSuda/AkihiroSuda/blob/master/slides/2026/20261112%20%5BKubeCon%20NA%20Pavilion%5D%20Lima.pdf).
