@@ -209,18 +209,24 @@ func listenFD(ctx context.Context, vn *virtualnetwork.VirtualNetwork) error {
 			}
 
 			files, err := fd.Get(conn.(*net.UnixConn), 1, []string{"client"})
+			conn.Close()
+			if err == nil && len(files) != 1 {
+				err = fmt.Errorf("expected 1 file descriptor, got %d", len(files))
+			}
 			if err != nil {
-				logrus.Error("Failed to get FD via socket", err)
+				for _, file := range files {
+					file.Close()
+				}
+				logrus.WithError(err).Error("Failed to get FD via socket")
+				continue
 			}
 
-			if len(files) != 1 {
-				logrus.Error("Invalid number of fd in response", err)
-			}
 			fileConn, err := net.FileConn(files[0])
-			if err != nil {
-				logrus.Error("Error in FD Socket", err)
-			}
 			files[0].Close()
+			if err != nil {
+				logrus.WithError(err).Error("Error in FD Socket")
+				continue
+			}
 
 			go func() {
 				err = vn.AcceptBess(ctx, &UDPFileConn{Conn: fileConn})
