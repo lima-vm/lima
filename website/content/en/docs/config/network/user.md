@@ -57,3 +57,11 @@ DNS over tcp is rarely used. It is usually only used either when user explicitly
 During initial cloud-init bootstrap, `iptables` may not yet be installed. In that case the repo server is determined using the slirp DNS. After `iptables` has been installed, the forwarding rule is applied, switching over to the hostagent DNS.
 
 If `hostResolver.enabled` is false, then DNS servers can be configured manually in `lima.yaml` via the `dns` setting. If that list is empty, then Lima will either use the slirp DNS (on Linux), or the nameservers from the first host interface in service order that has an assigned IPv4 address (on macOS).
+
+### Search domains
+
+For `vmType: vz`, `vmType: krunkit`, and [`user-v2`]({{< ref "/docs/config/network/user-v2" >}}) networks, Lima passes the host's DNS search domains from `/etc/resolv.conf` to the guest via DHCP. On `vmType: qemu`, by default, Lima does not pass search domains on QEMU's slirp network.
+
+Lima includes the domains in their original order, up to the search list limits of macOS `resolver(5)`: six domains and 256 characters in total.
+Exceeding these limits can make the DHCP reply too large for the guest to process, preventing it from obtaining an IP address.
+On Windows, Lima does not pass any search domains.
