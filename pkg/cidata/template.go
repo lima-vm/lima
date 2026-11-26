@@ -111,6 +111,8 @@ type TemplateArgs struct {
 	Disks                           []Disk
 	GuestInstallPrefix              string
 	UpgradePackages                 bool
+	InotifyMaxUserWatches           int
+	InotifyMaxUserInstances         int
 	Containerd                      Containerd
 	Networks                        []Network
 	SlirpNICName                    string

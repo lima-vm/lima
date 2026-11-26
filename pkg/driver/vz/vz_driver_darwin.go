@@ -57,6 +57,7 @@ var knownYamlProperties = []string{
 	"GuestInstallPrefix",
 	"HostResolver",
 	"Images",
+	"Inotify",
 	"Memory",
 	"Message",
 	"MinimumLimaVersion",
