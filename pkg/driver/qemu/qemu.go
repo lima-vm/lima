@@ -544,7 +544,7 @@ func resolveCPUType(y *limatype.LimaYAML, qemuVersion *semver.Version) string {
 		logrus.WithError(err).Warnf("Couldn't convert %#q", y.VMOpts[limatype.QEMU])
 	}
 	for k, v := range qemuOpts.CPUType {
-		if !slices.Contains(limatype.ArchTypes, *y.Arch) {
+		if !slices.Contains(limatype.ArchTypes, k) {
 			logrus.Warnf("field `vmOpts.qemu.cpuType` uses unsupported arch %#q", k)
 			continue
 		}

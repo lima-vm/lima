@@ -4,6 +4,7 @@
 package qemu
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"os"
@@ -13,6 +14,7 @@ import (
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
+	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/driver"
@@ -404,4 +406,33 @@ func TestCoordinateQEMUWaitNoRaceOrPanic(t *testing.T) {
 		_, open := <-qWaitCh
 		assert.Assert(t, !open, "expected qWaitCh to be closed")
 	})
+}
+
+func TestResolveCPUType(t *testing.T) {
+	arch := limatype.X8664
+	y := &limatype.LimaYAML{
+		Arch: &arch,
+		VMOpts: limatype.VMOpts{
+			limatype.QEMU: limatype.QEMUOpts{
+				CPUType: map[limatype.Arch]string{
+					"amd64":        "host",
+					limatype.X8664: "qemu64",
+				},
+			},
+		},
+	}
+
+	var logBuf bytes.Buffer
+	origOut := logrus.StandardLogger().Out
+	logrus.SetOutput(&logBuf)
+	t.Cleanup(func() { logrus.SetOutput(origOut) })
+
+	got := resolveCPUType(y, semver.New("9.0.0"))
+	assert.Equal(t, got, "qemu64")
+	assert.Assert(t, bytes.Contains(logBuf.Bytes(), []byte("uses unsupported arch `amd64`")), "expected warning log, got: %s", logBuf.String())
+
+	qemuOpts, ok := y.VMOpts[limatype.QEMU].(limatype.QEMUOpts)
+	assert.Assert(t, ok)
+	_, hasInvalid := qemuOpts.CPUType["amd64"]
+	assert.Assert(t, !hasInvalid, "expected unsupported arch key to be ignored")
 }
