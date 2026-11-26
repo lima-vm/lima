@@ -262,6 +262,7 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 		instances = append(instances, inst)
 	}
 
+	var errs []error
 	for _, diskName := range args {
 		disk, err := store.InspectDisk(diskName, nil)
 		if err != nil {
@@ -269,12 +270,14 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 				logrus.Warnf("Ignoring non-existent disk %#q", diskName)
 				continue
 			}
-			return err
+			errs = append(errs, err)
+			continue
 		}
 
 		if !force {
 			if disk.Instance != "" {
-				return fmt.Errorf("cannot delete disk %#q in use by instance %#q", disk.Name, disk.Instance)
+				errs = append(errs, fmt.Errorf("cannot delete disk %#q in use by instance %#q", disk.Name, disk.Instance))
+				continue
 			}
 			var refInstances []string
 			for _, inst := range instances {
@@ -293,11 +296,12 @@ func diskDeleteAction(cmd *cobra.Command, args []string) error {
 		}
 
 		if err := deleteDisk(disk); err != nil {
-			return fmt.Errorf("failed to delete disk %#q: %w", diskName, err)
+			errs = append(errs, fmt.Errorf("failed to delete disk %#q: %w", diskName, err))
+			continue
 		}
 		logrus.Infof("Deleted %#q (%#q)", diskName, disk.Dir)
 	}
-	return nil
+	return errors.Join(errs...)
 }
 
 func deleteDisk(disk *store.Disk) error {
