@@ -33,6 +33,7 @@ weight: 6
 - [Filesystem sharing](#filesystem-sharing)
   - ["Filesystem is slow"](#filesystem-is-slow)
   - ["Filesystem is not writable"](#filesystem-is-not-writable)
+  - ["How to disable default home directory sharing?"](#how-to-disable-default-home-directory-sharing)
   - ["Filesystem is unmounted after upgrading Lima to v1.0"](#filesystem-is-unmounted-after-upgrading-lima-to-v10)
 - [External projects](#external-projects)
   - ["I am using Rancher Desktop. How to deal with the underlying Lima?"](#i-am-using-rancher-desktop-how-to-deal-with-the-underlying-lima)
@@ -257,6 +258,16 @@ mounts:
 ```
 
 Run `limactl edit <INSTANCE>` to open the YAML editor for an existing instance.
+
+#### "How to disable default home directory sharing?"
+To disable all mounts (including the default home mount) for a single instance, pass `--mount-none` to `limactl create`, `limactl start`, or `limactl edit` (for a stopped instance).
+
+To disable default home sharing for all newly created instances, override the `_default/mounts` base template under `${LIMA_HOME}/_templates` (`~/.lima/_templates` by default, searched before the bundled templates directory when `LIMA_TEMPLATES_PATH` is unset):
+
+```bash
+mkdir -p "${LIMA_HOME:-$HOME/.lima}/_templates/_default"
+echo "mounts: []" > "${LIMA_HOME:-$HOME/.lima}/_templates/_default/mounts.yaml"
+```
 
 #### "Filesystem is unmounted after upgrading Lima to v1.0"
 
