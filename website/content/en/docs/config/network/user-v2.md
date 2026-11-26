@@ -83,3 +83,49 @@ then navigate to `http://lima-default.internal`.
 > **Note**
 >
 > `limactl tunnel` is experimental.
+
+## External daemon
+
+A user-v2 network can be served by a program other than `limactl usernet`, for
+example one that sends all guest traffic through a VPN. Set `daemon` to its
+absolute path:
+
+```yaml
+networks:
+  vpn:
+    mode: user-v2
+    gateway: 192.168.130.1
+    netmask: 255.255.255.0
+    daemon: /usr/local/libexec/vpn-usernet
+```
+
+Lima starts the daemon with the same flags as `limactl usernet` (`-p`, `-e`,
+`--listen-qemu`, `--listen`, `--subnet`, and optionally `--leases`), and
+expects the same HTTP API on the `-e` socket. `--subnet` is the network address
+(`192.168.130.0/24` here), and the guest uses that address plus two
+(`192.168.130.2`) as its gateway and DNS server.
+
+Lima runs the daemon with your privileges, so like `paths.socketVMNet` it must
+be a regular executable file that, together with every parent directory, is
+owned by root and not writable by anyone else.
+
+A network's daemon keeps running while instances use it. If `daemon` is
+changed in the meantime, instances on the network fail to start until the
+running daemon has been stopped, by stopping the instances that use it.
+
+Because such a daemon decides all of the guest's network access, an instance
+using it is rejected if it would give the guest another way out:
+
+- the network must be the instance's only entry in `networks`;
+- `portForwards` must not use `reverse: true`;
+- no mount may contain, or be inside, `LIMA_HOME`, where the guest could read the
+  daemon's state or rewrite `networks.yaml`. The default `~` mount is therefore
+  refused; mount specific directories instead:
+
+```yaml
+networks:
+  - lima: vpn
+mounts:
+  - location: "~/src"
+    writable: true
+```
