@@ -43,7 +43,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0 // gomodjail:unconfined
 	github.com/klauspost/compress v1.20.4
 	github.com/mattn/go-isatty v0.0.24 // gomodjail:unconfined
-	github.com/mattn/go-shellwords v1.0.16 // gomodjail:unconfined
+	github.com/mattn/go-shellwords v1.0.17 // gomodjail:unconfined
 	github.com/mdlayher/netlink v1.11.2 // gomodjail:unconfined
 	github.com/mdlayher/vsock v1.4.0 // gomodjail:unconfined
 	github.com/miekg/dns v1.1.73 // gomodjail:unconfined
