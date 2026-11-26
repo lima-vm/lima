@@ -21,11 +21,9 @@ local_teardown_file() {
 }
 
 @test 'stopped snapshot restores a guest file' {
-    run -0 limactl list --format '{{.VMType}}' "$NAME"
-    case $output in
-    qemu | krunkit) ;;
-    *) skip "vmType ${output} does not implement snapshots" ;;
-    esac
+    vmType=$(limactl list --format '{{.VMType}}' "$NAME")
+    canSnapshot=$(limactl info --yq ".vmTypesEx.${vmType}.canSnapshot")
+    [[ $canSnapshot == true ]] || skip "vmType ${vmType} does not support snapshots"
 
     limactl start --tty=false "$NAME"
     before=$(limactl shell "$NAME" -- sh -c 'echo marker-1 >/var/tmp/snap-marker && sync && sha256sum /var/tmp/snap-marker')
