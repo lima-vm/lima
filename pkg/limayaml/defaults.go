@@ -150,8 +150,8 @@ func defaultGuestInstallPrefix() string {
 // matching rule terminates the search).
 //
 // Exceptions:
-//   - Mounts are appended in d, y, o order, but "merged" when the Location matches a previous entry;
-//     the highest priority Writable setting wins.
+//   - Mounts are appended in d, y, o order, but "merged" when the MountPoint matches a previous
+//     entry; the highest priority setting wins for every field, including Location.
 //   - Networks are appended in d, y, o order
 //   - DNS are picked from the highest priority where DNS is not empty.
 //   - CACertificates Files and Certs are uniquely appended in d, y, o order
@@ -729,7 +729,8 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 		y.MountInotify = new(false)
 	}
 
-	// Combine all mounts; highest priority entry determines writable status.
+	// Combine all mounts; entries sharing a MountPoint are merged, and each setting that
+	// the higher priority entry defines replaces the one from the lower priority entry.
 	// Only works for exact matches; does not normalize case or resolve symlinks.
 	mounts := make([]limatype.Mount, 0, len(d.Mounts)+len(y.Mounts)+len(o.Mounts))
 	mountPoint := make(map[string]int)
@@ -809,6 +810,9 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			}
 			if mount.MountPoint != nil {
 				mounts[i].MountPoint = mount.MountPoint
+			}
+			if mount.Location != "" {
+				mounts[i].Location = mount.Location
 			}
 		} else {
 			mountPoint[*mount.MountPoint] = len(mounts)
