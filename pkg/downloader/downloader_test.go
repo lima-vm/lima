@@ -178,6 +178,59 @@ func TestDownloadRemote(t *testing.T) {
 		wrongDigest := digest.Digest("sha256:8313944efb4f38570c689813f288058b674ea6c487017a5a4738dc674b65f9d9")
 		_, err = Cached(dummyRemoteFileURL, WithExpectedDigest(wrongDigest), WithCacheDir(cacheDir))
 		assert.ErrorContains(t, err, "expected digest")
+
+		t.Run("without digest file falls back to data digest", func(t *testing.T) {
+			noDigestCacheDir := filepath.Join(t.TempDir(), "cache")
+			r, err := Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(noDigestCacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusDownloaded, r.Status)
+
+			shad := cacheDirectoryPath(noDigestCacheDir, dummyRemoteFileURL)
+			shadData := filepath.Join(shad, "data")
+			shadDigest, err := cacheDigestPath(shad, dummyRemoteFileDigest)
+			assert.NilError(t, err)
+			assert.NilError(t, os.Remove(shadDigest))
+
+			r, err = Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(noDigestCacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusUsedCache, r.Status)
+			assert.Assert(t, r.ValidatedDigest)
+
+			_, err = Cached(dummyRemoteFileURL, WithExpectedDigest(wrongDigest), WithCacheDir(noDigestCacheDir))
+			assert.ErrorContains(t, err, "expected digest")
+
+			assert.NilError(t, os.WriteFile(shadData, []byte("corrupted-data"), 0o600))
+			_, err = Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(noDigestCacheDir))
+			assert.ErrorContains(t, err, "expected digest")
+		})
+
+		t.Run("with digest file skips re-hashing data", func(t *testing.T) {
+			digestCacheDir := filepath.Join(t.TempDir(), "cache")
+			r, err := Download(ctx, "", dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(digestCacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusDownloaded, r.Status)
+
+			shad := cacheDirectoryPath(digestCacheDir, dummyRemoteFileURL)
+			shadData := filepath.Join(shad, "data")
+			assert.NilError(t, os.WriteFile(shadData, []byte("modified-data"), 0o600))
+
+			r, err = Cached(dummyRemoteFileURL, WithExpectedDigest(dummyRemoteFileDigest), WithCacheDir(digestCacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusUsedCache, r.Status)
+			assert.Assert(t, r.ValidatedDigest)
+		})
+
+		t.Run("without expected digest", func(t *testing.T) {
+			noExpectedCacheDir := filepath.Join(t.TempDir(), "cache")
+			r, err := Download(ctx, "", dummyRemoteFileURL, WithCacheDir(noExpectedCacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusDownloaded, r.Status)
+
+			r, err = Cached(dummyRemoteFileURL, WithCacheDir(noExpectedCacheDir))
+			assert.NilError(t, err)
+			assert.Equal(t, StatusUsedCache, r.Status)
+			assert.Assert(t, !r.ValidatedDigest)
+		})
 	})
 	t.Run("metadata", func(t *testing.T) {
 		ctx := t.Context()

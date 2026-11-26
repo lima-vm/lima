@@ -608,7 +608,7 @@ func Cached(remote string, opts ...Opt) (*Result, error) {
 		return nil, err
 	}
 	err = lockutil.WithDirLock(shad, func() error {
-		if _, err := os.Stat(shadDigest); err != nil {
+		if _, err := os.Stat(shadDigest); err == nil {
 			if err := validateCachedDigest(shadDigest, o.expectedDigest); err != nil {
 				return err
 			}
