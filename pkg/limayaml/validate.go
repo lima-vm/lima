@@ -661,7 +661,7 @@ func validateNetwork(y *limatype.LimaYAML) error {
 	return errs
 }
 
-// validateParamIsUsed checks if the keys in the `param` field are used in any script, probe, copyToHost, or portForward.
+// validateParamIsUsed checks if the keys in the `param` field are used in any mount, provision, probe, copyToHost, or portForward.
 // It should be called before the `y` parameter is passed to FillDefault() that execute template.
 func validateParamIsUsed(y *limatype.LimaYAML) error {
 	for key := range y.Param {
@@ -720,7 +720,7 @@ func validateParamIsUsed(y *limatype.LimaYAML) error {
 			keyIsUsed = true
 		}
 		if !keyIsUsed {
-			return fmt.Errorf("field `param` key %#q is not used in any provision, probe, copyToHost, or portForward", key)
+			return fmt.Errorf("field `param` key %#q is not used in any mount, provision, probe, copyToHost, or portForward", key)
 		}
 	}
 	return nil

@@ -516,7 +516,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 	paramYaml := `param:
   name: value`
 	_, err := Load(t.Context(), []byte(paramYaml), "paramIsNotUsed.yaml")
-	assert.Error(t, err, "field `param` key `name` is not used in any provision, probe, copyToHost, or portForward")
+	assert.Error(t, err, "field `param` key `name` is not used in any mount, provision, probe, copyToHost, or portForward")
 
 	fieldsUsingParam := []string{
 		`mounts: [{"location": "/tmp/{{ .Param.name }}"}]`,
@@ -536,7 +536,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 		assert.NilError(t, err)
 	}
 
-	// use "{{if eq .Param.rootful \"true\"}}…{{else}}…{{end}}" in provision, probe, copyToHost, and portForward
+	// use "{{if eq .Param.rootful \"true\"}}…{{else}}…{{end}}" in mount, provision, probe, copyToHost, and portForward
 	rootfulYaml := `param:
   rootful: true`
 	fieldsUsingIfParamRootfulTrue := []string{
@@ -561,7 +561,7 @@ func TestValidateParamIsUsed(t *testing.T) {
 	for _, fieldUsingIfParamRootfulTrue := range fieldsUsingIfParamRootfulTrue {
 		_, err = Load(t.Context(), []byte(fieldUsingIfParamRootfulTrue+"\n"+rootFulYaml), "paramIsUsed.yaml")
 		//
-		assert.Error(t, err, "field `param` key `rootFul` is not used in any provision, probe, copyToHost, or portForward")
+		assert.Error(t, err, "field `param` key `rootFul` is not used in any mount, provision, probe, copyToHost, or portForward")
 	}
 }
 
@@ -642,7 +642,7 @@ provision:
 			yLatest: `disk: 100GiB
 param:
   FOO: bar`,
-			wantErr: "field `param` key `FOO` is not used in any provision, probe, copyToHost, or portForward",
+			wantErr: "field `param` key `FOO` is not used in any mount, provision, probe, copyToHost, or portForward",
 		},
 		{
 			name:    "Latest YAML is malformed",
