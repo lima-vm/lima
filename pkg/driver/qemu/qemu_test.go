@@ -436,3 +436,103 @@ func TestResolveCPUType(t *testing.T) {
 	_, hasInvalid := qemuOpts.CPUType["amd64"]
 	assert.Assert(t, !hasInvalid, "expected unsupported arch key to be ignored")
 }
+
+func TestInspectFeatures(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("uses POSIX shell script for fake QEMU")
+	}
+
+	t.Run("isolates help buffers per command", func(t *testing.T) {
+		fakeQemu := filepath.Join(t.TempDir(), "qemu-fake")
+		script := `#!/bin/sh
+case "$*" in
+  *"-accel help"*)
+    printf "Accelerators supported in QEMU binary:\ntcg\nkvm\n"
+    ;;
+  *"-netdev help"*)
+    printf "Available netdev backend types:\nuser\nsocket\n"
+    ;;
+  *"-machine help"*)
+    printf "Supported machines are:\nq35\npc\n"
+    ;;
+  *"-cpu help"*)
+    printf "Available CPUs:\nx86 qemu64\n"
+    ;;
+  *)
+    echo "unexpected args: $*" >&2
+    exit 1
+    ;;
+esac
+`
+		assert.NilError(t, os.WriteFile(fakeQemu, []byte(script), 0o755))
+
+		f, err := inspectFeatures(t.Context(), fakeQemu, "q35")
+		assert.NilError(t, err)
+		assert.Equal(t, string(f.AccelHelp), "Accelerators supported in QEMU binary:\ntcg\nkvm\n")
+		assert.Equal(t, string(f.NetdevHelp), "Available netdev backend types:\nuser\nsocket\n")
+		assert.Equal(t, string(f.MachineHelp), "Supported machines are:\nq35\npc\n")
+		assert.Equal(t, string(f.CPUHelp), "Available CPUs:\nx86 qemu64\n")
+	})
+
+	t.Run("falls back to stderr when prior command wrote stdout", func(t *testing.T) {
+		fakeQemu := filepath.Join(t.TempDir(), "qemu-fake")
+		script := `#!/bin/sh
+case "$*" in
+  *"-accel help"*)
+    printf "accel-stdout\n"
+    ;;
+  *"-netdev help"*)
+    printf "netdev-stderr\n" >&2
+    ;;
+  *"-machine help"*)
+    printf "machine-stdout\n"
+    ;;
+  *"-cpu help"*)
+    printf "cpu-stderr\n" >&2
+    ;;
+esac
+`
+		assert.NilError(t, os.WriteFile(fakeQemu, []byte(script), 0o755))
+
+		f, err := inspectFeatures(t.Context(), fakeQemu, "q35")
+		assert.NilError(t, err)
+		assert.Equal(t, string(f.AccelHelp), "accel-stdout\n")
+		assert.Equal(t, string(f.NetdevHelp), "netdev-stderr\n")
+		assert.Equal(t, string(f.MachineHelp), "machine-stdout\n")
+		assert.Equal(t, string(f.CPUHelp), "cpu-stderr\n")
+	})
+
+	t.Run("accel failure returns error and optional check failure leaves field empty", func(t *testing.T) {
+		fakeQemu := filepath.Join(t.TempDir(), "qemu-fake")
+		script := `#!/bin/sh
+case "$*" in
+  *"-accel help"*)
+    echo "accel boom" >&2
+    exit 1
+    ;;
+esac
+`
+		assert.NilError(t, os.WriteFile(fakeQemu, []byte(script), 0o755))
+		_, err := inspectFeatures(t.Context(), fakeQemu, "q35")
+		assert.ErrorContains(t, err, "accel boom")
+
+		script2 := `#!/bin/sh
+case "$*" in
+  *"-accel help"*)
+    printf "tcg\n"
+    ;;
+  *)
+    echo "unsupported" >&2
+    exit 1
+    ;;
+esac
+`
+		assert.NilError(t, os.WriteFile(fakeQemu, []byte(script2), 0o755))
+		f, err := inspectFeatures(t.Context(), fakeQemu, "q35")
+		assert.NilError(t, err)
+		assert.Equal(t, string(f.AccelHelp), "tcg\n")
+		assert.Equal(t, len(f.NetdevHelp), 0)
+		assert.Equal(t, len(f.MachineHelp), 0)
+		assert.Equal(t, len(f.CPUHelp), 0)
+	})
+}
