@@ -6,6 +6,7 @@ package plugins
 import (
 	"cmp"
 	"context"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -185,14 +186,16 @@ func (plugin *Plugin) Run(ctx context.Context, args []string) {
 var descRegex = regexp.MustCompile(`<limactl-desc>(.*?)</limactl-desc>`)
 
 func extractDescFromScript(path string) string {
-	content, err := os.ReadFile(path)
-	if err != nil {
-		logrus.Debugf("Failed to read plugin script %s: %v", path, err)
+	// Check for a shebang before reading the rest, so that plugin binaries,
+	// which can be tens of MB, are not read on every limactl command.
+	if !hasShebang(path) {
+		logrus.Debugf("Plugin %s: not a script file, skipping description extraction", path)
 		return ""
 	}
 
-	if !strings.HasPrefix(string(content), "#!") {
-		logrus.Debugf("Plugin %s: not a script file, skipping description extraction", path)
+	content, err := os.ReadFile(path)
+	if err != nil {
+		logrus.Debugf("Failed to read plugin script %s: %v", path, err)
 		return ""
 	}
 
@@ -226,4 +229,19 @@ func UpdatePath() error {
 	pluginDirs := getPluginDirectories()
 	newPath := strings.Join(pluginDirs, string(filepath.ListSeparator))
 	return os.Setenv("PATH", newPath)
+}
+
+// hasShebang reports whether the file at path starts with "#!".
+func hasShebang(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		logrus.Debugf("Failed to open plugin %s: %v", path, err)
+		return false
+	}
+	defer f.Close()
+	prefix := make([]byte, 2)
+	if _, err := io.ReadFull(f, prefix); err != nil {
+		return false
+	}
+	return string(prefix) == "#!"
 }
