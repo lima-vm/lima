@@ -495,21 +495,22 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 	l.qCmd = qCmd
 	l.qWaitCh = make(chan error, 1)
+	qWaitErrCh := make(chan error, 1)
 	go func() {
-		defer close(l.qWaitCh)
-		defer cancel()
-		l.qWaitCh <- qCmd.Wait()
+		qWaitErrCh <- qCmd.Wait()
 	}()
 	l.vhostCmds = vhostCmds
+	usernetErrCh := make(chan error, 1)
 	go func() {
 		if usernetIndex := limayaml.FirstUsernetIndex(l.Instance.Config); usernetIndex != -1 {
 			client := usernet.NewClientByName(l.Instance.Config.Networks[usernetIndex].Lima)
 			err := client.ConfigureDriver(ctx, l.Instance, l.SSHLocalPort)
 			if err != nil {
-				l.qWaitCh <- err
+				usernetErrCh <- fmt.Errorf("failed to configure usernet driver: %w", err)
 			}
 		}
 	}()
+	go coordinateQEMUWait(cancel, l.qWaitCh, qWaitErrCh, usernetErrCh)
 
 	// QEMU's UEFI boot order doesn't work well for Windows guest OS.
 	// We send a key periodically to proceed from "Press any key to boot from CD or DVD...".
@@ -521,6 +522,24 @@ func (l *LimaQemuDriver) Start(ctx context.Context) (chan error, error) {
 	}
 
 	return l.qWaitCh, nil
+}
+
+func coordinateQEMUWait(cancel context.CancelFunc, qWaitCh chan<- error, qWaitErrCh, usernetErrCh <-chan error) {
+	defer close(qWaitCh)
+	defer cancel()
+	select {
+	case err := <-usernetErrCh:
+		cancel()
+		qWaitErr := <-qWaitErrCh
+		qWaitCh <- errors.Join(err, qWaitErr)
+	case qWaitErr := <-qWaitErrCh:
+		select {
+		case err := <-usernetErrCh:
+			qWaitCh <- errors.Join(qWaitErr, err)
+		default:
+			qWaitCh <- qWaitErr
+		}
+	}
 }
 
 func (l *LimaQemuDriver) Stop(ctx context.Context) error {

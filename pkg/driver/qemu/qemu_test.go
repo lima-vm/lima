@@ -4,9 +4,12 @@
 package qemu
 
 import (
+	"context"
+	"errors"
 	"os"
 	"path/filepath"
 	"runtime"
+	"sync"
 	"testing"
 
 	"github.com/coreos/go-semver/semver"
@@ -340,4 +343,65 @@ func TestValidateRejectsHostLoopbackFalse(t *testing.T) {
 	assert.NilError(t, validateConfig(cfg))
 	l := &LimaQemuDriver{Instance: &limatype.Instance{Config: cfg}}
 	assert.ErrorContains(t, l.Validate(t.Context()), "field `networkOpts.hostLoopback: false` is not supported for vmType: qemu")
+}
+
+func TestCoordinateQEMUWaitNoRaceOrPanic(t *testing.T) {
+	t.Run("usernet errors first and waits for qemu exit", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		qWaitCh := make(chan error, 1)
+		qWaitErrCh := make(chan error, 1)
+		usernetErrCh := make(chan error, 1)
+
+		go coordinateQEMUWait(cancel, qWaitCh, qWaitErrCh, usernetErrCh)
+
+		usernetErrCh <- errors.New("usernet failed")
+		<-ctx.Done()
+		qWaitErrCh <- errors.New("qemu killed")
+
+		err, ok := <-qWaitCh
+		assert.Assert(t, ok, "expected joined error before channel close")
+		assert.ErrorContains(t, err, "usernet failed")
+		assert.ErrorContains(t, err, "qemu killed")
+		_, open := <-qWaitCh
+		assert.Assert(t, !open, "expected qWaitCh to be closed")
+	})
+
+	t.Run("qemu exits before concurrent usernet error without panic", func(t *testing.T) {
+		_, cancel := context.WithCancel(t.Context())
+		qWaitCh := make(chan error, 1)
+		qWaitErrCh := make(chan error, 1)
+		usernetErrCh := make(chan error, 1)
+
+		var wg sync.WaitGroup
+		wg.Go(func() {
+			coordinateQEMUWait(cancel, qWaitCh, qWaitErrCh, usernetErrCh)
+		})
+
+		qWaitErrCh <- errors.New("qemu exited early")
+		usernetErrCh <- errors.New("usernet late error")
+		wg.Wait()
+
+		err, ok := <-qWaitCh
+		assert.Assert(t, ok, "expected error before channel close")
+		assert.ErrorContains(t, err, "qemu exited early")
+		_, open := <-qWaitCh
+		assert.Assert(t, !open, "expected qWaitCh to be closed")
+	})
+
+	t.Run("clean exit with nil wait error closes channel", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		qWaitCh := make(chan error, 1)
+		qWaitErrCh := make(chan error, 1)
+		usernetErrCh := make(chan error, 1)
+
+		go coordinateQEMUWait(cancel, qWaitCh, qWaitErrCh, usernetErrCh)
+		qWaitErrCh <- nil
+
+		err, ok := <-qWaitCh
+		assert.Assert(t, ok, "expected nil result before channel close")
+		assert.NilError(t, err)
+		<-ctx.Done()
+		_, open := <-qWaitCh
+		assert.Assert(t, !open, "expected qWaitCh to be closed")
+	})
 }
