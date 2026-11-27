@@ -7,6 +7,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net"
 	"time"
 
@@ -94,17 +95,25 @@ func (d *DriverClient) Start(ctx context.Context) (chan error, error) {
 
 	errCh := make(chan error, 1)
 	go func() {
+		defer close(errCh)
 		for {
 			respStream, err := stream.Recv()
 			if err != nil {
-				d.logger.Infof("Error receiving response from driver: %v", err)
+				if !errors.Is(err, io.EOF) {
+					d.logger.Infof("Error receiving response from driver: %v", err)
+					select {
+					case errCh <- err:
+					default:
+					}
+				}
 				return
 			}
 			d.logger.Debugf("Received response: %v", respStream)
 			if !respStream.Success {
-				errCh <- errors.New(respStream.Error)
-			} else {
-				close(errCh)
+				select {
+				case errCh <- errors.New(respStream.Error):
+				default:
+				}
 				return
 			}
 		}
