@@ -5,7 +5,9 @@ package instance
 
 import (
 	"bytes"
+	"errors"
 	"testing"
+	"time"
 
 	"github.com/sirupsen/logrus"
 	"gotest.tools/v3/assert"
@@ -82,4 +84,53 @@ func TestRenderRequirementProgressNonTTY(t *testing.T) {
 	assert.Equal(t, "level=info msg=\"( 1/2) 🕐 Foo (essential)\"\n"+
 		"level=info msg=\"( 1/2) ✅ Foo\"\n"+
 		"level=info msg=\"( 2/2) ❌ Bar\"\n", out.String())
+}
+
+func TestAwaitHostAgentDoesNotBlockLosingGoroutine(t *testing.T) {
+	t.Run("watch finishes first", func(t *testing.T) {
+		releaseWait := make(chan struct{})
+		waitReturned := make(chan struct{})
+
+		err := awaitHostAgent(
+			func() error { return nil },
+			func() error {
+				<-releaseWait
+				defer close(waitReturned)
+				return errors.New("late wait error")
+			},
+		)
+		assert.NilError(t, err)
+		close(releaseWait)
+		select {
+		case <-waitReturned:
+		case <-time.After(time.Second):
+			assert.Assert(t, false, "wait goroutine blocked sending after awaitHostAgent returned")
+		}
+	})
+
+	t.Run("wait finishes first", func(t *testing.T) {
+		releaseWatch := make(chan struct{})
+		watchReturned := make(chan struct{})
+
+		err := awaitHostAgent(
+			func() error {
+				<-releaseWatch
+				defer close(watchReturned)
+				return errors.New("late watch error")
+			},
+			func() error { return errors.New("early exit") },
+		)
+		assert.ErrorContains(t, err, "host agent process has exited: early exit")
+		close(releaseWatch)
+		select {
+		case <-watchReturned:
+		case <-time.After(time.Second):
+			assert.Assert(t, false, "watch goroutine blocked sending after awaitHostAgent returned")
+		}
+	})
+
+	t.Run("nil waitFn returns watch result", func(t *testing.T) {
+		err := awaitHostAgent(func() error { return nil }, nil)
+		assert.NilError(t, err)
+	})
 }
