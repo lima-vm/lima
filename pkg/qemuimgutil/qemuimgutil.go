@@ -164,13 +164,17 @@ func getInfo(ctx context.Context, f string) (*Info, error) {
 }
 
 // CreateDisk creates a new disk image with the specified size.
-func (q *QemuImageUtil) CreateDisk(ctx context.Context, disk string, size int64) error {
+func (q *QemuImageUtil) CreateDisk(ctx context.Context, disk string, size int64, format image.Type) error {
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		// disk already exists
 		return err
 	}
 
-	args := []string{"create", "-f", q.DefaultFormat, disk, strconv.FormatInt(size, 10)}
+	imageFormat := q.DefaultFormat
+	if format != "" {
+		imageFormat = string(format)
+	}
+	args := []string{"create", "-f", imageFormat, disk, strconv.FormatInt(size, 10)}
 	cmd := exec.CommandContext(ctx, "qemu-img", args...)
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("failed to run %v: %#q: %w", cmd.Args, string(out), err)

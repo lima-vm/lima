@@ -262,7 +262,10 @@ func DetectFormat(path string) (string, error) {
 }
 
 // CreateDisk creates a new disk image with the specified size.
-func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64) error {
+func (n *NativeImageUtil) CreateDisk(_ context.Context, disk string, size int64, format image.Type) error {
+	if format != "" && format != raw.Type {
+		return fmt.Errorf("cannot create a %s disk without qemu-img", format)
+	}
 	if _, err := os.Stat(disk); err == nil || !errors.Is(err, fs.ErrNotExist) {
 		return err
 	}

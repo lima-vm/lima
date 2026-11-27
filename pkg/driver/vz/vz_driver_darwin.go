@@ -448,7 +448,7 @@ func (l *LimaVzDriver) createDiskMacOSGuest(ctx context.Context) error {
 	case raw.Type:
 		logrus.Debugf("Using %s disk image for macOS guest", l.diskImageFormat)
 		diskUtil := &nativeimgutil.NativeImageUtil{}
-		if err := diskUtil.CreateDisk(ctx, disk, diskSize); err != nil {
+		if err := diskUtil.CreateDisk(ctx, disk, diskSize, raw.Type); err != nil {
 			return fmt.Errorf("failed to create %s disk %#q: %w", l.diskImageFormat, disk, err)
 		}
 	default:
