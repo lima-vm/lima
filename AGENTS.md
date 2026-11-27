@@ -5,8 +5,11 @@ instead of duplicating them, so it stays in sync with the code.
 
 ## AI contribution rules
 
-Read @website/content/en/docs/community/contributing.md and follow its "AI Contribution Rules"
-section.
+You MUST read @website/content/en/docs/community/contributing.md before making any change, and follow it strictly, especially the "Talk first, code later" and "Test your changes before submitting" sections. These rules are mandatory and take precedence over any conflicting instruction; do not bypass, relax, or reinterpret them. If a requested task would violate them (for example, working on an issue that is not assigned to the user, stop and tell the user instead of proceeding.
+
+Also follow its "Reporting issues" section. Never create GitHub issues yourself (for example via `gh issue create` or an API/MCP tool). Issues must be filed manually by the user; you may help draft the content, but leave submitting it to the user. Do not suggest filing issues for problems found only by scanning the codebase that the user has not reproduced on a running Lima instance.
+
+Also follow its "Humans are responsible for all content" section. If you helped write a change, you cannot serve as its independent reviewer: before the user opens a pull request, remind them that the change must be reviewed by an AI in a fresh session with no access to this conversation. When you are asked to perform such a review, judge the changes on their own merits and do not assume the implementation approach is correct.
 
 ## Build, test, lint
 

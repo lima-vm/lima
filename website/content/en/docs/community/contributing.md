@@ -7,9 +7,13 @@ weight: 20
 
 Bugs and feature requests can be submitted via <https://github.com/lima-vm/lima/issues>.
 
+Only report problems you have actually encountered while using Lima. Issues found solely by AI scanning of the codebase, without reproducing them on a running instance, may be closed without investigation. If such a finding seems critical (e.g., data loss or wide user impact), report it with your reasoning.
+
+When reporting a bug, include the steps to reproduce it, the Lima version and host OS you used, and the relevant logs or error output.
+
 For asking questions, use [GitHub Discussions](https://github.com/lima-vm/lima/discussions) or [Slack (`#lima`)](https://slack.cncf.io).
 
-For reporting vulnerabilities, see <https://github.com/lima-vm/.github/blob/main/SECURITY.md>.
+Security vulnerabilities must not be reported as public issues; follow the process in <https://github.com/lima-vm/.github/blob/main/SECURITY.md> instead.
 
 ## Contributing code
 
@@ -38,7 +42,11 @@ We’re glad to have you here, your contributions make Lima better!
 Pull requests can be submitted to <https://github.com/lima-vm/lima/pulls>. Please ensure that you are familiar with the below policies before submitting pull requests.
 
 #### Talk first, code later
-Before opening a pull request, open an issue first and explain your idea. Approval can be given as an approved comment, or by adding the `ready-to-work` label. It is okay to submit a pull request before the issue is approved, but keep in mind that unapproved work may not be merged and you risk wasting your effort.
+With the rise of AI coding assistants, code can now be generated far faster than before, while the time and effort required to review and maintain it remain unchanged. To keep the review workload sustainable for maintainers, Lima enforces an "issue first" policy.
+
+Before opening a pull request, you MUST open an issue and explain your idea. You may only work on an issue if you have been assigned to the issue by a maintainer. This applies even to issues you filed yourself.
+
+Pull requests that are not linked to an issue assigned to you may be closed without review.
 
 **Exceptions (issue is not required first):**
 - Pull requests from maintainers.
@@ -52,15 +60,22 @@ It is highly suggested to add [tests]({{< ref "/docs/dev/testing" >}}) for every
 A test can be implemented as a unit test rather than an integration test when it is possible,
 to avoid slowing the integration test CI.
 
-Usually, all commits in a PR need to be squashed to a single commit before it can be merged. Rebase on the latest `master` branch in case GitHub shows that there are merge conflicts! For tips on squashing commits and rebasing before submitting your pull request, see [Git Tips]({{< ref "/docs/dev/git" >}}).
+Usually, all commits in a pull request need to be squashed to a single commit before it can be merged. Rebase on the latest `master` branch in case GitHub shows that there are merge conflicts! For tips on squashing commits and rebasing before submitting your pull request, see [Git Tips]({{< ref "/docs/dev/git" >}}).
 
-### AI Contribution Rules
+#### Test your changes before submitting
+Every pull request that touches code must be tested by running a Lima VM instance; a passing build or unit tests alone are not sufficient. New contributors must also include untrimmed logs or screenshots from the VM instance under a "How I tested this" section of the pull request description, clearly showing that the issue is fixed or the feature works.
 
-Lima welcomes help from AI tools, but we only accept high-quality pull requests. These rules help keep review time useful and fair for maintainers.
+💡 **Tip:** When pasting logs directly, use the `/details` command in the pull request description (which inserts a collapsible `<details>` block) under "How I tested this" to keep the description tidy.
+
+Pull requests without adequate evidence of testing may be closed without review. These rules help keep review time useful and fair for maintainers.
 
 #### Humans are responsible for all content
 
-All content in your pull request whether written directly by you or generated with AI tools must be reviewed and edited by you. You are responsible for ensuring the description is clear, accurate, and free of errors. It is often discouraged to have long AI-generated text blocks for pull request description, as reviewers need clear explanations directly from the contributor. When reviewers leave review comments, reply yourself without relying on AI tools.
+All content in your pull request whether written directly by you or generated with AI tools must be thoroughly reviewed by you. If you used AI to help write any part of a pull request, you must run a separate AI review of your changes before opening it. Address the findings, or explain in the pull request description why you chose not to.
+
+💡 **Tip:** The review may use the same model or tool, but it must start in a fresh session with no access to the implementation conversation. A session that helped write the code is anchored on its own approach and tends to defend it, whereas a fresh session has no such investment and is better placed to look for flaws.
+
+You are responsible for ensuring the description is clear, accurate, and free of errors. It is often discouraged to have long AI-generated text blocks for pull request description, as reviewers need clear explanations directly from the contributor. When reviewers leave review comments, reply yourself without relying on AI tools.
 
 #### Legal sign-off (DCO)
 
@@ -73,7 +88,22 @@ If you use AI-generated code, you must:
 
 #### Mention AI usage
 
-If you used AI tools while preparing your pull request, disclose that in the pull request description using an `Assisted-by: AI_TOOL_NAME` trailer (see [Linux kernel coding assistants policy](https://docs.kernel.org/process/coding-assistants.html)). `Co-Authored-By` trailers added by AI tools are also acceptable and will not block a pull request from being merged.
+If you used an AI coding assistant while preparing a change, disclose it with an `Assisted-by:` tag:
+
+- `Assisted-by: LLM` is the standard form; any free-form variant naming the assistant and/or model
+  (e.g. `Assisted-by: Claude Opus`) is equally acceptable. The tag is a free-form, self-asserted
+  disclosure - it just needs to make visible to reviewers that an LLM helped.
+- Put it where it is most visible for the change: in the squashed commit message (the durable place,
+  as in the Linux kernel) or in the pull request "AI Usage" section - both are accepted.
+- If your assistant added a `Co-Authored-By` trailer, that is also accepted as a disclosure, even
+  though an assistant cannot be an author in the legal or copyright sense.
+- The exception is `Signed-off-by`: that must always be you. See
+  [Developer Certificate of Origin](#developer-certificate-of-origin-dco) above.
+
+(For context, this policy is modeled on the [Linux kernel's AI coding assistants
+policy](https://docs.kernel.org/process/coding-assistants.html), without the
+optional analysis-tool entries, which do not apply to Lima's Go and shell
+tooling.)
 
 #### Enforcement
 
