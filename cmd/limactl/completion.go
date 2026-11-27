@@ -24,9 +24,9 @@ func bashCompleteInstanceNames(_ *cobra.Command) ([]string, cobra.ShellCompDirec
 	return instances, cobra.ShellCompDirectiveNoFileComp
 }
 
-func bashCompleteTemplateNames(_ *cobra.Command, toComplete string) ([]string, cobra.ShellCompDirective) {
+func bashCompleteTemplateNames(cmd *cobra.Command, toComplete string) ([]string, cobra.ShellCompDirective) {
 	var comp []string
-	if templates, err := templatestore.Templates(); err == nil {
+	if templates, err := templatestore.Templates(cmd.Context()); err == nil {
 		for _, f := range templates {
 			name := "template:" + f.Name
 			if !strings.HasPrefix(name, toComplete) {

@@ -318,7 +318,7 @@ func loadOrCreateInstance(cmd *cobra.Command, args []string, createOnly bool) (*
 			logrus.Warnf("This form is deprecated. Use `limactl create --name=%s template:default` instead", tmpl.Name)
 		}
 		// Read the default template for creating a new instance
-		tmpl.Bytes, err = templatestore.Read(templatestore.Default)
+		tmpl.Bytes, err = templatestore.Read(ctx, templatestore.Default)
 		if err != nil {
 			return nil, err
 		}
@@ -481,7 +481,7 @@ func chooseNextCreatorState(ctx context.Context, tmpl *limatmpl.Template, yq str
 			}
 			return tmpl, nil
 		case 2: // "Choose another template..."
-			templates, err := filterHiddenTemplates()
+			templates, err := filterHiddenTemplates(ctx)
 			if err != nil {
 				return tmpl, err
 			}
@@ -526,7 +526,7 @@ func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err err
 	if listTemplates, err := cmd.Flags().GetBool("list-templates"); err != nil {
 		return true, err
 	} else if listTemplates {
-		templates, err := filterHiddenTemplates()
+		templates, err := filterHiddenTemplates(cmd.Context())
 		if err != nil {
 			return true, err
 		}
@@ -547,8 +547,8 @@ func createStartActionCommon(cmd *cobra.Command, _ []string) (exit bool, err err
 	return false, nil
 }
 
-func filterHiddenTemplates() ([]templatestore.Template, error) {
-	templates, err := templatestore.Templates()
+func filterHiddenTemplates(ctx context.Context) ([]templatestore.Template, error) {
+	templates, err := templatestore.Templates(ctx)
 	if err != nil {
 		return nil, err
 	}

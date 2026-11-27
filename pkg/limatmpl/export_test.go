@@ -4,3 +4,5 @@
 package limatmpl
 
 var ArchKeywords = archKeywords
+
+func LocalFSPath(p string) string { return localFSPath(p) }
