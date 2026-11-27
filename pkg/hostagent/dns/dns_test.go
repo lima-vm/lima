@@ -10,6 +10,7 @@ import (
 	"net"
 	"regexp"
 	"runtime"
+	"strings"
 	"testing"
 
 	"github.com/foxcpp/go-mockdns"
@@ -324,4 +325,46 @@ func (r TestAddr) Network() string {
 
 func (r TestAddr) String() string {
 	return ""
+}
+
+func TestStartAndShutdown(t *testing.T) {
+	var lc net.ListenConfig
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	assert.NilError(t, err)
+	port := l.Addr().(*net.TCPAddr).Port
+	assert.NilError(t, l.Close())
+
+	opts := ServerOptions{
+		Address: "127.0.0.1",
+		TCPPort: port,
+		HandlerOptions: HandlerOptions{
+			StaticHosts: map[string]string{},
+		},
+	}
+
+	srv, err := Start(opts)
+	assert.NilError(t, err)
+	assert.Assert(t, srv != nil)
+	srv.Shutdown()
+}
+
+func TestStartBindError(t *testing.T) {
+	var lc net.ListenConfig
+	l, err := lc.Listen(t.Context(), "tcp", "127.0.0.1:0")
+	assert.NilError(t, err)
+	defer l.Close()
+	port := l.Addr().(*net.TCPAddr).Port
+
+	opts := ServerOptions{
+		Address: "127.0.0.1",
+		TCPPort: port,
+		HandlerOptions: HandlerOptions{
+			StaticHosts: map[string]string{},
+		},
+	}
+
+	srv, err := Start(opts)
+	assert.Assert(t, err != nil)
+	assert.Assert(t, srv == nil)
+	assert.Assert(t, strings.Contains(err.Error(), "failed to start tcp DNS server"))
 }

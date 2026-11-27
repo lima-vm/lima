@@ -7,6 +7,7 @@ package dns
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"runtime"
 	"strconv"
@@ -356,6 +357,9 @@ func Start(opts ServerOptions) (*Server, error) {
 	if opts.TCPPort > 0 {
 		tcpSrv, err := listenAndServe(TCP, opts)
 		if err != nil {
+			if server.udp != nil {
+				_ = server.udp.Shutdown()
+			}
 			return nil, err
 		}
 		server.tcp = tcpSrv
@@ -377,14 +381,29 @@ func listenAndServe(network Network, opts ServerOptions) (*dns.Server, error) {
 		return nil, err
 	}
 	s := &dns.Server{Net: string(network), Addr: addr, Handler: h}
+	started := make(chan struct{})
+	s.NotifyStartedFunc = func() {
+		close(started)
+	}
+	errCh := make(chan error, 1)
 	go func() {
 		logrus.Debugf("Start %v DNS listening on: %v", network, addr)
 		if e := s.ListenAndServe(); e != nil {
-			panic(e)
+			select {
+			case <-started:
+				logrus.WithError(e).Debugf("%v DNS server stopped", network)
+			default:
+				errCh <- e
+			}
 		}
 	}()
 
-	return s, nil
+	select {
+	case <-started:
+		return s, nil
+	case err := <-errCh:
+		return nil, fmt.Errorf("failed to start %v DNS server on %s: %w", network, addr, err)
+	}
 }
 
 func chunkify(buffer string, limit int) []string {
