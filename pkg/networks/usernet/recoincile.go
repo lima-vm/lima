@@ -97,14 +97,19 @@ func Start(ctx context.Context, name string) error {
 				return err
 			}
 
-			cmd.Stdout, err = os.Create(stdoutPath)
+			stdoutFile, err := os.Create(stdoutPath)
 			if err != nil {
 				return err
 			}
-			cmd.Stderr, err = os.Create(stderrPath)
+			defer stdoutFile.Close()
+			cmd.Stdout = stdoutFile
+
+			stderrFile, err := os.Create(stderrPath)
 			if err != nil {
 				return err
 			}
+			defer stderrFile.Close()
+			cmd.Stderr = stderrFile
 
 			logrus.Debugf("Starting usernet network: %v", cmd.Args)
 			if err := cmd.Start(); err != nil {
@@ -115,14 +120,28 @@ func Start(ctx context.Context, name string) error {
 		if err != nil {
 			return err
 		}
-		for {
-			if _, err := os.Stat(fdSock); !errors.Is(err, os.ErrNotExist) {
-				break
-			}
-			time.Sleep(500 * time.Millisecond)
+		if err := waitForSock(ctx, fdSock, 30*time.Second); err != nil {
+			return fmt.Errorf("%w (Hint: check %s/usernet.*.log)", err, usernetDir)
 		}
 	}
 	return nil
+}
+
+func waitForSock(ctx context.Context, sockPath string, timeout time.Duration) error {
+	startWaiting := time.Now()
+	for {
+		if _, err := os.Stat(sockPath); !errors.Is(err, os.ErrNotExist) {
+			return nil
+		}
+		if time.Since(startWaiting) > timeout {
+			return fmt.Errorf("timed out waiting for socket %q", sockPath)
+		}
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("context canceled while waiting for socket %q: %w", sockPath, ctx.Err())
+		case <-time.After(100 * time.Millisecond):
+		}
+	}
 }
 
 // Stop stops running instance a usernet network with the given name.
@@ -163,7 +182,11 @@ func Stop(ctx context.Context, name string) error {
 			}
 			break
 		}
-		time.Sleep(500 * time.Millisecond)
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		case <-time.After(500 * time.Millisecond):
+		}
 	}
 	return nil
 }
