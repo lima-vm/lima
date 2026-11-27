@@ -15,15 +15,25 @@ fi
 # This script does not work unless systemd is available
 command -v systemctl >/dev/null 2>&1 || exit 0
 
-# Extract bin/nerdctl and compare whether it is newer than the current /usr/local/bin/nerdctl (if already exists).
-# Takes 4-5 seconds. (FIXME: optimize)
+# Compare whether bin/nerdctl in the archive is newer than the current /usr/local/bin/nerdctl (if already exists).
+# Extracting bin/nerdctl takes seconds, so the stamp file keeps the archive's checksum, with the mtime of its bin/nerdctl.
+archive="${LIMA_CIDATA_MNT}/${LIMA_CIDATA_CONTAINERD_ARCHIVE}"
+stamp="${LIMA_CIDATA_GUEST_INSTALL_PREFIX}/share/lima/nerdctl-full.stamp"
+checksum="$(sha256sum "${archive}" | cut -d " " -f 1)"
 tmp_extract_nerdctl="$(mktemp -d)"
-tar Cxaf "${tmp_extract_nerdctl}" "${LIMA_CIDATA_MNT}"/"${LIMA_CIDATA_CONTAINERD_ARCHIVE}" bin/nerdctl
+if [ "$(cat "${stamp}" 2>/dev/null)" != "${checksum}" ]; then
+	tar Cxaf "${tmp_extract_nerdctl}" "${archive}" bin/nerdctl
+	mkdir -p "$(dirname "${stamp}")"
+	echo "${checksum}" >"${stamp}.tmp"
+	touch -r "${tmp_extract_nerdctl}"/bin/nerdctl "${stamp}.tmp"
+	mv "${stamp}.tmp" "${stamp}"
+fi
 
-if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extract_nerdctl}"/bin/nerdctl -nt "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]]; then
+if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ ${stamp} -nt "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]]; then
 	if [ -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ]; then
 		(
 			set +e
+			[ -f "${tmp_extract_nerdctl}"/bin/nerdctl ] || tar Cxaf "${tmp_extract_nerdctl}" "${archive}" bin/nerdctl
 			echo "Upgrading existing nerdctl"
 			echo "- Old: $("${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl --version)"
 			echo "- New: $("${tmp_extract_nerdctl}"/bin/nerdctl --version)"
@@ -32,7 +42,7 @@ if [ ! -f "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}"/bin/nerdctl ] || [[ "${tmp_extra
 			sudo -iu "${LIMA_CIDATA_USER}" "XDG_RUNTIME_DIR=/run/user/${LIMA_CIDATA_UID}" "PATH=${PATH}" containerd-rootless-setuptool.sh uninstall
 		)
 	fi
-	tar Cxaf "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}" "${LIMA_CIDATA_MNT}"/"${LIMA_CIDATA_CONTAINERD_ARCHIVE}"
+	tar Cxaf "${LIMA_CIDATA_GUEST_INSTALL_PREFIX}" "${archive}"
 
 	mkdir -p /etc/bash_completion.d
 	nerdctl completion bash >/etc/bash_completion.d/nerdctl
