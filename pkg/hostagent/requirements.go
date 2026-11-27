@@ -41,7 +41,9 @@ func capitalizeFirst(s string) string {
 // in-place 🕐 -> ✅ flip (when stderr is a TTY) or two log lines (otherwise).
 func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requirements []requirement, step *int, total int) error {
 	const (
-		retries       = 200
+		// 4 more than 200 keep the total wait at about 10 minutes, with the shorter first sleeps.
+		retries       = 204
+		firstSleep    = 100 * time.Millisecond
 		sleepDuration = 3 * time.Second
 	)
 	var errs []error
@@ -100,7 +102,8 @@ func (a *HostAgent) waitForRequirements(ctx context.Context, label string, requi
 				errs = append(errs, fmt.Errorf("failed to satisfy the %s requirement (%d/%d) %#q: %s: %w", label, stepNum, total, req.description, req.debugHint, err))
 				break retryLoop
 			}
-			time.Sleep(sleepDuration)
+			// Sleep 0.1s, 0.2s, 0.4s, 0.8s, 1.6s, then 3s from then on.
+			time.Sleep(min(firstSleep<<min(j, 5), sleepDuration))
 		}
 	}
 	return errors.Join(errs...)
