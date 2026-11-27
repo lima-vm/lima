@@ -377,61 +377,40 @@ type features struct {
 	CPUHelp []byte
 }
 
+func inspectHelp(ctx context.Context, exe string, args ...string) ([]byte, error) {
+	var stdout, stderr bytes.Buffer
+	cmd := exec.CommandContext(ctx, exe, args...)
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	if err := cmd.Run(); err != nil {
+		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q: %w", cmd.Args, stdout.String(), stderr.String(), err)
+	}
+	// on older versions qemu will write "help" output to stderr
+	if stdout.Len() > 0 {
+		return stdout.Bytes(), nil
+	}
+	return stderr.Bytes(), nil
+}
+
 func inspectFeatures(ctx context.Context, exe, machine string) (*features, error) {
 	var (
-		f      features
-		stdout bytes.Buffer
-		stderr bytes.Buffer
+		f   features
+		err error
 	)
-	cmd := exec.CommandContext(ctx, exe, "-M", "none", "-accel", "help")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		return nil, fmt.Errorf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
+	f.AccelHelp, err = inspectHelp(ctx, exe, "-M", "none", "-accel", "help")
+	if err != nil {
+		return nil, err
 	}
-	f.AccelHelp = stdout.Bytes()
-	// on older versions qemu will write "help" output to stderr
-	if len(f.AccelHelp) == 0 {
-		f.AccelHelp = stderr.Bytes()
+	if f.NetdevHelp, err = inspectHelp(ctx, exe, "-M", "none", "-netdev", "help"); err != nil {
+		logrus.Warn(err)
 	}
-
-	cmd = exec.CommandContext(ctx, exe, "-M", "none", "-netdev", "help")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
-	} else {
-		f.NetdevHelp = stdout.Bytes()
-		if len(f.NetdevHelp) == 0 {
-			f.NetdevHelp = stderr.Bytes()
-		}
+	if f.MachineHelp, err = inspectHelp(ctx, exe, "-machine", "help"); err != nil {
+		logrus.Warn(err)
 	}
-
-	cmd = exec.CommandContext(ctx, exe, "-machine", "help")
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
-	} else {
-		f.MachineHelp = stdout.Bytes()
-		if len(f.MachineHelp) == 0 {
-			f.MachineHelp = stderr.Bytes()
-		}
-	}
-
 	// Avoid error: "No machine specified, and there is no default"
-	cmd = exec.CommandContext(ctx, exe, "-cpu", "help", "-machine", machine)
-	cmd.Stdout = &stdout
-	cmd.Stderr = &stderr
-	if err := cmd.Run(); err != nil {
-		logrus.Warnf("failed to run %v: stdout=%#q, stderr=%#q", cmd.Args, stdout.String(), stderr.String())
-	} else {
-		f.CPUHelp = stdout.Bytes()
-		if len(f.CPUHelp) == 0 {
-			f.CPUHelp = stderr.Bytes()
-		}
+	if f.CPUHelp, err = inspectHelp(ctx, exe, "-cpu", "help", "-machine", machine); err != nil {
+		logrus.Warn(err)
 	}
-
 	return &f, nil
 }
 
