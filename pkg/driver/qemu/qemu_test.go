@@ -536,3 +536,19 @@ esac
 		assert.Equal(t, len(f.CPUHelp), 0)
 	})
 }
+
+func TestStreamReconnectOpt(t *testing.T) {
+	assert.Equal(t, streamReconnectOpt(nil), "")
+	assert.Equal(t, streamReconnectOpt(semver.New("7.2.0")), "")
+	assert.Equal(t, streamReconnectOpt(semver.New("8.0.0")), ",reconnect=1")
+	assert.Equal(t, streamReconnectOpt(semver.New("9.1.0")), ",reconnect=1")
+	assert.Equal(t, streamReconnectOpt(semver.New("9.2.0")), ",reconnect-ms=500")
+}
+
+func TestHasHostCPUNilVersion(t *testing.T) {
+	// Must not panic when the QEMU version could not be detected.
+	got := hasHostCPU(nil)
+	if runtime.GOOS == "windows" {
+		assert.Assert(t, !got)
+	}
+}

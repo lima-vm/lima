@@ -914,11 +914,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 					}
 					if strings.Contains(string(features.NetdevHelp), "stream") {
 						netdev := fmt.Sprintf("stream,id=net%d,server=off,addr.type=unix,addr.path=%s", i+1, sock)
-						if !version.LessThan(*semver.New("9.2.0")) {
-							netdev += ",reconnect-ms=500"
-						} else if !version.LessThan(*semver.New("8.0.0")) {
-							netdev += ",reconnect=1"
-						}
+						netdev += streamReconnectOpt(version)
 						args = append(args, "-netdev", netdev)
 					} else {
 						args = append(args, "-netdev", fmt.Sprintf("socket,id=net%d,fd={{ fd_connect %q }}", i+1, sock))
@@ -966,7 +962,7 @@ func Cmdline(ctx context.Context, cfg Config) (exe string, args []string, err er
 			switch audioInterface {
 			case "virtio":
 				minVirtioVersion := semver.New("8.2.0")
-				if version.LessThan(*minVirtioVersion) {
+				if version == nil || version.LessThan(*minVirtioVersion) {
 					logrus.Warnf("virtio-sound requires QEMU 8.2.0 or newer. Falling back to intel-hda.")
 					// We append the HDA hardware directly here instead of mutating the variable
 					args = append(args, "-device", "ich9-intel-hda", "-device", "hda-output,audiodev=snd0")
@@ -1458,6 +1454,20 @@ var hasSMEDarwin = sync.OnceValue(func() bool {
 	return s == "1"
 })
 
+// streamReconnectOpt returns the reconnect option for a "stream" netdev,
+// or an empty string when the QEMU version is unknown or too old.
+func streamReconnectOpt(qemuVersion *semver.Version) string {
+	switch {
+	case qemuVersion == nil:
+		return ""
+	case !qemuVersion.LessThan(*semver.New("9.2.0")):
+		return ",reconnect-ms=500"
+	case !qemuVersion.LessThan(*semver.New("8.0.0")):
+		return ",reconnect=1"
+	}
+	return ""
+}
+
 func hasHostCPU(qemuVersion *semver.Version) bool {
 	switch runtime.GOOS {
 	case "darwin":
@@ -1481,7 +1491,7 @@ func hasHostCPU(qemuVersion *semver.Version) bool {
 		return true
 	case "windows":
 		// Should have been 11.1.0, but it contained a regression when running in nested virt
-		if qemuVersion.LessThan(*semver.New("11.1.1")) {
+		if qemuVersion == nil || qemuVersion.LessThan(*semver.New("11.1.1")) {
 			return false
 		}
 		return true
