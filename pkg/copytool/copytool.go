@@ -142,6 +142,7 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 
 	for _, path := range paths {
 		cp := &Path{}
+		origPath := path
 		if runtime.GOOS == "windows" {
 			// Classify absolute paths before the ":" split, so a drive letter
 			// is not read as an instance name. Drive-relative "C:foo" is not
@@ -162,9 +163,19 @@ func parseCopyPaths(ctx context.Context, paths []string) ([]*Path, error) {
 		parts := strings.SplitN(path, ":", 2)
 		switch len(parts) {
 		case 1:
-			cp.Path = path
+			cp.Path = origPath
 			cp.IsRemote = false
 		case 2:
+			// Like scp and rsync, a colon is only treated as an instance/host separator
+			// if it is not preceded by a slash. Paths like "./foo:bar" or "dir/foo:bar"
+			// are local paths.
+			if strings.ContainsAny(parts[0], "/\\") {
+				cp.Path = origPath
+				cp.IsRemote = false
+				copyPaths = append(copyPaths, cp)
+				continue
+			}
+
 			cp.InstanceName = parts[0]
 			cp.Path = parts[1]
 			cp.IsRemote = true

@@ -372,3 +372,35 @@ func TestSSHOptsForInstanceMultiplexing(t *testing.T) {
 		assert.Equal(t, len(mux), 3, "other platforms multiplex: %v", opts)
 	}
 }
+
+// TestParseCopyPathsLocalColon verifies that local paths containing colons
+// preceded by a path separator (e.g. "./foo:bar", "dir/sub:file", "/tmp/a:b")
+// are parsed as local paths rather than invalid remote instances.
+func TestParseCopyPathsLocalColon(t *testing.T) {
+	ctx := t.Context()
+
+	localCases := []string{
+		"./foo:bar",
+		"dir/sub:file",
+		"../parent:child",
+		"/tmp/test:colons",
+	}
+	if runtime.GOOS == "windows" {
+		localCases = append(localCases, `.\foo:bar`, `dir\sub:file`, `C:\dir\a:b`)
+	}
+
+	for _, p := range localCases {
+		cps, err := parseCopyPaths(ctx, []string{p})
+		assert.NilError(t, err, "path %q should be parsed as local", p)
+		assert.Equal(t, len(cps), 1)
+		assert.Equal(t, cps[0].IsRemote, false, "path %q must not be marked remote", p)
+		assert.Equal(t, cps[0].Path, p, "path %q must remain unconverted", p)
+	}
+
+	// Paths without a slash before the colon must still be treated as remote instances.
+	remoteCases := []string{"nonexistent-instance:path", "C:foo"}
+	for _, p := range remoteCases {
+		_, err := parseCopyPaths(ctx, []string{p})
+		assert.ErrorContains(t, err, "does not exist")
+	}
+}
