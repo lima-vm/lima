@@ -112,7 +112,7 @@ func networkListAction(cmd *cobra.Command, args []string) error {
 		for _, name := range networkNames {
 			nw, ok := config.Networks[name]
 			if !ok {
-				logrus.Errorf("network %#q does not exist", nw)
+				logrus.Errorf("network %#q does not exist", name)
 				continue
 			}
 			j, err := json.Marshal(struct {
@@ -132,7 +132,7 @@ func networkListAction(cmd *cobra.Command, args []string) error {
 	for _, name := range networkNames {
 		nw, ok := config.Networks[name]
 		if !ok {
-			logrus.Errorf("network %#q does not exist", nw)
+			logrus.Errorf("network %#q does not exist", name)
 			continue
 		}
 		gwStr := "-"
