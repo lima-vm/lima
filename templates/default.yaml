@@ -761,6 +761,16 @@ tpm: null
 #   name with higher priority definitions. This does not apply if the
 #  `interface` field is empty. `networks` are therefore also processed
 #  in lowest to highest priority order.
+#
+# Bundled base templates (such as `_default/mounts.yaml`, which mounts `~`
+# read-only) can also be overridden globally for newly created instances by
+# placing a file with the same relative path under `$LIMA_HOME/_templates/`
+# (when `LIMA_TEMPLATES_PATH` is unset, `$LIMA_HOME/_templates` is searched
+# before the bundled templates directory).
+#
+# For example, to disable default home directory sharing for all new
+# instances without affecting per-instance `mounts` entries, create
+# `$LIMA_HOME/_templates/_default/mounts.yaml` containing `mounts: []`.
 
 # ===================================================================== #
 # END OF TEMPLATE
