@@ -201,3 +201,64 @@ func TestReplaceRefusesOversizedFile(t *testing.T) {
 	assert.Equal(t, len(b), len(orig), "Replace changed the file")
 	assert.Error(t, err, fmt.Sprintf("file is larger than %d bytes", readLimitBytes))
 }
+
+func TestSearchFileContentSeparators(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("stub limactl shell script requires Unix")
+	}
+	dir := t.TempDir()
+	stub := filepath.Join(dir, "limactl")
+	script := "#!/bin/sh\nprintf '%s\\n' \"$@\"\n"
+	assert.NilError(t, os.WriteFile(stub, []byte(script), 0o755))
+
+	ts := &ToolSet{
+		limactl: stub,
+		inst:    &limatype.Instance{Name: "default"},
+	}
+
+	searchDir := filepath.Join(dir, "repo")
+	tests := []struct {
+		name     string
+		params   msi.SearchFileContentParams
+		wantPath string
+	}{
+		{
+			name:     "leading dash pattern",
+			params:   msi.SearchFileContentParams{Pattern: "--help", Path: &searchDir},
+			wantPath: searchDir,
+		},
+		{
+			name:     "empty pattern",
+			params:   msi.SearchFileContentParams{Pattern: "", Path: &searchDir},
+			wantPath: searchDir,
+		},
+		{
+			name:     "leading dash pattern with include",
+			params:   msi.SearchFileContentParams{Pattern: "-e", Path: &searchDir, Include: new("*.go")},
+			wantPath: filepath.Join(searchDir, "*.go"),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			_, res, err := ts.SearchFileContent(t.Context(), nil, tc.params)
+			assert.NilError(t, err)
+
+			got := strings.Split(strings.TrimSuffix(res.GitGrepOutput, "\n"), "\n")
+			want := []string{
+				"shell",
+				"--workdir=" + searchDir,
+				"default",
+				"git",
+				"grep",
+				"-n",
+				"--no-index",
+				"-e",
+				tc.params.Pattern,
+				"--",
+				tc.wantPath,
+			}
+			assert.DeepEqual(t, got, want)
+		})
+	}
+}

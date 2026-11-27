@@ -271,7 +271,7 @@ func (ts *ToolSet) SearchFileContent(ctx context.Context,
 		guestPath = path.Join(guestPath, *args.Include)
 	}
 	cmdToolRes, cmdRes, err := ts.RunShellCommand(ctx, req, msi.RunShellCommandParams{
-		Command:   []string{"git", "grep", "-n", "--no-index", args.Pattern, guestPath},
+		Command:   []string{"git", "grep", "-n", "--no-index", "-e", args.Pattern, "--", guestPath},
 		Directory: pathStr, // Directory must be always set
 	})
 	if err != nil {
