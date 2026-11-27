@@ -66,7 +66,7 @@ func factoryResetAction(cmd *cobra.Command, args []string) error {
 		path := filepath.Join(inst.Dir, f.Name())
 		if _, ok := retain[f.Name()]; !ok && !strings.HasSuffix(path, ".yaml") && !strings.HasSuffix(path, ".yml") {
 			logrus.Infof("Removing %#q", path)
-			if err := os.Remove(path); err != nil {
+			if err := os.RemoveAll(path); err != nil {
 				logrus.Error(err)
 			}
 		}
