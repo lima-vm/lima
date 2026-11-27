@@ -147,6 +147,11 @@ sudo install -o root etc_sudoers.d_lima /etc/sudoers.d/lima
 rm etc_sudoers.d_lima
 ```
 
+The generated file allows only the exact `socket_vmnet` command lines for the
+networks defined in `networks.yaml`. Re-run `limactl sudoers` and re-install the
+file whenever `networks.yaml` changes, otherwise Lima reports that the `sudoers`
+file is out of sync and refuses to start the networks.
+
 The `sudoers` file grants the members of the `group` configured in `networks.yaml`
 permission to run `socket_vmnet` as root. Since Lima v2.2, `group` defaults to
 `admin` instead of `everyone`, so the permission is no longer granted to non-admin
@@ -161,9 +166,48 @@ the networks is a member of the new group, and regenerate the `sudoers` file wit
 the command above.
 {{% /alert %}}
 
-The IP address is automatically assigned by macOS's bootpd.
+For `shared` and `host` networks, the IP address is automatically assigned by macOS's bootpd.
 If the IP address is not assigned, try the following commands:
 ```bash
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --add /usr/libexec/bootpd
 sudo /usr/libexec/ApplicationFirewall/socketfilterfw --unblock /usr/libexec/bootpd
 ```
+
+### Modes
+
+The `mode` of a network in `networks.yaml` selects the vmnet.framework mode that
+`socket_vmnet` is started with (`--vmnet-mode`). One `socket_vmnet` daemon runs
+per network.
+
+#### shared (192.168.105.0/24)
+
+Guests reach the host, the other guests on the same network, and the outside
+world through NAT provided by macOS. The host is the gateway (`192.168.105.1`),
+and guests get an address up to `dhcpEnd` from macOS's `bootpd`. The guests are
+reachable from the host, but not from other hosts on the LAN.
+
+#### host (192.168.106.0/24)
+
+Guests reach the host and the other guests on the same network, but the network
+is not routed to the outside world.
+
+Note that an instance also has the default user-mode network, which still
+provides outbound connectivity. The `host` network only adds an address that is
+reachable from the host and from the other guests on the same network.
+
+#### bridged
+
+Attaches the instance to the physical host interface named by `interface`
+(default: `en0`), so that it gets an address from the outside network's DHCP
+server rather than from `bootpd`, and is reachable from the LAN. For that reason
+a `bridged` network has no `gateway`, `dhcpEnd` or `netmask`.
+
+Unlike on Linux, `interface` names a physical interface rather than an existing
+bridge; no bridge has to be created beforehand. Set it to the interface that is
+connected to the LAN if that is not `en0` (see `networksetup -listallhardwareports`).
+The `sudoers` file authorizes the exact interface, so regenerate and re-install
+it with `limactl sudoers` after changing `interface`.
+
+> **Warning**
+>
+> A bridged instance is exposed to every host on the LAN.
