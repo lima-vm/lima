@@ -5,9 +5,9 @@ weight: 1
 Supported host OS:
 - macOS (the latest version is recommended)
 - Linux
+- Windows
 - NetBSD (untested)
 - DragonFlyBSD (untested)
-- Windows (untested)
 
 Prerequisite:
 - QEMU (Required, only if [QEMU]({{< ref "/docs/config/vmtype#qemu" >}}) driver is used)
