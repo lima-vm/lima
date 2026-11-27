@@ -461,6 +461,8 @@ func Validate(y *limatype.LimaYAML, warn bool) error {
 		errs = errors.Join(errs, err)
 	}
 
+	errs = errors.Join(errs, ValidateUSB(y, warn))
+
 	if warn {
 		warnExperimental(y)
 	}
