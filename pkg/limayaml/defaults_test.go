@@ -284,6 +284,7 @@ func TestFillDefault(t *testing.T) {
 	expect.Networks[0].MACAddress = MACAddress(fmt.Sprintf("%s#%d", filePath, 0))
 	expect.Networks[0].Interface = "lima0"
 	expect.Networks[0].Metric = new(uint32(100))
+	expect.Networks[0].GuestToGuest = new(false)
 
 	expect.DNS = slices.Clone(y.DNS)
 	expect.PortForwards = []limatype.PortForward{
@@ -420,9 +421,10 @@ func TestFillDefault(t *testing.T) {
 		},
 		Networks: []limatype.Network{
 			{
-				MACAddress: "11:22:33:44:55:66",
-				Interface:  "def0",
-				Metric:     new(uint32(50)),
+				MACAddress:   "11:22:33:44:55:66",
+				Interface:    "def0",
+				Metric:       new(uint32(50)),
+				GuestToGuest: new(false),
 			},
 		},
 		DNS: []net.IP{
@@ -651,14 +653,16 @@ func TestFillDefault(t *testing.T) {
 		},
 		Networks: []limatype.Network{
 			{
-				Lima:       "shared",
-				MACAddress: "10:20:30:40:50:60",
-				Interface:  "def1",
-				Metric:     new(uint32(25)),
+				Lima:         "shared",
+				MACAddress:   "10:20:30:40:50:60",
+				Interface:    "def1",
+				Metric:       new(uint32(25)),
+				GuestToGuest: new(false),
 			},
 			{
-				Lima:      "bridged",
-				Interface: "def0",
+				Lima:         "bridged",
+				Interface:    "def0",
+				GuestToGuest: new(true),
 			},
 		},
 		DNS: []net.IP{
@@ -739,6 +743,7 @@ func TestFillDefault(t *testing.T) {
 	// o.Networks[1] is overriding the dExpected.Networks[0].Lima entry for the "def0" interface
 	expect.Networks = slices.Concat(dExpected.Networks, y.Networks, []limatype.Network{o.Networks[0]})
 	expect.Networks[0].Lima = o.Networks[1].Lima
+	expect.Networks[0].GuestToGuest = o.Networks[1].GuestToGuest
 
 	// Only highest prio DNS are retained
 	expect.DNS = slices.Clone(o.DNS)

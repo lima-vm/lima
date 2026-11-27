@@ -247,6 +247,7 @@ The volume label is "cidata", as defined by [cloud-init NoCloud](https://docs.cl
 - `LIMA_CIDATA_VIRTIO_PORT`: the virtio-serial port name used by the guest agent (empty when virtio-serial is not used).
 - `LIMA_CIDATA_GUEST_OS_VERSION`: for macOS guests on the `vz` driver, the macOS version of the restore image the instance was created from, e.g. `27.0.0`. Empty for other guests and for instances created before this was recorded.
 - `LIMA_CIDATA_GUEST_OS_BUILD_VERSION`: the corresponding build number, e.g. `26A428`. Empty in the same cases.
+- `LIMA_CIDATA_GUEST_TO_GUEST_ROUTES`: one `<interface>,<metric>` entry per network with `guestToGuest` enabled, separated by spaces; empty otherwise. `<metric>` is the metric for the guest-to-guest route, one below the network's own metric.
 - `LIMA_CIDATA_PLAIN`: set to "1" when the instance is in [plain mode]({{< ref "/docs/config/plain" >}}) (no mounts, port forwarding, or containerd), empty otherwise.
 - `LIMA_CIDATA_NO_CLOUD_INIT`: set to "1" if cloud-init should be skipped on this boot, empty otherwise.
 

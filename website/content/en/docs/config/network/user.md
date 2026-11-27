@@ -15,7 +15,9 @@ The guest IP address is set to `192.168.5.15`.
 
 This IP address is not accessible from the host by design.
 
-Use [vzNAT]({{< ref "/docs/config/network/vznat" >}}) or [managed networks]({{< ref "/docs/config/network/managed" >}}) to allow accessing the guest IP from the host and other guests.
+Use [vzNAT]({{< ref "/docs/config/network/vznat" >}}) to allow accessing the guest IP from the host, or [managed networks]({{< ref "/docs/config/network/managed" >}}) to allow accessing it from the host and other guests.
+With [`guestToGuest`]({{< ref "/docs/config/network/vznat#guest-to-guest-traffic" >}}), vzNAT guests can reach each other too.
+[`user-v2`]({{< ref "/docs/config/network/user-v2" >}}) lets guests reach each other without a `sudoers` file, but the host can reach a user-v2 guest IP only through `limactl tunnel`.
 
 ## Host IP (192.168.5.2)
 
