@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Code-Hex/vz/v3"
 	"gotest.tools/v3/assert"
 
 	"github.com/lima-vm/lima/v2/pkg/limatype"
@@ -50,6 +51,32 @@ func TestStartSignalsFailReleasesSSHWait(t *testing.T) {
 		assert.Assert(t, false, "AdditionalSetupForSSH still waits after the driver failed")
 	}
 	assert.Equal(t, <-signals.errCh, driverErr)
+}
+
+func TestHandleVMEndFailsStart(t *testing.T) {
+	for _, state := range []vz.VirtualMachineState{vz.VirtualMachineStateStopped, vz.VirtualMachineStateError} {
+		t.Run(state.String(), func(t *testing.T) {
+			signals := newStartSignals()
+			wrapper := &virtualMachineWrapper{}
+			l := &LimaVzDriver{machine: wrapper, waitSSHLocalPortAccessible: signals.sshPortAccessible}
+			released := false
+			handled := make(chan bool, 1)
+			go func() { handled <- handleVMEnd(state, wrapper, signals, func() { released = true }) }()
+
+			setupDone := make(chan error, 1)
+			go func() { setupDone <- l.AdditionalSetupForSSH(t.Context()) }()
+			select {
+			case err := <-setupDone:
+				assert.NilError(t, err)
+			case <-time.After(5 * time.Second):
+				assert.Assert(t, false, "AdditionalSetupForSSH still waits after the VM ended")
+			}
+			assert.ErrorContains(t, <-signals.errCh, "vz driver state")
+			assert.Assert(t, <-handled)
+			assert.Assert(t, released)
+			assert.NilError(t, l.waitForStopped(time.Second))
+		})
+	}
 }
 
 func TestRemovePIDFile(t *testing.T) {

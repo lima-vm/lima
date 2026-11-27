@@ -116,6 +116,31 @@ func (s *startSignals) fail(err error) {
 	s.errCh <- err
 }
 
+// handleVMEnd reports whether newState means the VM no longer runs. If so, it
+// marks the VM stopped, calls release, and sends the host agent an error. VZ
+// enters the Error state when the VM terminates on an internal error.
+func handleVMEnd(newState vz.VirtualMachineState, wrapper *virtualMachineWrapper, signals *startSignals, release func()) bool {
+	var err error
+	switch newState {
+	case vz.VirtualMachineStateStopped:
+		logrus.Info("[VZ] - vm state change: stopped")
+		err = errors.New("vz driver state stopped")
+	case vz.VirtualMachineStateError:
+		logrus.Error("[VZ] - vm state change: error")
+		err = errors.New("vz driver state error")
+	default:
+		return false
+	}
+	wrapper.mu.Lock()
+	wrapper.stopped = true
+	wrapper.mu.Unlock()
+	// Call release before notifying the host agent, which may exit as soon as
+	// it receives the error.
+	release()
+	signals.fail(err)
+	return true
+}
+
 func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onVsockEvent func(*events.VsockEvent)) (vm *virtualMachineWrapper, waitSSHLocalPortAccessible <-chan any, errCh chan error, err error) {
 	usernetClient, stopUsernet, err := startUsernet(ctx, inst)
 	if err != nil {
@@ -220,21 +245,17 @@ func startVM(ctx context.Context, inst *limatype.Instance, sshLocalPort int, onV
 							signals.fail(err)
 						}
 					}()
-				case vz.VirtualMachineStateStopped:
-					logrus.Info("[VZ] - vm state change: stopped")
-					wrapper.mu.Lock()
-					wrapper.stopped = true
-					wrapper.mu.Unlock()
-					_ = usernetClient.UnExposeSSH(inst.SSHLocalPort)
-					if stopUsernet != nil {
-						stopUsernet()
-					}
-					// Release descriptors before notifying the hostagent, which may
-					// exit immediately upon receiving the stopped state.
-					retainedFDs.CloseAll()
-					signals.fail(errors.New("vz driver state stopped"))
-					return
 				default:
+					release := func() {
+						_ = usernetClient.UnExposeSSH(inst.SSHLocalPort)
+						if stopUsernet != nil {
+							stopUsernet()
+						}
+						retainedFDs.CloseAll()
+					}
+					if handleVMEnd(newState, wrapper, signals, release) {
+						return
+					}
 					logrus.Debugf("[VZ] - vm state change: %#q", newState)
 				}
 			}
