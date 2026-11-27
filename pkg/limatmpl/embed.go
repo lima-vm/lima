@@ -642,7 +642,7 @@ func (tmpl *Template) embedAllScripts(ctx context.Context, embedAll bool) error 
 			continue
 		}
 		// Don't overwrite existing script. This should throw an error during validation.
-		if p.Script == nil || *p.Script != "" {
+		if p.Script != nil && *p.Script != "" {
 			continue
 		}
 		isTemplate, _ := SeemsTemplateURL(p.File.URL)

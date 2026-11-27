@@ -401,6 +401,12 @@ provision:
 		`provision: [{script: "#! my script"}]`,
 	},
 	{
+		"Probe script files are embedded even when no base property exists",
+		"probes: [{file: base0.sh}]",
+		"#! my probe",
+		`probes: [{script: "#! my probe"}]`,
+	},
+	{
 		"ERROR base digest is not yet implemented",
 		"",
 		"base: [{url: base.yaml, digest: deafbad}]",
@@ -531,4 +537,20 @@ func TestEncodeScriptReason(t *testing.T) {
 		reason := encodeScriptReason("line 1\nline 2\n01234567\n")
 		assert.Equal(t, reason, "line 3 (offset 14) is longer than 8 characters")
 	})
+}
+
+func TestEmbedProbeFilePreservesExistingScript(t *testing.T) {
+	t.Chdir(t.TempDir())
+	assert.NilError(t, os.WriteFile("probe.sh", []byte("#! my probe\n"), 0o600))
+
+	tmpl := &Template{
+		Bytes:   []byte("probes: [{file: probe.sh, script: '#! existing'}]\n"),
+		Locator: "tmpl.yaml",
+	}
+	assert.NilError(t, tmpl.Embed(t.Context(), false, false))
+	assert.NilError(t, tmpl.Unmarshal())
+	assert.Equal(t, len(tmpl.Config.Probes), 1)
+	assert.Assert(t, tmpl.Config.Probes[0].Script != nil)
+	assert.Equal(t, *tmpl.Config.Probes[0].Script, "#! existing")
+	assert.Assert(t, tmpl.Config.Probes[0].File != nil)
 }
