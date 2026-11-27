@@ -6,6 +6,7 @@ package proxyimgutil
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"os/exec"
 
@@ -32,13 +33,16 @@ func NewDiskUtil(_ context.Context) imgutil.ImageDiskManager {
 }
 
 // CreateDisk creates a new disk image with the specified size.
-func (p *ImageDiskManager) CreateDisk(ctx context.Context, disk string, size int64) error {
-	err := p.qemu.CreateDisk(ctx, disk, size)
+func (p *ImageDiskManager) CreateDisk(ctx context.Context, disk string, size int64, format image.Type) error {
+	err := p.qemu.CreateDisk(ctx, disk, size, format)
 	if err == nil {
 		return nil
 	}
 	if errors.Is(err, exec.ErrNotFound) {
-		return p.native.CreateDisk(ctx, disk, size)
+		if format == "" || format == raw.Type {
+			return p.native.CreateDisk(ctx, disk, size, format)
+		}
+		return fmt.Errorf("cannot create a %s disk without qemu-img: %w", format, err)
 	}
 	return err
 }

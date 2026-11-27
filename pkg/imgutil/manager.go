@@ -13,7 +13,8 @@ import (
 // ImageDiskManager defines the common operations for disk image utilities.
 type ImageDiskManager interface {
 	// CreateDisk creates a new disk image with the specified size.
-	CreateDisk(ctx context.Context, disk string, size int64) error
+	// An empty format selects the implementation's default.
+	CreateDisk(ctx context.Context, disk string, size int64, format image.Type) error
 
 	// ResizeDisk resizes an existing disk image to the specified size.
 	ResizeDisk(ctx context.Context, disk string, size int64) error

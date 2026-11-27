@@ -15,6 +15,7 @@ import (
 	contfs "github.com/containerd/continuity/fs"
 	"github.com/docker/go-units"
 	"github.com/lima-vm/go-qcow2reader"
+	"github.com/lima-vm/go-qcow2reader/image"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 
@@ -94,6 +95,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	default:
 		return fmt.Errorf("disk format %#q not supported, use `qcow2` or `raw` instead", format)
 	}
+	diskFormat := image.Type(format)
 
 	// only exactly one arg is allowed
 	name := args[0]
@@ -119,7 +121,7 @@ func diskCreateAction(cmd *cobra.Command, args []string) error {
 	// qemu may not be available, use it only if needed.
 	dataDisk := filepath.Join(diskDir, filenames.DataDisk)
 	diskUtil := proxyimgutil.NewDiskUtil(ctx)
-	err = diskUtil.CreateDisk(ctx, dataDisk, diskSize)
+	err = diskUtil.CreateDisk(ctx, dataDisk, diskSize, diskFormat)
 	if err != nil {
 		return fmt.Errorf("failed to create %s disk in %#q: %w", format, diskDir, removeFailedDiskDir(diskDir, err))
 	}
