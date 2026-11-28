@@ -276,19 +276,19 @@ func TestYQExpressions(t *testing.T) {
 			name:        "network vzNAT",
 			args:        []string{"--network", "vzNAT"},
 			newInstance: true,
-			expected:    []string{`.networks += [{"vzNAT": true}] | .networks |= unique_by(.lima)`},
+			expected:    []string{`.networks = ([{"vzNAT": true}] + (.networks // [])) | .networks |= unique`},
 		},
 		{
 			name:        "network lima:shared",
 			args:        []string{"--network", "lima:shared"},
 			newInstance: true,
-			expected:    []string{`.networks += [{"lima": "shared"}] | .networks |= unique_by(.lima)`},
+			expected:    []string{`.networks = ([{"lima": "shared"}] + (.networks // [])) | .networks |= unique`},
 		},
 		{
 			name:        "multiple networks",
 			args:        []string{"--network", "vzNAT", "--network", "lima:shared", "--network", "lima:bridged"},
 			newInstance: true,
-			expected:    []string{`.networks += [{"vzNAT": true},{"lima": "shared"},{"lima": "bridged"}] | .networks |= unique_by(.lima)`},
+			expected:    []string{`.networks = ([{"vzNAT": true},{"lima": "shared"},{"lima": "bridged"}] + (.networks // [])) | .networks |= unique`},
 		},
 		{
 			name:        "nested-virt",
@@ -333,6 +333,64 @@ func TestYQExpressions(t *testing.T) {
 				assert.NilError(t, err)
 				assert.DeepEqual(t, tt.expected, expr)
 			}
+		})
+	}
+}
+
+func TestNetworkYQExpressionKeepsExistingEntries(t *testing.T) {
+	tests := []struct {
+		name     string
+		args     []string
+		input    string
+		expected string
+	}{
+		{
+			name:     "socket entry survives --network vzNAT",
+			args:     []string{"--network", "vzNAT"},
+			input:    "networks:\n- socket: /tmp/lima.sock\n",
+			expected: "networks:\n- vzNAT: true\n- socket: /tmp/lima.sock\n",
+		},
+		{
+			name:     "vzNAT entry survives --network lima:shared",
+			args:     []string{"--network", "lima:shared"},
+			input:    "networks:\n- vzNAT: true\n",
+			expected: "networks:\n- lima: shared\n- vzNAT: true\n",
+		},
+		{
+			name:     "both non-lima entries survive",
+			args:     []string{"--network", "lima:shared"},
+			input:    "networks:\n- socket: /tmp/lima.sock\n- vzNAT: true\n",
+			expected: "networks:\n- lima: shared\n- socket: /tmp/lima.sock\n- vzNAT: true\n",
+		},
+		{
+			name:     "repeating an existing network does not duplicate it",
+			args:     []string{"--network", "lima:shared"},
+			input:    "networks:\n- lima: shared\n",
+			expected: "networks:\n- lima: shared\n",
+		},
+		{
+			name:     "repeating vzNAT does not duplicate it",
+			args:     []string{"--network", "vzNAT"},
+			input:    "networks:\n- vzNAT: true\n",
+			expected: "networks:\n- vzNAT: true\n",
+		},
+		{
+			name:     "missing networks list is created",
+			args:     []string{"--network", "vzNAT"},
+			input:    "vmType: vz\n",
+			expected: "vmType: vz\nnetworks:\n- vzNAT: true\n",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := &cobra.Command{}
+			RegisterEdit(cmd, "")
+			assert.NilError(t, cmd.ParseFlags(tt.args))
+			exprs, err := YQExpressions(cmd.Flags(), false, nil)
+			assert.NilError(t, err)
+			out, err := yqutil.EvaluateExpression(t.Context(), yqutil.Join(exprs), []byte(tt.input))
+			assert.NilError(t, err)
+			assert.Equal(t, tt.expected, string(out))
 		})
 	}
 }
