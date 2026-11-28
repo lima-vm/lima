@@ -815,6 +815,76 @@ func TestFillDefaultMergesBlockDevices(t *testing.T) {
 	assert.DeepEqual(t, y.BlockDevices, []string{"/dev/disk1", "/dev/disk2", "/dev/disk3"})
 }
 
+func TestFillDefaultMergesNetworksVZNAT(t *testing.T) {
+	tests := []struct {
+		name       string
+		d, y, o    *limatype.Network
+		wantLima   string
+		wantSocket string
+		wantVZNAT  *bool
+	}{
+		{
+			name:      "override switches lima to vzNAT",
+			d:         &limatype.Network{Lima: "shared"},
+			o:         &limatype.Network{VZNAT: new(true)},
+			wantVZNAT: new(true),
+		},
+		{
+			name:      "override switches lima to vzNAT on the instance",
+			d:         &limatype.Network{Lima: "shared"},
+			y:         &limatype.Network{VZNAT: new(true)},
+			wantVZNAT: new(true),
+		},
+		{
+			name:      "override switches socket to vzNAT",
+			d:         &limatype.Network{Socket: "/tmp/template.sock"},
+			o:         &limatype.Network{VZNAT: new(true)},
+			wantVZNAT: new(true),
+		},
+		{
+			name:     "override switches vzNAT to lima",
+			d:        &limatype.Network{VZNAT: new(true)},
+			o:        &limatype.Network{Lima: "shared"},
+			wantLima: "shared",
+		},
+		{
+			name:       "override switches vzNAT to socket",
+			d:          &limatype.Network{VZNAT: new(true)},
+			o:          &limatype.Network{Socket: "/tmp/override.sock"},
+			wantSocket: "/tmp/override.sock",
+		},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var d, y, o limatype.LimaYAML
+			for _, layer := range []struct {
+				yaml *limatype.LimaYAML
+				nw   *limatype.Network
+			}{
+				{&d, tc.d},
+				{&y, tc.y},
+				{&o, tc.o},
+			} {
+				if layer.nw == nil {
+					continue
+				}
+				nw := *layer.nw
+				nw.Interface = "lima0"
+				layer.yaml.Networks = []limatype.Network{nw}
+			}
+
+			FillDefault(t.Context(), &y, &d, &o, "test.yaml", false)
+
+			assert.Equal(t, len(y.Networks), 1)
+			nw := y.Networks[0]
+			assert.Equal(t, nw.Interface, "lima0")
+			assert.Equal(t, nw.Lima, tc.wantLima)
+			assert.Equal(t, nw.Socket, tc.wantSocket)
+			assert.DeepEqual(t, nw.VZNAT, tc.wantVZNAT)
+		})
+	}
+}
+
 func TestStaticPortForwarding(t *testing.T) {
 	tests := []struct {
 		name     string

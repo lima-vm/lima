@@ -670,6 +670,7 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 			if nw.Socket != "" {
 				networks[i].Socket = nw.Socket
 				networks[i].Lima = ""
+				networks[i].VZNAT = nil
 			}
 			if nw.Lima != "" {
 				if nw.Socket != "" {
@@ -679,6 +680,21 @@ func FillDefault(ctx context.Context, y, d, o *limatype.LimaYAML, filePath strin
 				}
 				networks[i].Lima = nw.Lima
 				networks[i].Socket = ""
+				networks[i].VZNAT = nil
+			}
+			if nw.VZNAT != nil {
+				if *nw.VZNAT && (nw.Lima != "" || nw.Socket != "") {
+					// Same as socket+lima above: prefer the explicit interface selection
+					logrus.Errorf("Network %#q has both vzNAT=%#v and lima=%#q or socket=%#q fields; ignoring vzNAT",
+						nw.Interface, *nw.VZNAT, nw.Lima, nw.Socket)
+				} else {
+					networks[i].VZNAT = nw.VZNAT
+					if *nw.VZNAT {
+						// vzNAT and lima/socket are mutually exclusive (validate rejects both)
+						networks[i].Lima = ""
+						networks[i].Socket = ""
+					}
+				}
 			}
 			if nw.MACAddress != "" {
 				networks[i].MACAddress = nw.MACAddress
