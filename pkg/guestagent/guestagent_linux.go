@@ -128,7 +128,15 @@ func (a *agent) Events(ctx context.Context, ch chan *api.Event) {
 		var ev *api.Event
 		ev, st = a.collectEvent(ctx, st)
 		if !isEventEmpty(ev) {
-			ch <- ev
+			// The consumer is the gRPC GetEvents handler, which returns as soon as
+			// stream.Send fails. Blocking on an unbuffered send that nobody reads
+			// would leak this goroutine and skip the SaveEventState above, so the
+			// send has to give up when the stream is gone.
+			select {
+			case ch <- ev:
+			case <-ctx.Done():
+				return
+			}
 		}
 		select {
 		case <-ctx.Done():
