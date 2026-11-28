@@ -350,7 +350,10 @@ func YQExpressions(flags *flag.FlagSet, newInstance bool, params map[string]stri
 						return nil, fmt.Errorf("network name must be `vzNAT` or `lima:*`, got %#q", s)
 					}
 				}
-				expr := fmt.Sprintf(`.networks += [%s] | .networks |= unique_by(.lima)`, strings.Join(networks, ","))
+				// `unique_by(.lima)` collapsed every entry without a `lima`
+				// key (vzNAT, socket) into the first one, because they all
+				// compare equal on that key. Compare whole entries instead.
+				expr := fmt.Sprintf(`.networks = ([%s] + (.networks // [])) | .networks |= unique`, strings.Join(networks, ","))
 				return []string{expr}, nil
 			},
 			false,
